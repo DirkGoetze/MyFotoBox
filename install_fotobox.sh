@@ -48,6 +48,26 @@ python3 -m venv venv
 ./venv/bin/pip install --upgrade pip
 ./venv/bin/pip install -r requirements.txt
 
+# Backup-Verzeichnis anlegen (mit Zeitstempel)
+BACKUP_DIR="$PROJECT_DIR/backup-$(date +%Y%m%d%H%M%S)"
+mkdir -p "$BACKUP_DIR"
+
+# Vorhandene NGINX-Konfiguration sichern
+if [ -f /etc/nginx/sites-available/fotobox ]; then
+    cp /etc/nginx/sites-available/fotobox "$BACKUP_DIR/nginx-fotobox.conf.bak"
+fi
+if [ -L /etc/nginx/sites-enabled/fotobox ]; then
+    cp --remove-destination /etc/nginx/sites-enabled/fotobox "$BACKUP_DIR/nginx-fotobox.link.bak"
+fi
+# Standard-NGINX-Seite sichern
+if [ -f /etc/nginx/sites-enabled/default ]; then
+    cp /etc/nginx/sites-enabled/default "$BACKUP_DIR/nginx-default.link.bak"
+fi
+# Vorhandene systemd-Service-Datei sichern
+if [ -f /etc/systemd/system/fotobox-backend.service ]; then
+    cp /etc/systemd/system/fotobox-backend.service "$BACKUP_DIR/fotobox-backend.service.bak"
+fi
+
 # 4. NGINX-Konfiguration bereitstellen
 cp "$PROJECT_DIR/nginx-fotobox.conf" /etc/nginx/sites-available/fotobox
 ln -sf /etc/nginx/sites-available/fotobox /etc/nginx/sites-enabled/fotobox
