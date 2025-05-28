@@ -42,9 +42,11 @@ fi
 # Besitzrechte anpassen
 chown -R "$FOTOBOX_USER":"$FOTOBOX_GROUP" "$PROJECT_DIR"
 
-# 3. Python-Abhängigkeiten installieren
+# 3. Python-Abhängigkeiten in venv installieren
 cd "$PROJECT_DIR/backend"
-pip3 install -r requirements.txt
+python3 -m venv venv
+./venv/bin/pip install --upgrade pip
+./venv/bin/pip install -r requirements.txt
 
 # 4. NGINX-Konfiguration bereitstellen
 cp "$PROJECT_DIR/nginx-fotobox.conf" /etc/nginx/sites-available/fotobox
@@ -63,7 +65,7 @@ After=network.target
 [Service]
 User=$FOTOBOX_USER
 WorkingDirectory=$PROJECT_DIR/backend
-ExecStart=/usr/bin/python3 app.py
+ExecStart=$PROJECT_DIR/backend/venv/bin/python app.py
 Restart=always
 
 [Install]
