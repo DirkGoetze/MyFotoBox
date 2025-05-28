@@ -68,8 +68,19 @@ if [ -f /etc/systemd/system/fotobox-backend.service ]; then
     cp /etc/systemd/system/fotobox-backend.service "$BACKUP_DIR/fotobox-backend.service.bak"
 fi
 
+# README.md ins documentation-Verzeichnis verschieben
+if [ -f "$PROJECT_DIR/README.md" ]; then
+    mkdir -p "$PROJECT_DIR/documentation"
+    mv "$PROJECT_DIR/README.md" "$PROJECT_DIR/documentation/README.md"
+fi
+# nginx-fotobox.conf in conf-Verzeichnis verschieben
+if [ -f "$PROJECT_DIR/nginx-fotobox.conf" ]; then
+    mkdir -p "$PROJECT_DIR/conf"
+    mv "$PROJECT_DIR/nginx-fotobox.conf" "$PROJECT_DIR/conf/nginx-fotobox.conf"
+fi
+
 # 4. NGINX-Konfiguration bereitstellen
-cp "$PROJECT_DIR/nginx-fotobox.conf" /etc/nginx/sites-available/fotobox
+cp "$PROJECT_DIR/conf/nginx-fotobox.conf" /etc/nginx/sites-available/fotobox
 ln -sf /etc/nginx/sites-available/fotobox /etc/nginx/sites-enabled/fotobox
 rm -f /etc/nginx/sites-enabled/default
 systemctl restart nginx

@@ -46,3 +46,8 @@ Das Skript stellt vorherige Systemdateien aus dem Backup wieder her und entfernt
 
 ---
 
+# Dokumentation zur MyFotoBox-Installation
+
+Die vollständige Anleitung zur Installation, Update und Deinstallation finden Sie in dieser README.md.
+
+(Die Inhalte entsprechen der bisherigen README im Projektroot.)
