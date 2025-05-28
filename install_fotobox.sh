@@ -7,7 +7,7 @@ set -e
 
 # 1. Notwendige Pakete installieren
 apt update
-apt install -y nginx python3 python3-pip git
+apt install -y nginx python3 python3-pip python3.11-venv git
 
 # 2. Projekt von GitHub klonen (URL ggf. anpassen)
 PROJECT_DIR="/opt/fotobox"
