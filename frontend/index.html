@@ -10,10 +10,17 @@
 </head>
 <body>
     <h1>Fotobox</h1>
+    <div id="eventName"></div>
     <button id="takePhotoBtn">Foto aufnehmen</button>
     <h2>Aufgenommene Fotos</h2>
     <div id="photos"></div>
+    <a href="start.html" style="position:fixed;top:1em;right:1em;">Zurück zur Startseite</a>
     <script>
+        // Eventname aus Konfiguration anzeigen
+        const config = JSON.parse(localStorage.getItem('fotobox_config') || '{}');
+        if(config.event_name) {
+            document.getElementById('eventName').textContent = config.event_name;
+        }
         async function loadPhotos() {
             const res = await fetch('/api/photos');
             const data = await res.json();
