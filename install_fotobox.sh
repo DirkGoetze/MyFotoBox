@@ -79,9 +79,25 @@ if [ -f "$PROJECT_DIR/nginx-fotobox.conf" ]; then
     mv "$PROJECT_DIR/nginx-fotobox.conf" "$PROJECT_DIR/conf/nginx-fotobox.conf"
 fi
 
-# 4. NGINX-Konfiguration bereitstellen
-cp "$PROJECT_DIR/conf/nginx-fotobox.conf" /etc/nginx/sites-available/fotobox
-ln -sf /etc/nginx/sites-available/fotobox /etc/nginx/sites-enabled/fotobox
+# Prüfen, ob Port 80 belegt ist
+if lsof -i :80 | grep LISTEN; then
+    echo "Port 80 ist bereits belegt (z.B. durch apache2)."
+    read -p "Bitte geben Sie einen alternativen Port für NGINX ein [8080]: " ALT_PORT
+    ALT_PORT=${ALT_PORT:-8080}
+    NGINX_PORT=$ALT_PORT
+else
+    NGINX_PORT=80
+fi
+
+# 4. NGINX-Konfiguration bereitstellen (Port ggf. ersetzen)
+CONF_SRC="$PROJECT_DIR/conf/nginx-fotobox.conf"
+CONF_DST="/etc/nginx/sites-available/fotobox"
+if [ "$NGINX_PORT" != "80" ]; then
+    sed "s/listen 80;/listen $NGINX_PORT;/g" "$CONF_SRC" > "$CONF_DST"
+else
+    cp "$CONF_SRC" "$CONF_DST"
+fi
+ln -sf "$CONF_DST" /etc/nginx/sites-enabled/fotobox
 rm -f /etc/nginx/sites-enabled/default
 systemctl restart nginx
 
@@ -109,10 +125,16 @@ fi
 # IP-Adresse des Servers ermitteln (erste nicht-loopback IPv4-Adresse)
 SERVER_IP=$(hostname -I | awk '{print $1}')
 
+if [ "$NGINX_PORT" != "80" ]; then
+    FRONTEND_URL="http://$SERVER_IP:$NGINX_PORT/start.html (bzw. index.html)"
+else
+    FRONTEND_URL="http://$SERVER_IP/start.html (bzw. index.html)"
+fi
+
 echo "Fotobox-Frontend ist jetzt über NGINX erreichbar. Backend läuft als Service."
 echo "------------------------------------------------------------"
 echo "Zugriff auf die Fotobox:"
-echo "Frontend:  http://$SERVER_IP/start.html (bzw. index.html)"
+echo "Frontend:  $FRONTEND_URL"
 echo "Backend-API:  http://$SERVER_IP:5000/api/ (z.B. /api/photos)"
 echo "Fotos:  http://$SERVER_IP:5000/photos/<dateiname.jpg>"
 echo "------------------------------------------------------------"
