@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Fotobox</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2em; }
+        #photos img { max-width: 200px; margin: 0.5em; }
+    </style>
+</head>
+<body>
+    <h1>Fotobox</h1>
+    <button id="takePhotoBtn">Foto aufnehmen</button>
+    <h2>Aufgenommene Fotos</h2>
+    <div id="photos"></div>
+    <script>
+        async function loadPhotos() {
+            const res = await fetch('/api/photos');
+            const data = await res.json();
+            const photosDiv = document.getElementById('photos');
+            photosDiv.innerHTML = '';
+            data.photos.forEach(photo => {
+                const img = document.createElement('img');
+                img.src = '/photos/' + photo;
+                photosDiv.appendChild(img);
+            });
+        }
+        document.getElementById('takePhotoBtn').onclick = async () => {
+            await fetch('/api/take_photo', { method: 'POST' });
+            loadPhotos();
+        };
+        loadPhotos();
+    </script>
+</body>
+</html>
