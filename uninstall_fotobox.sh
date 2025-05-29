@@ -67,6 +67,8 @@ systemctl restart nginx
 
 # Projektverzeichnis entfernen
 rm -rf "$PROJECT_DIR"
+# SQLite-Datenbank entfernen, falls noch vorhanden
+rm -f "$PROJECT_DIR/backend/fotobox_settings.db"
 
 # Abschlussmeldung
 cat <<EOM

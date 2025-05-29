@@ -51,17 +51,19 @@
             if(document.getElementById('adminPassword').value === ADMIN_PASS) {
                 document.getElementById('loginForm').style.display = 'none';
                 document.getElementById('configForm').style.display = '';
+                loadConfigFromServer();
             } else {
                 document.getElementById('loginStatus').textContent = 'Falsches Passwort!';
             }
         };
-        // Einstellungen laden
-        function loadConfig() {
-            const config = JSON.parse(localStorage.getItem('fotobox_config') || '{}');
-            if(config.camera_mode) document.getElementById('camera_mode').value = config.camera_mode;
-            if(config.resolution) document.getElementById('resolution').value = config.resolution;
-            if(config.storage_path) document.getElementById('storage_path').value = config.storage_path;
-            if(config.event_name) document.getElementById('event_name').value = config.event_name;
+        // Einstellungen vom Server laden
+        function loadConfigFromServer() {
+            fetch('/api/settings').then(r=>r.json()).then(config => {
+                if(config.camera_mode) document.getElementById('camera_mode').value = config.camera_mode;
+                if(config.resolution) document.getElementById('resolution').value = config.resolution;
+                if(config.storage_path) document.getElementById('storage_path').value = config.storage_path;
+                if(config.event_name) document.getElementById('event_name').value = config.event_name;
+            });
         }
         // Einstellungen speichern
         document.getElementById('configForm').onsubmit = function(e) {
@@ -72,11 +74,15 @@
                 storage_path: document.getElementById('storage_path').value,
                 event_name: document.getElementById('event_name').value
             };
-            localStorage.setItem('fotobox_config', JSON.stringify(config));
-            document.getElementById('status').textContent = 'Gespeichert!';
-            setTimeout(()=>document.getElementById('status').textContent='', 1500);
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(config)
+            }).then(()=>{
+                document.getElementById('status').textContent = 'Gespeichert!';
+                setTimeout(()=>document.getElementById('status').textContent='', 1500);
+            });
         };
-        loadConfig();
     </script>
 </body>
 </html>

@@ -7,7 +7,7 @@ set -e
 
 # 1. Notwendige Pakete installieren
 apt update
-apt install -y nginx python3 python3-pip python3.11-venv git
+apt install -y nginx python3 python3-pip python3.11-venv git sqlite3
 
 # 2. Projekt von GitHub klonen (URL ggf. anpassen)
 PROJECT_DIR="/opt/fotobox"
@@ -47,6 +47,11 @@ cd "$PROJECT_DIR/backend"
 python3 -m venv venv
 ./venv/bin/pip install --upgrade pip
 ./venv/bin/pip install -r requirements.txt
+
+# SQLite-Datenbank initialisieren, falls nicht vorhanden
+if [ ! -f "$PROJECT_DIR/backend/fotobox_settings.db" ]; then
+    ./venv/bin/python -c "import sqlite3; con=sqlite3.connect('fotobox_settings.db'); con.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)'); con.close()"
+fi
 
 # Backup-Verzeichnis anlegen (mit Zeitstempel)
 BACKUP_DIR="$PROJECT_DIR/backup-$(date +%Y%m%d%H%M%S)"
