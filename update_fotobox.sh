@@ -56,6 +56,12 @@ ln -sf /etc/nginx/sites-available/fotobox /etc/nginx/sites-enabled/fotobox
 systemctl restart nginx
 systemctl restart fotobox-backend || true
 
+# Nach dem Update: SQLite-Datenbank initialisieren, falls nicht vorhanden
+if [ ! -f "$PROJECT_DIR/backend/fotobox_settings.db" ]; then
+    cd "$PROJECT_DIR/backend"
+    ./venv/bin/python -c "import sqlite3; con=sqlite3.connect('fotobox_settings.db'); con.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)'); con.close()"
+fi
+
 # Abschlussmeldung
 cat <<EOM
 Update abgeschlossen.
