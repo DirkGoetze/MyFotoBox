@@ -24,7 +24,12 @@ if [ -f /etc/systemd/system/fotobox-backend.service ]; then
 fi
 
 # 2. Projekt aktualisieren
+# Unversionierte README.md sichern, falls vorhanden
+if [ -f "$PROJECT_DIR/documentation/README.md" ]; then
+    mv "$PROJECT_DIR/documentation/README.md" "$PROJECT_DIR/documentation/README.md.bak.$(date +%Y%m%d%H%M%S)"
+fi
 cd "$PROJECT_DIR"
+git config --global --add safe.directory "$PROJECT_DIR"
 if [ -d .git ]; then
     git pull origin main || git pull origin master
 else
