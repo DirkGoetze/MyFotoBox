@@ -51,9 +51,13 @@ else
 fi
 
 # 4. NGINX und systemd-Service neu laden
-cp "$PROJECT_DIR/nginx-fotobox.conf" /etc/nginx/sites-available/fotobox
-ln -sf /etc/nginx/sites-available/fotobox /etc/nginx/sites-enabled/fotobox
-systemctl restart nginx
+if [ -f "$PROJECT_DIR/conf/nginx-fotobox.conf" ]; then
+    cp "$PROJECT_DIR/conf/nginx-fotobox.conf" /etc/nginx/sites-available/fotobox
+    ln -sf /etc/nginx/sites-available/fotobox /etc/nginx/sites-enabled/fotobox
+    systemctl restart nginx
+else
+    echo "Warnung: $PROJECT_DIR/conf/nginx-fotobox.conf nicht gefunden! NGINX-Konfiguration wurde nicht aktualisiert."
+fi
 systemctl restart fotobox-backend || true
 
 # Nach dem Update: SQLite-Datenbank initialisieren, falls nicht vorhanden
