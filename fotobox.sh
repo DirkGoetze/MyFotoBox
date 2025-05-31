@@ -12,19 +12,19 @@ REPO_URL="https://github.com/DirkGoetze/fotobox2.git"
 
 # --- System aktualisieren ---
 update_system() {
-    echo "[1/8] Systempakete werden aktualisiert ..."
-    apt update -qq > /dev/null
+    echo "[1/9] Systempakete werden aktualisiert ..."
+    apt-get update -qq > /dev/null
 }
 
 # --- Notwendige Software installieren ---
 install_software() {
-    echo "[2/8] Notwendige Software wird installiert ..."
-    apt install -y -qq nginx python3 python3-pip python3.11-venv git sqlite3 lsof > /dev/null
+    echo "[2/9] Notwendige Software wird installiert ..."
+    apt-get install -y -qq nginx python3 python3-pip python3.11-venv git sqlite3 lsof > /dev/null
 }
 
 # --- User und Gruppe anlegen ---
 setup_user_group() {
-    echo "[3/8] Systembenutzer und Gruppe prüfen ..."
+    echo "[3/9] Systembenutzer und Gruppe prüfen ..."
     read -p "Bitte geben Sie den gewünschten System-User für die Fotobox ein [www-data]: " input_user
     FOTOBOX_USER=${input_user:-www-data}
     read -p "Bitte geben Sie die gewünschte System-Gruppe für die Fotobox ein [www-data]: " input_group
@@ -41,12 +41,12 @@ setup_user_group() {
 
 # --- Projekt klonen oder aktualisieren (Self-Bootstrap) ---
 bootstrap_project() {
-    echo "[4/8] Projektdateien werden bereitgestellt ..."
+    echo "[4/9] Projektdateien werden bereitgestellt ..."
     if [ ! -d "$PROJECT_DIR" ]; then
         echo "  → Repository wird geklont ..."
         if ! command -v git &>/dev/null; then
             echo "  → git wird installiert ..."
-            apt update -qq > /dev/null && apt install -y -qq git > /dev/null
+            apt-get update -qq > /dev/null && apt-get install -y -qq git > /dev/null
         fi
         git clone -q "$REPO_URL" "$PROJECT_DIR" > /dev/null
     else
@@ -57,7 +57,7 @@ bootstrap_project() {
 
 # --- Python venv und Abhängigkeiten ---
 setup_python_backend() {
-    echo "[5/8] Python-Umgebung und Backend-Abhängigkeiten werden eingerichtet ..."
+    echo "[5/9] Python-Umgebung und Backend-Abhängigkeiten werden eingerichtet ..."
     cd "$PROJECT_DIR/backend"
     python3 -m venv venv > /dev/null 2>&1
     ./venv/bin/pip install --upgrade pip > /dev/null
@@ -67,9 +67,33 @@ setup_python_backend() {
     fi
 }
 
+# --- Passwort für Konfiguration abfragen und speichern ---
+setup_config_password() {
+    echo "[6/9] Passwort für Konfigurationsseite wird gesetzt ..."
+    echo "[SICHERHEIT] Zugang zur Konfigurationsseite"
+    echo "Für den Zugang zur Konfigurationsseite der Fotobox wird ein Passwort benötigt."
+    echo "Bitte wählen Sie ein sicheres Passwort. Dieses wird im Backend gespeichert und schützt Ihre Einstellungen vor unbefugtem Zugriff."
+    echo "Das Passwort kann später über die Konfigurationsseite geändert werden."
+    while true; do
+        read -s -p "Neues Konfigurations-Passwort: " CONFIG_PW1; echo
+        read -s -p "Passwort wiederholen: " CONFIG_PW2; echo
+        if [ "$CONFIG_PW1" != "$CONFIG_PW2" ]; then
+            echo "Die Passwörter stimmen nicht überein. Bitte erneut eingeben."
+        elif [ -z "$CONFIG_PW1" ]; then
+            echo "Das Passwort darf nicht leer sein."
+        else
+            break
+        fi
+    done
+    # Passwort in die Datenbank schreiben (ersetzt bisherigen Wert)
+    cd "$PROJECT_DIR/backend"
+    ./venv/bin/python -c "import sqlite3, hashlib; con=sqlite3.connect('fotobox_settings.db'); con.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)'); con.execute('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', ('config_password', hashlib.sha256('$CONFIG_PW1'.encode()).hexdigest())); con.commit(); con.close()"
+    echo "Das Passwort wurde sicher gespeichert. Bewahren Sie es gut auf!"
+}
+
 # --- Backup und Datei-Organisation ---
 backup_and_organize() {
-    echo "[6/8] Systemdateien werden gesichert ..."
+    echo "[7/9] Systemdateien werden gesichert ..."
     BACKUP_DIR="$PROJECT_DIR/backup-$(date +%Y%m%d%H%M%S)"
     mkdir -p "$BACKUP_DIR"
     if [ -f /etc/nginx/sites-available/fotobox ]; then
@@ -96,7 +120,7 @@ backup_and_organize() {
 
 # --- NGINX konfigurieren ---
 configure_nginx() {
-    echo "[7/8] NGINX-Konfiguration wird eingerichtet ..."
+    echo "[8/9] NGINX-Konfiguration wird eingerichtet ..."
     if lsof -i :80 | grep LISTEN > /dev/null; then
         echo "  → Port 80 ist belegt. Alternativer Port wird abgefragt ..."
         read -p "Bitte geben Sie einen alternativen Port für NGINX ein [8080]: " ALT_PORT
@@ -119,7 +143,7 @@ configure_nginx() {
 
 # --- systemd-Service für Backend ---
 setup_systemd_service() {
-    echo "[8/8] Backend-Service wird eingerichtet und gestartet ..."
+    echo "[9/9] Backend-Service wird eingerichtet und gestartet ..."
     SERVICE_FILE="/etc/systemd/system/fotobox-backend.service"
     if [ ! -f "$SERVICE_FILE" ]; then
 cat > "$SERVICE_FILE" <<EOL
@@ -278,6 +302,7 @@ case "$1" in
         setup_user_group
         bootstrap_project
         setup_python_backend
+        setup_config_password
         backup_and_organize
         configure_nginx
         setup_systemd_service
