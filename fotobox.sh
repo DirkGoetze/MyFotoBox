@@ -362,6 +362,7 @@ setup_python_backend() {
         print_error "Fehler: Python-venv konnte nicht erstellt werden!"
         exit 1
     fi
+
     if run_and_log "pip install --upgrade pip" ./venv/bin/pip install --upgrade pip && \
        run_and_log "pip install requirements.txt" ./venv/bin/pip install -r requirements.txt; then
         print_success "  → Python-Abhängigkeiten wurden installiert."
@@ -369,6 +370,7 @@ setup_python_backend() {
         print_error "Fehler: Python-Abhängigkeiten konnten nicht installiert werden!"
         exit 1
     fi
+
     if [ ! -f "$PROJECT_DIR/backend/fotobox_settings.db" ]; then
         if run_and_log "sqlite3 DB initialisieren" ./venv/bin/python -c "import sqlite3; con=sqlite3.connect('fotobox_settings.db'); con.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)'); con.close()"; then
             print_success "  → Datenbank wurde initialisiert."
@@ -377,6 +379,7 @@ setup_python_backend() {
             exit 1
         fi
     fi
+    
     # SQLite-Schreibtest
     if run_and_log "sqlite3 Schreibtest" ./venv/bin/python -c "import sqlite3; con=sqlite3.connect('fotobox_settings.db'); con.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('test_write', 'ok')\"); con.commit(); con.close()"; then
         print_success "  → SQLite-Schreibtest erfolgreich."
