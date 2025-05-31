@@ -23,6 +23,26 @@ set -e
 PROJECT_DIR="/opt/fotobox"
 REPO_URL="https://github.com/DirkGoetze/fotobox2.git"
 
+# Farbdefinitionen für Ausgaben
+COLOR_GREEN="\033[1;32m"
+COLOR_RED="\033[1;31m"
+COLOR_YELLOW="\033[1;33m"
+COLOR_RESET="\033[0m"
+
+# Hilfsfunktionen für farbige Ausgaben
+print_success() {
+    echo -e "${COLOR_GREEN}$1${COLOR_RESET}"
+}
+print_error() {
+    echo -e "${COLOR_RED}$1${COLOR_RESET}"
+}
+print_warning() {
+    echo -e "${COLOR_RED}$1${COLOR_RESET}"
+}
+print_interactive() {
+    echo -e "${COLOR_YELLOW}$1${COLOR_RESET}"
+}
+
 # ------------------------------------------------------------------------------
 # update_system
 # ------------------------------------------------------------------------------
@@ -46,17 +66,19 @@ install_software() {
 # ------------------------------------------------------------------------------
 # Funktion: Prüft und legt Systembenutzer und -gruppe für die Fotobox an (Schritt 3/9)
 setup_user_group() {
-    echo "[3/9] Systembenutzer und Gruppe prüfen ..."
-    read -p "Bitte geben Sie den gewünschten System-User für die Fotobox ein [www-data]: " input_user
+    print_interactive "[3/9] Systembenutzer und Gruppe prüfen ..."
+    print_interactive "Bitte geben Sie den gewünschten System-User für die Fotobox ein [www-data]:"
+    read -p "User: " input_user
     FOTOBOX_USER=${input_user:-www-data}
-    read -p "Bitte geben Sie die gewünschte System-Gruppe für die Fotobox ein [www-data]: " input_group
+    print_interactive "Bitte geben Sie die gewünschte System-Gruppe für die Fotobox ein [www-data]:"
+    read -p "Gruppe: " input_group
     FOTOBOX_GROUP=${input_group:-www-data}
     if ! id -u "$FOTOBOX_USER" &>/dev/null; then
-        echo "  → Benutzer $FOTOBOX_USER wird angelegt ..."
+        print_success "  → Benutzer $FOTOBOX_USER wird angelegt ..."
         adduser --system --no-create-home "$FOTOBOX_USER" > /dev/null
     fi
     if ! getent group "$FOTOBOX_GROUP" &>/dev/null; then
-        echo "  → Gruppe $FOTOBOX_GROUP wird angelegt ..."
+        print_success "  → Gruppe $FOTOBOX_GROUP wird angelegt ..."
         addgroup "$FOTOBOX_GROUP" > /dev/null
     fi
 }
@@ -100,18 +122,20 @@ setup_python_backend() {
 # ------------------------------------------------------------------------------
 # Funktion: Fragt das Passwort für die Konfigurationsseite ab und speichert es (Schritt 6/9)
 setup_config_password() {
-    echo "[6/9] Passwort für Konfigurationsseite wird gesetzt ..."
-    echo "[SICHERHEIT] Zugang zur Konfigurationsseite"
-    echo "Für den Zugang zur Konfigurationsseite der Fotobox wird ein Passwort benötigt."
-    echo "Bitte wählen Sie ein sicheres Passwort. Dieses wird im Backend gespeichert und schützt Ihre Einstellungen vor unbefugtem Zugriff."
-    echo "Das Passwort kann später über die Konfigurationsseite geändert werden."
+    print_interactive "[6/9] Passwort für Konfigurationsseite wird gesetzt ..."
+    print_interactive "[SICHERHEIT] Zugang zur Konfigurationsseite"
+    print_interactive "Für den Zugang zur Konfigurationsseite der Fotobox wird ein Passwort benötigt."
+    print_interactive "Bitte wählen Sie ein sicheres Passwort. Dieses wird im Backend gespeichert und schützt Ihre Einstellungen vor unbefugtem Zugriff."
+    print_interactive "Das Passwort kann später über die Konfigurationsseite geändert werden."
     while true; do
-        read -s -p "Neues Konfigurations-Passwort: " CONFIG_PW1; echo
-        read -s -p "Passwort wiederholen: " CONFIG_PW2; echo
+        print_interactive "Neues Konfigurations-Passwort:"
+        read -s -p "Passwort: " CONFIG_PW1; echo
+        print_interactive "Passwort wiederholen:"
+        read -s -p "Wiederholen: " CONFIG_PW2; echo
         if [ "$CONFIG_PW1" != "$CONFIG_PW2" ]; then
-            echo "Die Passwörter stimmen nicht überein. Bitte erneut eingeben."
+            print_error "Die Passwörter stimmen nicht überein. Bitte erneut eingeben."
         elif [ -z "$CONFIG_PW1" ]; then
-            echo "Das Passwort darf nicht leer sein."
+            print_error "Das Passwort darf nicht leer sein."
         else
             break
         fi
@@ -119,7 +143,7 @@ setup_config_password() {
     # Passwort in die Datenbank schreiben (ersetzt bisherigen Wert)
     cd "$PROJECT_DIR/backend"
     ./venv/bin/python -c "import sqlite3, hashlib; con=sqlite3.connect('fotobox_settings.db'); con.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)'); con.execute('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', ('config_password', hashlib.sha256('$CONFIG_PW1'.encode()).hexdigest())); con.commit(); con.close()"
-    echo "Das Passwort wurde sicher gespeichert. Bewahren Sie es gut auf!"
+    print_success "Das Passwort wurde sicher gespeichert. Bewahren Sie es gut auf!"
 }
 
 # ------------------------------------------------------------------------------
@@ -157,10 +181,11 @@ backup_and_organize() {
 # ------------------------------------------------------------------------------
 # Funktion: Richtet die NGINX-Konfiguration ein, fragt ggf. alternativen Port ab (Schritt 8/9)
 configure_nginx() {
-    echo "[8/9] NGINX-Konfiguration wird eingerichtet ..."
+    print_interactive "[8/9] NGINX-Konfiguration wird eingerichtet ..."
     if lsof -i :80 | grep LISTEN > /dev/null; then
-        echo "  → Port 80 ist belegt. Alternativer Port wird abgefragt ..."
-        read -p "Bitte geben Sie einen alternativen Port für NGINX ein [8080]: " ALT_PORT
+        print_warning "Der Standard-Port [80] des NGINX Webserver ist bereits belegt. Wählen Sie einen alternativen Port (z.B. 8080)"
+        print_interactive "Port:"
+        read -p "" ALT_PORT
         ALT_PORT=${ALT_PORT:-8080}
         NGINX_PORT=$ALT_PORT
     else
@@ -174,8 +199,9 @@ configure_nginx() {
         fi
         ln -sf /etc/nginx/sites-available/fotobox /etc/nginx/sites-enabled/fotobox
         systemctl restart nginx > /dev/null
+        print_success "NGINX-Konfiguration wurde erfolgreich eingerichtet."
     else
-        echo "Warnung: $PROJECT_DIR/conf/nginx-fotobox.conf nicht gefunden! NGINX-Konfiguration wurde nicht aktualisiert."
+        print_warning "Warnung: $PROJECT_DIR/conf/nginx-fotobox.conf nicht gefunden! NGINX-Konfiguration wurde nicht aktualisiert."
     fi
 }
 
@@ -217,24 +243,24 @@ show_final_message() {
     else
         FRONTEND_URL="http://$SERVER_IP/start.html (bzw. index.html)"
     fi
-    echo "\nInstallation abgeschlossen!"
+    print_success "\nInstallation abgeschlossen!"
     echo "------------------------------------------------------------"
-    echo "Fotobox-Frontend:  $FRONTEND_URL"
-    echo "Backend-API:      http://$SERVER_IP:5000/api/ (z.B. /api/photos)"
-    echo "Fotos:            http://$SERVER_IP:5000/photos/<dateiname.jpg>"
+    print_success "Fotobox-Frontend:  $FRONTEND_URL"
+    print_success "Backend-API:      http://$SERVER_IP:5000/api/ (z.B. /api/photos)"
+    print_success "Fotos:            http://$SERVER_IP:5000/photos/<dateiname.jpg>"
     echo "------------------------------------------------------------"
-    echo "Hinweis: Die ermittelte IP-Adresse ist ggf. nur im lokalen Netzwerk gültig."
+    print_interactive "Hinweis: Die ermittelte IP-Adresse ist ggf. nur im lokalen Netzwerk gültig."
     # Skript ins Projektverzeichnis verschieben und dort ausführbar machen
     SCRIPT_PATH="$(readlink -f "$0")"
     if [ "$PWD" != "$PROJECT_DIR" ]; then
         if [ -f "$SCRIPT_PATH" ]; then
             cp "$SCRIPT_PATH" "$PROJECT_DIR/fotobox.sh"
             chmod +x "$PROJECT_DIR/fotobox.sh"
-            echo "Installationsskript wurde nach $PROJECT_DIR/fotobox.sh kopiert und ausführbar gemacht."
-            echo "Das lokale Installationsskript $SCRIPT_PATH wird nun entfernt."
+            print_success "Installationsskript wurde nach $PROJECT_DIR/fotobox.sh kopiert und ausführbar gemacht."
+            print_interactive "Das lokale Installationsskript $SCRIPT_PATH wird nun entfernt."
             rm -- "$SCRIPT_PATH"
         else
-            echo "Hinweis: Das lokale Installationsskript $SCRIPT_PATH konnte nicht gefunden werden und wurde daher nicht kopiert/gelöscht."
+            print_warning "Hinweis: Das lokale Installationsskript $SCRIPT_PATH konnte nicht gefunden werden und wurde daher nicht kopiert/gelöscht."
         fi
     fi
 }
@@ -416,8 +442,9 @@ update_nginx_config_with_check() {
     LAST_CONF="$PROJECT_DIR/conf/nginx-fotobox.last.conf"
     # Port-Logik wie gehabt
     if lsof -i :80 | grep LISTEN > /dev/null; then
-        echo "  → Port 80 ist belegt. Alternativer Port wird abgefragt ..."
-        read -p "Bitte geben Sie einen alternativen Port für NGINX ein [8080]: " ALT_PORT
+        print_warning "Der Standard-Port [80] des NGINX Webserver ist bereits belegt. Wählen Sie einen alternativen Port (z.B. 8080)"
+        print_interactive "Port:"
+        read -p "" ALT_PORT
         ALT_PORT=${ALT_PORT:-8080}
         NGINX_PORT=$ALT_PORT
     else
@@ -426,25 +453,29 @@ update_nginx_config_with_check() {
     # Vergleich: System vs. Projekt-Konfiguration
     if [ -f "$SYSTEM_CONF" ] && [ -f "$PROJECT_CONF" ]; then
         if ! diff -q "$SYSTEM_CONF" "$PROJECT_CONF" > /dev/null; then
-            echo "Warnung: Die aktuelle NGINX-Konfiguration unterscheidet sich von der im Projekt gespeicherten!"
-            echo "Ein Backup der aktuellen Konfiguration wird angelegt."
+            print_warning "Warnung: Die aktuelle NGINX-Konfiguration unterscheidet sich von der im Projekt gespeicherten!"
+            print_interactive "Ein Backup der aktuellen Konfiguration wird angelegt."
             cp "$SYSTEM_CONF" "$SYSTEM_CONF.bak.$(date +%Y%m%d%H%M%S)"
-            read -p "Soll die Projekt-Konfiguration übernommen werden? [J/n]: " OVERWRITE
+            print_interactive "Soll die Projekt-Konfiguration übernommen werden? [J/n]:"
+            read -p "Antwort: " OVERWRITE
             OVERWRITE=${OVERWRITE:-J}
             if [[ "$OVERWRITE" =~ ^[JjYy]$ ]]; then
                 write_nginx_config_with_port "$PROJECT_CONF" "$SYSTEM_CONF" "$NGINX_PORT"
+                print_success "Projekt-Konfiguration übernommen."
             else
                 write_nginx_config_with_port "$SYSTEM_CONF" "$SYSTEM_CONF" "$NGINX_PORT"
-                echo "Die bestehende NGINX-Konfiguration bleibt erhalten (Port ggf. angepasst)."
+                print_interactive "Die bestehende NGINX-Konfiguration bleibt erhalten (Port ggf. angepasst)."
             fi
         else
             # Keine Unterschiede, trotzdem Port anpassen
             write_nginx_config_with_port "$PROJECT_CONF" "$SYSTEM_CONF" "$NGINX_PORT"
+            print_success "NGINX-Konfiguration wurde aktualisiert."
         fi
     elif [ -f "$PROJECT_CONF" ]; then
         write_nginx_config_with_port "$PROJECT_CONF" "$SYSTEM_CONF" "$NGINX_PORT"
+        print_success "NGINX-Konfiguration wurde übernommen."
     else
-        echo "Warnung: $PROJECT_CONF nicht gefunden! NGINX-Konfiguration wurde nicht aktualisiert."
+        print_warning "Warnung: $PROJECT_CONF nicht gefunden! NGINX-Konfiguration wurde nicht aktualisiert."
     fi
     ln -sf "$SYSTEM_CONF" /etc/nginx/sites-enabled/fotobox
     systemctl restart nginx > /dev/null
@@ -460,8 +491,9 @@ restore_nginx_config_with_port() {
     SYSTEM_CONF="/etc/nginx/sites-available/fotobox"
     BACKUP_CONF="$1"
     if lsof -i :80 | grep LISTEN > /dev/null; then
-        echo "  → Port 80 ist belegt. Alternativer Port wird abgefragt ..."
-        read -p "Bitte geben Sie einen alternativen Port für NGINX ein [8080]: " ALT_PORT
+        print_warning "Der Standard-Port [80] des NGINX Webserver ist bereits belegt. Wählen Sie einen alternativen Port (z.B. 8080)"
+        print_interactive "Port:"
+        read -p "" ALT_PORT
         ALT_PORT=${ALT_PORT:-8080}
         NGINX_PORT=$ALT_PORT
     else
@@ -470,6 +502,7 @@ restore_nginx_config_with_port() {
     write_nginx_config_with_port "$BACKUP_CONF" "$SYSTEM_CONF" "$NGINX_PORT"
     ln -sf "$SYSTEM_CONF" /etc/nginx/sites-enabled/fotobox
     systemctl restart nginx > /dev/null
+    print_success "NGINX-Konfiguration aus Backup wiederhergestellt."
 }
 
 # ------------------------------------------------------------------------------
