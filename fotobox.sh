@@ -158,7 +158,7 @@ setup_user_group() {
     local valid_user=0
     while [ $valid_user -eq 0 ]; do
         print_interactive "Bitte geben Sie den gewünschten System-User für die Fotobox ein [www-data]:"
-        read -p "User: " input_user
+        read -p "User [www-data]: " input_user
         FOTOBOX_USER=${input_user:-www-data}
         if [[ ! "$FOTOBOX_USER" =~ ^[a-zA-Z0-9_-]+$ ]]; then
             print_error "Ungültiger Benutzername! Nur Buchstaben, Zahlen, - und _ erlaubt."
@@ -171,7 +171,7 @@ setup_user_group() {
     local valid_group=0
     while [ $valid_group -eq 0 ]; do
         print_interactive "Bitte geben Sie die gewünschte System-Gruppe für die Fotobox ein [www-data]:"
-        read -p "Gruppe: " input_group
+        read -p "Gruppe [www-data]: " input_group
         FOTOBOX_GROUP=${input_group:-www-data}
         if [[ ! "$FOTOBOX_GROUP" =~ ^[a-zA-Z0-9_-]+$ ]]; then
             print_error "Ungültiger Gruppenname! Nur Buchstaben, Zahlen, - und _ erlaubt."
@@ -276,7 +276,7 @@ configure_nginx() {
         print_warning "Der Standard-Port [80] des NGINX Webserver ist bereits belegt. Wählen Sie einen alternativen Port (z.B. 8080)"
         while true; do
             print_interactive "Port:"
-            read -p "" ALT_PORT
+            read -p "Port [8080]: " ALT_PORT
             ALT_PORT=${ALT_PORT:-8080}
             if lsof -i :$ALT_PORT | grep LISTEN > /dev/null; then
                 print_error "Port $ALT_PORT ist ebenfalls belegt. Bitte anderen Port wählen!"
@@ -290,7 +290,18 @@ configure_nginx() {
     fi
     if [ -f "$PROJECT_DIR/conf/nginx-fotobox.conf" ]; then
         if [ "$NGINX_PORT" != "80" ]; then
-            run_and_log "sed Portanpassung nginx-fotobox.conf ($NGINX_PORT)" sed "s/listen 80;/listen $NGINX_PORT;/g" "$PROJECT_DIR/conf/nginx-fotobox.conf" > /etc/nginx/sites-available/fotobox
+            # Ersetze alle relevanten listen-Direktiven (auch default_server und IPv6)
+            run_and_log "sed Portanpassung nginx-fotobox.conf ($NGINX_PORT)" \
+                sed -e "s/listen 80;/listen $NGINX_PORT;/g" \
+                    -e "s/listen 80 default_server;/listen $NGINX_PORT default_server;/g" \
+                    -e "s/listen [::]:80;/listen [::]:$NGINX_PORT;/g" \
+                    -e "s/listen [::]:80 default_server;/listen [::]:$NGINX_PORT default_server;/g" \
+                "$PROJECT_DIR/conf/nginx-fotobox.conf" > /etc/nginx/sites-available/fotobox
+            # Default-Site deaktivieren, wenn alternativer Port genutzt wird
+            if [ -L /etc/nginx/sites-enabled/default ]; then
+                rm -f /etc/nginx/sites-enabled/default
+                print_interactive "Default-Site wurde deaktiviert, da alternativer Port verwendet wird."
+            fi
         else
             run_and_log "cp nginx-fotobox.conf" cp "$PROJECT_DIR/conf/nginx-fotobox.conf" /etc/nginx/sites-available/fotobox
         fi
@@ -301,6 +312,9 @@ configure_nginx() {
             run_and_log "systemctl restart nginx" systemctl restart nginx
         else
             print_error "Fehler: NGINX-Konfigurationstest fehlgeschlagen! Siehe /tmp/fotobox_nginx_test.log."
+            if [ -f /tmp/fotobox_nginx_test.log ]; then
+                cat /tmp/fotobox_nginx_test.log
+            fi
             exit 1
         fi
         print_success "NGINX-Konfiguration wurde erfolgreich eingerichtet."
@@ -647,7 +661,7 @@ update_nginx_config_with_check() {
         print_warning "Der Standard-Port [80] des NGINX Webserver ist bereits belegt. Wählen Sie einen alternativen Port (z.B. 8080)"
         while true; do
             print_interactive "Port:"
-            read -p "" ALT_PORT
+            read -p "Port [8080]: " ALT_PORT
             ALT_PORT=${ALT_PORT:-8080}
             if lsof -i :$ALT_PORT | grep LISTEN > /dev/null; then
                 print_error "Port $ALT_PORT ist ebenfalls belegt. Bitte anderen Port wählen!"
@@ -703,7 +717,7 @@ restore_nginx_config_with_port() {
         print_warning "Der Standard-Port [80] des NGINX Webserver ist bereits belegt. Wählen Sie einen alternativen Port (z.B. 8080)"
         while true; do
             print_interactive "Port:"
-            read -p "" ALT_PORT
+            read -p "Port [8080]: " ALT_PORT
             ALT_PORT=${ALT_PORT:-8080}
             if lsof -i :$ALT_PORT | grep LISTEN > /dev/null; then
                 print_error "Port $ALT_PORT ist ebenfalls belegt. Bitte anderen Port wählen!"
