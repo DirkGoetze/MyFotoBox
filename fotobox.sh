@@ -220,6 +220,15 @@ update_fotobox() {
     if [ -d .git ]; then
         echo "  → Repository wird aktualisiert ..."
         git pull origin main 2>/dev/null || git pull origin master 2>/dev/null
+        # Prüfe, ob fotobox.sh im Repo neuer ist als das laufende Skript
+        if [ -f "$PROJECT_DIR/fotobox.sh" ]; then
+            if ! cmp -s "$PROJECT_DIR/fotobox.sh" "$SCRIPT_PATH"; then
+                echo "\nHinweis: Es wurde eine neue Version von fotobox.sh im Repository gefunden."
+                echo "Das Update wird jetzt beendet. Bitte starten Sie das Skript neu mit:"
+                echo "  bash $PROJECT_DIR/fotobox.sh --update"
+                exit 0
+            fi
+        fi
     else
         echo "  → Repository wird neu geklont ..."
         rm -rf "$PROJECT_DIR"
@@ -253,10 +262,10 @@ remove_fotobox() {
     if [ -n "$LATEST_BACKUP" ]; then
         echo "  → Systemdateien werden aus Backup wiederhergestellt ..."
         if [ -f "$LATEST_BACKUP/nginx-fotobox.conf.bak" ]; then
-            cp "$LATEST_BACKUP/nginx-fotobox.conf.bak" /etc/nginx/sites-available/fotobox
+            restore_nginx_config_with_port "$LATEST_BACKUP/nginx-fotobox.conf.bak"
         fi
         if [ -f "$LATEST_BACKUP/nginx-fotobox.link.bak" ]; then
-            cp "$LATEST_BACKUP/nginx-fotobox.link.bak" /etc/nginx/sites-enabled/fotobox
+            cp --remove-destination "$LATEST_BACKUP/nginx-fotobox.link.bak" /etc/nginx/sites-enabled/fotobox
         fi
         if [ -f "$LATEST_BACKUP/nginx-default.link.bak" ]; then
             cp "$LATEST_BACKUP/nginx-default.link.bak" /etc/nginx/sites-enabled/default
@@ -265,6 +274,20 @@ remove_fotobox() {
             cp "$LATEST_BACKUP/fotobox-backend.service.bak" /etc/systemd/system/fotobox-backend.service
         fi
         systemctl daemon-reload > /dev/null
+        # NGINX-Konfiguration nach Restore immer mit Port-Anpassung aktivieren
+        if [ -f /etc/nginx/sites-available/fotobox ]; then
+            # Port prüfen und ggf. anpassen
+            if lsof -i :80 | grep LISTEN > /dev/null; then
+                echo "  → Port 80 ist belegt. Alternativer Port wird abgefragt ..."
+                read -p "Bitte geben Sie einen alternativen Port für NGINX ein [8080]: " ALT_PORT
+                ALT_PORT=${ALT_PORT:-8080}
+                NGINX_PORT=$ALT_PORT
+            else
+                NGINX_PORT=80
+            fi
+            write_nginx_config_with_port /etc/nginx/sites-available/fotobox /etc/nginx/sites-available/fotobox "$NGINX_PORT"
+            ln -sf /etc/nginx/sites-available/fotobox /etc/nginx/sites-enabled/fotobox
+        fi
         systemctl restart nginx > /dev/null
     fi
     NGINX_CONF="/etc/nginx/sites-available/fotobox"
@@ -314,9 +337,21 @@ save_nginx_config() {
     fi
 }
 
+# --- Hilfsfunktion: Schreibe NGINX-Konfiguration mit Port-Anpassung ---
+write_nginx_config_with_port() {
+    # $1 = Quell-Datei, $2 = Ziel-Datei, $3 = Port
+    local SRC="$1"
+    local DST="$2"
+    local PORT="$3"
+    if [ "$PORT" != "80" ]; then
+        sed "s/listen 80;/listen $PORT;/g" "$SRC" > "$DST"
+    else
+        cp "$SRC" "$DST"
+    fi
+}
+
 # --- NGINX-Konfiguration vergleichen und anwenden (für Update) ---
 update_nginx_config_with_check() {
-    # Prüft, ob die aktuelle NGINX-Konfiguration von der gespeicherten abweicht
     SYSTEM_CONF="/etc/nginx/sites-available/fotobox"
     PROJECT_CONF="$PROJECT_DIR/conf/nginx-fotobox.conf"
     LAST_CONF="$PROJECT_DIR/conf/nginx-fotobox.last.conf"
@@ -338,32 +373,38 @@ update_nginx_config_with_check() {
             read -p "Soll die Projekt-Konfiguration übernommen werden? [J/n]: " OVERWRITE
             OVERWRITE=${OVERWRITE:-J}
             if [[ "$OVERWRITE" =~ ^[JjYy]$ ]]; then
-                if [ "$NGINX_PORT" != "80" ]; then
-                    sed "s/listen 80;/listen $NGINX_PORT;/g" "$PROJECT_CONF" > "$SYSTEM_CONF"
-                else
-                    cp "$PROJECT_CONF" "$SYSTEM_CONF"
-                fi
+                write_nginx_config_with_port "$PROJECT_CONF" "$SYSTEM_CONF" "$NGINX_PORT"
             else
-                echo "Die bestehende NGINX-Konfiguration bleibt erhalten."
+                write_nginx_config_with_port "$SYSTEM_CONF" "$SYSTEM_CONF" "$NGINX_PORT"
+                echo "Die bestehende NGINX-Konfiguration bleibt erhalten (Port ggf. angepasst)."
             fi
         else
-            # Keine Unterschiede, wie gehabt anwenden
-            if [ "$NGINX_PORT" != "80" ]; then
-                sed "s/listen 80;/listen $NGINX_PORT;/g" "$PROJECT_CONF" > "$SYSTEM_CONF"
-            else
-                cp "$PROJECT_CONF" "$SYSTEM_CONF"
-            fi
+            # Keine Unterschiede, trotzdem Port anpassen
+            write_nginx_config_with_port "$PROJECT_CONF" "$SYSTEM_CONF" "$NGINX_PORT"
         fi
     elif [ -f "$PROJECT_CONF" ]; then
-        # Nur Projekt-Konfiguration vorhanden
-        if [ "$NGINX_PORT" != "80" ]; then
-            sed "s/listen 80;/listen $NGINX_PORT;/g" "$PROJECT_CONF" > "$SYSTEM_CONF"
-        else
-            cp "$PROJECT_CONF" "$SYSTEM_CONF"
-        fi
+        write_nginx_config_with_port "$PROJECT_CONF" "$SYSTEM_CONF" "$NGINX_PORT"
     else
         echo "Warnung: $PROJECT_CONF nicht gefunden! NGINX-Konfiguration wurde nicht aktualisiert."
     fi
+    ln -sf "$SYSTEM_CONF" /etc/nginx/sites-enabled/fotobox
+    systemctl restart nginx > /dev/null
+}
+
+# --- NGINX-Konfiguration aus Backup wiederherstellen (mit Port-Anpassung) ---
+restore_nginx_config_with_port() {
+    # $1 = Backup-Datei
+    SYSTEM_CONF="/etc/nginx/sites-available/fotobox"
+    BACKUP_CONF="$1"
+    if lsof -i :80 | grep LISTEN > /dev/null; then
+        echo "  → Port 80 ist belegt. Alternativer Port wird abgefragt ..."
+        read -p "Bitte geben Sie einen alternativen Port für NGINX ein [8080]: " ALT_PORT
+        ALT_PORT=${ALT_PORT:-8080}
+        NGINX_PORT=$ALT_PORT
+    else
+        NGINX_PORT=80
+    fi
+    write_nginx_config_with_port "$BACKUP_CONF" "$SYSTEM_CONF" "$NGINX_PORT"
     ln -sf "$SYSTEM_CONF" /etc/nginx/sites-enabled/fotobox
     systemctl restart nginx > /dev/null
 }
