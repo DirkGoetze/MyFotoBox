@@ -1,28 +1,50 @@
 #!/bin/bash
-# Fotobox Multi-Tool: Installation und Update
+# ------------------------------------------------------------------------------
+# Fotobox Multi-Tool: Installation, Update, Deinstallation und Systemintegration
+# ------------------------------------------------------------------------------
 # Für Ubuntu/Debian-basierte Systeme
 # Nutzung:
-#   ./fotobox.sh --install   # Erstinstallation
-#   ./fotobox.sh --update    # Update auf aktuelle Version
+#   ./fotobox.sh --install   # Erstinstallation (inkl. User/Gruppe, Abhängigkeiten, Passwort, NGINX, systemd, Backup)
+#   ./fotobox.sh --update    # Update (inkl. automatischer Skript-Selbstaktualisierung, Port-/Konfig-Prüfung, Backup)
+#   ./fotobox.sh --remove    # Deinstallation und Rücksicherung (inkl. Port-/Konfig-Prüfung, Backup)
+#
+# Features:
+# - Ein-Skript-Lösung für alle Lebenszyklus-Phasen
+# - Automatische Port-Prüfung und dynamische NGINX-Konfiguration (auch bei Update/Restore)
+# - Sicherung und Vergleich der NGINX-Konfiguration, Rücksicherung mit Port-Anpassung
+# - Automatische Sicherung und Wiederherstellung aller Systemdateien (NGINX, systemd, DB)
+# - Sichere Passwortverwaltung (SHA256-Hash in SQLite)
+# - Automatische Selbstaktualisierung des Skripts bei Update
+# - Benutzerführung, Fortschrittsanzeige, Fehlerbehandlung
+# - Für produktiven Einsatz auf Linux vorbereitet
 
 set -e
 
 PROJECT_DIR="/opt/fotobox"
 REPO_URL="https://github.com/DirkGoetze/fotobox2.git"
 
-# --- System aktualisieren ---
+# ------------------------------------------------------------------------------
+# update_system
+# ------------------------------------------------------------------------------
+# Funktion: Aktualisiert die Systempakete mit apt-get update (Schritt 1/9)
 update_system() {
     echo "[1/9] Systempakete werden aktualisiert ..."
     apt-get update -qq > /dev/null
 }
 
-# --- Notwendige Software installieren ---
+# ------------------------------------------------------------------------------
+# install_software
+# ------------------------------------------------------------------------------
+# Funktion: Installiert alle benötigten Pakete für die Fotobox (Schritt 2/9)
 install_software() {
     echo "[2/9] Notwendige Software wird installiert ..."
     apt-get install -y -qq nginx python3 python3-pip python3.11-venv git sqlite3 lsof > /dev/null
 }
 
-# --- User und Gruppe anlegen ---
+# ------------------------------------------------------------------------------
+# setup_user_group
+# ------------------------------------------------------------------------------
+# Funktion: Prüft und legt Systembenutzer und -gruppe für die Fotobox an (Schritt 3/9)
 setup_user_group() {
     echo "[3/9] Systembenutzer und Gruppe prüfen ..."
     read -p "Bitte geben Sie den gewünschten System-User für die Fotobox ein [www-data]: " input_user
@@ -39,7 +61,10 @@ setup_user_group() {
     fi
 }
 
-# --- Projekt klonen oder aktualisieren (Self-Bootstrap) ---
+# ------------------------------------------------------------------------------
+# bootstrap_project
+# ------------------------------------------------------------------------------
+# Funktion: Klont oder aktualisiert das Projekt-Repository und setzt Rechte (Schritt 4/9)
 bootstrap_project() {
     echo "[4/9] Projektdateien werden bereitgestellt ..."
     if [ ! -d "$PROJECT_DIR" ]; then
@@ -55,7 +80,10 @@ bootstrap_project() {
     chown -R "$FOTOBOX_USER":"$FOTOBOX_GROUP" "$PROJECT_DIR" > /dev/null 2>&1
 }
 
-# --- Python venv und Abhängigkeiten ---
+# ------------------------------------------------------------------------------
+# setup_python_backend
+# ------------------------------------------------------------------------------
+# Funktion: Richtet die Python-Umgebung und Backend-Abhängigkeiten ein (Schritt 5/9)
 setup_python_backend() {
     echo "[5/9] Python-Umgebung und Backend-Abhängigkeiten werden eingerichtet ..."
     cd "$PROJECT_DIR/backend"
@@ -67,7 +95,10 @@ setup_python_backend() {
     fi
 }
 
-# --- Passwort für Konfiguration abfragen und speichern ---
+# ------------------------------------------------------------------------------
+# setup_config_password
+# ------------------------------------------------------------------------------
+# Funktion: Fragt das Passwort für die Konfigurationsseite ab und speichert es (Schritt 6/9)
 setup_config_password() {
     echo "[6/9] Passwort für Konfigurationsseite wird gesetzt ..."
     echo "[SICHERHEIT] Zugang zur Konfigurationsseite"
@@ -91,7 +122,10 @@ setup_config_password() {
     echo "Das Passwort wurde sicher gespeichert. Bewahren Sie es gut auf!"
 }
 
-# --- Backup und Datei-Organisation ---
+# ------------------------------------------------------------------------------
+# backup_and_organize
+# ------------------------------------------------------------------------------
+# Funktion: Sichert wichtige Systemdateien und organisiert Projektdateien (Schritt 7/9)
 backup_and_organize() {
     echo "[7/9] Systemdateien werden gesichert ..."
     BACKUP_DIR="$PROJECT_DIR/backup-$(date +%Y%m%d%H%M%S)"
@@ -118,7 +152,10 @@ backup_and_organize() {
     fi
 }
 
-# --- NGINX konfigurieren ---
+# ------------------------------------------------------------------------------
+# configure_nginx
+# ------------------------------------------------------------------------------
+# Funktion: Richtet die NGINX-Konfiguration ein, fragt ggf. alternativen Port ab (Schritt 8/9)
 configure_nginx() {
     echo "[8/9] NGINX-Konfiguration wird eingerichtet ..."
     if lsof -i :80 | grep LISTEN > /dev/null; then
@@ -142,7 +179,10 @@ configure_nginx() {
     fi
 }
 
-# --- systemd-Service für Backend ---
+# ------------------------------------------------------------------------------
+# setup_systemd_service
+# ------------------------------------------------------------------------------
+# Funktion: Richtet den systemd-Service für das Backend ein und startet ihn (Schritt 9/9)
 setup_systemd_service() {
     echo "[9/9] Backend-Service wird eingerichtet und gestartet ..."
     SERVICE_FILE="/etc/systemd/system/fotobox-backend.service"
@@ -166,7 +206,10 @@ EOL
     fi
 }
 
-# --- Abschlussmeldung ---
+# ------------------------------------------------------------------------------
+# show_final_message
+# ------------------------------------------------------------------------------
+# Funktion: Zeigt die Abschlussmeldung mit Zugangsdaten und Hinweisen an
 show_final_message() {
     SERVER_IP=$(hostname -I | awk '{print $1}')
     if [ "$NGINX_PORT" != "80" ]; then
@@ -196,7 +239,10 @@ show_final_message() {
     fi
 }
 
-# --- Update-Funktion ---
+# ------------------------------------------------------------------------------
+# update_fotobox
+# ------------------------------------------------------------------------------
+# Funktion: Führt Backup und Aktualisierung der Fotobox durch
 update_fotobox() {
     echo "[Update] Backup und Aktualisierung werden durchgeführt ..."
     BACKUP_DIR="$PROJECT_DIR/backup-update-$(date +%Y%m%d%H%M%S)"
@@ -255,7 +301,10 @@ update_fotobox() {
     echo "Update abgeschlossen. Backup der vorherigen Version liegt unter: $BACKUP_DIR"
 }
 
-# --- Deinstallations-Funktion ---
+# ------------------------------------------------------------------------------
+# remove_fotobox
+# ------------------------------------------------------------------------------
+# Funktion: Deinstalliert die Fotobox und stellt das System aus Backup wieder her
 remove_fotobox() {
     echo "[Remove] Deinstallation und Rücksicherung werden durchgeführt ..."
     LATEST_BACKUP=$(ls -dt $PROJECT_DIR/backup-* 2>/dev/null | head -1)
@@ -328,7 +377,10 @@ Bitte prüfen Sie ggf. manuell, ob weitere benutzerdefinierte Einstellungen entf
 EOM
 }
 
-# --- NGINX-Konfiguration sichern (nach Installation/Update) ---
+# ------------------------------------------------------------------------------
+# save_nginx_config
+# ------------------------------------------------------------------------------
+# Funktion: Sichert die aktuell verwendete NGINX-Konfiguration im Projektverzeichnis
 save_nginx_config() {
     # Speichert die aktuell verwendete NGINX-Konfiguration im Projektverzeichnis
     if [ -f /etc/nginx/sites-available/fotobox ]; then
@@ -337,7 +389,11 @@ save_nginx_config() {
     fi
 }
 
-# --- Hilfsfunktion: Schreibe NGINX-Konfiguration mit Port-Anpassung ---
+# ------------------------------------------------------------------------------
+# write_nginx_config_with_port
+# ------------------------------------------------------------------------------
+# Funktion: Schreibe NGINX-Konfiguration mit Port-Anpassung
+# $1 = Quell-Datei, $2 = Ziel-Datei, $3 = Port
 write_nginx_config_with_port() {
     # $1 = Quell-Datei, $2 = Ziel-Datei, $3 = Port
     local SRC="$1"
@@ -350,7 +406,10 @@ write_nginx_config_with_port() {
     fi
 }
 
-# --- NGINX-Konfiguration vergleichen und anwenden (für Update) ---
+# ------------------------------------------------------------------------------
+# update_nginx_config_with_check
+# ------------------------------------------------------------------------------
+# Funktion: Vergleicht die NGINX-Konfiguration und wendet Änderungen an (für Update)
 update_nginx_config_with_check() {
     SYSTEM_CONF="/etc/nginx/sites-available/fotobox"
     PROJECT_CONF="$PROJECT_DIR/conf/nginx-fotobox.conf"
@@ -391,7 +450,11 @@ update_nginx_config_with_check() {
     systemctl restart nginx > /dev/null
 }
 
-# --- NGINX-Konfiguration aus Backup wiederherstellen (mit Port-Anpassung) ---
+# ------------------------------------------------------------------------------
+# restore_nginx_config_with_port
+# ------------------------------------------------------------------------------
+# Funktion: Stellt die NGINX-Konfiguration aus einem Backup wieder her (mit Port-Anpassung)
+# $1 = Backup-Datei
 restore_nginx_config_with_port() {
     # $1 = Backup-Datei
     SYSTEM_CONF="/etc/nginx/sites-available/fotobox"
@@ -409,7 +472,10 @@ restore_nginx_config_with_port() {
     systemctl restart nginx > /dev/null
 }
 
-# --- Hauptablauf ---
+# ------------------------------------------------------------------------------
+# Hauptablauf
+# ------------------------------------------------------------------------------
+# Funktion: Steuert die Ausführung des Skripts je nach übergebenem Parameter
 case "$1" in
     --install)
         update_system
