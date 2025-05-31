@@ -129,16 +129,17 @@ configure_nginx() {
     else
         NGINX_PORT=80
     fi
-    CONF_SRC="$PROJECT_DIR/conf/nginx-fotobox.conf"
-    CONF_DST="/etc/nginx/sites-available/fotobox"
-    if [ "$NGINX_PORT" != "80" ]; then
-        sed "s/listen 80;/listen $NGINX_PORT;/g" "$CONF_SRC" > "$CONF_DST"
+    if [ -f "$PROJECT_DIR/conf/nginx-fotobox.conf" ]; then
+        if [ "$NGINX_PORT" != "80" ]; then
+            sed "s/listen 80;/listen $NGINX_PORT;/g" "$PROJECT_DIR/conf/nginx-fotobox.conf" > /etc/nginx/sites-available/fotobox
+        else
+            cp "$PROJECT_DIR/conf/nginx-fotobox.conf" /etc/nginx/sites-available/fotobox
+        fi
+        ln -sf /etc/nginx/sites-available/fotobox /etc/nginx/sites-enabled/fotobox
+        systemctl restart nginx > /dev/null
     else
-        cp "$CONF_SRC" "$CONF_DST"
+        echo "Warnung: $PROJECT_DIR/conf/nginx-fotobox.conf nicht gefunden! NGINX-Konfiguration wurde nicht aktualisiert."
     fi
-    ln -sf "$CONF_DST" /etc/nginx/sites-enabled/fotobox
-    rm -f /etc/nginx/sites-enabled/default
-    systemctl restart nginx > /dev/null
 }
 
 # --- systemd-Service für Backend ---
@@ -234,13 +235,10 @@ update_fotobox() {
         ./venv/bin/pip install --upgrade pip > /dev/null
         ./venv/bin/pip install -r requirements.txt > /dev/null
     fi
-    if [ -f "$PROJECT_DIR/conf/nginx-fotobox.conf" ]; then
-        cp "$PROJECT_DIR/conf/nginx-fotobox.conf" /etc/nginx/sites-available/fotobox
-        ln -sf /etc/nginx/sites-available/fotobox /etc/nginx/sites-enabled/fotobox
-        systemctl restart nginx > /dev/null
-    else
-        echo "Warnung: $PROJECT_DIR/conf/nginx-fotobox.conf nicht gefunden! NGINX-Konfiguration wurde nicht aktualisiert."
-    fi
+    # NGINX-Konfiguration prüfen und ggf. anwenden
+    update_nginx_config_with_check
+    # Nach erfolgreichem Update die verwendete Konfiguration sichern
+    save_nginx_config
     systemctl restart fotobox-backend > /dev/null 2>&1 || true
     if [ ! -f "$PROJECT_DIR/backend/fotobox_settings.db" ]; then
         ./venv/bin/python -c "import sqlite3; con=sqlite3.connect('fotobox_settings.db'); con.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)'); con.close()" > /dev/null
@@ -305,6 +303,69 @@ Backups der entfernten Dateien finden Sie unter:
   $BACKUP_DIR
 Bitte prüfen Sie ggf. manuell, ob weitere benutzerdefinierte Einstellungen entfernt werden müssen.
 EOM
+}
+
+# --- NGINX-Konfiguration sichern (nach Installation/Update) ---
+save_nginx_config() {
+    # Speichert die aktuell verwendete NGINX-Konfiguration im Projektverzeichnis
+    if [ -f /etc/nginx/sites-available/fotobox ]; then
+        mkdir -p "$PROJECT_DIR/conf"
+        cp /etc/nginx/sites-available/fotobox "$PROJECT_DIR/conf/nginx-fotobox.last.conf"
+    fi
+}
+
+# --- NGINX-Konfiguration vergleichen und anwenden (für Update) ---
+update_nginx_config_with_check() {
+    # Prüft, ob die aktuelle NGINX-Konfiguration von der gespeicherten abweicht
+    SYSTEM_CONF="/etc/nginx/sites-available/fotobox"
+    PROJECT_CONF="$PROJECT_DIR/conf/nginx-fotobox.conf"
+    LAST_CONF="$PROJECT_DIR/conf/nginx-fotobox.last.conf"
+    # Port-Logik wie gehabt
+    if lsof -i :80 | grep LISTEN > /dev/null; then
+        echo "  → Port 80 ist belegt. Alternativer Port wird abgefragt ..."
+        read -p "Bitte geben Sie einen alternativen Port für NGINX ein [8080]: " ALT_PORT
+        ALT_PORT=${ALT_PORT:-8080}
+        NGINX_PORT=$ALT_PORT
+    else
+        NGINX_PORT=80
+    fi
+    # Vergleich: System vs. Projekt-Konfiguration
+    if [ -f "$SYSTEM_CONF" ] && [ -f "$PROJECT_CONF" ]; then
+        if ! diff -q "$SYSTEM_CONF" "$PROJECT_CONF" > /dev/null; then
+            echo "Warnung: Die aktuelle NGINX-Konfiguration unterscheidet sich von der im Projekt gespeicherten!"
+            echo "Ein Backup der aktuellen Konfiguration wird angelegt."
+            cp "$SYSTEM_CONF" "$SYSTEM_CONF.bak.$(date +%Y%m%d%H%M%S)"
+            read -p "Soll die Projekt-Konfiguration übernommen werden? [J/n]: " OVERWRITE
+            OVERWRITE=${OVERWRITE:-J}
+            if [[ "$OVERWRITE" =~ ^[JjYy]$ ]]; then
+                if [ "$NGINX_PORT" != "80" ]; then
+                    sed "s/listen 80;/listen $NGINX_PORT;/g" "$PROJECT_CONF" > "$SYSTEM_CONF"
+                else
+                    cp "$PROJECT_CONF" "$SYSTEM_CONF"
+                fi
+            else
+                echo "Die bestehende NGINX-Konfiguration bleibt erhalten."
+            fi
+        else
+            # Keine Unterschiede, wie gehabt anwenden
+            if [ "$NGINX_PORT" != "80" ]; then
+                sed "s/listen 80;/listen $NGINX_PORT;/g" "$PROJECT_CONF" > "$SYSTEM_CONF"
+            else
+                cp "$PROJECT_CONF" "$SYSTEM_CONF"
+            fi
+        fi
+    elif [ -f "$PROJECT_CONF" ]; then
+        # Nur Projekt-Konfiguration vorhanden
+        if [ "$NGINX_PORT" != "80" ]; then
+            sed "s/listen 80;/listen $NGINX_PORT;/g" "$PROJECT_CONF" > "$SYSTEM_CONF"
+        else
+            cp "$PROJECT_CONF" "$SYSTEM_CONF"
+        fi
+    else
+        echo "Warnung: $PROJECT_CONF nicht gefunden! NGINX-Konfiguration wurde nicht aktualisiert."
+    fi
+    ln -sf "$SYSTEM_CONF" /etc/nginx/sites-enabled/fotobox
+    systemctl restart nginx > /dev/null
 }
 
 # --- Hauptablauf ---
