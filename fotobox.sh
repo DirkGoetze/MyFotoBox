@@ -378,7 +378,7 @@ setup_python_backend() {
         fi
     fi
     # SQLite-Schreibtest
-    if run_and_log "sqlite3 Schreibtest" ./venv/bin/python -c "import sqlite3; con=sqlite3.connect('fotobox_settings.db'); con.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('test_write', 'ok')\"); con.commit(); con.close()" then
+    if run_and_log "sqlite3 Schreibtest" ./venv/bin/python -c "import sqlite3; con=sqlite3.connect('fotobox_settings.db'); con.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('test_write', 'ok')\"); con.commit(); con.close()"; then
         print_success "  → SQLite-Schreibtest erfolgreich."
     else
         print_error "Fehler: SQLite-Datenbank ist nicht schreibbar! Siehe /tmp/fotobox_sqlite_test.log."
