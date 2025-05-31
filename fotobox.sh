@@ -183,11 +183,15 @@ show_final_message() {
     # Skript ins Projektverzeichnis verschieben und dort ausführbar machen
     SCRIPT_PATH="$(readlink -f "$0")"
     if [ "$PWD" != "$PROJECT_DIR" ]; then
-        cp "$SCRIPT_PATH" "$PROJECT_DIR/fotobox.sh"
-        chmod +x "$PROJECT_DIR/fotobox.sh"
-        echo "Installationsskript wurde nach $PROJECT_DIR/fotobox.sh kopiert und ausführbar gemacht."
-        echo "Das lokale Installationsskript wird nun entfernt."
-        rm -- "$SCRIPT_PATH"
+        if [ -f "$SCRIPT_PATH" ]; then
+            cp "$SCRIPT_PATH" "$PROJECT_DIR/fotobox.sh"
+            chmod +x "$PROJECT_DIR/fotobox.sh"
+            echo "Installationsskript wurde nach $PROJECT_DIR/fotobox.sh kopiert und ausführbar gemacht."
+            echo "Das lokale Installationsskript $SCRIPT_PATH wird nun entfernt."
+            rm -- "$SCRIPT_PATH"
+        else
+            echo "Hinweis: Das lokale Installationsskript $SCRIPT_PATH konnte nicht gefunden werden und wurde daher nicht kopiert/gelöscht."
+        fi
     fi
 }
 
