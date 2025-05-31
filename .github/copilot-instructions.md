@@ -26,16 +26,16 @@ funktionsname() {
 - Optional können weitere Details ergänzt werden.
 - Dieses Schema ist für alle Shell-Skripte und bash-Funktionen zu verwenden.
 
-# Copilot Review Policy für Shell-Skripte (z.B. fotobox.sh)
+# Copilot Review Policy für Quellcodedateien (Shell, Python, HTML, CSS, JS, ...)
 
-Bei jeder Überprüfung eines Shell-Skripts in diesem Projekt sind folgende Vorgaben zwingend zu beachten:
+Bei jeder Überprüfung einer Quellcodedatei (Shell-Skripte, Python-Skripte, HTML-, CSS-, JS-Dateien etc.) in diesem Projekt sind folgende Vorgaben zwingend zu beachten:
 
-- Prüfe Syntax und Ausführung für alle drei Modi: Installation, Update und Deinstallation
-- Suche nach möglichen Fehlerquellen und Schwierigkeiten, die eine korrekte Ausführung verhindern könnten (z.B. Rechte, Konfigurationskonsistenz, Abhängigkeiten, veraltete Software, Distributionen, Hardware)
+- Prüfe Syntax und Ausführung bzw. Funktionalität für alle relevanten Modi (z.B. Installation, Update, Deinstallation, Laufzeit, Interaktion)
+- Suche nach möglichen Fehlerquellen und Schwierigkeiten, die eine korrekte Ausführung oder Darstellung verhindern könnten (z.B. Rechte, Konfigurationskonsistenz, Abhängigkeiten, veraltete Software, Distributionen, Hardware, Browser-Kompatibilität)
 - Liste alle gefundenen Fehler und Schwachstellen auf
 - Schlage für jeden gefundenen Punkt eine Korrektur vor und begründe diese
 - Nach Nutzer-Zustimmung wird jede Anpassung einzeln und nachvollziehbar vorgenommen
-- Ziel: Ein robustes, auf allen aktuellen Debian- und Ubuntu-Systemen (und Derivaten) funktionierendes Skript mit minimalen Hardware-Anforderungen
+- Ziel: Ein robustes, auf allen aktuellen Debian- und Ubuntu-Systemen (und Derivaten) sowie gängigen Browsern funktionierendes Projekt mit minimalen Hardware-Anforderungen
 - Dokumentations- und Kommentarstandard gemäß DOKUMENTATIONSSTANDARD.md
 
 Diese Vorgaben sind bei jeder Überprüfung und Bearbeitung durch Copilot einzuhalten.
