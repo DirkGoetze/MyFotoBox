@@ -181,13 +181,13 @@ show_final_message() {
     echo "------------------------------------------------------------"
     echo "Hinweis: Die ermittelte IP-Adresse ist ggf. nur im lokalen Netzwerk gültig."
     # Skript ins Projektverzeichnis verschieben und dort ausführbar machen
-    SCRIPT_NAME="$(basename "$0")"
+    SCRIPT_PATH="$(readlink -f "$0")"
     if [ "$PWD" != "$PROJECT_DIR" ]; then
-        cp "$0" "$PROJECT_DIR/fotobox.sh"
+        cp "$SCRIPT_PATH" "$PROJECT_DIR/fotobox.sh"
         chmod +x "$PROJECT_DIR/fotobox.sh"
         echo "Installationsskript wurde nach $PROJECT_DIR/fotobox.sh kopiert und ausführbar gemacht."
         echo "Das lokale Installationsskript wird nun entfernt."
-        rm -- "$0"
+        rm -- "$SCRIPT_PATH"
     fi
 }
 
