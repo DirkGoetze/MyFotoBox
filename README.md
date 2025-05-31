@@ -1,53 +1,45 @@
 # Fotobox
 
-Dieses Projekt ist eine Fotobox-Anwendung mit Python-Backend und HTML/JS-Frontend.
+Dieses Projekt ist eine Fotobox-Anwendung mit Python-Backend (Flask), HTML/JS-Frontend und SQLite für Einstellungen. Die Software ist für den Einsatz auf Linux-Systemen (z.B. Raspberry Pi, Ubuntu/Debian) konzipiert und kann per Skript installiert, aktualisiert und deinstalliert werden.
 
-## Installation von GitHub
+## Installation
 
-1. Repository klonen:
-
-   ```sh
-   git clone https://github.com/DirkGoetze/fotobox2.git
-   cd fotobox2
-   ```
-
-2. Installationsskript als root ausführen:
+1. Installationsskript herunterladen:
 
    ```sh
-   sudo bash install_fotobox.sh
+   wget https://raw.githubusercontent.com/DirkGoetze/fotobox2/main/fotobox.sh
+   sudo chmod +x fotobox.sh
+   sudo ./fotobox.sh --install
    ```
 
-Das Skript installiert alle Abhängigkeiten, richtet NGINX ein und startet das Backend als Service.
+   Das Skript lädt automatisch das gesamte Repository, installiert alle Abhängigkeiten, richtet NGINX ein, konfiguriert das Backend als systemd-Service und übernimmt die gesamte Systemintegration. Während der Installation werden Sie nach User/Gruppe für den Betrieb gefragt.
 
-### Sicherheit
+## Update
 
-- Die Konfigurationsseite ist passwortgeschützt, das Passwort sollte regelmäßig geändert werden.
-- Für den Produktivbetrieb HTTPS aktivieren (z. B. mit Let's Encrypt).
-
-## Update des Projekts
-
-Um das Projekt auf die neueste Version zu aktualisieren, führen Sie das Update-Skript als root aus:
+Um die Fotobox-Software auf die neueste Version zu aktualisieren, führen Sie das Skript mit dem Update-Parameter aus:
 
 ```sh
-sudo bash update_fotobox.sh
+sudo ./fotobox.sh --update
 ```
 
 Das Skript legt automatisch ein Backup der aktuellen Installation an, aktualisiert den Code aus GitHub, installiert ggf. neue Abhängigkeiten und startet die Dienste neu.
 
 ## Deinstallation
 
-Um das Projekt vollständig zu entfernen und alle Systemänderungen rückgängig zu machen, führen Sie das Deinstallationsskript als root aus:
+Um die Fotobox-Software vollständig zu entfernen und alle Systemänderungen rückgängig zu machen, führen Sie das Skript mit dem Remove-Parameter aus:
 
 ```sh
-sudo bash uninstall_fotobox.sh
+sudo ./fotobox.sh --remove
 ```
 
 Das Skript stellt vorherige Systemdateien aus dem Backup wieder her und entfernt alle Projektdateien sowie die zugehörigen Dienste.
 
+## Hinweise
+
+- Die Konfigurationsseite ist passwortgeschützt, das Passwort sollte regelmäßig geändert werden.
+- Für den Produktivbetrieb wird empfohlen, HTTPS (z. B. mit Let's Encrypt) zu aktivieren.
+- Alle Systemdateien (NGINX, systemd, Datenbank) werden bei Installation, Update und Deinstallation automatisch gesichert und können wiederhergestellt werden.
+
 ---
 
-# Dokumentation zur MyFotoBox-Installation
-
-Die vollständige Anleitung zur Installation, Update und Deinstallation finden Sie in dieser README.md.
-
-(Die Inhalte entsprechen der bisherigen README im Projektroot.)
+Weitere Details und technische Dokumentation finden Sie im Ordner `documentation/`.
