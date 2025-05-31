@@ -20,6 +20,24 @@
 
 set -e
 
+# Root-Prüfung
+if [ "$EUID" -ne 0 ]; then
+    echo -e "\033[1;31mFehler: Dieses Skript muss als root ausgeführt werden!\033[0m"
+    exit 1
+fi
+
+# Distributionserkennung (Debian/Ubuntu)
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    if [[ ! "$ID" =~ ^(debian|ubuntu|raspbian)$ && ! "$ID_LIKE" =~ (debian|ubuntu) ]]; then
+        echo -e "\033[1;31mFehler: Dieses Skript unterstützt nur Debian, Ubuntu oder davon abgeleitete Distributionen!\033[0m"
+        exit 1
+    fi
+else
+    echo -e "\033[1;31mFehler: Konnte die Distribution nicht erkennen (fehlende /etc/os-release). Skript wird abgebrochen.\033[0m"
+    exit 1
+fi
+
 PROJECT_DIR="/opt/fotobox"
 REPO_URL="https://github.com/DirkGoetze/fotobox2.git"
 
@@ -29,18 +47,47 @@ COLOR_RED="\033[1;31m"
 COLOR_YELLOW="\033[1;33m"
 COLOR_RESET="\033[0m"
 
-# Hilfsfunktionen für farbige Ausgaben
+# ------------------------------------------------------------------------------
+# log_message
+# ------------------------------------------------------------------------------
+# Funktion: Schreibt eine Lognachricht mit Zeitstempel in die zentrale Logdatei
+# Parameter: $1 = Log-Level (INFO/WARN/ERROR), $2 = Nachricht
+log_message() {
+    local LEVEL="$1"
+    local MSG="$2"
+    local TS
+    TS="$(date '+%Y-%m-%d %H:%M:%S')"
+    echo "[$TS] [$LEVEL] $MSG" >> "$LOGFILE"
+}
+
+# Logfile-Initialisierung (Pfad und Rechte setzen, Rotation bei >1MB)
+LOGFILE="/var/log/fotobox_install.log"
+if [ -f "$LOGFILE" ]; then
+    if [ $(stat -c%s "$LOGFILE") -gt 1048576 ]; then
+        mv "$LOGFILE" "/var/log/fotobox_install_$(date +%Y%m%d%H%M%S).log"
+        touch "$LOGFILE"
+    fi
+else
+    touch "$LOGFILE"
+fi
+chmod 640 "$LOGFILE"
+
+# Farbige Ausgaben + Logging
 print_success() {
     echo -e "${COLOR_GREEN}$1${COLOR_RESET}"
+    log_message "INFO" "$1"
 }
 print_error() {
     echo -e "${COLOR_RED}$1${COLOR_RESET}"
+    log_message "ERROR" "$1"
 }
 print_warning() {
     echo -e "${COLOR_RED}$1${COLOR_RESET}"
+    log_message "WARN" "$1"
 }
 print_interactive() {
     echo -e "${COLOR_YELLOW}$1${COLOR_RESET}"
+    log_message "INFO" "$1"
 }
 
 # ------------------------------------------------------------------------------
@@ -48,8 +95,13 @@ print_interactive() {
 # ------------------------------------------------------------------------------
 # Funktion: Aktualisiert die Systempakete mit apt-get update (Schritt 1/9)
 update_system() {
-    echo "[1/9] Systempakete werden aktualisiert ..."
-    apt-get update -qq > /dev/null
+    print_interactive "[1/9] Systempakete werden aktualisiert ..."
+    if run_and_log "apt-get update" apt-get update -qq; then
+        print_success "Systempakete wurden erfolgreich aktualisiert."
+    else
+        print_error "Fehler: Systempakete konnten nicht aktualisiert werden!"
+        exit 1
+    fi
 }
 
 # ------------------------------------------------------------------------------
@@ -57,8 +109,44 @@ update_system() {
 # ------------------------------------------------------------------------------
 # Funktion: Installiert alle benötigten Pakete für die Fotobox (Schritt 2/9)
 install_software() {
-    echo "[2/9] Notwendige Software wird installiert ..."
-    apt-get install -y -qq nginx python3 python3-pip python3.11-venv git sqlite3 lsof > /dev/null
+    print_interactive "[2/9] Notwendige Software wird installiert ..."
+    export DEBIAN_FRONTEND=noninteractive
+    # Prüfe, ob nginx installiert ist, sonst nachinstallieren
+    if ! command -v nginx >/dev/null 2>&1; then
+        print_interactive "  → nginx wird installiert ..."
+        if ! run_and_log "apt-get install nginx" apt-get install -y -qq nginx; then
+            print_error "Fehler: nginx konnte nicht installiert werden!"
+            exit 1
+        fi
+    fi
+    # Prüfe, ob systemd vorhanden und aktiv ist
+    if ! pidof systemd >/dev/null 2>&1; then
+        print_error "Fehler: systemd ist nicht aktiv! Dieses Skript benötigt ein laufendes systemd."
+        exit 1
+    fi
+    # Prüfe, ob python3-pip installiert ist, sonst nachinstallieren
+    if ! command -v pip3 >/dev/null 2>&1; then
+        print_interactive "  → python3-pip wird installiert ..."
+        if ! run_and_log "apt-get install python3-pip" apt-get install -y -qq python3-pip; then
+            print_error "Fehler: python3-pip konnte nicht installiert werden!"
+            exit 1
+        fi
+    fi
+    # Prüfe, ob python3-venv installiert ist, sonst nachinstallieren
+    if ! python3 -m venv --help >/dev/null 2>&1; then
+        print_interactive "  → python3-venv wird installiert ..."
+        if ! run_and_log "apt-get install python3-venv" apt-get install -y -qq python3-venv; then
+            print_error "Fehler: python3-venv konnte nicht installiert werden!"
+            exit 1
+        fi
+    fi
+    if run_and_log "apt-get update für weitere Pakete" apt-get update -qq && \
+       run_and_log "apt-get install python3 git sqlite3 lsof" apt-get install -y -qq python3 git sqlite3 lsof; then
+        print_success "Alle benötigten Pakete wurden erfolgreich installiert."
+    else
+        print_error "Fehler: Die Installation der benötigten Pakete ist fehlgeschlagen! Siehe ggf. /var/log/apt/term.log."
+        exit 1
+    fi
 }
 
 # ------------------------------------------------------------------------------
@@ -67,19 +155,51 @@ install_software() {
 # Funktion: Prüft und legt Systembenutzer und -gruppe für die Fotobox an (Schritt 3/9)
 setup_user_group() {
     print_interactive "[3/9] Systembenutzer und Gruppe prüfen ..."
-    print_interactive "Bitte geben Sie den gewünschten System-User für die Fotobox ein [www-data]:"
-    read -p "User: " input_user
-    FOTOBOX_USER=${input_user:-www-data}
-    print_interactive "Bitte geben Sie die gewünschte System-Gruppe für die Fotobox ein [www-data]:"
-    read -p "Gruppe: " input_group
-    FOTOBOX_GROUP=${input_group:-www-data}
+    local valid_user=0
+    while [ $valid_user -eq 0 ]; do
+        print_interactive "Bitte geben Sie den gewünschten System-User für die Fotobox ein [www-data]:"
+        read -p "User: " input_user
+        FOTOBOX_USER=${input_user:-www-data}
+        if [[ ! "$FOTOBOX_USER" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+            print_error "Ungültiger Benutzername! Nur Buchstaben, Zahlen, - und _ erlaubt."
+        elif [[ "$FOTOBOX_USER" == "root" || "$FOTOBOX_USER" == "admin" ]]; then
+            print_error "Reservierter Benutzername! Bitte anderen Namen wählen."
+        else
+            valid_user=1
+        fi
+    done
+    local valid_group=0
+    while [ $valid_group -eq 0 ]; do
+        print_interactive "Bitte geben Sie die gewünschte System-Gruppe für die Fotobox ein [www-data]:"
+        read -p "Gruppe: " input_group
+        FOTOBOX_GROUP=${input_group:-www-data}
+        if [[ ! "$FOTOBOX_GROUP" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+            print_error "Ungültiger Gruppenname! Nur Buchstaben, Zahlen, - und _ erlaubt."
+        elif [[ "$FOTOBOX_GROUP" == "root" || "$FOTOBOX_GROUP" == "admin" ]]; then
+            print_error "Reservierter Gruppenname! Bitte anderen Namen wählen."
+        else
+            valid_group=1
+        fi
+    done
     if ! id -u "$FOTOBOX_USER" &>/dev/null; then
-        print_success "  → Benutzer $FOTOBOX_USER wird angelegt ..."
-        adduser --system --no-create-home "$FOTOBOX_USER" > /dev/null
+        if run_and_log "adduser $FOTOBOX_USER" adduser --system --no-create-home "$FOTOBOX_USER"; then
+            print_success "  → Benutzer $FOTOBOX_USER wurde angelegt."
+        else
+            print_error "Fehler: Benutzer $FOTOBOX_USER konnte nicht angelegt werden!"
+            exit 1
+        fi
+    else
+        print_success "  → Benutzer $FOTOBOX_USER existiert bereits."
     fi
     if ! getent group "$FOTOBOX_GROUP" &>/dev/null; then
-        print_success "  → Gruppe $FOTOBOX_GROUP wird angelegt ..."
-        addgroup "$FOTOBOX_GROUP" > /dev/null
+        if run_and_log "addgroup $FOTOBOX_GROUP" addgroup "$FOTOBOX_GROUP"; then
+            print_success "  → Gruppe $FOTOBOX_GROUP wurde angelegt."
+        else
+            print_error "Fehler: Gruppe $FOTOBOX_GROUP konnte nicht angelegt werden!"
+            exit 1
+        fi
+    else
+        print_success "  → Gruppe $FOTOBOX_GROUP existiert bereits."
     fi
 }
 
@@ -88,18 +208,145 @@ setup_user_group() {
 # ------------------------------------------------------------------------------
 # Funktion: Klont oder aktualisiert das Projekt-Repository und setzt Rechte (Schritt 4/9)
 bootstrap_project() {
-    echo "[4/9] Projektdateien werden bereitgestellt ..."
-    if [ ! -d "$PROJECT_DIR" ]; then
-        echo "  → Repository wird geklont ..."
-        if ! command -v git &>/dev/null; then
-            echo "  → git wird installiert ..."
-            apt-get update -qq > /dev/null && apt-get install -y -qq git > /dev/null
+    print_interactive "[4/9] Projektdateien werden bereitgestellt ..."
+    # Internetverbindung prüfen (maximal 3 Versuche)
+    local net_ok=0
+    for i in {1..3}; do
+        if ping -c 1 -W 2 github.com > /dev/null 2>&1; then
+            net_ok=1
+            break
+        else
+            print_warning "  → Keine Internetverbindung oder github.com nicht erreichbar (Versuch $i/3)."
+            sleep 2
         fi
-        git clone -q "$REPO_URL" "$PROJECT_DIR" > /dev/null
-    else
-        echo "  → Projektverzeichnis existiert bereits."
+    done
+    if [ $net_ok -ne 1 ]; then
+        print_error "Fehler: Keine Internetverbindung oder github.com nicht erreichbar! Bitte prüfen Sie Ihre Netzwerkverbindung."
+        exit 1
     fi
-    chown -R "$FOTOBOX_USER":"$FOTOBOX_GROUP" "$PROJECT_DIR" > /dev/null 2>&1
+    if [ ! -d "$PROJECT_DIR" ]; then
+        print_interactive "  → Repository wird geklont ..."
+        if ! command -v git &>/dev/null; then
+            print_interactive "  → git wird installiert ..."
+            run_and_log "apt-get update für git" apt-get update -qq
+            run_and_log "apt-get install git" apt-get install -y -qq git
+        fi
+        # Git-Klonvorgang mit bis zu 3 Versuchen
+        local clone_ok=0
+        for i in {1..3}; do
+            if run_and_log "git clone Versuch $i" git clone -q "$REPO_URL" "$PROJECT_DIR"; then
+                print_success "  → Repository wurde erfolgreich geklont."
+                clone_ok=1
+                break
+            else
+                print_warning "  → Klonen fehlgeschlagen (Versuch $i/3). Prüfe Internet/DNS ..."
+                sleep 2
+            fi
+        done
+        if [ $clone_ok -ne 1 ]; then
+            print_error "Fehler: Repository konnte nach mehreren Versuchen nicht geklont werden! Siehe $LOGFILE."
+            exit 1
+        fi
+    else
+        print_success "  → Projektverzeichnis existiert bereits."
+    fi
+    if [ ! -d "$PROJECT_DIR" ]; then
+        if run_and_log "mkdir Projektverzeichnis" mkdir -p "$PROJECT_DIR"; then
+            print_success "  → Projektverzeichnis wurde angelegt."
+        else
+            print_error "Fehler: Projektverzeichnis konnte nicht angelegt werden!"
+            exit 1
+        fi
+    fi
+    if run_and_log "chown Projektverzeichnis" chown -R "$FOTOBOX_USER":"$FOTOBOX_GROUP" "$PROJECT_DIR"; then
+        print_success "  → Rechte wurden erfolgreich gesetzt."
+    else
+        print_error "Fehler: Rechte konnten nicht gesetzt werden!"
+        exit 1
+    fi
+}
+
+# ------------------------------------------------------------------------------
+# configure_nginx
+# ------------------------------------------------------------------------------
+# Funktion: Richtet die NGINX-Konfiguration ein, fragt ggf. alternativen Port ab (Schritt 8/9)
+configure_nginx() {
+    print_interactive "[8/9] NGINX-Konfiguration wird eingerichtet ..."
+    if lsof -i :80 | grep LISTEN > /dev/null; then
+        print_warning "Der Standard-Port [80] des NGINX Webserver ist bereits belegt. Wählen Sie einen alternativen Port (z.B. 8080)"
+        while true; do
+            print_interactive "Port:"
+            read -p "" ALT_PORT
+            ALT_PORT=${ALT_PORT:-8080}
+            if lsof -i :$ALT_PORT | grep LISTEN > /dev/null; then
+                print_error "Port $ALT_PORT ist ebenfalls belegt. Bitte anderen Port wählen!"
+            else
+                NGINX_PORT=$ALT_PORT
+                break
+            fi
+        done
+    else
+        NGINX_PORT=80
+    fi
+    if [ -f "$PROJECT_DIR/conf/nginx-fotobox.conf" ]; then
+        if [ "$NGINX_PORT" != "80" ]; then
+            run_and_log "sed Portanpassung nginx-fotobox.conf ($NGINX_PORT)" sed "s/listen 80;/listen $NGINX_PORT;/g" "$PROJECT_DIR/conf/nginx-fotobox.conf" > /etc/nginx/sites-available/fotobox
+        else
+            run_and_log "cp nginx-fotobox.conf" cp "$PROJECT_DIR/conf/nginx-fotobox.conf" /etc/nginx/sites-available/fotobox
+        fi
+        run_and_log "ln -sf nginx site enable" ln -sf /etc/nginx/sites-available/fotobox /etc/nginx/sites-enabled/fotobox
+        # NGINX-Konfiguration testen
+        if run_and_log "nginx -t" nginx -t 2>&1 | tee /tmp/fotobox_nginx_test.log | grep -q 'successful'; then
+            print_success "NGINX-Konfigurationstest erfolgreich. NGINX wird neu gestartet."
+            run_and_log "systemctl restart nginx" systemctl restart nginx
+        else
+            print_error "Fehler: NGINX-Konfigurationstest fehlgeschlagen! Siehe /tmp/fotobox_nginx_test.log."
+            exit 1
+        fi
+        print_success "NGINX-Konfiguration wurde erfolgreich eingerichtet."
+    else
+        print_warning "Warnung: $PROJECT_DIR/conf/nginx-fotobox.conf nicht gefunden! NGINX-Konfiguration wurde nicht aktualisiert."
+    fi
+}
+
+# ------------------------------------------------------------------------------
+# setup_systemd_service
+# ------------------------------------------------------------------------------
+# Funktion: Richtet den systemd-Service für das Backend ein und startet ihn (Schritt 9/9)
+setup_systemd_service() {
+    # Prüfe, ob systemd vorhanden und aktiv ist
+    if ! pidof systemd >/dev/null 2>&1; then
+        print_error "Fehler: systemd ist nicht aktiv! Dieses Skript benötigt ein laufendes systemd."
+        exit 1
+    fi
+    echo "[9/9] Backend-Service wird eingerichtet ..."
+    SERVICE_FILE="/etc/systemd/system/fotobox-backend.service"
+    if [ ! -f "$SERVICE_FILE" ]; then
+cat > "$SERVICE_FILE" <<EOL
+[Unit]
+Description=Fotobox Backend (Flask)
+After=network.target
+
+[Service]
+User=$FOTOBOX_USER
+WorkingDirectory=$PROJECT_DIR/backend
+ExecStart=$PROJECT_DIR/backend/venv/bin/python app.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOL
+        run_and_log "systemctl daemon-reload" systemctl daemon-reload
+        run_and_log "systemctl enable --now fotobox-backend" systemctl enable --now fotobox-backend
+    fi
+    # Service-Status prüfen
+    if systemctl is-active --quiet fotobox-backend; then
+        print_success "  → systemd-Service fotobox-backend läuft."
+    else
+        print_error "Fehler: systemd-Service fotobox-backend konnte nicht gestartet werden!"
+        run_and_log "journalctl fotobox-backend" journalctl -u fotobox-backend --no-pager | tail -20
+        exit 1
+    fi
 }
 
 # ------------------------------------------------------------------------------
@@ -107,13 +354,35 @@ bootstrap_project() {
 # ------------------------------------------------------------------------------
 # Funktion: Richtet die Python-Umgebung und Backend-Abhängigkeiten ein (Schritt 5/9)
 setup_python_backend() {
-    echo "[5/9] Python-Umgebung und Backend-Abhängigkeiten werden eingerichtet ..."
+    print_interactive "[5/9] Python-Umgebung und Backend-Abhängigkeiten werden eingerichtet ..."
     cd "$PROJECT_DIR/backend"
-    python3 -m venv venv > /dev/null 2>&1
-    ./venv/bin/pip install --upgrade pip > /dev/null
-    ./venv/bin/pip install -r requirements.txt > /dev/null
+    if run_and_log "python3 -m venv venv" python3 -m venv venv; then
+        print_success "  → Python-venv wurde erstellt."
+    else
+        print_error "Fehler: Python-venv konnte nicht erstellt werden!"
+        exit 1
+    fi
+    if run_and_log "pip install --upgrade pip" ./venv/bin/pip install --upgrade pip && \
+       run_and_log "pip install requirements.txt" ./venv/bin/pip install -r requirements.txt; then
+        print_success "  → Python-Abhängigkeiten wurden installiert."
+    else
+        print_error "Fehler: Python-Abhängigkeiten konnten nicht installiert werden!"
+        exit 1
+    fi
     if [ ! -f "$PROJECT_DIR/backend/fotobox_settings.db" ]; then
-        ./venv/bin/python -c "import sqlite3; con=sqlite3.connect('fotobox_settings.db'); con.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)'); con.close()" > /dev/null
+        if run_and_log "sqlite3 DB initialisieren" ./venv/bin/python -c "import sqlite3; con=sqlite3.connect('fotobox_settings.db'); con.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)'); con.close()"; then
+            print_success "  → Datenbank wurde initialisiert."
+        else
+            print_error "Fehler: Datenbank konnte nicht initialisiert werden!"
+            exit 1
+        fi
+    fi
+    # SQLite-Schreibtest
+    if run_and_log "sqlite3 Schreibtest" ./venv/bin/python -c "import sqlite3; con=sqlite3.connect('fotobox_settings.db'); con.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('test_write', 'ok')\"); con.commit(); con.close()" then
+        print_success "  → SQLite-Schreibtest erfolgreich."
+    else
+        print_error "Fehler: SQLite-Datenbank ist nicht schreibbar! Siehe /tmp/fotobox_sqlite_test.log."
+        exit 1
     fi
 }
 
@@ -142,8 +411,16 @@ setup_config_password() {
     done
     # Passwort in die Datenbank schreiben (ersetzt bisherigen Wert)
     cd "$PROJECT_DIR/backend"
-    ./venv/bin/python -c "import sqlite3, hashlib; con=sqlite3.connect('fotobox_settings.db'); con.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)'); con.execute('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', ('config_password', hashlib.sha256('$CONFIG_PW1'.encode()).hexdigest())); con.commit(); con.close()"
-    print_success "Das Passwort wurde sicher gespeichert. Bewahren Sie es gut auf!"
+    # Passwort-Hash berechnen, um Quoting-Probleme zu vermeiden
+    CONFIG_PW_HASH=$(echo -n "$CONFIG_PW1" | ./venv/bin/python -c "import sys,hashlib; print(hashlib.sha256(sys.stdin.read().encode()).hexdigest())")
+    ./venv/bin/python -c "import sqlite3; con=sqlite3.connect('fotobox_settings.db'); con.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)'); con.execute('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', ('config_password', '$CONFIG_PW_HASH')); con.commit(); con.close()"
+    # SQLite-Schreibtest nach Passwort-Setzen
+    if ./venv/bin/python -c "import sqlite3; con=sqlite3.connect('fotobox_settings.db'); con.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('test_pw_write', 'ok')\"); con.commit(); con.close()" 2>/tmp/fotobox_sqlite_pw_test.log; then
+        print_success "Das Passwort wurde sicher gespeichert. Bewahren Sie es gut auf!"
+    else
+        print_error "Fehler: Passwort konnte nicht in die SQLite-Datenbank geschrieben werden! Siehe /tmp/fotobox_sqlite_pw_test.log."
+        exit 1
+    fi
 }
 
 # ------------------------------------------------------------------------------
@@ -151,117 +428,39 @@ setup_config_password() {
 # ------------------------------------------------------------------------------
 # Funktion: Sichert wichtige Systemdateien und organisiert Projektdateien (Schritt 7/9)
 backup_and_organize() {
-    echo "[7/9] Systemdateien werden gesichert ..."
+    print_interactive "[7/9] Systemdateien werden gesichert ..."
     BACKUP_DIR="$PROJECT_DIR/backup-$(date +%Y%m%d%H%M%S)"
-    mkdir -p "$BACKUP_DIR"
+    if run_and_log "mkdir Backup-Verzeichnis" mkdir -p "$BACKUP_DIR"; then
+        print_success "  → Backup-Verzeichnis wurde erstellt."
+    else
+        print_error "Fehler: Backup-Verzeichnis konnte nicht erstellt werden!"
+        exit 1
+    fi
+    local ok=1
     if [ -f /etc/nginx/sites-available/fotobox ]; then
-        cp /etc/nginx/sites-available/fotobox "$BACKUP_DIR/nginx-fotobox.conf.bak"
+        run_and_log "cp nginx-fotobox.conf.bak" cp /etc/nginx/sites-available/fotobox "$BACKUP_DIR/nginx-fotobox.conf.bak" || ok=0
     fi
     if [ -L /etc/nginx/sites-enabled/fotobox ]; then
-        cp --remove-destination /etc/nginx/sites-enabled/fotobox "$BACKUP_DIR/nginx-fotobox.link.bak"
+        run_and_log "cp nginx-fotobox.link.bak" cp --remove-destination /etc/nginx/sites-enabled/fotobox "$BACKUP_DIR/nginx-fotobox.link.bak" || ok=0
     fi
     if [ -f /etc/nginx/sites-enabled/default ]; then
-        cp /etc/nginx/sites-enabled/default "$BACKUP_DIR/nginx-default.link.bak"
+        run_and_log "cp nginx-default.link.bak" cp /etc/nginx/sites-enabled/default "$BACKUP_DIR/nginx-default.link.bak" || ok=0
     fi
     if [ -f /etc/systemd/system/fotobox-backend.service ]; then
-        cp /etc/systemd/system/fotobox-backend.service "$BACKUP_DIR/fotobox-backend.service.bak"
+        run_and_log "cp fotobox-backend.service.bak" cp /etc/systemd/system/fotobox-backend.service "$BACKUP_DIR/fotobox-backend.service.bak" || ok=0
     fi
     if [ -f "$PROJECT_DIR/README.md" ]; then
-        mkdir -p "$PROJECT_DIR/documentation"
-        mv "$PROJECT_DIR/README.md" "$PROJECT_DIR/documentation/README.md"
+        run_and_log "mkdir documentation" mkdir -p "$PROJECT_DIR/documentation"
+        run_and_log "mv README.md" mv "$PROJECT_DIR/README.md" "$PROJECT_DIR/documentation/README.md" || ok=0
     fi
     if [ -f "$PROJECT_DIR/nginx-fotobox.conf" ]; then
-        mkdir -p "$PROJECT_DIR/conf"
-        mv "$PROJECT_DIR/nginx-fotobox.conf" "$PROJECT_DIR/conf/nginx-fotobox.conf"
+        run_and_log "mkdir conf" mkdir -p "$PROJECT_DIR/conf"
+        run_and_log "mv nginx-fotobox.conf" mv "$PROJECT_DIR/nginx-fotobox.conf" "$PROJECT_DIR/conf/nginx-fotobox.conf" || ok=0
     fi
-}
-
-# ------------------------------------------------------------------------------
-# configure_nginx
-# ------------------------------------------------------------------------------
-# Funktion: Richtet die NGINX-Konfiguration ein, fragt ggf. alternativen Port ab (Schritt 8/9)
-configure_nginx() {
-    print_interactive "[8/9] NGINX-Konfiguration wird eingerichtet ..."
-    if lsof -i :80 | grep LISTEN > /dev/null; then
-        print_warning "Der Standard-Port [80] des NGINX Webserver ist bereits belegt. Wählen Sie einen alternativen Port (z.B. 8080)"
-        print_interactive "Port:"
-        read -p "" ALT_PORT
-        ALT_PORT=${ALT_PORT:-8080}
-        NGINX_PORT=$ALT_PORT
+    if [ $ok -eq 1 ]; then
+        print_success "  → Systemdateien wurden erfolgreich gesichert und organisiert."
     else
-        NGINX_PORT=80
-    fi
-    if [ -f "$PROJECT_DIR/conf/nginx-fotobox.conf" ]; then
-        if [ "$NGINX_PORT" != "80" ]; then
-            sed "s/listen 80;/listen $NGINX_PORT;/g" "$PROJECT_DIR/conf/nginx-fotobox.conf" > /etc/nginx/sites-available/fotobox
-        else
-            cp "$PROJECT_DIR/conf/nginx-fotobox.conf" /etc/nginx/sites-available/fotobox
-        fi
-        ln -sf /etc/nginx/sites-available/fotobox /etc/nginx/sites-enabled/fotobox
-        systemctl restart nginx > /dev/null
-        print_success "NGINX-Konfiguration wurde erfolgreich eingerichtet."
-    else
-        print_warning "Warnung: $PROJECT_DIR/conf/nginx-fotobox.conf nicht gefunden! NGINX-Konfiguration wurde nicht aktualisiert."
-    fi
-}
-
-# ------------------------------------------------------------------------------
-# setup_systemd_service
-# ------------------------------------------------------------------------------
-# Funktion: Richtet den systemd-Service für das Backend ein und startet ihn (Schritt 9/9)
-setup_systemd_service() {
-    echo "[9/9] Backend-Service wird eingerichtet und gestartet ..."
-    SERVICE_FILE="/etc/systemd/system/fotobox-backend.service"
-    if [ ! -f "$SERVICE_FILE" ]; then
-cat > "$SERVICE_FILE" <<EOL
-[Unit]
-Description=Fotobox Backend (Flask)
-After=network.target
-
-[Service]
-User=$FOTOBOX_USER
-WorkingDirectory=$PROJECT_DIR/backend
-ExecStart=$PROJECT_DIR/backend/venv/bin/python app.py
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-EOL
-        systemctl daemon-reload > /dev/null
-        systemctl enable --now fotobox-backend > /dev/null
-    fi
-}
-
-# ------------------------------------------------------------------------------
-# show_final_message
-# ------------------------------------------------------------------------------
-# Funktion: Zeigt die Abschlussmeldung mit Zugangsdaten und Hinweisen an
-show_final_message() {
-    SERVER_IP=$(hostname -I | awk '{print $1}')
-    if [ "$NGINX_PORT" != "80" ]; then
-        FRONTEND_URL="http://$SERVER_IP:$NGINX_PORT/start.html (bzw. index.html)"
-    else
-        FRONTEND_URL="http://$SERVER_IP/start.html (bzw. index.html)"
-    fi
-    print_success "\nInstallation abgeschlossen!"
-    echo "------------------------------------------------------------"
-    print_success "Fotobox-Frontend:  $FRONTEND_URL"
-    print_success "Backend-API:      http://$SERVER_IP:5000/api/ (z.B. /api/photos)"
-    print_success "Fotos:            http://$SERVER_IP:5000/photos/<dateiname.jpg>"
-    echo "------------------------------------------------------------"
-    print_interactive "Hinweis: Die ermittelte IP-Adresse ist ggf. nur im lokalen Netzwerk gültig."
-    # Skript ins Projektverzeichnis verschieben und dort ausführbar machen
-    SCRIPT_PATH="$(readlink -f "$0")"
-    if [ "$PWD" != "$PROJECT_DIR" ]; then
-        if [ -f "$SCRIPT_PATH" ]; then
-            cp "$SCRIPT_PATH" "$PROJECT_DIR/fotobox.sh"
-            chmod +x "$PROJECT_DIR/fotobox.sh"
-            print_success "Installationsskript wurde nach $PROJECT_DIR/fotobox.sh kopiert und ausführbar gemacht."
-            print_interactive "Das lokale Installationsskript $SCRIPT_PATH wird nun entfernt."
-            rm -- "$SCRIPT_PATH"
-        else
-            print_warning "Hinweis: Das lokale Installationsskript $SCRIPT_PATH konnte nicht gefunden werden und wurde daher nicht kopiert/gelöscht."
-        fi
+        print_error "Warnung: Mindestens eine Datei konnte nicht gesichert/verschoben werden!"
     fi
 }
 
@@ -287,12 +486,13 @@ update_fotobox() {
     if [ -f "$PROJECT_DIR/documentation/README.md" ]; then
         mv "$PROJECT_DIR/documentation/README.md" "$PROJECT_DIR/documentation/README.md.bak.$(date +%Y%m%d%H%M%S)"
     fi
+    # Fehlerbehandlung: Rollback bei Fehler
+    trap 'rollback_update; print_error "Update abgebrochen. Rollback durchgeführt."; exit 1' ERR
     cd "$PROJECT_DIR"
     git config --global --add safe.directory "$PROJECT_DIR"
     if [ -d .git ]; then
         echo "  → Repository wird aktualisiert ..."
         git pull origin main 2>/dev/null || git pull origin master 2>/dev/null
-        # Prüfe, ob fotobox.sh im Repo neuer ist als das laufende Skript
         if [ -f "$PROJECT_DIR/fotobox.sh" ]; then
             if ! cmp -s "$PROJECT_DIR/fotobox.sh" "$SCRIPT_PATH"; then
                 echo "\nHinweis: Es wurde eine neue Version von fotobox.sh im Repository gefunden."
@@ -316,14 +516,13 @@ update_fotobox() {
         ./venv/bin/pip install --upgrade pip > /dev/null
         ./venv/bin/pip install -r requirements.txt > /dev/null
     fi
-    # NGINX-Konfiguration prüfen und ggf. anwenden
     update_nginx_config_with_check
-    # Nach erfolgreichem Update die verwendete Konfiguration sichern
     save_nginx_config
     systemctl restart fotobox-backend > /dev/null 2>&1 || true
     if [ ! -f "$PROJECT_DIR/backend/fotobox_settings.db" ]; then
         ./venv/bin/python -c "import sqlite3; con=sqlite3.connect('fotobox_settings.db'); con.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)'); con.close()" > /dev/null
     fi
+    trap - ERR
     echo "Update abgeschlossen. Backup der vorherigen Version liegt unter: $BACKUP_DIR"
 }
 
@@ -443,10 +642,17 @@ update_nginx_config_with_check() {
     # Port-Logik wie gehabt
     if lsof -i :80 | grep LISTEN > /dev/null; then
         print_warning "Der Standard-Port [80] des NGINX Webserver ist bereits belegt. Wählen Sie einen alternativen Port (z.B. 8080)"
-        print_interactive "Port:"
-        read -p "" ALT_PORT
-        ALT_PORT=${ALT_PORT:-8080}
-        NGINX_PORT=$ALT_PORT
+        while true; do
+            print_interactive "Port:"
+            read -p "" ALT_PORT
+            ALT_PORT=${ALT_PORT:-8080}
+            if lsof -i :$ALT_PORT | grep LISTEN > /dev/null; then
+                print_error "Port $ALT_PORT ist ebenfalls belegt. Bitte anderen Port wählen!"
+            else
+                NGINX_PORT=$ALT_PORT
+                break
+            fi
+        done
     else
         NGINX_PORT=80
     fi
@@ -492,10 +698,17 @@ restore_nginx_config_with_port() {
     BACKUP_CONF="$1"
     if lsof -i :80 | grep LISTEN > /dev/null; then
         print_warning "Der Standard-Port [80] des NGINX Webserver ist bereits belegt. Wählen Sie einen alternativen Port (z.B. 8080)"
-        print_interactive "Port:"
-        read -p "" ALT_PORT
-        ALT_PORT=${ALT_PORT:-8080}
-        NGINX_PORT=$ALT_PORT
+        while true; do
+            print_interactive "Port:"
+            read -p "" ALT_PORT
+            ALT_PORT=${ALT_PORT:-8080}
+            if lsof -i :$ALT_PORT | grep LISTEN > /dev/null; then
+                print_error "Port $ALT_PORT ist ebenfalls belegt. Bitte anderen Port wählen!"
+            else
+                NGINX_PORT=$ALT_PORT
+                break
+            fi
+        done
     else
         NGINX_PORT=80
     fi
@@ -503,6 +716,26 @@ restore_nginx_config_with_port() {
     ln -sf "$SYSTEM_CONF" /etc/nginx/sites-enabled/fotobox
     systemctl restart nginx > /dev/null
     print_success "NGINX-Konfiguration aus Backup wiederhergestellt."
+}
+
+# ------------------------------------------------------------------------------
+# run_and_log
+# ------------------------------------------------------------------------------
+# Funktion: Führt einen Befehl aus, loggt Kommando, Exitcode und Fehlerausgabe
+# Parameter: $1 = Beschreibung, $2... = Befehl und Argumente
+run_and_log() {
+    local DESC="$1"
+    shift
+    local CMD=("$@")
+    log_message "INFO" "[RUN] $DESC: ${CMD[*]}"
+    "${CMD[@]}" 1>>"$LOGFILE" 2>>"$LOGFILE"
+    local STATUS=$?
+    if [ $STATUS -eq 0 ]; then
+        log_message "INFO" "[OK] $DESC erfolgreich (Exitcode $STATUS)"
+    else
+        log_message "ERROR" "[FAIL] $DESC fehlgeschlagen (Exitcode $STATUS)"
+    fi
+    return $STATUS
 }
 
 # ------------------------------------------------------------------------------

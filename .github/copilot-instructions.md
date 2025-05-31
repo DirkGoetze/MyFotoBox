@@ -25,3 +25,17 @@ funktionsname() {
 - Nach dem Funktionsnamen folgt eine Zeile mit der Beschreibung.
 - Optional können weitere Details ergänzt werden.
 - Dieses Schema ist für alle Shell-Skripte und bash-Funktionen zu verwenden.
+
+# Copilot Review Policy für Shell-Skripte (z.B. fotobox.sh)
+
+Bei jeder Überprüfung eines Shell-Skripts in diesem Projekt sind folgende Vorgaben zwingend zu beachten:
+
+- Prüfe Syntax und Ausführung für alle drei Modi: Installation, Update und Deinstallation
+- Suche nach möglichen Fehlerquellen und Schwierigkeiten, die eine korrekte Ausführung verhindern könnten (z.B. Rechte, Konfigurationskonsistenz, Abhängigkeiten, veraltete Software, Distributionen, Hardware)
+- Liste alle gefundenen Fehler und Schwachstellen auf
+- Schlage für jeden gefundenen Punkt eine Korrektur vor und begründe diese
+- Nach Nutzer-Zustimmung wird jede Anpassung einzeln und nachvollziehbar vorgenommen
+- Ziel: Ein robustes, auf allen aktuellen Debian- und Ubuntu-Systemen (und Derivaten) funktionierendes Skript mit minimalen Hardware-Anforderungen
+- Dokumentations- und Kommentarstandard gemäß DOKUMENTATIONSSTANDARD.md
+
+Diese Vorgaben sind bei jeder Überprüfung und Bearbeitung durch Copilot einzuhalten.
