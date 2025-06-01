@@ -119,9 +119,9 @@ install_software() {
             exit 1
         fi
     fi
-    # Prüfe, ob systemd vorhanden und aktiv ist
-    if ! pidof systemd >/dev/null 2>&1; then
-        print_error "  → Fehler: systemd ist nicht aktiv! Dieses Skript benötigt ein laufendes systemd."
+    # Prüfe, ob systemd vorhanden und aktiv ist (robustere Prüfung)
+    if ! pgrep -x systemd >/dev/null 2>&1 && [ "$(ps -p 1 -o comm=)" != "systemd" ]; then
+        echo -e "\033[1;31mFehler: systemd ist nicht aktiv! Dieses Skript benötigt ein laufendes systemd.\033[0m"
         exit 1
     fi
     # Prüfe, ob python3-pip installiert ist, sonst nachinstallieren
