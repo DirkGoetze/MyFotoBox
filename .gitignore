@@ -1,3 +1,4 @@
 # .gitignore für Produktionssysteme
 .vscode/
 .github/
+backend/venv/
