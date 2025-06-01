@@ -3,12 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Fotobox Konfiguration</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 2em; }
-        label { display: block; margin-top: 1em; }
-        input, select { margin-top: 0.2em; }
-        .info { color: #888; font-size: 0.9em; }
-    </style>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <h1>Fotobox Konfiguration</h1>
@@ -55,62 +50,6 @@
         </fieldset>
     </form>
     <p class="info">Diese Einstellungen werden lokal im Browser gespeichert.</p>
-    <script>
-        // Passwortschutz
-        const ADMIN_PASS = 'fotobox2025'; // TODO: Sicher speichern!
-        document.getElementById('loginForm').onsubmit = function(e) {
-            e.preventDefault();
-            if(document.getElementById('adminPassword').value === ADMIN_PASS) {
-                document.getElementById('loginForm').style.display = 'none';
-                document.getElementById('configForm').style.display = '';
-                document.getElementById('updateForm').style.display = '';
-                loadConfigFromServer();
-            } else {
-                document.getElementById('loginStatus').textContent = 'Falsches Passwort!';
-            }
-        };
-        // Einstellungen vom Server laden
-        function loadConfigFromServer() {
-            fetch('/api/settings').then(r=>r.json()).then(config => {
-                if(config.camera_mode) document.getElementById('camera_mode').value = config.camera_mode;
-                if(config.resolution) document.getElementById('resolution').value = config.resolution;
-                if(config.storage_path) document.getElementById('storage_path').value = config.storage_path;
-                if(config.event_name) document.getElementById('event_name').value = config.event_name;
-                if(config.gallery_timeout_ms) document.getElementById('gallery_timeout').value = Math.round(config.gallery_timeout_ms/1000);
-            });
-        }
-        // Einstellungen speichern
-        document.getElementById('configForm').onsubmit = function(e) {
-            e.preventDefault();
-            const config = {
-                camera_mode: document.getElementById('camera_mode').value,
-                resolution: document.getElementById('resolution').value,
-                storage_path: document.getElementById('storage_path').value,
-                event_name: document.getElementById('event_name').value,
-                gallery_timeout_ms: parseInt(document.getElementById('gallery_timeout').value,10)*1000||60000
-            };
-            fetch('/api/settings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(config)
-            }).then(()=>{
-                document.getElementById('status').textContent = 'Gespeichert!';
-                setTimeout(()=>document.getElementById('status').textContent='', 1500);
-            });
-        };
-        // Update/Backup auslösen
-        document.getElementById('updateForm').onsubmit = function(e) {
-            e.preventDefault();
-            document.getElementById('updateStatus').textContent = 'Update läuft ...';
-            fetch('/update', { method: 'POST' })
-                .then(r => r.text())
-                .then(txt => {
-                    document.getElementById('updateStatus').textContent = txt || 'Update/Backup abgeschlossen.';
-                })
-                .catch(()=>{
-                    document.getElementById('updateStatus').textContent = 'Fehler beim Update/Backup!';
-                });
-        };
-    </script>
+    <script src="js/main.js"></script>
 </body>
 </html>

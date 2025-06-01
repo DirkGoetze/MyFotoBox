@@ -1,0 +1,27 @@
+/* style.css
+-------------------------------------------------------------------------------
+# Funktion: Zentrale CSS-Styles für das Fotobox-Frontend
+-------------------------------------------------------------------------------
+*/
+body { font-family: Arial, sans-serif; margin: 2em; }
+#photos img { max-width: 200px; margin: 0.5em; }
+#menu { margin-bottom: 1em; }
+#galleryView { display: none; }
+#galleryPhotos img { max-width: 300px; margin: 0.5em; border-radius: 8px; box-shadow: 0 2px 8px #888; }
+#backBtn { margin-top: 1em; }
+label { display: block; margin-top: 1em; }
+input, select { margin-top: 0.2em; }
+.info { color: #888; font-size: 0.9em; }
+.splash {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100vh; background: rgba(34,34,34,0.7);
+}
+.splash h1 { font-size: 3em; margin-bottom: 0.5em; }
+.splash button { font-size: 1.2em; margin: 1em; padding: 0.7em 2em; border: none; border-radius: 5px; background: #fff; color: #222; cursor: pointer; }
+.splash .small { font-size: 0.9em; color: #aaa; margin-top: 2em; }
+body.start-bg {
+    margin: 0;
+    background: url('../picture/background.jpg') no-repeat center center fixed;
+    background-size: cover;
+    color: #fff;
+}
