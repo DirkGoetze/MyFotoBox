@@ -4,14 +4,39 @@
 <head>
     <meta charset="UTF-8">
     <title>Fotobox Start</title>
+    <link rel="stylesheet" href="fonts/fontawesome-free-5.15.4-web/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
-    <div class="splash">
+<body class="start-bg">
+    <!-- header-block
+    -------------------------------------------------------------------------------
+    # Funktion: Header mit Projektnamen für Startseite
+    -------------------------------------------------------------------------------
+    -->
+    <header id="mainHeader">
+        <span id="headerTitle">Fotobox</span>
+    </header>
+
+    <div class="splash-panel">
+        <div class="logo-placeholder">
+            <!-- Hier kann später ein Logo eingebunden werden -->
+            <img src="picture/background.jpg" alt="Fotobox Logo" style="max-width:120px; border-radius:50%; box-shadow:0 2px 8px #222; background:#fff; padding:8px; margin-bottom:1em;">
+        </div>
         <h1>Willkommen zur Fotobox</h1>
-        <button onclick="window.location.href='index.html'">Zur Fotoaufnahme</button>
-        <button onclick="window.location.href='config.html'">Zur Einrichtung</button>
-        <div class="small">© 2025 Ihr Eventname</div>
+        <div class="splash-buttons">
+            <button class="main-btn" onclick="window.location.href='index.html'">Zur Fotoaufnahme</button>
+            <button class="main-btn" onclick="window.location.href='config.html'">Zur Einrichtung</button>
+        </div>
+        <div class="small">© 2025 Fotobox</div>
     </div>
+
+    <!-- footer-block
+    -------------------------------------------------------------------------------
+    # Funktion: Footer mit Copyright und Projektnamen für alle Seiten
+    -------------------------------------------------------------------------------
+    -->
+    <footer id="mainFooter">
+        <span id="footerText">© 2025 Fotobox</span>
+    </footer>
 </body>
 </html>

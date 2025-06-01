@@ -3,7 +3,12 @@
 # Funktion: Zentrale CSS-Styles für das Fotobox-Frontend
 -------------------------------------------------------------------------------
 */
-body { font-family: Arial, sans-serif; margin: 2em; }
+body {
+    font-family: Arial, sans-serif;
+    margin: 2em;
+    background: #f4f7fa;
+    color: #222;
+}
 #photos img { max-width: 200px; margin: 0.5em; }
 #menu { margin-bottom: 1em; }
 #galleryView { display: none; }
@@ -24,4 +29,470 @@ body.start-bg {
     background: url('../picture/background.jpg') no-repeat center center fixed;
     background-size: cover;
     color: #fff;
+}
+.splash-panel {
+    background: rgba(34,34,34,0.85);
+    border-radius: 18px;
+    box-shadow: 0 4px 24px #2228;
+    padding: 3em 2em 2em 2em;
+    max-width: 400px;
+    margin: 8vh auto 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.logo-placeholder {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1em;
+}
+.splash-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+    width: 100%;
+    margin-bottom: 2em;
+}
+.main-btn {
+    font-size: 1.3em;
+    padding: 0.9em 2em;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #4e9cff 0%, #38d39f 100%);
+    color: #fff;
+    font-weight: bold;
+    box-shadow: 0 2px 8px #2223;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+.main-btn:hover {
+    background: linear-gradient(90deg, #38d39f 0%, #4e9cff 100%);
+    transform: translateY(-2px) scale(1.03);
+}
+
+/* Heller Modus (Standard) */
+body {
+    background: #f4f7fa;
+    color: #222;
+}
+#captureView, #galleryView, .splash-panel {
+    background: rgba(255,255,255,0.95);
+    color: #222;
+}
+.main-btn, #menu button {
+    background: linear-gradient(90deg, #4e9cff 0%, #38d39f 100%);
+    color: #fff;
+}
+
+/* Dunkler Modus */
+body.dark {
+    background: #181c22;
+    color: #f4f7fa;
+}
+body.dark #captureView, body.dark #galleryView, body.dark .splash-panel {
+    background: rgba(34,34,34,0.95);
+    color: #f4f7fa;
+}
+body.dark .main-btn, body.dark #menu button {
+    background: linear-gradient(90deg, #222 0%, #444 100%);
+    color: #fff;
+}
+body.dark .info {
+    color: #aaa;
+}
+body.dark .small {
+    color: #888;
+}
+
+/* Responsive Layout für Smartphones */
+@media (max-width: 600px) {
+    body, .splash-panel {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .splash-panel {
+        max-width: 98vw;
+        min-width: unset;
+        padding: 1em 0.2em 1em 0.2em;
+        border-radius: 0;
+        box-shadow: none;
+    }
+    .main-btn {
+        font-size: 1em;
+        padding: 0.7em 0.5em;
+    }
+    h1, h2 {
+        font-size: 1.3em;
+    }
+    .logo-placeholder img {
+        max-width: 70px;
+    }
+}
+
+/* Responsive Layout für Tablets */
+@media (min-width: 601px) and (max-width: 1023px) {
+    .splash-panel {
+        max-width: 80vw;
+        padding: 2em 1em 1.5em 1em;
+    }
+    .main-btn {
+        font-size: 1.1em;
+        padding: 0.8em 1.2em;
+    }
+    h1, h2 {
+        font-size: 1.7em;
+    }
+    .logo-placeholder img {
+        max-width: 100px;
+    }
+}
+
+/* Layout für große Bildschirme (ab 1080p) */
+@media (min-width: 1024px) {
+    .splash-panel {
+        max-width: 400px;
+        padding: 3em 2em 2em 2em;
+    }
+    .main-btn {
+        font-size: 1.3em;
+        padding: 0.9em 2em;
+    }
+    h1, h2 {
+        font-size: 2.2em;
+    }
+    .logo-placeholder img {
+        max-width: 120px;
+    }
+}
+
+/* Layout für sehr große Bildschirme (4K, optional) */
+@media (min-width: 1920px) {
+    .splash-panel {
+        max-width: 600px;
+        padding: 4em 3em 3em 3em;
+    }
+    .main-btn {
+        font-size: 1.6em;
+        padding: 1.2em 2.5em;
+    }
+    h1, h2 {
+        font-size: 2.8em;
+    }
+    .logo-placeholder img {
+        max-width: 180px;
+    }
+}
+
+/* Responsive Layout für index.html (Galerie, Menü, Fotos) */
+#menu {
+    display: flex;
+    gap: 1em;
+    justify-content: center;
+    margin-bottom: 2em;
+}
+#menu button {
+    font-size: 1.1em;
+    padding: 0.7em 1.5em;
+    border-radius: 8px;
+    border: none;
+    background: linear-gradient(90deg, #4e9cff 0%, #38d39f 100%);
+    color: #fff;
+    font-weight: bold;
+    box-shadow: 0 2px 8px #2223;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+#menu button:hover {
+    background: linear-gradient(90deg, #38d39f 0%, #4e9cff 100%);
+    transform: translateY(-2px) scale(1.03);
+}
+#captureView, #galleryView {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.5em 1em;
+    background: rgba(255,255,255,0.95);
+    border-radius: 12px;
+    box-shadow: 0 2px 16px #2222;
+}
+#photos, #galleryPhotos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1em;
+    justify-content: flex-start;
+}
+#photos img, #galleryPhotos img {
+    max-width: 180px;
+    width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px #888;
+}
+@media (max-width: 600px) {
+    #menu {
+        flex-direction: column;
+        gap: 0.7em;
+    }
+    #captureView, #galleryView {
+        padding: 0.7em 0.2em;
+        border-radius: 0;
+        box-shadow: none;
+    }
+    #photos img, #galleryPhotos img {
+        max-width: 95vw;
+    }
+    h1, h2 {
+        font-size: 1.2em;
+    }
+}
+@media (min-width: 601px) and (max-width: 1023px) {
+    #captureView, #galleryView {
+        max-width: 98vw;
+        padding: 1em 0.5em;
+    }
+    #photos img, #galleryPhotos img {
+        max-width: 220px;
+    }
+    h1, h2 {
+        font-size: 1.5em;
+    }
+}
+@media (min-width: 1024px) {
+    #captureView, #galleryView {
+        max-width: 900px;
+        padding: 2em 2em;
+    }
+    #photos img, #galleryPhotos img {
+        max-width: 300px;
+    }
+    h1, h2 {
+        font-size: 2em;
+    }
+}
+@media (min-width: 1920px) {
+    #captureView, #galleryView {
+        max-width: 1400px;
+        padding: 3em 4em;
+    }
+    #photos img, #galleryPhotos img {
+        max-width: 400px;
+    }
+    h1, h2 {
+        font-size: 2.7em;
+    }
+}
+.settings-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 0.3em;
+    margin-bottom: 1em;
+}
+.settings-table td.label {
+    width: 28%;
+    font-weight: bold;
+    text-align: left;
+    padding-right: 1em;
+    vertical-align: middle;
+}
+.settings-table td {
+    padding: 0.3em 0.2em;
+    vertical-align: middle;
+}
+.settings-table td.desc {
+    width: 38%;
+    color: #666;
+    font-size: 0.97em;
+    text-align: left;
+    padding-left: 1em;
+}
+@media (max-width: 700px) {
+    .settings-table td.label, .settings-table td.desc {
+        display: block;
+        width: 100%;
+        padding: 0.2em 0;
+    }
+    .settings-table tr {
+        display: block;
+        margin-bottom: 1em;
+    }
+    .settings-table td {
+        display: block;
+        width: 100%;
+    }
+}
+#autosaveToast {
+    position: fixed;
+    top: 1.5em;
+    right: 2em;
+    min-width: 220px;
+    max-width: 90vw;
+    z-index: 9999;
+    padding: 1em 2em;
+    border-radius: 8px;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #fff;
+    box-shadow: 0 2px 12px #2225;
+    opacity: 0.97;
+    display: none;
+    transition: opacity 0.3s;
+}
+#autosaveToast.success {
+    background: linear-gradient(90deg, #38d39f 0%, #4e9cff 100%);
+}
+#autosaveToast.error {
+    background: linear-gradient(90deg, #ff4e4e 0%, #ffb938 100%);
+}
+@media (max-width: 600px) {
+    #autosaveToast {
+        right: 0.5em;
+        left: 0.5em;
+        min-width: unset;
+        padding: 0.7em 0.5em;
+        font-size: 1em;
+    }
+}
+form fieldset {
+    margin-bottom: 1.5em;
+}
+
+/* header-footer-style
+-------------------------------------------------------------------------------
+# Funktion: Styles für Header und Footer (Footer sticky, ohne Rahmen, volle Breite)
+-------------------------------------------------------------------------------
+*/
+header#mainHeader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    z-index: 1000;
+    background: linear-gradient(90deg, #4e9cff 0%, #38d39f 100%);
+    color: #fff;
+    font-size: 1.5em;
+    font-weight: bold;
+    padding: 0.7em 1.5em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0;
+}
+body.dark header#mainHeader {
+    background: linear-gradient(90deg, #222 0%, #444 100%);
+    color: #f4f7fa;
+}
+body {
+    padding-top: 3.2em !important;
+}
+footer#mainFooter {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100vw;
+    background: #222;
+    color: #fff;
+    font-size: 1em;
+    text-align: center;
+    padding: 0.7em 0;
+    margin: 0;
+    box-shadow: none;
+    border: none;
+    letter-spacing: 0.02em;
+    z-index: 1000;
+}
+body.dark footer#mainFooter {
+    background: #181c22;
+    color: #f4f7fa;
+}
+body {
+    padding-bottom: 3em !important;
+}
+@media (max-width: 600px) {
+    header#mainHeader {
+        font-size: 1.1em;
+        padding: 0.5em 0.7em;
+    }
+    footer#mainFooter {
+        font-size: 0.95em;
+        padding: 0.5em 0;
+    }
+    body {
+        padding-top: 2.5em !important;
+        padding-bottom: 2.2em !important;
+    }
+}
+
+/* header-hamburger-style
+-------------------------------------------------------------------------------
+# Funktion: Styles für Hamburger-Menü im Header (responsive, animiert)
+-------------------------------------------------------------------------------
+*/
+.hamburger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    width: 2em;
+    height: 2em;
+    cursor: pointer;
+    margin-left: 1em;
+    z-index: 1100;
+}
+.hamburger span {
+    display: block;
+    height: 0.25em;
+    width: 100%;
+    background: #fff;
+    margin: 0.3em 0;
+    border-radius: 2px;
+    transition: 0.3s;
+}
+#headerMenu {
+    display: none;
+    position: fixed;
+    top: 3.2em;
+    right: 0;
+    background: #fff;
+    color: #222;
+    min-width: 180px;
+    box-shadow: 0 2px 16px #2223;
+    border-radius: 0 0 0.7em 0.7em;
+    z-index: 1100;
+    font-size: 1.1em;
+    padding: 0.7em 0.5em;
+}
+#headerMenu a {
+    display: block;
+    color: #222;
+    text-decoration: none;
+    padding: 0.6em 1.2em;
+    border-radius: 0.4em;
+    margin-bottom: 0.2em;
+    transition: background 0.2s;
+}
+#headerMenu a:hover {
+    background: #38d39f22;
+}
+body.dark #headerMenu {
+    background: #222;
+    color: #f4f7fa;
+    box-shadow: 0 2px 16px #0008;
+}
+body.dark #headerMenu a {
+    color: #f4f7fa;
+}
+body.dark #headerMenu a:hover {
+    background: #38d39f44;
+}
+@media (max-width: 900px) {
+    .hamburger {
+        display: flex;
+    }
+    #headerMenu {
+        top: 2.5em;
+        min-width: 140px;
+        font-size: 1em;
+    }
+    header#mainHeader {
+        font-size: 1.1em;
+        padding: 0.5em 0.7em;
+    }
 }

@@ -89,11 +89,12 @@ if (document.getElementById('loginForm')) {
             document.getElementById('loginStatus').textContent = 'Falsches Passwort!';
         }
     };
-    // Einstellungen vom Server laden
+    // Einstellungen vom Server laden (angepasst für Auflösung)
     function loadConfigFromServer() {
         fetch('/api/settings').then(r=>r.json()).then(config => {
             if(config.camera_mode) document.getElementById('camera_mode').value = config.camera_mode;
-            if(config.resolution) document.getElementById('resolution').value = config.resolution;
+            if(config.resolution_width) document.getElementById('resolution_width').value = config.resolution_width;
+            if(config.resolution_height) document.getElementById('resolution_height').value = config.resolution_height;
             if(config.storage_path) document.getElementById('storage_path').value = config.storage_path;
             if(config.event_name) document.getElementById('event_name').value = config.event_name;
             if(config.gallery_timeout_ms) document.getElementById('gallery_timeout').value = Math.round(config.gallery_timeout_ms/1000);
@@ -104,7 +105,8 @@ if (document.getElementById('loginForm')) {
         e.preventDefault();
         const config = {
             camera_mode: document.getElementById('camera_mode').value,
-            resolution: document.getElementById('resolution').value,
+            resolution_width: document.getElementById('resolution_width').value,
+            resolution_height: document.getElementById('resolution_height').value,
             storage_path: document.getElementById('storage_path').value,
             event_name: document.getElementById('event_name').value,
             gallery_timeout_ms: parseInt(document.getElementById('gallery_timeout').value,10)*1000||60000
@@ -132,3 +134,229 @@ if (document.getElementById('loginForm')) {
             });
     };
 }
+
+// Update & Backup Buttons getrennt
+if(document.getElementById('backupBtn')) {
+    document.getElementById('backupBtn').onclick = function() {
+        const status = document.getElementById('updateStatus');
+        status.textContent = 'Backup läuft ...';
+        fetch('/api/backup', { method: 'POST' })
+            .then(r => r.text())
+            .then(txt => {
+                status.textContent = txt || 'Backup abgeschlossen.';
+            })
+            .catch(()=>{
+                status.textContent = 'Fehler beim Backup!';
+            });
+    };
+}
+if(document.getElementById('updateBtn')) {
+    const updateBtn = document.getElementById('updateBtn');
+    const updateInfoText = document.getElementById('updateInfoText');
+    updateBtn.onclick = function() {
+        const status = document.getElementById('updateStatus');
+        status.textContent = 'Update läuft ...';
+        fetch('/api/update', { method: 'POST' })
+            .then(r => r.text())
+            .then(txt => {
+                status.textContent = txt || 'Update abgeschlossen.';
+            })
+            .catch(()=>{
+                status.textContent = 'Fehler beim Update!';
+            });
+    };
+    // Prüfe, ob ein Update verfügbar ist
+    fetch('/api/update', { method: 'GET' })
+        .then(r => r.json())
+        .then(data => {
+            if(data.update_available) {
+                updateBtn.style.display = '';
+                if(updateInfoText) updateInfoText.style.display = 'none';
+            } else {
+                updateBtn.style.display = 'none';
+                if(updateInfoText) updateInfoText.style.display = '';
+            }
+        })
+        .catch(()=>{
+            updateBtn.style.display = 'none';
+            if(updateInfoText) updateInfoText.style.display = '';
+        });
+}
+
+// Autosave für Konfigurationsseite
+function showAutosaveToast(msg, success=true) {
+    const toast = document.getElementById('autosaveToast');
+    toast.textContent = msg;
+    toast.className = success ? 'success' : 'error';
+    toast.style.display = 'block';
+    clearTimeout(window._autosaveToastTimeout);
+    window._autosaveToastTimeout = setTimeout(() => {
+        toast.style.display = 'none';
+    }, 7000);
+}
+
+function autosaveConfigField(field, label) {
+    field.addEventListener('change', function() {
+        const config = {};
+        config[field.name] = (field.type === 'number') ? parseInt(field.value, 10) : field.value;
+        if(field.name === 'gallery_timeout') config['gallery_timeout_ms'] = config['gallery_timeout']*1000;
+        fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+        }).then(r => {
+            if(r.ok) {
+                showAutosaveToast(label + ' angepasst ...', true);
+            } else {
+                showAutosaveToast(label + ' konnte nicht gespeichert werden!', false);
+            }
+        }).catch(() => {
+            showAutosaveToast(label + ' konnte nicht gespeichert werden!', false);
+        });
+    });
+}
+
+if(document.getElementById('configForm')) {
+    const fields = [
+        {id:'color_mode', label:'Farbschema'},
+        {id:'gallery_timeout', label:'Galerie-Timeout'},
+        {id:'event_name', label:'Eventname'},
+        {id:'storage_path', label:'Speicherpfad'},
+        {id:'camera_mode', label:'Kamera-Modus'}
+    ];
+    fields.forEach(f => {
+        const el = document.getElementById(f.id);
+        if(el) autosaveConfigField(el, f.label);
+    });
+    // Speziell für Auflösung (Breite/Höhe)
+    const resW = document.getElementById('resolution_width');
+    const resH = document.getElementById('resolution_height');
+    if(resW && resH) {
+        [resW, resH].forEach(field => {
+            field.addEventListener('change', function() {
+                const config = {
+                    resolution_width: parseInt(resW.value, 10) || '',
+                    resolution_height: parseInt(resH.value, 10) || ''
+                };
+                fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                }).then(r => {
+                    if(r.ok) {
+                        showAutosaveToast('Foto-Auflösung angepasst ...', true);
+                    } else {
+                        showAutosaveToast('Foto-Auflösung konnte nicht gespeichert werden!', false);
+                    }
+                }).catch(() => {
+                    showAutosaveToast('Foto-Auflösung konnte nicht gespeichert werden!', false);
+                });
+            });
+        });
+    }
+}
+
+// Farbschema-Umschaltung (Light/Dark/Auto)
+function applyColorMode(mode) {
+    if (mode === 'auto') {
+        const hour = new Date().getHours();
+        if (hour >= 7 && hour < 20) {
+            document.body.classList.remove('dark');
+        } else {
+            document.body.classList.add('dark');
+        }
+    } else if (mode === 'dark') {
+        document.body.classList.add('dark');
+    } else {
+        document.body.classList.remove('dark');
+    }
+}
+function getColorMode() {
+    return localStorage.getItem('color_mode') || 'auto';
+}
+function setColorMode(mode) {
+    localStorage.setItem('color_mode', mode);
+    applyColorMode(mode);
+}
+// Initial anwenden
+applyColorMode(getColorMode());
+// Wenn auf der Konfigurationsseite, Auswahlfeld synchronisieren und speichern
+if (document.getElementById('color_mode')) {
+    document.getElementById('color_mode').value = getColorMode();
+    document.getElementById('color_mode').onchange = function() {
+        setColorMode(this.value);
+    };
+}
+
+// header-footer-dynamik
+// -------------------------------------------------------------------------------
+// Funktion: Setzt dynamisch den Header-Titel (Eventname/Projektnamen)
+// -------------------------------------------------------------------------------
+function setHeaderTitle(title) {
+    var el = document.getElementById('headerTitle');
+    if(el) el.textContent = title || 'Fotobox';
+}
+// Für index.html: Eventname dynamisch aus Settings
+if(document.getElementById('headerTitle') && window.location.pathname.endsWith('index.html')) {
+    fetch('/api/settings').then r=>r.json()).then(config => {
+        setHeaderTitle(config.event_name || 'Fotobox');
+        // Footer ggf. auch Eventname anzeigen
+        var f = document.getElementById('footerText');
+        if(f && config.event_name) f.textContent = '© 2025 ' + config.event_name;
+    });
+}
+// Für config.html und start.html statisch (Fotobox/Fotobox Konfiguration)
+if(document.getElementById('headerTitle') && (window.location.pathname.endsWith('config.html') || window.location.pathname.endsWith('start.html'))) {
+    setHeaderTitle(document.title.replace('Start','Fotobox').replace('Konfiguration','Fotobox Konfiguration'));
+    // Footer bleibt © 2025 Fotobox
+}
+
+// hamburger-menu
+// -------------------------------------------------------------------------------
+// Funktion: Hamburger-Menü im Header steuern (öffnen/schließen, Fokus, ESC)
+// -------------------------------------------------------------------------------
+(function(){
+    const btn = document.getElementById('hamburgerBtn');
+    const menu = document.getElementById('headerMenu');
+    if(!btn || !menu) return;
+    function closeMenu() {
+        menu.style.display = 'none';
+        btn.setAttribute('aria-expanded','false');
+    }
+    function openMenu() {
+        menu.style.display = 'block';
+        btn.setAttribute('aria-expanded','true');
+        // Fokus auf erstes Menüelement
+        const first = menu.querySelector('a');
+        if(first) first.focus();
+    }
+    btn.onclick = function(e) {
+        if(menu.style.display==='block') {
+            closeMenu();
+        } else {
+            openMenu();
+        }
+    };
+    btn.onkeydown = function(e) {
+        if(e.key==='Enter' || e.key===' ') {
+            e.preventDefault();
+            btn.click();
+        }
+    };
+    // Schließe Menü bei Klick außerhalb
+    document.addEventListener('click', function(e){
+        if(menu.style.display==='block' && !menu.contains(e.target) && !btn.contains(e.target)) {
+            closeMenu();
+        }
+    });
+    // ESC schließt Menü
+    document.addEventListener('keydown', function(e){
+        if(e.key==='Escape') closeMenu();
+    });
+    // Menü bei Navigation schließen
+    menu.querySelectorAll('a').forEach(a=>{
+        a.addEventListener('click', closeMenu);
+    });
+    // Initial geschlossen
+    closeMenu();
+})();

@@ -122,4 +122,9 @@ def main():
     print('Update abgeschlossen. Siehe Log:', LOGFILE)
 
 if __name__ == '__main__':
+    import sys
+    if '--backup-only' in sys.argv:
+        backup_configs()
+        print('Backup abgeschlossen.')
+        sys.exit(0)
     main()

@@ -3,9 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <title>Fotobox Konfiguration</title>
+    <link rel="stylesheet" href="fonts/fontawesome-free-5.15.4-web/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <!-- header-block
+    -------------------------------------------------------------------------------
+    # Funktion: Header mit Projektnamen für Konfigurationsseite
+    -------------------------------------------------------------------------------
+    -->
+    <header id="mainHeader">
+        <span id="headerTitle">Fotobox Konfiguration</span>
+    </header>
     <h1>Fotobox Konfiguration</h1>
     <form id="loginForm" style="margin-bottom:2em;">
         <label>Passwort für Einstellungen:
@@ -15,41 +24,92 @@
         <span id="loginStatus"></span>
     </form>
     <form id="configForm" style="display:none;">
-        <label>
-            Kamera-Modus:
-            <select name="camera_mode" id="camera_mode">
-                <option value="dummy">Platzhalter (Dummy)</option>
-                <option value="linux">Linux Kamera (z.B. fswebcam)</option>
-            </select>
-        </label>
-        <label>
-            Foto-Auflösung:
-            <input type="text" name="resolution" id="resolution" placeholder="z.B. 1920x1080">
-        </label>
-        <label>
-            Speicherpfad:
-            <input type="text" name="storage_path" id="storage_path" placeholder="z.B. /home/pi/fotos">
-        </label>
-        <label>
-            Eventname:
-            <input type="text" name="event_name" id="event_name" placeholder="z.B. Hochzeit Lisa & Max">
-        </label>
-        <label>
-            Galerie-Timeout (Sekunden):
-            <input type="number" name="gallery_timeout" id="gallery_timeout" min="10" max="600" step="1" placeholder="z.B. 60">
-            <span class="info">Zeit bis automatischer Rückkehr zur Aufnahme-Ansicht</span>
-        </label>
-        <button type="submit">Speichern</button>
-        <span id="status"></span>
+        <fieldset>
+            <legend>Anzeige</legend>
+            <table class="settings-table">
+                <tr>
+                    <td class="label">Farbschema</td>
+                    <td><select name="color_mode" id="color_mode">
+                        <option value="auto">Automatisch (nach Tageszeit)</option>
+                        <option value="light">Hell</option>
+                        <option value="dark">Dunkel</option>
+                    </select></td>
+                    <td class="desc">Steuert hellen, dunklen oder automatischen Modus</td>
+                </tr>
+                <tr>
+                    <td class="label">Galerie-Timeout</td>
+                    <td><input type="number" name="gallery_timeout" id="gallery_timeout" min="10" max="600" step="1" placeholder="z.B. 60"></td>
+                    <td class="desc">Zeit bis Rückkehr zur Aufnahme-Ansicht (Sekunden)</td>
+                </tr>
+            </table>
+        </fieldset>
+        <fieldset>
+            <legend>Event</legend>
+            <table class="settings-table">
+                <tr>
+                    <td class="label">Eventname</td>
+                    <td><input type="text" name="event_name" id="event_name" placeholder="z.B. Hochzeit Lisa & Max"></td>
+                    <td class="desc">Wird in der Galerie und auf Fotos angezeigt</td>
+                </tr>
+                <tr>
+                    <td class="label">Speicherpfad</td>
+                    <td><input type="text" name="storage_path" id="storage_path" placeholder="z.B. /home/pi/fotos"></td>
+                    <td class="desc">Ablageort für neue Fotos</td>
+                </tr>
+            </table>
+        </fieldset>
+        <fieldset>
+            <legend>Fotos</legend>
+            <table class="settings-table">
+                <tr>
+                    <td class="label">Kamera-Modus</td>
+                    <td><select name="camera_mode" id="camera_mode">
+                        <option value="dummy">Platzhalter (Dummy)</option>
+                        <option value="linux">Linux Kamera (z.B. fswebcam)</option>
+                    </select></td>
+                    <td class="desc">Wählt die Art der Kamera-Ansteuerung</td>
+                </tr>
+                <tr>
+                    <td class="label">Foto-Auflösung</td>
+                    <td>
+                        <input type="number" name="resolution_width" id="resolution_width" placeholder="Breite (z.B. 1920)" min="1" style="width:6em;"> x 
+                        <input type="number" name="resolution_height" id="resolution_height" placeholder="Höhe (z.B. 1080)" min="1" style="width:6em;">
+                    </td>
+                    <td class="desc">Breite x Höhe der aufgenommenen Fotos (Pixel)</td>
+                </tr>
+            </table>
+        </fieldset>
     </form>
-    <form id="updateForm" style="display:none; margin-top:2em;">
+    <form id="updateForm" style="display:none;">
         <fieldset>
             <legend>Update & Backup</legend>
-            <button type="submit">Update & Backup jetzt ausführen</button>
+            <table class="settings-table">
+                <tr>
+                    <td class="label">Backup</td>
+                    <td><button type="button" id="backupBtn">Backup jetzt ausführen</button></td>
+                    <td class="desc">Erstellt eine Sicherung aller wichtigen Konfigurationen und Daten</td>
+                </tr>
+                <tr>
+                    <td class="label">Update</td>
+                    <td>
+                        <button type="button" id="updateBtn" style="display:none;">Update jetzt ausführen</button>
+                        <span id="updateInfoText" style="display:none; color:#38d39f; font-weight:bold;">System aktuell</span>
+                    </td>
+                    <td class="desc">Installiert ein verfügbares Software-Update (nur sichtbar, wenn Update vorhanden)</td>
+                </tr>
+            </table>
             <span id="updateStatus"></span>
         </fieldset>
     </form>
-    <p class="info">Diese Einstellungen werden lokal im Browser gespeichert.</p>
+    <div id="autosaveToast" style="display:none;"></div>
+    <!-- footer-block
+    -------------------------------------------------------------------------------
+    # Funktion: Footer mit Copyright und Projektnamen für alle Seiten
+    -------------------------------------------------------------------------------
+    -->
+    <footer id="mainFooter">
+        <span id="footerText">© 2025 Fotobox</span>
+    </footer>
     <script src="js/main.js"></script>
 </body>
 </html>

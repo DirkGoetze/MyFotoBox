@@ -102,9 +102,9 @@ def api_settings():
     cur.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
     if request.method == 'POST':
         data = request.get_json(force=True)
-        for key in ['camera_mode', 'resolution', 'storage_path', 'event_name']:
+        for key in ['camera_mode', 'resolution_width', 'resolution_height', 'storage_path', 'event_name']:
             if key in data:
-                cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, data[key]))
+                cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, str(data[key])))
         db.commit()
         db.close()
         return jsonify({'status': 'ok'})
@@ -113,6 +113,45 @@ def api_settings():
     result = {k: v for k, v in cur.fetchall()}
     db.close()
     return jsonify(result)
+
+# -------------------------------------------------------------------------------
+# /api/backup (POST)
+# -------------------------------------------------------------------------------
+@app.route('/api/backup', methods=['POST'])
+def api_backup():
+    import subprocess, sys
+    proc = subprocess.Popen([sys.executable, 'manage_update.py', '--backup-only'], cwd=os.path.dirname(__file__), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = proc.communicate(timeout=120)
+    if proc.returncode == 0:
+        return out.decode() or 'Backup abgeschlossen.'
+    else:
+        return (err.decode() or 'Fehler beim Backup!'), 500
+
+# -------------------------------------------------------------------------------
+# /api/update (GET, POST)
+# -------------------------------------------------------------------------------
+@app.route('/api/update', methods=['GET', 'POST'])
+def api_update():
+    import subprocess, sys
+    # Dummy-Logik: Prüfe, ob Update verfügbar ist (z.B. git fetch)
+    if request.method == 'GET':
+        import subprocess
+        repo_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        try:
+            subprocess.run(['git', '-C', repo_dir, 'fetch'], check=True)
+            local = subprocess.check_output(['git', '-C', repo_dir, 'rev-parse', 'HEAD']).strip()
+            remote = subprocess.check_output(['git', '-C', repo_dir, 'rev-parse', '@{u}']).strip()
+            update_available = (local != remote)
+        except Exception:
+            update_available = False
+        return jsonify({'update_available': update_available})
+    # POST: Führe Update nur aus, wenn Update verfügbar
+    proc = subprocess.Popen([sys.executable, 'manage_update.py'], cwd=os.path.dirname(__file__), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = proc.communicate(timeout=120)
+    if proc.returncode == 0:
+        return out.decode() or 'Update abgeschlossen.'
+    else:
+        return (err.decode() or 'Fehler beim Update!'), 500
 
 # -------------------------------------------------------------------------------
 # /update (POST)

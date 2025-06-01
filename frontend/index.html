@@ -3,9 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <title>Fotobox</title>
+    <link rel="stylesheet" href="fonts/fontawesome-free-5.15.4-web/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <!-- header-block
+    -------------------------------------------------------------------------------
+    # Funktion: Header mit Hamburger-Menü für alle Seiten
+    -------------------------------------------------------------------------------
+    -->
+    <header id="mainHeader">
+        <span id="headerTitle">Fotobox</span>
+        <button class="hamburger" id="hamburgerBtn" tabindex="0" aria-label="Menü öffnen" aria-expanded="false">
+            <i class="fas fa-bars" aria-hidden="true"></i>
+        </button>
+        <nav id="headerMenu" aria-label="Hauptmenü">
+            <a href="index.html">Aufnahme</a>
+            <a href="index.html#galleryView">Galerie</a>
+            <a href="config.html">Einstellungen</a>
+        </nav>
+    </header>
+    <!-- ...bestehender Inhalt... -->
     <div id="menu">
         <button id="showCapture">Aufnahme</button>
         <button id="showGallery">Galerie</button>
@@ -23,6 +41,14 @@
         <button id="backBtn">Zurück zur Aufnahme</button>
     </div>
     <a href="start.html" style="position:fixed;top:1em;right:1em;">Zurück zur Startseite</a>
+    <!-- footer-block
+    -------------------------------------------------------------------------------
+    # Funktion: Footer mit Copyright und Event-/Projektnamen für alle Seiten
+    -------------------------------------------------------------------------------
+    -->
+    <footer id="mainFooter">
+        <span id="footerText">© 2025 Fotobox</span>
+    </footer>
     <script src="js/main.js"></script>
 </body>
 </html>
