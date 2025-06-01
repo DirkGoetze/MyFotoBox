@@ -97,9 +97,9 @@ print_interactive() {
 update_system() {
     print_interactive "[1/9] Systempakete werden aktualisiert ..."
     if run_and_log "apt-get update" apt-get update -qq; then
-        print_success "Systempakete wurden erfolgreich aktualisiert."
+        print_success "  → Systempakete wurden erfolgreich aktualisiert."
     else
-        print_error "Fehler: Systempakete konnten nicht aktualisiert werden!"
+        print_error "  → Fehler: Systempakete konnten nicht aktualisiert werden!"
         exit 1
     fi
 }
@@ -115,36 +115,40 @@ install_software() {
     if ! command -v nginx >/dev/null 2>&1; then
         print_interactive "  → nginx wird installiert ..."
         if ! run_and_log "apt-get install nginx" apt-get install -y -qq nginx; then
-            print_error "Fehler: nginx konnte nicht installiert werden!"
+            print_error "  → Fehler: nginx konnte nicht installiert werden!"
             exit 1
         fi
     fi
     # Prüfe, ob systemd vorhanden und aktiv ist
     if ! pidof systemd >/dev/null 2>&1; then
-        print_error "Fehler: systemd ist nicht aktiv! Dieses Skript benötigt ein laufendes systemd."
+        print_error "  → Fehler: systemd ist nicht aktiv! Dieses Skript benötigt ein laufendes systemd."
         exit 1
     fi
     # Prüfe, ob python3-pip installiert ist, sonst nachinstallieren
     if ! command -v pip3 >/dev/null 2>&1; then
         print_interactive "  → python3-pip wird installiert ..."
         if ! run_and_log "apt-get install python3-pip" apt-get install -y -qq python3-pip; then
-            print_error "Fehler: python3-pip konnte nicht installiert werden!"
+            print_error "  → Fehler: python3-pip konnte nicht installiert werden!"
             exit 1
         fi
     fi
     # Prüfe, ob python3-venv installiert ist, sonst nachinstallieren
+    PY_VER=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
     if ! python3 -m venv --help >/dev/null 2>&1; then
         print_interactive "  → python3-venv wird installiert ..."
-        if ! run_and_log "apt-get install python3-venv" apt-get install -y -qq python3-venv; then
-            print_error "Fehler: python3-venv konnte nicht installiert werden!"
-            exit 1
+        if ! run_and_log "apt-get install python3-$PY_VER-venv" apt-get install -y -qq python3-$PY_VER-venv; then
+            print_warning "python3-$PY_VER-venv konnte nicht installiert werden, versuche python3-venv ..."
+            if ! run_and_log "apt-get install python3-venv" apt-get install -y -qq python3-venv; then
+                print_error "  → Fehler: python3-venv konnte nicht installiert werden!"
+                exit 1
+            fi
         fi
     fi
     if run_and_log "apt-get update für weitere Pakete" apt-get update -qq && \
        run_and_log "apt-get install python3 git sqlite3 lsof" apt-get install -y -qq python3 git sqlite3 lsof; then
-        print_success "Alle benötigten Pakete wurden erfolgreich installiert."
+        print_success "  → Alle benötigten Pakete wurden erfolgreich installiert."
     else
-        print_error "Fehler: Die Installation der benötigten Pakete ist fehlgeschlagen! Siehe ggf. /var/log/apt/term.log."
+        print_error "  → Fehler: Die Installation der benötigten Pakete ist fehlgeschlagen! Siehe ggf. /var/log/apt/term.log."
         exit 1
     fi
 }
@@ -273,18 +277,74 @@ bootstrap_project() {
 configure_nginx() {
     print_interactive "[8/9] NGINX-Konfiguration wird eingerichtet ..."
     if lsof -i :80 | grep LISTEN > /dev/null; then
-        print_warning "Der Standard-Port [80] des NGINX Webserver ist bereits belegt. Wählen Sie einen alternativen Port (z.B. 8080)"
-        while true; do
-            print_interactive "Port:"
-            read -p "Port [8080]: " ALT_PORT
-            ALT_PORT=${ALT_PORT:-8080}
-            if lsof -i :$ALT_PORT | grep LISTEN > /dev/null; then
-                print_error "Port $ALT_PORT ist ebenfalls belegt. Bitte anderen Port wählen!"
+        # Prüfe, ob der fotobox-Service oder die NGINX-Default-Site Port 80 belegt
+        local port80_info
+        port80_info=$(lsof -i :80 | grep LISTEN)
+        print_warning "Der Standard-Port [80] des NGINX Webserver ist bereits belegt."
+        print_interactive "Dienst/Prozess auf Port 80:"
+        if echo "$port80_info" | grep -q 'nginx'; then
+            # Prüfe, ob es die fotobox-Site ist
+            if [ -L /etc/nginx/sites-enabled/fotobox ]; then
+                print_success "Port 80 wird bereits von der Fotobox (nginx/sites-enabled/fotobox) genutzt. Keine Aktion erforderlich."
+                NGINX_PORT=80
+                # Keine weitere Portabfrage, direkt fortfahren
+            elif [ -L /etc/nginx/sites-enabled/default ]; then
+                print_warning "Port 80 wird von der NGINX-Default-Site genutzt."
+                print_interactive "Soll die Default-Site durch die Fotobox-Konfiguration ersetzt werden? [J/n]:"
+                read -p "Antwort: " OVERWRITE_DEFAULT
+                OVERWRITE_DEFAULT=${OVERWRITE_DEFAULT:-J}
+                if [[ "$OVERWRITE_DEFAULT" =~ ^[JjYy]$ ]]; then
+                    rm -f /etc/nginx/sites-enabled/default
+                    print_success "Default-Site wurde entfernt. Fotobox übernimmt Port 80."
+                    NGINX_PORT=80
+                else
+                    print_interactive "Bitte wählen Sie einen alternativen Port für die Fotobox."
+                    while true; do
+                        read -p "Port [8080]: " ALT_PORT
+                        ALT_PORT=${ALT_PORT:-8080}
+                        if lsof -i :$ALT_PORT | grep LISTEN > /dev/null; then
+                            print_error "Port $ALT_PORT ist ebenfalls belegt. Bitte anderen Port wählen!"
+                            print_interactive "Dienst/Prozess auf Port $ALT_PORT:"
+                            lsof -i :$ALT_PORT | grep LISTEN || print_warning "Keine Information zu Prozessen auf Port $ALT_PORT gefunden."
+                        else
+                            NGINX_PORT=$ALT_PORT
+                            break
+                        fi
+                    done
+                fi
             else
-                NGINX_PORT=$ALT_PORT
-                break
+                # NGINX läuft, aber keine bekannte Site – Portwahl anbieten
+                print_interactive "Bitte wählen Sie einen alternativen Port für die Fotobox."
+                while true; do
+                    read -p "Port [8080]: " ALT_PORT
+                    ALT_PORT=${ALT_PORT:-8080}
+                    if lsof -i :$ALT_PORT | grep LISTEN > /dev/null; then
+                        print_error "Port $ALT_PORT ist ebenfalls belegt. Bitte anderen Port wählen!"
+                        print_interactive "Dienst/Prozess auf Port $ALT_PORT:"
+                        lsof -i :$ALT_PORT | grep LISTEN || print_warning "Keine Information zu Prozessen auf Port $ALT_PORT gefunden."
+                    else
+                        NGINX_PORT=$ALT_PORT
+                        break
+                    fi
+                done
             fi
-        done
+        else
+            # Port 80 wird von einem anderen Dienst belegt
+            echo "$port80_info"
+            print_interactive "Bitte wählen Sie einen alternativen Port für die Fotobox."
+            while true; do
+                read -p "Port [8080]: " ALT_PORT
+                ALT_PORT=${ALT_PORT:-8080}
+                if lsof -i :$ALT_PORT | grep LISTEN > /dev/null; then
+                    print_error "Port $ALT_PORT ist ebenfalls belegt. Bitte anderen Port wählen!"
+                    print_interactive "Dienst/Prozess auf Port $ALT_PORT:"
+                    lsof -i :$ALT_PORT | grep LISTEN || print_warning "Keine Information zu Prozessen auf Port $ALT_PORT gefunden."
+                else
+                    NGINX_PORT=$ALT_PORT
+                    break
+                fi
+            done
+        fi
     else
         NGINX_PORT=80
     fi
@@ -306,14 +366,18 @@ configure_nginx() {
             run_and_log "cp nginx-fotobox.conf" cp "$PROJECT_DIR/conf/nginx-fotobox.conf" /etc/nginx/sites-available/fotobox
         fi
         run_and_log "ln -sf nginx site enable" ln -sf /etc/nginx/sites-available/fotobox /etc/nginx/sites-enabled/fotobox
-        # NGINX-Konfiguration testen
-        if run_and_log "nginx -t" nginx -t 2>&1 | tee /tmp/fotobox_nginx_test.log | grep -q 'successful'; then
+        # NGINX-Konfiguration testen (robust, Fehlerausgabe immer sichtbar)
+        nginx -t > /tmp/fotobox_nginx_test.log 2>&1
+        local NGINX_TEST_STATUS=$?
+        if [ $NGINX_TEST_STATUS -eq 0 ]; then
             print_success "NGINX-Konfigurationstest erfolgreich. NGINX wird neu gestartet."
             run_and_log "systemctl restart nginx" systemctl restart nginx
         else
             print_error "Fehler: NGINX-Konfigurationstest fehlgeschlagen! Siehe /tmp/fotobox_nginx_test.log."
-            if [ -f /tmp/fotobox_nginx_test.log ]; then
-                cat /tmp/fotobox_nginx_test.log
+            # Zeige an, welcher Dienst Port 80 belegt (nur wenn Port 80 verwendet werden soll)
+            if [ "$NGINX_PORT" = "80" ]; then
+                print_interactive "Dienst/Prozess auf Port 80:"
+                lsof -i :80 | grep LISTEN || print_warning "Keine Information zu Prozessen auf Port 80 gefunden."
             fi
             exit 1
         fi
@@ -541,6 +605,8 @@ update_fotobox() {
     fi
     trap - ERR
     echo "Update abgeschlossen. Backup der vorherigen Version liegt unter: $BACKUP_DIR"
+    # Weboberflächen-Check nach Update
+    chk_webui
 }
 
 # ------------------------------------------------------------------------------
@@ -576,7 +642,13 @@ remove_fotobox() {
             else
                 NGINX_PORT=80
             fi
-            write_nginx_config_with_port /etc/nginx/sites-available/fotobox /etc/nginx/sites-available/fotobox "$NGINX_PORT"
+            # Prüfe, ob Quell- und Zieldatei identisch sind und Port 80 verwendet wird
+            if [ "/etc/nginx/sites-available/fotobox" = "/etc/nginx/sites-available/fotobox" ] && [ "$NGINX_PORT" = "80" ]; then
+                # Kein write_nginx_config_with_port nötig, da identisch und Port 80
+                print_interactive "NGINX-Konfiguration bleibt unverändert (Port 80, identische Datei)."
+            else
+                write_nginx_config_with_port /etc/nginx/sites-available/fotobox /etc/nginx/sites-available/fotobox "$NGINX_PORT"
+            fi
             ln -sf /etc/nginx/sites-available/fotobox /etc/nginx/sites-enabled/fotobox
         fi
         systemctl restart nginx > /dev/null
@@ -659,12 +731,16 @@ update_nginx_config_with_check() {
     # Port-Logik wie gehabt
     if lsof -i :80 | grep LISTEN > /dev/null; then
         print_warning "Der Standard-Port [80] des NGINX Webserver ist bereits belegt. Wählen Sie einen alternativen Port (z.B. 8080)"
+        print_interactive "Dienst/Prozess auf Port 80:"
+        lsof -i :80 | grep LISTEN || print_warning "Keine Information zu Prozessen auf Port 80 gefunden."
         while true; do
             print_interactive "Port:"
             read -p "Port [8080]: " ALT_PORT
             ALT_PORT=${ALT_PORT:-8080}
             if lsof -i :$ALT_PORT | grep LISTEN > /dev/null; then
                 print_error "Port $ALT_PORT ist ebenfalls belegt. Bitte anderen Port wählen!"
+                print_interactive "Dienst/Prozess auf Port $ALT_PORT:"
+                lsof -i :$ALT_PORT | grep LISTEN || print_warning "Keine Information zu Prozessen auf Port $ALT_PORT gefunden."
             else
                 NGINX_PORT=$ALT_PORT
                 break
@@ -715,12 +791,16 @@ restore_nginx_config_with_port() {
     BACKUP_CONF="$1"
     if lsof -i :80 | grep LISTEN > /dev/null; then
         print_warning "Der Standard-Port [80] des NGINX Webserver ist bereits belegt. Wählen Sie einen alternativen Port (z.B. 8080)"
+        print_interactive "Dienst/Prozess auf Port 80:"
+        lsof -i :80 | grep LISTEN || print_warning "Keine Information zu Prozessen auf Port 80 gefunden."
         while true; do
             print_interactive "Port:"
             read -p "Port [8080]: " ALT_PORT
             ALT_PORT=${ALT_PORT:-8080}
             if lsof -i :$ALT_PORT | grep LISTEN > /dev/null; then
                 print_error "Port $ALT_PORT ist ebenfalls belegt. Bitte anderen Port wählen!"
+                print_interactive "Dienst/Prozess auf Port $ALT_PORT:"
+                lsof -i :$ALT_PORT | grep LISTEN || print_warning "Keine Information zu Prozessen auf Port $ALT_PORT gefunden."
             else
                 NGINX_PORT=$ALT_PORT
                 break
@@ -753,6 +833,49 @@ run_and_log() {
         log_message "ERROR" "[FAIL] $DESC fehlgeschlagen (Exitcode $STATUS)"
     fi
     return $STATUS
+}
+
+# ------------------------------------------------------------------------------
+# show_final_message
+# ------------------------------------------------------------------------------
+# Funktion: Zeigt eine Abschlussmeldung nach erfolgreicher Installation an und prüft die Erreichbarkeit der Weboberfläche
+show_final_message() {
+    print_success "\nFotobox-Installation abgeschlossen!"
+    print_interactive "\nSie können die Fotobox nun im Browser aufrufen."
+    print_interactive "Beispiel: http://<IP-Adresse-oder-Hostname>:${NGINX_PORT}/"
+    print_interactive "\nWeitere Hinweise finden Sie in der README.md im Projektverzeichnis."
+    # Weboberflächen-Check
+    chk_webui
+}
+
+# ------------------------------------------------------------------------------
+# chk_webui
+# ------------------------------------------------------------------------------
+# Funktion: Prüft die Erreichbarkeit der Weboberfläche (start.html) per curl
+# Rückgabewert: 0 = erreichbar (HTTP 200), 1 = Fehler/Problem
+# Gibt Status und Troubleshooting-Hinweise aus
+chk_webui() {
+    local url="http://localhost:${NGINX_PORT}/start.html"
+    print_interactive "\nPrüfe Erreichbarkeit der Weboberfläche (${url}) ..."
+    if command -v curl >/dev/null 2>&1; then
+        local CURL_RESULT
+        CURL_RESULT=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+        if [ "$CURL_RESULT" = "200" ]; then
+            print_success "Weboberfläche ist erreichbar (HTTP 200)."
+            return 0
+        else
+            print_error "Weboberfläche ist NICHT erreichbar (HTTP $CURL_RESULT). Bitte prüfen Sie NGINX, systemd-Service und Firewall."
+            print_interactive "Fehlerbehebung:"
+            print_interactive "- Ist der Dienst 'fotobox-backend' aktiv? (systemctl status fotobox-backend)"
+            print_interactive "- Ist NGINX aktiv? (systemctl status nginx)"
+            print_interactive "- Ist der Port ${NGINX_PORT} offen? (lsof -i :${NGINX_PORT})"
+            print_interactive "- Siehe auch das Logfile: /var/log/fotobox_install.log"
+            return 1
+        fi
+    else
+        print_warning "curl ist nicht installiert, Weboberflächen-Test wird übersprungen."
+        return 2
+    fi
 }
 
 # ------------------------------------------------------------------------------
