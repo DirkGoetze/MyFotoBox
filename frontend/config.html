@@ -39,8 +39,20 @@
             Eventname:
             <input type="text" name="event_name" id="event_name" placeholder="z.B. Hochzeit Lisa & Max">
         </label>
+        <label>
+            Galerie-Timeout (Sekunden):
+            <input type="number" name="gallery_timeout" id="gallery_timeout" min="10" max="600" step="1" placeholder="z.B. 60">
+            <span class="info">Zeit bis automatischer Rückkehr zur Aufnahme-Ansicht</span>
+        </label>
         <button type="submit">Speichern</button>
         <span id="status"></span>
+    </form>
+    <form id="updateForm" style="display:none; margin-top:2em;">
+        <fieldset>
+            <legend>Update & Backup</legend>
+            <button type="submit">Update & Backup jetzt ausführen</button>
+            <span id="updateStatus"></span>
+        </fieldset>
     </form>
     <p class="info">Diese Einstellungen werden lokal im Browser gespeichert.</p>
     <script>
@@ -51,6 +63,7 @@
             if(document.getElementById('adminPassword').value === ADMIN_PASS) {
                 document.getElementById('loginForm').style.display = 'none';
                 document.getElementById('configForm').style.display = '';
+                document.getElementById('updateForm').style.display = '';
                 loadConfigFromServer();
             } else {
                 document.getElementById('loginStatus').textContent = 'Falsches Passwort!';
@@ -63,6 +76,7 @@
                 if(config.resolution) document.getElementById('resolution').value = config.resolution;
                 if(config.storage_path) document.getElementById('storage_path').value = config.storage_path;
                 if(config.event_name) document.getElementById('event_name').value = config.event_name;
+                if(config.gallery_timeout_ms) document.getElementById('gallery_timeout').value = Math.round(config.gallery_timeout_ms/1000);
             });
         }
         // Einstellungen speichern
@@ -72,7 +86,8 @@
                 camera_mode: document.getElementById('camera_mode').value,
                 resolution: document.getElementById('resolution').value,
                 storage_path: document.getElementById('storage_path').value,
-                event_name: document.getElementById('event_name').value
+                event_name: document.getElementById('event_name').value,
+                gallery_timeout_ms: parseInt(document.getElementById('gallery_timeout').value,10)*1000||60000
             };
             fetch('/api/settings', {
                 method: 'POST',
@@ -82,6 +97,19 @@
                 document.getElementById('status').textContent = 'Gespeichert!';
                 setTimeout(()=>document.getElementById('status').textContent='', 1500);
             });
+        };
+        // Update/Backup auslösen
+        document.getElementById('updateForm').onsubmit = function(e) {
+            e.preventDefault();
+            document.getElementById('updateStatus').textContent = 'Update läuft ...';
+            fetch('/update', { method: 'POST' })
+                .then(r => r.text())
+                .then(txt => {
+                    document.getElementById('updateStatus').textContent = txt || 'Update/Backup abgeschlossen.';
+                })
+                .catch(()=>{
+                    document.getElementById('updateStatus').textContent = 'Fehler beim Update/Backup!';
+                });
         };
     </script>
 </body>
