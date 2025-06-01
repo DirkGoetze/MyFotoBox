@@ -85,6 +85,38 @@ def remove_project():
         log('Projektverzeichnis entfernt.')
 
 # -------------------------------------------------------------------------------
+# backup_and_remove_systemd
+# -------------------------------------------------------------------------------
+# Funktion: Sichert und entfernt die systemd-Unit für das Fotobox-Backend
+# -------------------------------------------------------------------------------
+def backup_and_remove_systemd():
+    import shutil, datetime, os
+    dst = '/etc/systemd/system/fotobox-backend.service'
+    backup = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backup', f'fotobox-backend.service.bak.{datetime.datetime.now():%Y%m%d%H%M%S}'))
+    if os.path.exists(dst):
+        shutil.copy(dst, backup)
+        log(f"Backup systemd-Unit vor Entfernung: {backup}")
+        os.remove(dst)
+        run(['systemctl', 'daemon-reload'], sudo=True)
+        log('systemd-Unit entfernt.')
+
+# -------------------------------------------------------------------------------
+# backup_and_remove_nginx
+# -------------------------------------------------------------------------------
+# Funktion: Sichert und entfernt die NGINX-Konfiguration für die Fotobox
+# -------------------------------------------------------------------------------
+def backup_and_remove_nginx():
+    import shutil, datetime, os
+    dst = '/etc/nginx/sites-available/fotobox'
+    backup = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backup', f'nginx-fotobox.conf.bak.{datetime.datetime.now():%Y%m%d%H%M%S}'))
+    if os.path.exists(dst):
+        shutil.copy(dst, backup)
+        log(f"Backup NGINX-Konfiguration vor Entfernung: {backup}")
+        os.remove(dst)
+        run(['systemctl', 'restart', 'nginx'], sudo=True)
+        log('NGINX-Konfiguration entfernt.')
+
+# -------------------------------------------------------------------------------
 # main
 # -------------------------------------------------------------------------------
 # Funktion: Hauptablauf für das Uninstall-Skript (Backup, systemd, nginx, Projekt)
@@ -92,6 +124,8 @@ def remove_project():
 def main():
     print('Starte Deinstallation der Fotobox ...')
     backup_configs()
+    backup_and_remove_systemd()
+    backup_and_remove_nginx()
     remove_systemd()
     remove_nginx()
     remove_project()

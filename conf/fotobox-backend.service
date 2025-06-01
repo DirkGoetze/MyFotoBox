@@ -1,0 +1,13 @@
+[Unit]
+Description=Fotobox Backend (Flask)
+After=network.target
+
+[Service]
+Type=simple
+User=fotobox
+WorkingDirectory=/opt/fotobox/backend
+ExecStart=/opt/fotobox/backend/venv/bin/python app.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

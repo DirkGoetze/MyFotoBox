@@ -72,6 +72,42 @@ def update_backend():
     log('Backend-Abhängigkeiten aktualisiert.')
 
 # -------------------------------------------------------------------------------
+# backup_and_install_systemd
+# -------------------------------------------------------------------------------
+# Funktion: Sichert die aktuelle systemd-Unit und installiert die neue
+# -------------------------------------------------------------------------------
+def backup_and_install_systemd():
+    import shutil, datetime, os
+    src = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'conf', 'fotobox-backend.service'))
+    dst = '/etc/systemd/system/fotobox-backend.service'
+    backup = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backup', f'fotobox-backend.service.bak.{datetime.datetime.now():%Y%m%d%H%M%S}'))
+    if os.path.exists(dst):
+        shutil.copy(dst, backup)
+        log(f"Backup systemd-Unit: {backup}")
+    shutil.copy(src, dst)
+    run(['systemctl', 'daemon-reload'], sudo=True)
+    run(['systemctl', 'enable', 'fotobox-backend'], sudo=True)
+    run(['systemctl', 'restart', 'fotobox-backend'], sudo=True)
+    log('Neue systemd-Unit installiert.')
+
+# -------------------------------------------------------------------------------
+# backup_and_install_nginx
+# -------------------------------------------------------------------------------
+# Funktion: Sichert die aktuelle NGINX-Konfiguration und installiert die neue
+# -------------------------------------------------------------------------------
+def backup_and_install_nginx():
+    import shutil, datetime, os
+    src = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'conf', 'nginx-fotobox.conf'))
+    dst = '/etc/nginx/sites-available/fotobox'
+    backup = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backup', f'nginx-fotobox.conf.bak.{datetime.datetime.now():%Y%m%d%H%M%S}'))
+    if os.path.exists(dst):
+        shutil.copy(dst, backup)
+        log(f"Backup NGINX-Konfiguration: {backup}")
+    shutil.copy(src, dst)
+    run(['systemctl', 'restart', 'nginx'], sudo=True)
+    log('Neue NGINX-Konfiguration installiert.')
+
+# -------------------------------------------------------------------------------
 # main
 # -------------------------------------------------------------------------------
 # Funktion: Hauptablauf für das Update-Skript (Backup, Repo, Backend)
@@ -79,6 +115,8 @@ def update_backend():
 def main():
     print('Starte Update der Fotobox ...')
     backup_configs()
+    backup_and_install_systemd()
+    backup_and_install_nginx()
     update_repo()
     update_backend()
     print('Update abgeschlossen. Siehe Log:', LOGFILE)

@@ -174,6 +174,44 @@ check_nginx_port() {
 }
 
 # ------------------------------------------------------------------------------
+# backup_and_install_systemd
+# ------------------------------------------------------------------------------
+# Funktion: Sichert bestehende systemd-Unit, kopiert neue aus conf/, aktiviert und startet Service
+# ------------------------------------------------------------------------------
+backup_and_install_systemd() {
+    local src="conf/fotobox-backend.service"
+    local dst="/etc/systemd/system/fotobox-backend.service"
+    local backup="backup/fotobox-backend.service.bak.$(date +%Y%m%d%H%M%S)"
+    if [ -f "$dst" ]; then
+        cp "$dst" "$backup"
+        print_success "Backup der bestehenden systemd-Unit nach $backup"
+    fi
+    cp "$src" "$dst"
+    print_step "Neue systemd-Unit installiert."
+    systemctl daemon-reload
+    systemctl enable fotobox-backend
+    systemctl restart fotobox-backend
+}
+
+# ------------------------------------------------------------------------------
+# backup_and_install_nginx
+# ------------------------------------------------------------------------------
+# Funktion: Sichert bestehende NGINX-Konfiguration, kopiert neue aus conf/, startet NGINX neu
+# ------------------------------------------------------------------------------
+backup_and_install_nginx() {
+    local src="conf/nginx-fotobox.conf"
+    local dst="/etc/nginx/sites-available/fotobox"
+    local backup="backup/nginx-fotobox.conf.bak.$(date +%Y%m%d%H%M%S)"
+    if [ -f "$dst" ]; then
+        cp "$dst" "$backup"
+        print_success "Backup der bestehenden NGINX-Konfiguration nach $backup"
+    fi
+    cp "$src" "$dst"
+    print_step "Neue NGINX-Konfiguration installiert."
+    systemctl restart nginx
+}
+
+# ------------------------------------------------------------------------------
 # main
 # ------------------------------------------------------------------------------
 # Funktion: Hauptablauf der Erstinstallation
@@ -186,6 +224,8 @@ main() {
     setup_structure
     backup_nginx_config
     check_nginx_port
+    backup_and_install_systemd
+    backup_and_install_nginx
     print_success "Erstinstallation abgeschlossen."
     print_prompt "Bitte rufen Sie die Weboberfläche im Browser auf, um die Fotobox weiter zu konfigurieren und zu verwalten."
     echo "Weitere Wartung (Update, Deinstallation) erfolgt über die WebUI oder die Python-Skripte im backend/."

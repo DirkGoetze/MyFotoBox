@@ -4,4 +4,21 @@ Diese Dokumentation enthält Anleitungen und Hinweise zur Installation, Wartung 
 
 - Die Backup-/Restore-Strategie ist verbindlich in [BACKUP_STRATEGIE.md](../BACKUP_STRATEGIE.md) dokumentiert und für alle neuen Features, API-Endpunkte und Systemintegrationen einzuhalten.
 
+## Zusammenfassende Hinweise
+
+1. **Backup & Integration der Konfigurationen:**
+   - Vor dem Kopieren/Überschreiben von systemd- und NGINX-Konfigurationen werden Backups im Backup-Ordner mit Zeitstempel angelegt.
+   - Die neuen Konfigurationsdateien werden aus `conf/` an die Zielorte kopiert und die Dienste neu geladen/gestartet.
+2. **Update & Restore:**
+   - Beim Update werden die Konfigurationen ebenfalls gesichert und aktualisiert.
+   - Beim Entfernen (Deinstallation) werden die Konfigurationen gesichert und entfernt, optional kann ein Restore erfolgen.
+3. **Backup-Logik:**
+   - Die Backup-Logik (inkl. Metadaten) greift für alle Konfigurationsdateien.
+4. **Dokumentation:**
+   - Hinweise in INSTALLATION.md, UPDATE.md, REMOVE.md und README.md, dass Konfigurationsdateien automatisch gesichert und aktualisiert werden.
+5. **Backup-Strategie:**
+   - Im BACKUP_STRATEGIE.md ist explizit erwähnt, dass alle Systemkonfigurationen (systemd, nginx etc.) vor Änderungen gesichert werden.
+
+**Beispiel für die Umsetzung siehe install_fotobox.sh, manage_update.py, manage_uninstall.py.**
+
 Weitere Details siehe Einzelanleitungen und Haupt-README.
