@@ -1,8 +1,9 @@
-# DOKUMENTATIONSSTANDARD für das Fotobox-Projekt
+# dokumentationsstandard.md
 
 ## Geltungsbereich
 
 Dieser Standard gilt für **alle Skripttypen** im Projekt:
+
 - Bash-Skripte (nur Bash, keine SH-Mischformen)
 - Python-Skripte
 - HTML-Dateien
@@ -50,3 +51,13 @@ Diese Vorgaben sind bei jeder Überprüfung und Bearbeitung einzuhalten.
 - Alle anderen Ausgaben nach Systemstandard
 
 Beispiel-Funktionen siehe install_fotobox.sh.
+
+## Markdown-Formatierung
+
+- Überschriften (z.B. # Titel) müssen von einer Leerzeile oben und unten umgeben sein.
+- Listen müssen von einer Leerzeile oben und unten umgeben sein.
+- Es darf nur eine H1-Überschrift (# ...) pro Datei geben.
+- Jede Markdown-Datei muss mit einer Leerzeile enden.
+- Keine doppelten Überschriften oder Listen ohne Abstand.
+- Platzhalter wie `[eventname]` sind in Markdown in eckigen Klammern zu schreiben (keine spitzen Klammern, um Lint-Fehler zu vermeiden).
+- Siehe auch: [Markdownlint-Regeln](https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md)

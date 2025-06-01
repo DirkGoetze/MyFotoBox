@@ -40,4 +40,12 @@ Bei jeder Überprüfung einer Quellcodedatei (Bash-Skripte, Python-Skripte, HTML
 - Für Shellskripte gilt: Nur Bash-Syntax und -Funktionen prüfen und verwenden, keine SH-Mischformen.
 
 Diese Vorgaben sind bei jeder Überprüfung und Bearbeitung durch Copilot einzuhalten.
+
+- Achte bei Markdown-Dateien auf korrekte Formatierung:
+  - Überschriften (z.B. # Titel) immer mit Leerzeile davor und danach
+  - Listen immer mit Leerzeile davor und danach
+  - Nur eine H1-Überschrift pro Datei
+  - Jede Datei muss mit einer Leerzeile enden
+  - Keine doppelten Überschriften oder Listen ohne Abstand
+  - Siehe DOKUMENTATIONSSTANDARD.md und https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
 -->
