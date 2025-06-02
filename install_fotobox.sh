@@ -22,6 +22,28 @@
 set -e
 
 # ------------------------------------------------------------------------------
+# Globale Konstanten für zentrale Einstellungen
+# ------------------------------------------------------------------------------
+GIT_REPO_URL="https://github.com/DirkGoetze/fotobox2.git"
+INSTALL_DIR="/opt/fotobox"
+BACKUP_DIR="$INSTALL_DIR/backup"
+CONF_DIR="$INSTALL_DIR/conf"
+NGINX_CONF="$CONF_DIR/nginx-fotobox.conf"
+SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
+NGINX_DST="/etc/nginx/sites-available/fotobox"
+SYSTEMD_DST="/etc/systemd/system/fotobox-backend.service"
+
+# ------------------------------------------------------------------------------
+# Globale Konstanten für Konfiguration und Verzeichnisse
+# ------------------------------------------------------------------------------
+# GIT_REPO_URL="https://github.com/DEIN-REPO/fotobox2.git"
+# INSTALL_DIR="/opt/fotobox"
+# BACKUP_DIR="$INSTALL_DIR/backup"
+# CONF_DIR="$INSTALL_DIR/conf"
+# NGINX_CONF="$CONF_DIR/nginx-fotobox.conf"
+# SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
+
+# ------------------------------------------------------------------------------
 # print_error
 # ------------------------------------------------------------------------------
 # Funktion: Gibt eine Fehlermeldung farbig aus
@@ -139,20 +161,24 @@ setup_user_group() {
 # ------------------------------------------------------------------------------
 # setup_structure
 # ------------------------------------------------------------------------------
-# Funktion: Erstellt das Grundverzeichnis, kopiert Projektdateien und setzt die Rechte
+# Funktion: Erstellt das Grundverzeichnis, klont das Projekt per git (wenn leer) und setzt die Rechte
 # ------------------------------------------------------------------------------
 setup_structure() {
-    print_step "Erstelle Verzeichnisstruktur und kopiere Projektdateien ..."
-    mkdir -p /opt/fotobox
+    print_step "Erstelle Verzeichnisstruktur und prüfe Projektdateien ..."
+    mkdir -p "$INSTALL_DIR"
     # Prüfe, ob das Zielverzeichnis leer ist
-    if [ -z "$(ls -A /opt/fotobox 2>/dev/null)" ]; then
-        print_step "Kopiere Projektdateien (ohne rsync, nur mit cp/tar) ..."
-        tar --exclude='./backup' --exclude='./.git' --exclude='./venv' --exclude='./__pycache__' -cf - . | (cd /opt/fotobox && tar -xf -)
-        print_success "Projektdateien wurden nach /opt/fotobox kopiert."
+    if [ -z "$(ls -A "$INSTALL_DIR" 2>/dev/null)" ]; then
+        print_step "Klonen des Projekts per git nach $INSTALL_DIR ..."
+        if ! command -v git >/dev/null 2>&1; then
+            print_step "Installiere git ..."
+            apt-get update -qq && apt-get install -y -qq git
+        fi
+        git clone "$GIT_REPO_URL" "$INSTALL_DIR"
+        print_success "Projekt wurde per git nach $INSTALL_DIR geklont."
     else
-        print_prompt "/opt/fotobox ist nicht leer. Überspringe Kopiervorgang."
+        print_prompt "$INSTALL_DIR ist nicht leer. Überspringe Klonen."
     fi
-    chown -R fotobox:fotobox /opt/fotobox
+    chown -R fotobox:fotobox "$INSTALL_DIR"
     print_success "Verzeichnisstruktur und Rechte wurden gesetzt."
 }
 
@@ -163,12 +189,12 @@ setup_structure() {
 # ------------------------------------------------------------------------------
 setup_backup_dir() {
     print_step "Backup-Verzeichnis wird angelegt ..."
-    mkdir -p /opt/fotobox/backup
-    if [ ! -f /opt/fotobox/backup/readme.md ]; then
+    mkdir -p "$BACKUP_DIR"
+    if [ ! -f "$BACKUP_DIR/readme.md" ]; then
         echo "# backup
-Dieses Verzeichnis wird automatisch durch die Installations- und Update-Skripte erzeugt und enthält Backups von Konfigurationsdateien und Logs. Es ist nicht Teil des Repositorys." > /opt/fotobox/backup/readme.md
+Dieses Verzeichnis wird automatisch durch die Installations- und Update-Skripte erzeugt und enthält Backups von Konfigurationsdateien und Logs. Es ist nicht Teil des Repositorys." > "$BACKUP_DIR/readme.md"
     fi
-    print_success "Backup-Verzeichnis (/opt/fotobox/backup/) wurde angelegt."
+    print_success "Backup-Verzeichnis ($BACKUP_DIR/) wurde angelegt."
 }
 
 # ------------------------------------------------------------------------------
@@ -178,8 +204,8 @@ Dieses Verzeichnis wird automatisch durch die Installations- und Update-Skripte 
 # ------------------------------------------------------------------------------
 backup_nginx_config() {
     print_step "Sichere vorhandene NGINX-Konfiguration ..."
-    if [ -f /etc/nginx/sites-available/fotobox ]; then
-        cp /etc/nginx/sites-available/fotobox "/etc/nginx/sites-available/fotobox.bak.$(date +%Y%m%d%H%M%S)"
+    if [ -f "$NGINX_DST" ]; then
+        cp "$NGINX_DST" "$NGINX_DST.bak.$(date +%Y%m%d%H%M%S)"
         print_success "Vorhandene NGINX-Konfiguration wurde gesichert."
     fi
 }
@@ -203,27 +229,27 @@ check_nginx_port() {
                 neuer_port=8080
             fi
             # Passe die NGINX-Konfiguration an
-            if [ ! -d /opt/fotobox/conf ]; then
-                mkdir -p /opt/fotobox/conf
+            if [ ! -d "$CONF_DIR" ]; then
+                mkdir -p "$CONF_DIR"
             fi
-            if [ -f /opt/fotobox/conf/nginx-fotobox.conf ]; then
+            if [ -f "$NGINX_CONF" ]; then
                 # Korrigiere ggf. fehlerhafte proxy_set_header-Zeilen
-                sed -i '/proxy_set_header[[:space:]]*$/d' /opt/fotobox/conf/nginx-fotobox.conf
-                sed -i '/proxy_set_header[[:space:]]\+[^;]*$/!b' /opt/fotobox/conf/nginx-fotobox.conf
-                sed -i '/proxy_set_header[[:space:]]\+[^;]*;/!b' /opt/fotobox/conf/nginx-fotobox.conf
-                sed -i 's/[[:space:]]\{2,\}/ /g' /opt/fotobox/conf/nginx-fotobox.conf
-                sed -i 's/;\{2,\}/;/g' /opt/fotobox/conf/nginx-fotobox.conf
+                sed -i '/proxy_set_header[[:space:]]*$/d' "$NGINX_CONF"
+                sed -i '/proxy_set_header[[:space:]]\+[^;]*$/!b' "$NGINX_CONF"
+                sed -i '/proxy_set_header[[:space:]]\+[^;]*;/!b' "$NGINX_CONF"
+                sed -i 's/[[:space:]]\{2,\}/ /g' "$NGINX_CONF"
+                sed -i 's/;\{2,\}/;/g' "$NGINX_CONF"
                 print_success "NGINX-Konfiguration auf Port $neuer_port angepasst und geprüft."
             else
-                print_error "NGINX-Konfigurationsdatei (/opt/fotobox/conf/nginx-fotobox.conf) nicht gefunden!"
+                print_error "NGINX-Konfigurationsdatei ($NGINX_CONF) nicht gefunden!"
                 print_prompt "Soll eine Standard-NGINX-Konfiguration für Port $neuer_port erzeugt werden? [j/N]"
                 read -r genantwort
                 if [[ "$genantwort" =~ ^([jJ]|[yY])$ ]]; then
-                    cat > /opt/fotobox/conf/nginx-fotobox.conf <<EOF
+                    cat > "$NGINX_CONF" <<EOF
 server {
     listen $neuer_port;
     server_name _;
-    root /opt/fotobox/frontend;
+    root $INSTALL_DIR/frontend;
     index start.html index.html;
     location / {
         try_files $uri $uri/ =404;
@@ -259,9 +285,9 @@ EOF
 # Funktion: Sichert bestehende systemd-Unit, kopiert neue aus conf/, aktiviert und startet Service
 # ------------------------------------------------------------------------------
 backup_and_install_systemd() {
-    local src="/opt/fotobox/conf/fotobox-backend.service"
-    local dst="/etc/systemd/system/fotobox-backend.service"
-    local backup="/opt/fotobox/backup/fotobox-backend.service.bak.$(date +%Y%m%d%H%M%S)"
+    local src="$SYSTEMD_SERVICE"
+    local dst="$SYSTEMD_DST"
+    local backup="$BACKUP_DIR/fotobox-backend.service.bak.$(date +%Y%m%d%H%M%S)"
     if [ ! -f "$src" ]; then
         print_error "Service-Datei $src nicht gefunden!"
         print_prompt "Soll eine Standard-Service-Datei erzeugt werden? [j/N]"
@@ -275,8 +301,8 @@ After=network.target
 [Service]
 Type=simple
 User=fotobox
-WorkingDirectory=/opt/fotobox/backend
-ExecStart=/opt/fotobox/backend/venv/bin/python app.py
+WorkingDirectory=$INSTALL_DIR/backend
+ExecStart=$INSTALL_DIR/backend/venv/bin/python app.py
 Restart=on-failure
 
 [Install]
@@ -305,9 +331,9 @@ EOF
 # Funktion: Sichert bestehende NGINX-Konfiguration, kopiert neue aus conf/, startet NGINX neu
 # ------------------------------------------------------------------------------
 backup_and_install_nginx() {
-    local src="/opt/fotobox/conf/nginx-fotobox.conf"
-    local dst="/etc/nginx/sites-available/fotobox"
-    local backup="/opt/fotobox/backup/nginx-fotobox.conf.bak.$(date +%Y%m%d%H%M%S)"
+    local src="$NGINX_CONF"
+    local dst="$NGINX_DST"
+    local backup="$BACKUP_DIR/nginx-fotobox.conf.bak.$(date +%Y%m%d%H%M%S)"
     if [ -f "$dst" ]; then
         cp "$dst" "$backup"
         print_success "Backup der bestehenden NGINX-Konfiguration nach $backup"
