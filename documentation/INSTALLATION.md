@@ -28,12 +28,12 @@ Das Skript übernimmt folgende Aufgaben (jeder Schritt wird im Terminal erklärt
 1. **Systemprüfung**: Das Skript prüft, ob Sie root-Rechte haben und ob das System unterstützt wird.
 2. **System-Update**: Die Paketlisten werden aktualisiert, damit alle Softwarepakete auf dem neuesten Stand sind.
 3. **Software-Installation**: Notwendige Programme wie nginx (Webserver), Python, pip, venv, sqlite3 und lsof werden installiert. Fehlt ein Paket, wird es automatisch nachinstalliert.
-4. **Benutzer und Gruppe**: Sie werden gefragt, unter welchem Systembenutzer und welcher Gruppe die Fotobox laufen soll (Standard: www-data). Das erhöht die Sicherheit.
+4. **Benutzer und Gruppe**: Das Skript legt automatisch den Systembenutzer und die Gruppe "fotobox" an und verwendet diese für die Ausführung der Software. Dies erhöht die Sicherheit und trennt die Fotobox von anderen Diensten.
 5. **Projektdateien**: Das Fotobox-Projekt wird aus dem Internet geladen (git clone) und die Zugriffsrechte werden korrekt gesetzt.
 6. **Python-Umgebung**: Eine eigene Python-Umgebung (venv) wird eingerichtet und alle benötigten Python-Bibliotheken werden installiert.
-7. **Passwort setzen**: Sie legen ein Passwort für die Konfigurationsseite der Fotobox fest. Dieses wird sicher (verschlüsselt) gespeichert.
+7. **Passwort setzen**: Die Zugangsdaten für die Konfigurationsseite werden nach der Installation beim ersten Aufruf der Weboberfläche festgelegt (nicht im Installationsskript).
 8. **Backup & Organisation**: Wichtige Systemdateien (z.B. NGINX-Konfiguration) werden gesichert und im Projektordner organisiert.
-9. **NGINX-Konfiguration**: Das Skript prüft, ob der Standard-Webserver-Port (80) frei ist. Falls nicht, können Sie einen alternativen Port wählen (z.B. 8080). Die Konfiguration wird automatisch angepasst.
+9. **NGINX-Konfiguration**: Das Skript erkennt automatisch, ob NGINX im Default-Modus oder als Multi-Site läuft. Sie werden gefragt, ob die Fotobox in die bestehende Default-Konfiguration integriert oder als eigene Site mit eigener Konfiguration eingerichtet werden soll. Bestehende NGINX-Konfigurationen bleiben erhalten und werden nicht ohne Rückfrage deaktiviert oder gelöscht. Bei Port-Konflikten werden Sie gefragt, ob ein alternativer Port verwendet werden soll. Alle Änderungen sind reversibel (Backups werden angelegt).
 10. **Systemdienst**: Das Backend (die eigentliche Fotobox-Software) wird als systemd-Dienst eingerichtet und gestartet. So läuft die Fotobox automatisch nach jedem Neustart.
 11. **Abschlusstest**: Am Ende prüft das Skript, ob die Weboberfläche erreichbar ist. Sie erhalten eine Erfolgsmeldung oder Hinweise zur Fehlerbehebung.
 
@@ -46,7 +46,7 @@ sudo bash fotobox.sh --install
 - Nach der Installation können Sie die Fotobox im Browser aufrufen, z.B.:
   - http://<IP-Adresse>:80/  (Standard)
   - http://<IP-Adresse>:8080/ (falls Port 80 belegt war)
-- Das Passwort für die Konfigurationsseite wird beim ersten Start gesetzt.
+- Die Zugangsdaten für die Konfigurationsseite werden beim ersten Start der Weboberfläche festgelegt.
 - Alle wichtigen Schritte und Fehler werden in der Logdatei `/var/log/fotobox_install.log` protokolliert.
 
 ## Fehlerbehebung
