@@ -24,19 +24,19 @@ set -e
 # ------------------------------------------------------------------------------
 # TODO: Verbesserungen und Optimierungen für zukünftige Versionen
 # ------------------------------------------------------------------------------
-# - Automatische Prüfung, ob NGINX-Default-Server auf Port 80 deaktiviert werden soll
-# - Optionale Firewall-Konfiguration (z.B. ufw) für den gewählten Port
-# - Automatische HTTPS-Konfiguration (Let's Encrypt)
-# - Fortschrittsanzeige für lange Operationen (z.B. git clone, pip install)
-# - Optionale E-Mail-Benachrichtigung nach erfolgreicher Installation
-# - Bessere Fehlerausgabe und Logging in Logdatei
-# - Unterstützung für weitere Linux-Distributionen prüfen
-# - Mehrsprachige Installationsausgabe (DE/EN)
-# - Automatische Prüfung auf bereits laufende Fotobox-Instanz
-# - Optionale Integration in bestehende NGINX-Konfiguration (statt eigene Site)
-# - Verbesserte Rückabwicklung bei Fehlern (Rollback)
-# - Automatische Prüfung und ggf. Korrektur von Dateirechten
-# - Optionale Installation als Docker-Container
+# [ ] Automatische Prüfung, ob NGINX-Default-Server auf Port 80 deaktiviert werden soll
+# [ ] Optionale Firewall-Konfiguration (z.B. ufw) für den gewählten Port
+# [ ] Automatische HTTPS-Konfiguration (Let's Encrypt)
+# [ ] Fortschrittsanzeige für lange Operationen (z.B. git clone, pip install)
+# [ ] Optionale E-Mail-Benachrichtigung nach erfolgreicher Installation
+# [x] Bessere Fehlerausgabe und Logging in Logdatei
+# [x] Unterstützung für weitere Linux-Distributionen prüfen
+# [ ] Mehrsprachige Installationsausgabe (DE/EN)
+# [x] Automatische Prüfung auf bereits laufende Fotobox-Instanz
+# [x] Optionale Integration in bestehende NGINX-Konfiguration (statt eigene Site)
+# [x] Verbesserte Rückabwicklung bei Fehlern (Rollback)
+# [x] Automatische Prüfung und ggf. Korrektur von Dateirechten
+# [ ] Optionale Installation als Docker-Container
 # ------------------------------------------------------------------------------
 
 # ===========================================================================
