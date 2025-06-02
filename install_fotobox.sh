@@ -245,10 +245,12 @@ check_nginx_port() {
                 print_prompt "Soll eine Standard-NGINX-Konfiguration für Port $neuer_port erzeugt werden? [j/N]"
                 read -r genantwort
                 if [[ "$genantwort" =~ ^([jJ]|[yY])$ ]]; then
+                    # Ermittele aktuelle IP-Adresse
+                    ip_addr=$(hostname -I | awk '{print $1}')
                     cat > "$NGINX_CONF" <<EOF
 server {
-    listen $neuer_port;
-    server_name _;
+    listen 0.0.0.0:$neuer_port;
+    server_name $ip_addr;
     root $INSTALL_DIR/frontend;
     index start.html index.html;
     location / {
@@ -275,6 +277,33 @@ EOF
         else
             print_error "Installation abgebrochen. Bitte Port 80 freigeben oder NGINX-Konfiguration manuell anpassen."
             exit 1
+        fi
+    else
+        # Port 80 ist frei, Standardkonfiguration ggf. anpassen
+        if [ ! -f "$NGINX_CONF" ]; then
+            ip_addr=$(hostname -I | awk '{print $1}')
+            cat > "$NGINX_CONF" <<EOF
+server {
+    listen 0.0.0.0:80;
+    server_name $ip_addr;
+    root $INSTALL_DIR/frontend;
+    index start.html index.html;
+    location / {
+        try_files $uri $uri/ =404;
+    }
+    location /api/ {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /photos/ {
+        proxy_pass http://127.0.0.1:5000/photos/;
+    }
+}
+EOF
+            print_success "Standard-NGINX-Konfiguration für Port 80 erzeugt."
         fi
     fi
 }
@@ -359,8 +388,12 @@ main() {
     check_nginx_port
     backup_and_install_systemd
     backup_and_install_nginx
+    # Ermittele aktuelle IP-Adresse und Port für Beispiel-URL
+    ip_addr=$(hostname -I | awk '{print $1}')
+    # Port aus NGINX-Konfiguration extrahieren
+    port=$(grep -m1 'listen ' "$NGINX_CONF" | sed -E 's/.*listen ([^;]*);.*/\1/' | awk -F: '{print $NF}')
     print_success "Erstinstallation abgeschlossen."
-    print_prompt "Bitte rufen Sie die Weboberfläche im Browser auf, um die Fotobox weiter zu konfigurieren und zu verwalten."
+    print_prompt "Bitte rufen Sie die Weboberfläche im Browser auf, um die Fotobox weiter zu konfigurieren und zu verwalten.\nBeispiel: http://$ip_addr:$port/"
     echo "Weitere Wartung (Update, Deinstallation) erfolgt über die WebUI oder die Python-Skripte im backend/."
 }
 
