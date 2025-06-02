@@ -66,9 +66,59 @@ def update_repo():
 # Funktion: Aktualisiert Python-Abhängigkeiten im Backend (pip, requirements.txt)
 # -------------------------------------------------------------------------------
 def update_backend():
-    backend_dir = os.path.dirname(__file__)
-    run([os.path.join(backend_dir, 'venv/bin/pip'), 'install', '--upgrade', 'pip'])
-    run([os.path.join(backend_dir, 'venv/bin/pip'), 'install', '-r', 'requirements.txt'])
+    backend_dir = os.path.dirname(os.path.abspath(__file__))
+    venv_dir = os.path.join(backend_dir, 'venv')
+    # Plattformunabhängige Bildung des pip-Pfads
+    if os.name == 'nt':
+        venv_pip = os.path.join(venv_dir, 'Scripts', 'pip.exe')
+        venv_python = os.path.join(venv_dir, 'Scripts', 'python.exe')
+    else:
+        venv_pip = os.path.join(venv_dir, 'bin', 'pip')
+        venv_python = os.path.join(venv_dir, 'bin', 'python')
+    # -------------------------------------------------------------------------------
+    # venv_pruefen_und_ggf_anlegen
+    # -------------------------------------------------------------------------------
+    # Funktion: Prüft, ob das venv-Verzeichnis und pip existieren, legt ggf. venv an
+    # -------------------------------------------------------------------------------
+    if not os.path.exists(venv_pip):
+        print("Python-virtualenv (venv) nicht gefunden. Versuche, venv automatisch anzulegen ...")
+        log("venv/bin/pip nicht gefunden. Versuche automatisches Anlegen von venv.")
+        try:
+            import venv as venv_mod
+            venv_mod.create(venv_dir, with_pip=True)
+        except Exception as e:
+            print(f"Fehler beim automatischen Anlegen des venv: {e}\nBitte manuell mit 'python3 -m venv venv' im backend-Verzeichnis anlegen.")
+            log(f"Fehler beim automatischen Anlegen des venv: {e}")
+            sys.exit(1)
+        if not os.path.exists(venv_pip):
+            print("venv wurde angelegt, aber pip nicht gefunden. Abbruch.")
+            log("venv wurde angelegt, aber pip nicht gefunden. Update abgebrochen.")
+            sys.exit(1)
+        print("venv wurde automatisch angelegt.")
+        log("venv wurde automatisch angelegt.")
+    # -------------------------------------------------------------------------------
+    # pip_pruefen_und_installieren
+    # -------------------------------------------------------------------------------
+    # Funktion: Prüft, ob pip im venv vorhanden ist, installiert ggf. pip neu
+    # -------------------------------------------------------------------------------
+    if not os.path.isfile(venv_pip):
+        print("pip im venv nicht gefunden. Versuche, pip zu installieren ...")
+        log("pip im venv nicht gefunden. Versuche Installation.")
+        try:
+            import subprocess
+            subprocess.check_call([venv_python, '-m', 'ensurepip'])
+        except Exception as e:
+            print(f"Fehler bei der Installation von pip im venv: {e}\nBitte manuell mit 'python3 -m ensurepip' im venv nachinstallieren.")
+            log(f"Fehler bei der Installation von pip im venv: {e}")
+            sys.exit(1)
+        if not os.path.isfile(venv_pip):
+            print("pip konnte nicht installiert werden. Abbruch.")
+            log("pip konnte nicht installiert werden. Update abgebrochen.")
+            sys.exit(1)
+        print("pip wurde automatisch im venv installiert.")
+        log("pip wurde automatisch im venv installiert.")
+    run([venv_pip, 'install', '--upgrade', 'pip'])
+    run([venv_pip, 'install', '-r', os.path.join(backend_dir, 'requirements.txt')])
     log('Backend-Abhängigkeiten aktualisiert.')
 
 # -------------------------------------------------------------------------------
@@ -114,6 +164,16 @@ def backup_and_install_nginx():
 # -------------------------------------------------------------------------------
 def main():
     print('Starte Update der Fotobox ...')
+    # -------------------------------------------------------------------------------
+    # backup_dir_erzeugen
+    # -------------------------------------------------------------------------------
+    # Funktion: Legt das Backup-Verzeichnis an, falls nicht vorhanden
+    # -------------------------------------------------------------------------------
+    backup_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backup'))
+    if not os.path.exists(backup_dir):
+        os.makedirs(backup_dir)
+        with open(os.path.join(backup_dir, 'readme.md'), 'w') as f:
+            f.write('# backup\nDieses Verzeichnis wird automatisch durch die Installations- und Update-Skripte erzeugt und enthält Backups von Konfigurationsdateien und Logs. Es ist nicht Teil des Repositorys.')
     backup_configs()
     backup_and_install_systemd()
     backup_and_install_nginx()

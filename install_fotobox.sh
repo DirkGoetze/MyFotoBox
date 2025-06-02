@@ -156,6 +156,10 @@ setup_structure() {
 setup_backup_dir() {
     print_step "Backup-Verzeichnis wird angelegt ..."
     mkdir -p backup
+    if [ ! -f backup/readme.md ]; then
+        echo "# backup
+Dieses Verzeichnis wird automatisch durch die Installations- und Update-Skripte erzeugt und enthält Backups von Konfigurationsdateien und Logs. Es ist nicht Teil des Repositorys." > backup/readme.md
+    fi
     print_success "Backup-Verzeichnis (backup/) wurde angelegt."
 }
 

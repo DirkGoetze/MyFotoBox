@@ -129,6 +129,26 @@ def main():
     remove_systemd()
     remove_nginx()
     remove_project()
+    # -------------------------------------------------------------------------------
+    # backup_dir_entfernen_mit_rueckfrage
+    # -------------------------------------------------------------------------------
+    # Funktion: Fragt vor dem Löschen des Backup-Verzeichnisses nach Bestätigung
+    # -------------------------------------------------------------------------------
+    import shutil
+    backup_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backup'))
+    if os.path.exists(backup_dir):
+        antwort = input('Backup-Verzeichnis und alle Backups unwiderruflich löschen? (j/N): ')
+        if antwort.strip().lower() == 'j':
+            try:
+                shutil.rmtree(backup_dir)
+                print('Backup-Verzeichnis wurde entfernt.')
+                log('Backup-Verzeichnis entfernt.')
+            except Exception as e:
+                print(f'Fehler beim Entfernen des Backup-Verzeichnisses: {e}')
+                log(f'Fehler beim Entfernen des Backup-Verzeichnisses: {e}')
+        else:
+            print('Backup-Verzeichnis wurde NICHT entfernt.')
+            log('Backup-Verzeichnis wurde auf Nutzerwunsch nicht entfernt.')
     print('Deinstallation abgeschlossen. Siehe Log:', LOGFILE)
 
 if __name__ == '__main__':

@@ -1,7 +1,17 @@
+// ------------------------------------------------------------------------------
 // main.js
-// -----------------------------------------------------------------------------
-// Funktion: Zentrales JavaScript für das Fotobox-Frontend
-// -----------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
+// Funktion: Steuert die Interaktion der Fotobox-Weboberfläche (z.B. Fotoaufnahme,
+// Galerieanzeige, Kommunikation mit Backend per HTTP).
+// [Optional: Event-Handler, AJAX, DOM-Manipulation.]
+// ------------------------------------------------------------------------------
+
+// ------------------------------------------------------------------------------
+// Funktionsblock: Galerie- und Aufnahmeansicht (index.html)
+// ------------------------------------------------------------------------------
+// Funktion: Steuert Umschaltung zwischen Galerie- und Aufnahmeansicht, Timeout-
+// Handling, Eventname-Anzeige und Fotoladen.
+// ------------------------------------------------------------------------------
 
 // index.html Funktionen
 if (document.getElementById('showGallery')) {
@@ -74,6 +84,12 @@ if (document.getElementById('showGallery')) {
     showCaptureView();
 }
 
+// ------------------------------------------------------------------------------
+// Funktionsblock: Konfigurationsseite (config.html)
+// ------------------------------------------------------------------------------
+// Funktion: Passwortschutz, Laden/Speichern von Einstellungen, Update/Backup-Handling.
+// ------------------------------------------------------------------------------
+
 // config.html Funktionen
 if (document.getElementById('loginForm')) {
     // Passwortschutz
@@ -135,6 +151,12 @@ if (document.getElementById('loginForm')) {
     };
 }
 
+// ------------------------------------------------------------------------------
+// Funktionsblock: Update & Backup Buttons
+// ------------------------------------------------------------------------------
+// Funktion: Steuert die separaten Buttons für Backup und Update, Statusanzeige.
+// ------------------------------------------------------------------------------
+
 // Update & Backup Buttons getrennt
 if(document.getElementById('backupBtn')) {
     document.getElementById('backupBtn').onclick = function() {
@@ -182,6 +204,12 @@ if(document.getElementById('updateBtn')) {
             if(updateInfoText) updateInfoText.style.display = '';
         });
 }
+
+// ------------------------------------------------------------------------------
+// Funktionsblock: Autosave für Konfigurationsfelder
+// ------------------------------------------------------------------------------
+// Funktion: Automatisches Speichern von Konfigurationsfeldern mit Toast-Anzeige.
+// ------------------------------------------------------------------------------
 
 // Autosave für Konfigurationsseite
 function showAutosaveToast(msg, success=true) {
@@ -242,19 +270,25 @@ if(document.getElementById('configForm')) {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(config)
-                }).then(r => {
+                }).then(function(r) {
                     if(r.ok) {
                         showAutosaveToast('Foto-Auflösung angepasst ...', true);
                     } else {
                         showAutosaveToast('Foto-Auflösung konnte nicht gespeichert werden!', false);
                     }
-                }).catch(() => {
+                }).catch(function() {
                     showAutosaveToast('Foto-Auflösung konnte nicht gespeichert werden!', false);
                 });
             });
         });
     }
 }
+
+// ------------------------------------------------------------------------------
+// Funktionsblock: Farbschema-Umschaltung
+// ------------------------------------------------------------------------------
+// Funktion: Setzt und speichert das Farbschema (Light/Dark/Auto) für die Oberfläche.
+// ------------------------------------------------------------------------------
 
 // Farbschema-Umschaltung (Light/Dark/Auto)
 function applyColorMode(mode) {
@@ -288,6 +322,12 @@ if (document.getElementById('color_mode')) {
     };
 }
 
+// ------------------------------------------------------------------------------
+// Funktionsblock: Header/Footer Dynamik
+// ------------------------------------------------------------------------------
+// Funktion: Setzt dynamisch den Header-Titel und Footer-Text je nach Seite/Event.
+// ------------------------------------------------------------------------------
+
 // header-footer-dynamik
 // -------------------------------------------------------------------------------
 // Funktion: Setzt dynamisch den Header-Titel (Eventname/Projektnamen)
@@ -298,7 +338,7 @@ function setHeaderTitle(title) {
 }
 // Für index.html: Eventname dynamisch aus Settings
 if(document.getElementById('headerTitle') && window.location.pathname.endsWith('index.html')) {
-    fetch('/api/settings').then r=>r.json()).then(config => {
+    fetch('/api/settings').then(function(r){return r.json();}).then(function(config) {
         setHeaderTitle(config.event_name || 'Fotobox');
         // Footer ggf. auch Eventname anzeigen
         var f = document.getElementById('footerText');
@@ -310,6 +350,12 @@ if(document.getElementById('headerTitle') && (window.location.pathname.endsWith(
     setHeaderTitle(document.title.replace('Start','Fotobox').replace('Konfiguration','Fotobox Konfiguration'));
     // Footer bleibt © 2025 Fotobox
 }
+
+// ------------------------------------------------------------------------------
+// Funktionsblock: Hamburger-Menü
+// ------------------------------------------------------------------------------
+// Funktion: Steuert das Hamburger-Menü im Header (öffnen, schließen, Fokus, ESC).
+// ------------------------------------------------------------------------------
 
 // hamburger-menu
 // -------------------------------------------------------------------------------

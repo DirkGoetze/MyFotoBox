@@ -1,8 +1,9 @@
-/* style.css
--------------------------------------------------------------------------------
-# Funktion: Zentrale CSS-Styles für das Fotobox-Frontend
--------------------------------------------------------------------------------
-*/
+/* ------------------------------------------------------------------------------
+   style.css
+ ------------------------------------------------------------------------------
+   Funktion: Enthält alle CSS-Regeln für die Gestaltung der Fotobox-Weboberfläche.
+   [Optional: Layout, Farben, Responsive Design, Animationen.]
+ ------------------------------------------------------------------------------ */
 body {
     font-family: Arial, sans-serif;
     margin: 2em;
