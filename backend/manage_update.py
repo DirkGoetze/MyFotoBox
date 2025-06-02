@@ -2,9 +2,12 @@ import os
 import subprocess
 import sys
 from datetime import datetime
+import shutil
 
 BACKUP_DIR = os.path.join(os.path.dirname(__file__), '../backup')
 LOGFILE = os.path.join(BACKUP_DIR, 'update.log')
+DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
+DB_PATH = os.path.join(DATA_DIR, 'fotobox_settings.db')
 
 os.makedirs(BACKUP_DIR, exist_ok=True)
 
@@ -158,6 +161,29 @@ def backup_and_install_nginx():
     log('Neue NGINX-Konfiguration installiert.')
 
 # -------------------------------------------------------------------------------
+# migrate_db_to_data_dir
+# -------------------------------------------------------------------------------
+# Funktion: Verschiebt die alte Datenbankdatei ins neue data-Verzeichnis, falls nötig
+# -------------------------------------------------------------------------------
+def migrate_db_to_data_dir():
+    old_db = os.path.abspath(os.path.join(os.path.dirname(__file__), 'fotobox_settings.db'))
+    new_db = DB_PATH
+    if os.path.exists(old_db) and not os.path.exists(new_db):
+        os.makedirs(DATA_DIR, exist_ok=True)
+        shutil.move(old_db, new_db)
+        print(f"Datenbank wurde nach {new_db} verschoben.")
+        log(f"Datenbank migriert: {old_db} -> {new_db}")
+
+# -------------------------------------------------------------------------------
+# migrate_and_init_db
+# -------------------------------------------------------------------------------
+# Funktion: Migriert und initialisiert die Datenbank über manage_database.py
+# -------------------------------------------------------------------------------
+def migrate_and_init_db():
+    subprocess.run(['python3', os.path.join(os.path.dirname(__file__), 'manage_database.py'), 'migrate'])
+    subprocess.run(['python3', os.path.join(os.path.dirname(__file__), 'manage_database.py'), 'init'])
+
+# -------------------------------------------------------------------------------
 # main
 # -------------------------------------------------------------------------------
 # Funktion: Hauptablauf für das Update-Skript (Backup, Repo, Backend)
@@ -181,7 +207,8 @@ def main():
     update_backend()
     print('Update abgeschlossen. Siehe Log:', LOGFILE)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    migrate_and_init_db()
     import sys
     if '--backup-only' in sys.argv:
         backup_configs()

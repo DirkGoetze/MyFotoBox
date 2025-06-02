@@ -217,6 +217,18 @@ Dieses Verzeichnis wird automatisch durch die Installations- und Update-Skripte 
 }
 
 # ------------------------------------------------------------------------------
+# setup_data_dir
+# ------------------------------------------------------------------------------
+# Funktion: Legt das Datenverzeichnis an und setzt die Rechte
+# ------------------------------------------------------------------------------
+setup_data_dir() {
+    print_step "Datenverzeichnis wird angelegt ..."
+    mkdir -p "$INSTALL_DIR/data"
+    chown -R fotobox:fotobox "$INSTALL_DIR/data"
+    print_success "Datenverzeichnis ($INSTALL_DIR/data) wurde angelegt."
+}
+
+# ------------------------------------------------------------------------------
 # backup_nginx_config
 # ------------------------------------------------------------------------------
 # Funktion: Sichert vorhandene NGINX-Konfiguration, falls vorhanden
@@ -405,6 +417,7 @@ main() {
     setup_user_group
     setup_structure
     setup_backup_dir
+    setup_data_dir
     backup_nginx_config
     check_nginx_port
     backup_and_install_systemd

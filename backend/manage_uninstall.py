@@ -5,6 +5,8 @@ from datetime import datetime
 
 BACKUP_DIR = os.path.join(os.path.dirname(__file__), '../backup')
 LOGFILE = os.path.join(BACKUP_DIR, 'uninstall.log')
+DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
+DB_PATH = os.path.join(DATA_DIR, 'fotobox_settings.db')
 
 os.makedirs(BACKUP_DIR, exist_ok=True)
 
@@ -117,6 +119,15 @@ def backup_and_remove_nginx():
         log('NGINX-Konfiguration entfernt.')
 
 # -------------------------------------------------------------------------------
+# cleanup_and_optimize_db
+# -------------------------------------------------------------------------------
+# Funktion: Bereinigt und optimiert die Datenbank über manage_database.py
+# -------------------------------------------------------------------------------
+def cleanup_and_optimize_db():
+    subprocess.run(['python3', os.path.join(os.path.dirname(__file__), 'manage_database.py'), 'cleanup'])
+    subprocess.run(['python3', os.path.join(os.path.dirname(__file__), 'manage_database.py'), 'optimize'])
+
+# -------------------------------------------------------------------------------
 # main
 # -------------------------------------------------------------------------------
 # Funktion: Hauptablauf für das Uninstall-Skript (Backup, systemd, nginx, Projekt)
@@ -152,4 +163,5 @@ def main():
     print('Deinstallation abgeschlossen. Siehe Log:', LOGFILE)
 
 if __name__ == '__main__':
+    cleanup_and_optimize_db()
     main()

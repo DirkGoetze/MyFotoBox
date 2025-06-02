@@ -1,9 +1,20 @@
 import sqlite3
 from flask import Flask, request, jsonify, session, redirect, url_for, render_template_string, send_from_directory
 import os
+import subprocess
+
+# -------------------------------------------------------------------------------
+# DB_PATH und Datenverzeichnis sicherstellen
+# -------------------------------------------------------------------------------
+DB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
+DB_PATH = os.path.join(DB_DIR, 'fotobox_settings.db')
+os.makedirs(DB_DIR, exist_ok=True)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FOTOBOX_SECRET_KEY', 'fotobox_default_secret')
+
+# Datenbank initialisieren (bei jedem Start sicherstellen)
+subprocess.run(['python3', os.path.join(os.path.dirname(__file__), 'manage_database.py'), 'init'])
 
 # -------------------------------------------------------------------------------
 # check_password
@@ -13,7 +24,7 @@ app.secret_key = os.environ.get('FOTOBOX_SECRET_KEY', 'fotobox_default_secret')
 # -------------------------------------------------------------------------------
 def check_password(pw):
     import sqlite3, hashlib
-    con = sqlite3.connect('fotobox_settings.db')
+    con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
     cur.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
     cur.execute("SELECT value FROM settings WHERE key='config_password'")
@@ -45,7 +56,7 @@ def login_required(f):
 # Rückgabe: True = erste Inbetriebnahme, False = Konfiguration vorhanden
 # -------------------------------------------------------------------------------
 def check_first_run():
-    con = sqlite3.connect('fotobox_settings.db')
+    con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
     cur.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
     cur.execute("SELECT COUNT(*) FROM settings WHERE key='config_password'")
@@ -103,7 +114,7 @@ def config():
 # -------------------------------------------------------------------------------
 @app.route('/api/settings', methods=['GET', 'POST'])
 def api_settings():
-    db = sqlite3.connect('fotobox_settings.db')
+    db = sqlite3.connect(DB_PATH)
     cur = db.cursor()
     cur.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
     if request.method == 'POST':
