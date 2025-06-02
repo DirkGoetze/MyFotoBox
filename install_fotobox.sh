@@ -184,7 +184,27 @@ backup_nginx_config() {
 check_nginx_port() {
     print_step "Prüfe, ob Port 80 belegt ist ..."
     if lsof -i :80 | grep LISTEN > /dev/null; then
-        print_error "Port 80 ist bereits belegt. Bitte passen Sie die NGINX-Konfiguration nach der Installation an (z.B. auf Port 8080)."
+        print_error "Port 80 ist bereits belegt."
+        print_prompt "Möchten Sie einen alternativen Port (z.B. 8080) für NGINX verwenden? [j/N]"
+        read -r antwort
+        if [[ "$antwort" =~ ^([jJ]|[yY])$ ]]; then
+            print_prompt "Bitte geben Sie den gewünschten Port ein (z.B. 8080):"
+            read -r neuer_port
+            if [[ ! "$neuer_port" =~ ^[0-9]+$ ]]; then
+                print_error "Ungültige Eingabe. Es wird Port 8080 verwendet."
+                neuer_port=8080
+            fi
+            # Passe die NGINX-Konfiguration an
+            if [ -f conf/nginx-fotobox.conf ]; then
+                sed -i "s/listen 80;/listen $neuer_port;/g" conf/nginx-fotobox.conf
+                print_success "NGINX-Konfiguration auf Port $neuer_port angepasst."
+            else
+                print_error "NGINX-Konfigurationsdatei (conf/nginx-fotobox.conf) nicht gefunden!"
+            fi
+        else
+            print_error "Installation abgebrochen. Bitte Port 80 freigeben oder NGINX-Konfiguration manuell anpassen."
+            exit 1
+        fi
     fi
 }
 
@@ -197,6 +217,10 @@ backup_and_install_systemd() {
     local src="conf/fotobox-backend.service"
     local dst="/etc/systemd/system/fotobox-backend.service"
     local backup="backup/fotobox-backend.service.bak.$(date +%Y%m%d%H%M%S)"
+    if [ ! -f "$src" ]; then
+        print_error "Service-Datei $src nicht gefunden! Installation abgebrochen."
+        exit 1
+    fi
     if [ -f "$dst" ]; then
         cp "$dst" "$backup"
         print_success "Backup der bestehenden systemd-Unit nach $backup"
