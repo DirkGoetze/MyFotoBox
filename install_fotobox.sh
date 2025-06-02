@@ -83,12 +83,57 @@ README_DATA="# data\nDieses Verzeichnis enthält die persistenten Daten der Foto
 # Hilfsfunktionen
 # ==========================================================================='
 
+log() {
+    # -----------------------------------------------------------------------
+    # log
+    # -----------------------------------------------------------------------
+    # Hilfsfunktion zur Erzeugung eines einfachen Log mit Rotation und Komprimierung
+    local LOG_PATH
+    if [ -d "/var/log" ]; then
+        LOG_PATH="/var/log"
+    elif [ -d "/tmp" ]; then
+        LOG_PATH="/tmp"
+    else
+        LOG_PATH="."
+    fi
+    local LOG_FILE="${LOG_PATH}/$(date "+%Y-%m-%d")_$(basename "$0" .sh).log"
+    local MAX_ROTATE=5
+    if [ -z "$1" ]; then
+        # Logrotation und Komprimierung
+        if [ -f "${LOG_FILE}.${MAX_ROTATE}.gz" ]; then
+            rm -f "${LOG_FILE}.${MAX_ROTATE}.gz"
+        fi
+        for ((i=MAX_ROTATE-1; i>=2; i--)); do
+            if [ -f "${LOG_FILE}.${i}.gz" ]; then
+                mv "${LOG_FILE}.${i}.gz" "${LOG_FILE}.$((i+1)).gz"
+            fi
+        done
+        if [ -f "${LOG_FILE}.1" ]; then
+            gzip -c "${LOG_FILE}.1" > "${LOG_FILE}.2.gz"
+            rm -f "${LOG_FILE}.1"
+        fi
+        if [ -f "${LOG_FILE}" ]; then
+            mv "${LOG_FILE}" "${LOG_FILE}.1"
+        fi
+        if [ ! -f "${LOG_FILE}" ]; then
+            touch "${LOG_FILE}" || return 1
+        fi
+        echo "" >> "${LOG_FILE}"
+    else
+        if [ ! -f "${LOG_FILE}" ]; then
+            touch "${LOG_FILE}" || return 1
+        fi
+        echo "$(date "+%Y-%m-%d %H:%M:%S") $1" >> "${LOG_FILE}"
+    fi
+}
+
 print_step() {
     # -----------------------------------------------------------------------
     # print_step
     # -----------------------------------------------------------------------
     # Funktion: Gibt einen Hinweis auf einen auszuführenden Schritt in Gelb aus
     echo -e "\033[1;33m$1\033[0m"
+    log "STEP: $1"
 }
 
 print_error() {
@@ -97,6 +142,7 @@ print_error() {
     # -----------------------------------------------------------------------
     # Funktion: Gibt eine Fehlermeldung farbig aus
     echo -e "\033[1;31m  → Fehler: $1\033[0m"
+    log "ERROR: $1"
 }
 
 print_success() {
@@ -105,14 +151,34 @@ print_success() {
     # -----------------------------------------------------------------------
     # Funktion: Gibt eine Erfolgsmeldung in Dunkelgrün aus
     echo -e "\033[1;32m  → $1\033[0m"
+    log "SUCCESS: $1"
+}
+
+dialog_logfile_path() {
+    # -----------------------------------------------------------------------
+    # dialog_logfile_path
+    # -----------------------------------------------------------------------
+    # Gibt den Pfad zur aktuellen Logdatei aus
+    local LOG_PATH
+    if [ -d "/var/log" ]; then
+        LOG_PATH="/var/log"
+    elif [ -d "/tmp" ]; then
+        LOG_PATH="/tmp"
+    else
+        LOG_PATH="."
+    fi
+    echo "${LOG_PATH}/$(date "+%Y-%m-%d")_$(basename "$0" .sh).log"
 }
 
 print_prompt() {
     # -----------------------------------------------------------------------
-    # dlg_prompt
+    # print_prompt
     # -----------------------------------------------------------------------
-    # Funktion: Gibt eine Nutzeraufforderung in Blau aus
-    echo -e "\033[1;34m$1\033[0m"
+    # Funktion: Gibt eine Nutzeraufforderung in Blau aus (nur, wenn nicht unattended)
+    if [ "$UNATTENDED" -eq 0 ]; then
+        echo -e "\033[1;34m$1\033[0m"
+    fi
+    log "PROMPT: $1"
 }
 
 chk_is_root() {
@@ -237,8 +303,13 @@ install_package_group() {
             local installed_version
             installed_version=$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null)
             print_error "$pkg ist in Version $installed_version installiert, benötigt wird $version."
-            print_prompt "Soll $pkg auf Version $version aktualisiert werden? [j/N]"
-            read -r upgrade
+            if [ "$UNATTENDED" -eq 1 ]; then
+                upgrade="n"
+                log "Automatische Antwort (unattended) auf Upgrade-Rückfrage: $upgrade"
+            else
+                print_prompt "Soll $pkg auf Version $version aktualisiert werden? [j/N]"
+                read -r upgrade
+            fi
             if [[ "$upgrade" =~ ^([jJ]|[yY])$ ]]; then
                 apt-get install -y -qq "$pkg=$version"
                 local new_version
@@ -287,8 +358,13 @@ chk_nginx_installation() {
     # Funktion: Prüft, ob NGINX installiert ist, installiert ggf. nach (mit Rückfrage)
     # Rückgabe: 0 = OK, 1 = Installation abgebrochen, 2 = Installationsfehler
     if ! command -v nginx >/dev/null 2>&1; then
-        print_prompt "NGINX ist nicht installiert. Jetzt installieren? [J/n]"
-        read -r antwort
+        if [ "$UNATTENDED" -eq 1 ]; then
+            antwort="j"
+            log "Automatische Antwort (unattended) auf NGINX-Installationsabfrage: $antwort"
+        else
+            print_prompt "NGINX ist nicht installiert. Jetzt installieren? [J/n]"
+            read -r antwort
+        fi
         if [[ "$antwort" =~ ^([nN])$ ]]; then
             print_error "NGINX-Installation abgebrochen."
             return 1
@@ -438,8 +514,13 @@ set_nginx_port() {
     # Rückgabe: 0 = Port gesetzt, 1 = Abbruch
     local port=80
     while true; do
-        print_prompt "Bitte gewünschten Port für die Fotobox-Weboberfläche angeben [Default: 80]:"
-        read -r eingabe
+        if [ "$UNATTENDED" -eq 1 ]; then
+            eingabe=""
+            log "Automatische Portwahl (unattended): Default 80"
+        else
+            print_prompt "Bitte gewünschten Port für die Fotobox-Weboberfläche angeben [Default: 80]:"
+            read -r eingabe
+        fi
         if [ -z "$eingabe" ]; then
             port=80
         elif [[ "$eingabe" =~ ^[0-9]+$ ]]; then
@@ -455,10 +536,15 @@ set_nginx_port() {
             return 0
         else
             print_error "Port $port ist bereits belegt. Bitte anderen Port wählen."
-            print_prompt "Abbrechen? [j/N]"
-            read -r abbruch
-            if [[ "$abbruch" =~ ^([jJ]|[yY])$ ]]; then
+            if [ "$UNATTENDED" -eq 1 ]; then
+                log "Abbruch durch unattended, da Port belegt."
                 return 1
+            else
+                print_prompt "Abbrechen? [j/N]"
+                read -r abbruch
+                if [[ "$abbruch" =~ ^([jJ]|[yY])$ ]]; then
+                    return 1
+                fi
             fi
         fi
     done
@@ -766,11 +852,21 @@ dlg_nginx_installation() {
     fi
 
     if [ $rc -eq 0 ]; then
-        print_prompt "NGINX läuft nur im Default-Modus. Fotobox in Default-Konfiguration integrieren? [J/n]"
-        read -r antwort
+        if [ "$UNATTENDED" -eq 1 ]; then
+            antwort="j"
+            log "Automatische Antwort (unattended) auf Default-Integration: $antwort"
+        else
+            print_prompt "NGINX läuft nur im Default-Modus. Fotobox in Default-Konfiguration integrieren? [J/n]"
+            read -r antwort
+        fi
         if [[ "$antwort" =~ ^([nN])$ ]]; then
-            print_prompt "Stattdessen eigene Fotobox-Konfiguration anlegen? [J/n]"
-            read -r antwort2
+            if [ "$UNATTENDED" -eq 1 ]; then
+                antwort2="j"
+                log "Automatische Antwort (unattended) auf eigene Konfiguration: $antwort2"
+            else
+                print_prompt "Stattdessen eigene Fotobox-Konfiguration anlegen? [J/n]"
+                read -r antwort2
+            fi
             if [[ "$antwort2" =~ ^([nN])$ ]]; then
                 print_error "Abbruch: Keine NGINX-Integration gewählt."
                 exit 1
@@ -795,8 +891,13 @@ dlg_nginx_installation() {
             fi
         fi
     elif [ $rc -eq 1 ]; then
-        print_prompt "NGINX betreibt mehrere Sites. Eigene Fotobox-Konfiguration anlegen? [J/n]"
-        read -r antwort
+        if [ "$UNATTENDED" -eq 1 ]; then
+            antwort="j"
+            log "Automatische Antwort (unattended) auf eigene Konfiguration: $antwort"
+        else
+            print_prompt "NGINX betreibt mehrere Sites. Eigene Fotobox-Konfiguration anlegen? [J/n]"
+            read -r antwort
+        fi
         if [[ "$antwort" =~ ^([nN])$ ]]; then
             print_error "Abbruch: Keine NGINX-Integration gewählt."
             exit 1
@@ -848,11 +949,23 @@ main() {
     dlg_prepare_structure       # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
     dlg_nginx_installation      # NGINX-Konfiguration (Integration oder eigene Site)
     dlg_backend_integration     # Python-Backend, venv, systemd-Service, Start
-    print_success "Erstinstallation abgeschlossen."
-    local web_url
-    web_url=$(get_nginx_url)
-    print_prompt "Bitte rufen Sie die Weboberfläche im Browser auf, um die Fotobox weiter zu konfigurieren und zu verwalten.\nURL: $web_url"
-    echo "Weitere Wartung (Update, Deinstallation) erfolgt über die WebUI oder die Python-Skripte im backend/."
+    if [ "$UNATTENDED" -eq 1 ]; then
+        local logfile
+        logfile=$(dialog_logfile_path)
+        echo "Installation abgeschlossen. Details siehe Logfile: $logfile"
+        local web_url
+        web_url=$(get_nginx_url)
+        echo "Weboberfläche: $web_url"
+    else
+        print_success "Erstinstallation abgeschlossen."
+        local web_url
+        web_url=$(get_nginx_url)
+        print_prompt "Bitte rufen Sie die Weboberfläche im Browser auf, um die Fotobox weiter zu konfigurieren und zu verwalten.\nURL: $web_url"
+        echo "Weitere Wartung (Update, Deinstallation) erfolgt über die WebUI oder die Python-Skripte im backend/."
+    fi
 }
 
+# Log-Initialisierung (Rotation) direkt nach Skriptstart --------------------
+log
+# Hauptfunktion aufrufen ----------------------------------------------------
 main
