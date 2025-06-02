@@ -163,12 +163,12 @@ setup_structure() {
 # ------------------------------------------------------------------------------
 setup_backup_dir() {
     print_step "Backup-Verzeichnis wird angelegt ..."
-    mkdir -p backup
-    if [ ! -f backup/readme.md ]; then
+    mkdir -p /opt/fotobox/backup
+    if [ ! -f /opt/fotobox/backup/readme.md ]; then
         echo "# backup
-Dieses Verzeichnis wird automatisch durch die Installations- und Update-Skripte erzeugt und enthält Backups von Konfigurationsdateien und Logs. Es ist nicht Teil des Repositorys." > backup/readme.md
+Dieses Verzeichnis wird automatisch durch die Installations- und Update-Skripte erzeugt und enthält Backups von Konfigurationsdateien und Logs. Es ist nicht Teil des Repositorys." > /opt/fotobox/backup/readme.md
     fi
-    print_success "Backup-Verzeichnis (backup/) wurde angelegt."
+    print_success "Backup-Verzeichnis (/opt/fotobox/backup/) wurde angelegt."
 }
 
 # ------------------------------------------------------------------------------
@@ -203,23 +203,23 @@ check_nginx_port() {
                 neuer_port=8080
             fi
             # Passe die NGINX-Konfiguration an
-            if [ ! -d conf ]; then
-                mkdir -p conf
+            if [ ! -d /opt/fotobox/conf ]; then
+                mkdir -p /opt/fotobox/conf
             fi
-            if [ -f conf/nginx-fotobox.conf ]; then
+            if [ -f /opt/fotobox/conf/nginx-fotobox.conf ]; then
                 # Korrigiere ggf. fehlerhafte proxy_set_header-Zeilen
-                sed -i '/proxy_set_header[[:space:]]*$/d' conf/nginx-fotobox.conf
-                sed -i '/proxy_set_header[[:space:]]\+[^;]*$/!b' conf/nginx-fotobox.conf
-                sed -i '/proxy_set_header[[:space:]]\+[^;]*;/!b' conf/nginx-fotobox.conf
-                sed -i 's/[[:space:]]\{2,\}/ /g' conf/nginx-fotobox.conf
-                sed -i 's/;\{2,\}/;/g' conf/nginx-fotobox.conf
+                sed -i '/proxy_set_header[[:space:]]*$/d' /opt/fotobox/conf/nginx-fotobox.conf
+                sed -i '/proxy_set_header[[:space:]]\+[^;]*$/!b' /opt/fotobox/conf/nginx-fotobox.conf
+                sed -i '/proxy_set_header[[:space:]]\+[^;]*;/!b' /opt/fotobox/conf/nginx-fotobox.conf
+                sed -i 's/[[:space:]]\{2,\}/ /g' /opt/fotobox/conf/nginx-fotobox.conf
+                sed -i 's/;\{2,\}/;/g' /opt/fotobox/conf/nginx-fotobox.conf
                 print_success "NGINX-Konfiguration auf Port $neuer_port angepasst und geprüft."
             else
-                print_error "NGINX-Konfigurationsdatei (conf/nginx-fotobox.conf) nicht gefunden!"
+                print_error "NGINX-Konfigurationsdatei (/opt/fotobox/conf/nginx-fotobox.conf) nicht gefunden!"
                 print_prompt "Soll eine Standard-NGINX-Konfiguration für Port $neuer_port erzeugt werden? [j/N]"
                 read -r genantwort
                 if [[ "$genantwort" =~ ^([jJ]|[yY])$ ]]; then
-                    cat > conf/nginx-fotobox.conf <<EOF
+                    cat > /opt/fotobox/conf/nginx-fotobox.conf <<EOF
 server {
     listen $neuer_port;
     server_name _;
@@ -259,9 +259,9 @@ EOF
 # Funktion: Sichert bestehende systemd-Unit, kopiert neue aus conf/, aktiviert und startet Service
 # ------------------------------------------------------------------------------
 backup_and_install_systemd() {
-    local src="conf/fotobox-backend.service"
+    local src="/opt/fotobox/conf/fotobox-backend.service"
     local dst="/etc/systemd/system/fotobox-backend.service"
-    local backup="backup/fotobox-backend.service.bak.$(date +%Y%m%d%H%M%S)"
+    local backup="/opt/fotobox/backup/fotobox-backend.service.bak.$(date +%Y%m%d%H%M%S)"
     if [ ! -f "$src" ]; then
         print_error "Service-Datei $src nicht gefunden!"
         print_prompt "Soll eine Standard-Service-Datei erzeugt werden? [j/N]"
@@ -305,9 +305,9 @@ EOF
 # Funktion: Sichert bestehende NGINX-Konfiguration, kopiert neue aus conf/, startet NGINX neu
 # ------------------------------------------------------------------------------
 backup_and_install_nginx() {
-    local src="conf/nginx-fotobox.conf"
+    local src="/opt/fotobox/conf/nginx-fotobox.conf"
     local dst="/etc/nginx/sites-available/fotobox"
-    local backup="backup/nginx-fotobox.conf.bak.$(date +%Y%m%d%H%M%S)"
+    local backup="/opt/fotobox/backup/nginx-fotobox.conf.bak.$(date +%Y%m%d%H%M%S)"
     if [ -f "$dst" ]; then
         cp "$dst" "$backup"
         print_success "Backup der bestehenden NGINX-Konfiguration nach $backup"
