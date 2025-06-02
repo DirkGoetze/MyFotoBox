@@ -32,6 +32,7 @@ NGINX_CONF="$CONF_DIR/nginx-fotobox.conf"
 SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
 NGINX_DST="/etc/nginx/sites-available/fotobox"
 SYSTEMD_DST="/etc/systemd/system/fotobox-backend.service"
+FOTOBOX_PORT=80 # Wird ggf. in check_nginx_port überschrieben
 
 # ------------------------------------------------------------------------------
 # Globale Konstanten für Konfiguration und Verzeichnisse
@@ -228,28 +229,29 @@ check_nginx_port() {
                 print_error "Ungültige Eingabe. Es wird Port 8080 verwendet."
                 neuer_port=8080
             fi
+            FOTOBOX_PORT=$neuer_port
             # Passe die NGINX-Konfiguration an
             if [ ! -d "$CONF_DIR" ]; then
                 mkdir -p "$CONF_DIR"
             fi
             if [ -f "$NGINX_CONF" ]; then
                 # Korrigiere ggf. fehlerhafte proxy_set_header-Zeilen
+                sed -i "/listen /c\    listen 0.0.0.0:$FOTOBOX_PORT;" "$NGINX_CONF"
                 sed -i '/proxy_set_header[[:space:]]*$/d' "$NGINX_CONF"
                 sed -i '/proxy_set_header[[:space:]]\+[^;]*$/!b' "$NGINX_CONF"
                 sed -i '/proxy_set_header[[:space:]]\+[^;]*;/!b' "$NGINX_CONF"
                 sed -i 's/[[:space:]]\{2,\}/ /g' "$NGINX_CONF"
                 sed -i 's/;\{2,\}/;/g' "$NGINX_CONF"
-                print_success "NGINX-Konfiguration auf Port $neuer_port angepasst und geprüft."
+                print_success "NGINX-Konfiguration auf Port $FOTOBOX_PORT angepasst und geprüft."
             else
                 print_error "NGINX-Konfigurationsdatei ($NGINX_CONF) nicht gefunden!"
-                print_prompt "Soll eine Standard-NGINX-Konfiguration für Port $neuer_port erzeugt werden? [j/N]"
+                print_prompt "Soll eine Standard-NGINX-Konfiguration für Port $FOTOBOX_PORT erzeugt werden? [j/N]"
                 read -r genantwort
                 if [[ "$genantwort" =~ ^([jJ]|[yY])$ ]]; then
-                    # Ermittele aktuelle IP-Adresse
                     ip_addr=$(hostname -I | awk '{print $1}')
                     cat > "$NGINX_CONF" <<EOF
 server {
-    listen 0.0.0.0:$neuer_port;
+    listen 0.0.0.0:$FOTOBOX_PORT;
     server_name $ip_addr;
     root $INSTALL_DIR/frontend;
     index start.html index.html;
@@ -268,7 +270,7 @@ server {
     }
 }
 EOF
-                    print_success "Standard-NGINX-Konfiguration für Port $neuer_port erzeugt."
+                    print_success "Standard-NGINX-Konfiguration für Port $FOTOBOX_PORT erzeugt."
                 else
                     print_error "Installation abgebrochen. Bitte NGINX-Konfiguration manuell anlegen."
                     exit 1
@@ -279,12 +281,13 @@ EOF
             exit 1
         fi
     else
+        FOTOBOX_PORT=80
         # Port 80 ist frei, Standardkonfiguration ggf. anpassen
         if [ ! -f "$NGINX_CONF" ]; then
             ip_addr=$(hostname -I | awk '{print $1}')
             cat > "$NGINX_CONF" <<EOF
 server {
-    listen 0.0.0.0:80;
+    listen 0.0.0.0:$FOTOBOX_PORT;
     server_name $ip_addr;
     root $INSTALL_DIR/frontend;
     index start.html index.html;
@@ -303,7 +306,7 @@ server {
     }
 }
 EOF
-            print_success "Standard-NGINX-Konfiguration für Port 80 erzeugt."
+            print_success "Standard-NGINX-Konfiguration für Port $FOTOBOX_PORT erzeugt."
         fi
     fi
 }
@@ -388,12 +391,9 @@ main() {
     check_nginx_port
     backup_and_install_systemd
     backup_and_install_nginx
-    # Ermittele aktuelle IP-Adresse und Port für Beispiel-URL
     ip_addr=$(hostname -I | awk '{print $1}')
-    # Port aus NGINX-Konfiguration extrahieren
-    port=$(grep -m1 'listen ' "$NGINX_CONF" | sed -E 's/.*listen ([^;]*);.*/\1/' | awk -F: '{print $NF}')
     print_success "Erstinstallation abgeschlossen."
-    print_prompt "Bitte rufen Sie die Weboberfläche im Browser auf, um die Fotobox weiter zu konfigurieren und zu verwalten.\nBeispiel: http://$ip_addr:$port/"
+    print_prompt "Bitte rufen Sie die Weboberfläche im Browser auf, um die Fotobox weiter zu konfigurieren und zu verwalten.\nBeispiel: http://$ip_addr:$FOTOBOX_PORT/"
     echo "Weitere Wartung (Update, Deinstallation) erfolgt über die WebUI oder die Python-Skripte im backend/."
 }
 
