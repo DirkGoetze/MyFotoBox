@@ -139,13 +139,21 @@ setup_user_group() {
 # ------------------------------------------------------------------------------
 # setup_structure
 # ------------------------------------------------------------------------------
-# Funktion: Erstellt das Grundverzeichnis und setzt die Rechte
+# Funktion: Erstellt das Grundverzeichnis, kopiert Projektdateien und setzt die Rechte
 # ------------------------------------------------------------------------------
 setup_structure() {
-    print_step "Erstelle Verzeichnisstruktur und setze Rechte ..."
+    print_step "Erstelle Verzeichnisstruktur und kopiere Projektdateien ..."
     mkdir -p /opt/fotobox
+    # Prüfe, ob das Zielverzeichnis leer ist
+    if [ -z "$(ls -A /opt/fotobox 2>/dev/null)" ]; then
+        print_step "Kopiere Projektdateien (ohne rsync, nur mit cp/tar) ..."
+        tar --exclude='./backup' --exclude='./.git' --exclude='./venv' --exclude='./__pycache__' -cf - . | (cd /opt/fotobox && tar -xf -)
+        print_success "Projektdateien wurden nach /opt/fotobox kopiert."
+    else
+        print_prompt "/opt/fotobox ist nicht leer. Überspringe Kopiervorgang."
+    fi
     chown -R fotobox:fotobox /opt/fotobox
-    print_success "Verzeichnisstruktur wurde angelegt und Rechte gesetzt."
+    print_success "Verzeichnisstruktur und Rechte wurden gesetzt."
 }
 
 # ------------------------------------------------------------------------------
@@ -195,11 +203,48 @@ check_nginx_port() {
                 neuer_port=8080
             fi
             # Passe die NGINX-Konfiguration an
+            if [ ! -d conf ]; then
+                mkdir -p conf
+            fi
             if [ -f conf/nginx-fotobox.conf ]; then
-                sed -i "s/listen 80;/listen $neuer_port;/g" conf/nginx-fotobox.conf
-                print_success "NGINX-Konfiguration auf Port $neuer_port angepasst."
+                # Korrigiere ggf. fehlerhafte proxy_set_header-Zeilen
+                sed -i '/proxy_set_header[[:space:]]*$/d' conf/nginx-fotobox.conf
+                sed -i '/proxy_set_header[[:space:]]\+[^;]*$/!b' conf/nginx-fotobox.conf
+                sed -i '/proxy_set_header[[:space:]]\+[^;]*;/!b' conf/nginx-fotobox.conf
+                sed -i 's/[[:space:]]\{2,\}/ /g' conf/nginx-fotobox.conf
+                sed -i 's/;\{2,\}/;/g' conf/nginx-fotobox.conf
+                print_success "NGINX-Konfiguration auf Port $neuer_port angepasst und geprüft."
             else
                 print_error "NGINX-Konfigurationsdatei (conf/nginx-fotobox.conf) nicht gefunden!"
+                print_prompt "Soll eine Standard-NGINX-Konfiguration für Port $neuer_port erzeugt werden? [j/N]"
+                read -r genantwort
+                if [[ "$genantwort" =~ ^([jJ]|[yY])$ ]]; then
+                    cat > conf/nginx-fotobox.conf <<EOF
+server {
+    listen $neuer_port;
+    server_name _;
+    root /opt/fotobox/frontend;
+    index start.html index.html;
+    location / {
+        try_files $uri $uri/ =404;
+    }
+    location /api/ {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location /photos/ {
+        proxy_pass http://127.0.0.1:5000/photos/;
+    }
+}
+EOF
+                    print_success "Standard-NGINX-Konfiguration für Port $neuer_port erzeugt."
+                else
+                    print_error "Installation abgebrochen. Bitte NGINX-Konfiguration manuell anlegen."
+                    exit 1
+                fi
             fi
         else
             print_error "Installation abgebrochen. Bitte Port 80 freigeben oder NGINX-Konfiguration manuell anpassen."
@@ -218,8 +263,30 @@ backup_and_install_systemd() {
     local dst="/etc/systemd/system/fotobox-backend.service"
     local backup="backup/fotobox-backend.service.bak.$(date +%Y%m%d%H%M%S)"
     if [ ! -f "$src" ]; then
-        print_error "Service-Datei $src nicht gefunden! Installation abgebrochen."
-        exit 1
+        print_error "Service-Datei $src nicht gefunden!"
+        print_prompt "Soll eine Standard-Service-Datei erzeugt werden? [j/N]"
+        read -r genantwort
+        if [[ "$genantwort" =~ ^([jJ]|[yY])$ ]]; then
+            cat > "$src" <<EOF
+[Unit]
+Description=Fotobox Backend (Flask)
+After=network.target
+
+[Service]
+Type=simple
+User=fotobox
+WorkingDirectory=/opt/fotobox/backend
+ExecStart=/opt/fotobox/backend/venv/bin/python app.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+            print_success "Standard-Service-Datei erzeugt: $src"
+        else
+            print_error "Installation abgebrochen. Bitte Service-Datei manuell anlegen."
+            exit 1
+        fi
     fi
     if [ -f "$dst" ]; then
         cp "$dst" "$backup"
