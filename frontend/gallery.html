@@ -1,16 +1,20 @@
-<!-- Splash Screen und Navigation zur Aufnahme- und Konfigurationsseite -->
+<!-- gallery.html
+-------------------------------------------------------------------------------
+# Funktion: Zeigt die Galerie-Ansicht der Fotobox mit allen aufgenommenen Fotos
+# und Navigation. Responsive, modernes Layout, Navigation wie auf den anderen Seiten.
+------------------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Fotobox Start</title>
+    <title>Fotobox Galerie</title>
     <link rel="stylesheet" href="fonts/fontawesome-free-5.15.4-web/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="start-bg">
+<body>
     <!-- header-block
     -------------------------------------------------------------------------------
-    # Funktion: Header mit Projektnamen für Startseite
+    # Funktion: Header mit Projektnamen für Galerieansicht
     -------------------------------------------------------------------------------
     -->
     <header id="mainHeader">
@@ -19,31 +23,19 @@
         </button>
         <span id="headerTitle">Fotobox</span>
         <nav id="headerMenu" aria-label="Hauptmenü">
-            <a href="index.html">Home</a>
-            <a href="index.html#galleryView">Galerie</a>
+            <a href="index.html">Aufnahme</a>
+            <a href="gallery.html">Galerie</a>
             <a href="config.html">Einstellungen</a>
         </nav>
     </header>
     <!-- Brotkrumen-Navigation unter dem Header -->
     <nav class="breadcrumb">
-        <span>Home</span>
+        <a href="index.html">Home</a> &gt; <span>Galerie</span>
     </nav>
-    <div class="splash-panel" id="splashPanel">
-        <div class="logo-placeholder">
-            <!-- Hier kann später ein Logo eingebunden werden -->
-            <img src="picture/background.jpg" alt="Fotobox Logo" style="max-width:120px; border-radius:50%; box-shadow:0 2px 8px #222; background:#fff; padding:8px; margin-bottom:1em;">
-        </div>
-        <h1>Willkommen zur Fotobox</h1>
-        <div class="splash-buttons">
-            <button class="main-btn" onclick="window.location.href='index.html'">Zur Fotoaufnahme</button>
-            <button class="main-btn" onclick="window.location.href='config.html'">Zur Einrichtung</button>
-        </div>
-        <div class="small">© 2025 Fotobox</div>
-        <div class="info" style="margin-top:1em;">
-            <label><input type="checkbox" id="disableSplash"> Splash Screen beim Start nicht mehr anzeigen</label>
-        </div>
+    <div id="galleryView">
+        <h1>Galerie</h1>
+        <div id="galleryPhotos"></div>
     </div>
-
     <!-- footer-block
     -------------------------------------------------------------------------------
     # Funktion: Footer mit Copyright und Projektnamen für alle Seiten

@@ -61,3 +61,27 @@ Beispiel-Funktionen siehe install_fotobox.sh.
 - Keine doppelten Überschriften oder Listen ohne Abstand.
 - Platzhalter wie `[eventname]` sind in Markdown in eckigen Klammern zu schreiben (keine spitzen Klammern, um Lint-Fehler zu vermeiden).
 - Siehe auch: [Markdownlint-Regeln](https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md)
+
+## JavaScript Policy (Ergänzung)
+
+- **Alle JavaScript-Dateien müssen zentral im Verzeichnis `frontend/js/` abgelegt werden.**
+
+- Es dürfen keine Inline- oder eingebetteten Skripte in HTML-Dateien verwendet werden (außer zum Laden von Dateien per `script src`).
+
+- Die Einbindung von JavaScript erfolgt ausschließlich über `script src="js/main.js"` (bzw. weitere zentrale Dateien bei Bedarf).
+
+- Gemeinsame Funktionen und seitenübergreifende Logik sind in `main.js` zu bündeln.
+
+- Details siehe auch `frontend/js/JAVASCRIPT_POLICY.md`.
+
+-------------------------------------------------------------------------------
+# Ausnahme: Keine Prüfung von Unterordnern in 'frontend/fonts/'
+-------------------------------------------------------------------------------
+# Ordner und Dateien unterhalb von 'frontend/fonts/' (insbesondere 'fontawesome-free-5.15.4-web/')
+# sind explizit von allen Policy- und Dokumentationsprüfungen ausgenommen.
+# Diese stammen aus externen Quellen (z.B. FontAwesome) und sind nicht Bestandteil des eigenen Projekts.
+# Änderungen, Prüfungen oder Anpassungen an diesen Dateien sind nicht zulässig und nicht erforderlich.
+# Die Policy-Prüfung bezieht sich ausschließlich auf eigene Projektdateien.
+#
+# (Siehe auch copilot-instructions)
+-------------------------------------------------------------------------------

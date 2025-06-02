@@ -50,6 +50,12 @@ def check_first_run():
     cur.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
     cur.execute("SELECT COUNT(*) FROM settings WHERE key='config_password'")
     count = cur.fetchone()[0]
+    # Standardwert für photo_timer bei Erstinstallation setzen
+    cur.execute("SELECT COUNT(*) FROM settings WHERE key='photo_timer'")
+    timer_count = cur.fetchone()[0]
+    if timer_count == 0:
+        cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", ("photo_timer", "5"))
+        con.commit()
     con.close()
     return count == 0
 
@@ -102,7 +108,7 @@ def api_settings():
     cur.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
     if request.method == 'POST':
         data = request.get_json(force=True)
-        for key in ['camera_mode', 'resolution_width', 'resolution_height', 'storage_path', 'event_name']:
+        for key in ['camera_mode', 'resolution_width', 'resolution_height', 'storage_path', 'event_name', 'show_splash', 'photo_timer']:
             if key in data:
                 cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, str(data[key])))
         db.commit()
@@ -111,6 +117,11 @@ def api_settings():
     # GET
     cur.execute("SELECT key, value FROM settings")
     result = {k: v for k, v in cur.fetchall()}
+    # show_splash als bool zurückgeben (Default: '1')
+    if 'show_splash' not in result:
+        result['show_splash'] = '1'
+    if 'photo_timer' not in result:
+        result['photo_timer'] = '5'
     db.close()
     return jsonify(result)
 
@@ -165,6 +176,22 @@ def update_backend():
         return out.decode() or 'Update/Backup abgeschlossen.'
     else:
         return (err.decode() or 'Fehler beim Update/Backup!'), 500
+
+# -------------------------------------------------------------------------------
+# /api/take_photo (POST)
+# -------------------------------------------------------------------------------
+@app.route('/api/take_photo', methods=['POST'])
+def take_photo():
+    import time
+    data = request.get_json(silent=True) or {}
+    delay = int(data.get('delay', 0))
+    if delay > 0:
+        time.sleep(delay)
+    # Hier eigentliche Fotoaufnahme-Logik (Platzhalter)
+    # ... Foto aufnehmen und speichern ...
+    # Dummy-Implementierung:
+    # time.sleep(1) # Simuliert Fotoaufnahme
+    return jsonify({'status': 'ok'})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

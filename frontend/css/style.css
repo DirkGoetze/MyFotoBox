@@ -371,11 +371,13 @@ header#mainHeader {
     color: #fff;
     font-size: 1.5em;
     font-weight: bold;
-    padding: 0.7em 1.5em;
+    padding: 0.7em 1.5em 0.7em 1.5em;
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin: 0;
+    box-sizing: border-box;
+    overflow-x: auto;
 }
 body.dark header#mainHeader {
     background: linear-gradient(90deg, #222 0%, #444 100%);
@@ -428,7 +430,7 @@ body {
 -------------------------------------------------------------------------------
 */
 .hamburger {
-    display: none;
+    display: flex;
     flex-direction: column;
     justify-content: center;
     width: 2em;
@@ -483,17 +485,102 @@ body.dark #headerMenu a {
 body.dark #headerMenu a:hover {
     background: #38d39f44;
 }
+@media (min-width: 901px) {
+    .hamburger {
+        display: none !important;
+    }
+    #headerMenu {
+        display: flex !important;
+        position: static;
+        flex-direction: row;
+        background: none;
+        box-shadow: none;
+        min-width: unset;
+        padding: 0;
+        font-size: 1em;
+        align-items: center;
+        gap: 1.5em;
+    }
+    #headerMenu a {
+        color: #fff;
+        background: none;
+        padding: 0.3em 0.7em;
+        margin-bottom: 0;
+    }
+    #headerMenu a:hover {
+        background: #38d39f44;
+    }
+}
 @media (max-width: 900px) {
     .hamburger {
         display: flex;
     }
     #headerMenu {
-        top: 2.5em;
-        min-width: 140px;
-        font-size: 1em;
-    }
-    header#mainHeader {
+        display: none;
+        position: fixed;
+        top: 3.2em;
+        right: 0;
+        background: #fff;
+        color: #222;
+        min-width: 180px;
+        box-shadow: 0 2px 16px #2223;
+        border-radius: 0 0 0.7em 0.7em;
+        z-index: 1100;
         font-size: 1.1em;
-        padding: 0.5em 0.7em;
+        padding: 0.7em 0.5em;
+        flex-direction: column;
+        gap: 0;
     }
+    #headerMenu a {
+        color: #222;
+        background: none;
+        padding: 0.6em 1.2em;
+        border-radius: 0.4em;
+        margin-bottom: 0.2em;
+    }
+}
+
+/* Brotkrumen-Navigation (Breadcrumb) */
+.breadcrumb {
+    margin: 1.2em 0 1.5em 0;
+    padding: 0.3em 1em;
+    font-size: 1.05em;
+    color: #555;
+    background: #f4f7fa;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+}
+.breadcrumb a {
+    color: #38d39f;
+    text-decoration: none;
+    font-weight: bold;
+}
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+body.dark .breadcrumb {
+    background: #23272e;
+    color: #ccc;
+}
+body.dark .breadcrumb a {
+    color: #4e9cff;
+}
+#captureView {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+}
+#captureView > div, #captureView > button, #captureView > h1, #captureView > h2 {
+    text-align: center;
+}
+#captureView > div {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }

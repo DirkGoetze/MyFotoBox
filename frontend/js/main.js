@@ -114,6 +114,7 @@ if (document.getElementById('loginForm')) {
             if(config.storage_path) document.getElementById('storage_path').value = config.storage_path;
             if(config.event_name) document.getElementById('event_name').value = config.event_name;
             if(config.gallery_timeout_ms) document.getElementById('gallery_timeout').value = Math.round(config.gallery_timeout_ms/1000);
+            if(config.photo_timer) document.getElementById('photo_timer').value = config.photo_timer;
         });
     }
     // Einstellungen speichern
@@ -226,8 +227,18 @@ function showAutosaveToast(msg, success=true) {
 function autosaveConfigField(field, label) {
     field.addEventListener('change', function() {
         const config = {};
-        config[field.name] = (field.type === 'number') ? parseInt(field.value, 10) : field.value;
-        if(field.name === 'gallery_timeout') config['gallery_timeout_ms'] = config['gallery_timeout']*1000;
+        if(field.name === 'photo_timer') {
+            let val = parseInt(field.value, 10);
+            if(isNaN(val) || val < 2 || val > 10) {
+                showAutosaveToast('Timer muss zwischen 2 und 10 Sekunden liegen!', false);
+                field.value = 5;
+                return;
+            }
+            config['photo_timer'] = val;
+        } else {
+            config[field.name] = (field.type === 'number') ? parseInt(field.value, 10) : field.value;
+            if(field.name === 'gallery_timeout') config['gallery_timeout_ms'] = config['gallery_timeout']*1000;
+        }
         fetch('/api/settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -250,7 +261,8 @@ if(document.getElementById('configForm')) {
         {id:'gallery_timeout', label:'Galerie-Timeout'},
         {id:'event_name', label:'Eventname'},
         {id:'storage_path', label:'Speicherpfad'},
-        {id:'camera_mode', label:'Kamera-Modus'}
+        {id:'camera_mode', label:'Kamera-Modus'},
+        {id:'photo_timer', label:'Foto-Timer'}
     ];
     fields.forEach(f => {
         const el = document.getElementById(f.id);
@@ -352,57 +364,92 @@ if(document.getElementById('headerTitle') && (window.location.pathname.endsWith(
 }
 
 // ------------------------------------------------------------------------------
-// Funktionsblock: Hamburger-Menü
+// Funktionsblock: Hamburger-Menü für alle Seiten
 // ------------------------------------------------------------------------------
-// Funktion: Steuert das Hamburger-Menü im Header (öffnen, schließen, Fokus, ESC).
+// Funktion: Steuert das Hamburger-Menü im Header (öffnen, schließen, Fokus, ESC, Mausverlassen, Auswahl)
 // ------------------------------------------------------------------------------
-
-// hamburger-menu
-// -------------------------------------------------------------------------------
-// Funktion: Hamburger-Menü im Header steuern (öffnen/schließen, Fokus, ESC)
-// -------------------------------------------------------------------------------
-(function(){
+function setupHamburgerMenu() {
     const btn = document.getElementById('hamburgerBtn');
     const menu = document.getElementById('headerMenu');
-    if(!btn || !menu) return;
-    function closeMenu() {
-        menu.style.display = 'none';
-        btn.setAttribute('aria-expanded','false');
+    if(btn && menu) {
+        function closeMenu() {
+            menu.style.display = 'none';
+            btn.setAttribute('aria-expanded','false');
+        }
+        function openMenu() {
+            menu.style.display = 'block';
+            btn.setAttribute('aria-expanded','true');
+            const first = menu.querySelector('a');
+            if(first) first.focus();
+        }
+        btn.onclick = function(e) {
+            e.stopPropagation();
+            if(menu.style.display==='block') {
+                closeMenu();
+            } else {
+                openMenu();
+            }
+        };
+        btn.onkeydown = function(e) {
+            if(e.key==='Enter' || e.key===' ') {
+                e.preventDefault();
+                btn.click();
+            }
+        };
+        document.addEventListener('click', function(e){
+            if(menu.style.display==='block' && !menu.contains(e.target) && !btn.contains(e.target)) {
+                closeMenu();
+            }
+        });
+        document.addEventListener('keydown', function(e){
+            if(e.key==='Escape') closeMenu();
+        });
+        menu.querySelectorAll('a').forEach(a=>{
+            a.addEventListener('click', closeMenu);
+        });
+        menu.addEventListener('mouseleave', closeMenu);
+        closeMenu();
     }
-    function openMenu() {
-        menu.style.display = 'block';
-        btn.setAttribute('aria-expanded','true');
-        // Fokus auf erstes Menüelement
-        const first = menu.querySelector('a');
-        if(first) first.focus();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    setupHamburgerMenu();
+    // Splash-Checkbox-Logik für start.html
+    var splashBox = document.getElementById('showSplashConfig') || document.getElementById('disableSplash');
+    if(splashBox) {
+        fetch('/api/settings').then(r=>r.json()).then(settings => {
+            var showSplash = (settings.show_splash === undefined || settings.show_splash === '1' || settings.show_splash === 1);
+            if(splashBox.id === 'showSplashConfig') {
+                splashBox.checked = showSplash;
+            } else {
+                splashBox.checked = !showSplash;
+                if(!showSplash && window.location.pathname.endsWith('start.html')) {
+                    window.location.href = 'index.html';
+                }
+            }
+        });
+        splashBox.addEventListener('change', function() {
+            var val = (this.id === 'showSplashConfig') ? (this.checked ? '1' : '0') : (this.checked ? '0' : '1');
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ show_splash: val })
+            });
+        });
     }
-    btn.onclick = function(e) {
-        if(menu.style.display==='block') {
-            closeMenu();
-        } else {
-            openMenu();
+    // Footer-Logik für kleine Bildschirme (nur auf Seiten mit Footer)
+    var footer = document.getElementById('mainFooter');
+    if(footer) {
+        function handleFooterVisibility() {
+            if(window.innerWidth <= 900) {
+                var scrollBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 2;
+                footer.style.display = scrollBottom ? 'block' : 'none';
+            } else {
+                footer.style.display = 'block';
+            }
         }
-    };
-    btn.onkeydown = function(e) {
-        if(e.key==='Enter' || e.key===' ') {
-            e.preventDefault();
-            btn.click();
-        }
-    };
-    // Schließe Menü bei Klick außerhalb
-    document.addEventListener('click', function(e){
-        if(menu.style.display==='block' && !menu.contains(e.target) && !btn.contains(e.target)) {
-            closeMenu();
-        }
-    });
-    // ESC schließt Menü
-    document.addEventListener('keydown', function(e){
-        if(e.key==='Escape') closeMenu();
-    });
-    // Menü bei Navigation schließen
-    menu.querySelectorAll('a').forEach(a=>{
-        a.addEventListener('click', closeMenu);
-    });
-    // Initial geschlossen
-    closeMenu();
-})();
+        window.addEventListener('scroll', handleFooterVisibility);
+        window.addEventListener('resize', handleFooterVisibility);
+        handleFooterVisibility();
+    }
+});

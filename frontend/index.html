@@ -19,34 +19,26 @@
     -------------------------------------------------------------------------------
     -->
     <header id="mainHeader">
-        <span id="headerTitle">Fotobox</span>
         <button class="hamburger" id="hamburgerBtn" tabindex="0" aria-label="Menü öffnen" aria-expanded="false">
             <i class="fas fa-bars" aria-hidden="true"></i>
         </button>
+        <span id="headerTitle">Fotobox</span>
         <nav id="headerMenu" aria-label="Hauptmenü">
             <a href="index.html">Aufnahme</a>
-            <a href="index.html#galleryView">Galerie</a>
+            <a href="gallery.html">Galerie</a>
             <a href="config.html">Einstellungen</a>
         </nav>
     </header>
-    <!-- ...bestehender Inhalt... -->
-    <div id="menu">
-        <button id="showCapture">Aufnahme</button>
-        <button id="showGallery">Galerie</button>
-    </div>
     <div id="captureView">
-        <h1>Fotobox</h1>
         <div id="eventName"></div>
-        <button id="takePhotoBtn">Foto aufnehmen</button>
-        <h2>Aufgenommene Fotos</h2>
-        <div id="photos"></div>
+        <div id="cameraPreview" style="width:100%;max-width:600px;height:340px;background:#2223;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:1em 0 2em 0;color:#aaa;font-size:1.2em;">
+            Kamera-Vorschau (Platzhalter)
+        </div>
+        <button id="takePhotoBtn" class="main-btn" style="font-size:1.5em;padding:1em 2.5em;display:flex;align-items:center;gap:0.7em;background:linear-gradient(90deg,#38d39f 0%,#4e9cff 100%);border:none;border-radius:12px;box-shadow:0 2px 8px #2223;cursor:pointer;transition:background 0.2s,transform 0.2s;">
+            <i class="fas fa-camera" aria-hidden="true" style="font-size:1.3em;"></i>
+            <span id="takePhotoBtnText">Foto aufnehmen</span>
+        </button>
     </div>
-    <div id="galleryView">
-        <h1>Galerie</h1>
-        <div id="galleryPhotos"></div>
-        <button id="backBtn">Zurück zur Aufnahme</button>
-    </div>
-    <a href="start.html" style="position:fixed;top:1em;right:1em;">Zurück zur Startseite</a>
     <!-- footer-block
     -------------------------------------------------------------------------------
     # Funktion: Footer mit Copyright und Event-/Projektnamen für alle Seiten

@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Fotobox Konfiguration</title>
+    <title>Fotobox</title>
     <link rel="stylesheet" href="fonts/fontawesome-free-5.15.4-web/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -13,9 +13,20 @@
     -------------------------------------------------------------------------------
     -->
     <header id="mainHeader">
-        <span id="headerTitle">Fotobox Konfiguration</span>
+        <button class="hamburger" id="hamburgerBtn" tabindex="0" aria-label="Menü öffnen" aria-expanded="false">
+            <i class="fas fa-bars" aria-hidden="true"></i>
+        </button>
+        <span id="headerTitle">Fotobox</span>
+        <nav id="headerMenu" aria-label="Hauptmenü">
+            <a href="index.html">Aufnahme</a>
+            <a href="gallery.html">Galerie</a>
+            <a href="config.html">Einstellungen</a>
+        </nav>
     </header>
-    <h1>Fotobox Konfiguration</h1>
+    <!-- Brotkrumen-Navigation unter dem Header -->
+    <nav class="breadcrumb">
+        <a href="index.html">Home</a> &gt; <span>Konfiguration</span>
+    </nav>
     <form id="loginForm" style="margin-bottom:2em;">
         <label>Passwort für Einstellungen:
             <input type="password" id="adminPassword" required>
@@ -40,6 +51,11 @@
                     <td class="label">Galerie-Timeout</td>
                     <td><input type="number" name="gallery_timeout" id="gallery_timeout" min="10" max="600" step="1" placeholder="z.B. 60"></td>
                     <td class="desc">Zeit bis Rückkehr zur Aufnahme-Ansicht (Sekunden)</td>
+                </tr>
+                <tr>
+                    <td class="label">Splash Screen anzeigen</td>
+                    <td><input type="checkbox" id="showSplashConfig"> Splash Screen beim Start anzeigen</td>
+                    <td class="desc">Global für alle Nutzer aktivieren/deaktivieren</td>
                 </tr>
             </table>
         </fieldset>
@@ -76,6 +92,14 @@
                         <input type="number" name="resolution_height" id="resolution_height" placeholder="Höhe (z.B. 1080)" min="1" style="width:6em;">
                     </td>
                     <td class="desc">Breite x Höhe der aufgenommenen Fotos (Pixel)</td>
+                </tr>
+                <tr>
+                    <td class="label">Foto-Timer</td>
+                    <td>
+                        <input type="number" name="photo_timer" id="photo_timer" min="2" max="10" step="1" placeholder="2–10" style="width:5em;">
+                        <span class="info">Sekunden</span>
+                    </td>
+                    <td class="desc">Zeitverzögerung für Fotoaufnahmen (Countdown, 2–10 s, Default 5 s)</td>
                 </tr>
             </table>
         </fieldset>
