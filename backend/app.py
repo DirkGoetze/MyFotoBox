@@ -155,18 +155,18 @@ def api_backup():
 @app.route('/api/update', methods=['GET', 'POST'])
 def api_update():
     import subprocess, sys
-    # Dummy-Logik: Prüfe, ob Update verfügbar ist (z.B. git fetch)
+    repo_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     if request.method == 'GET':
-        import subprocess
-        repo_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
         try:
             subprocess.run(['git', '-C', repo_dir, 'fetch'], check=True)
             local = subprocess.check_output(['git', '-C', repo_dir, 'rev-parse', 'HEAD']).strip()
             remote = subprocess.check_output(['git', '-C', repo_dir, 'rev-parse', '@{u}']).strip()
             update_available = (local != remote)
-        except Exception:
-            update_available = False
-        return jsonify({'update_available': update_available})
+            return jsonify({'update_available': update_available})
+        except subprocess.CalledProcessError as e:
+            return jsonify({'update_available': False, 'error': 'Git-Fehler', 'details': str(e)}), 500
+        except Exception as e:
+            return jsonify({'update_available': False, 'error': 'Unbekannter Fehler', 'details': str(e)}), 500
     # POST: Führe Update nur aus, wenn Update verfügbar
     proc = subprocess.Popen([sys.executable, 'manage_update.py'], cwd=os.path.dirname(__file__), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate(timeout=120)
