@@ -22,6 +22,24 @@
 set -e
 
 # ------------------------------------------------------------------------------
+# TODO: Verbesserungen und Optimierungen für zukünftige Versionen
+# ------------------------------------------------------------------------------
+# - Automatische Prüfung, ob NGINX-Default-Server auf Port 80 deaktiviert werden soll
+# - Optionale Firewall-Konfiguration (z.B. ufw) für den gewählten Port
+# - Automatische HTTPS-Konfiguration (Let's Encrypt)
+# - Fortschrittsanzeige für lange Operationen (z.B. git clone, pip install)
+# - Optionale E-Mail-Benachrichtigung nach erfolgreicher Installation
+# - Bessere Fehlerausgabe und Logging in Logdatei
+# - Unterstützung für weitere Linux-Distributionen prüfen
+# - Mehrsprachige Installationsausgabe (DE/EN)
+# - Automatische Prüfung auf bereits laufende Fotobox-Instanz
+# - Optionale Integration in bestehende NGINX-Konfiguration (statt eigene Site)
+# - Verbesserte Rückabwicklung bei Fehlern (Rollback)
+# - Automatische Prüfung und ggf. Korrektur von Dateirechten
+# - Optionale Installation als Docker-Container
+# ------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
 # Globale Konstanten für zentrale Einstellungen
 # ------------------------------------------------------------------------------
 GIT_REPO_URL="https://github.com/DirkGoetze/fotobox2.git"
@@ -397,4 +415,9 @@ main() {
     echo "Weitere Wartung (Update, Deinstallation) erfolgt über die WebUI oder die Python-Skripte im backend/."
 }
 
+# ------------------------------------------------------------------------------
+# TODO: Aktuell werden Einstellungen (z.B. Portwahl) nur temporär verwendet und
+# nicht persistent gespeichert. Für produktive Nutzung sollte ein Mechanismus zur
+# dauerhaften Speicherung und Wiederherstellung der Konfiguration implementiert werden.
+# ------------------------------------------------------------------------------
 main
