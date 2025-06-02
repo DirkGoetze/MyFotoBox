@@ -28,3 +28,13 @@ Weitere technische Details und Hinweise finden Sie im Ordner `documentation/`.
   - Alle Backups und Logs werden im Ordner `backup/` abgelegt.
 
 Weitere Details siehe `documentation/INSTALLATION.md`, `UPDATE.md`, `REMOVE.md`.
+
+## Headless-/Unattended-Installation
+
+Die Fotobox kann vollständig ohne Benutzerinteraktion installiert werden (headless/unattended). Hierzu das Installationsskript mit dem Flag `--unattended` aufrufen:
+
+```bash
+sudo ./install_fotobox.sh --unattended
+```
+
+Weitere Details und Hinweise siehe `documentation/installation.md`.

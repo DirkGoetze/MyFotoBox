@@ -38,7 +38,7 @@ set -e
 # [x] Automatische Prüfung und ggf. Korrektur von Dateirechten
 # [ ] Optionale Installation als Docker-Container
 # [ ] Automatische Prüfung der Erreichbarkeit der Weboberfläche nach der Installation (z.B. per curl) und Ausgabe einer entsprechenden Erfolgsmeldung oder eines Hinweises zur Fehlerbehebung
-# [ ] Optional: Unattended-/Headless-Modus (z.B. per --unattended-Flag):
+# [x] Optional: Unattended-/Headless-Modus (z.B. per --unattended-Flag):
 #     - Automatische Auswahl von Standardwerten bei Nutzerabfragen
 #     - Keine Interaktion erforderlich, geeignet für automatisierte Installationen
 #     - Fehlerausgaben und Statusmeldungen weiterhin klar und verständlich
