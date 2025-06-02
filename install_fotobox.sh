@@ -149,6 +149,17 @@ setup_structure() {
 }
 
 # ------------------------------------------------------------------------------
+# setup_backup_dir
+# ------------------------------------------------------------------------------
+# Funktion: Legt das Backup-Verzeichnis an, falls nicht vorhanden
+# ------------------------------------------------------------------------------
+setup_backup_dir() {
+    print_step "Backup-Verzeichnis wird angelegt ..."
+    mkdir -p backup
+    print_success "Backup-Verzeichnis (backup/) wurde angelegt."
+}
+
+# ------------------------------------------------------------------------------
 # backup_nginx_config
 # ------------------------------------------------------------------------------
 # Funktion: Sichert vorhandene NGINX-Konfiguration, falls vorhanden
@@ -222,6 +233,7 @@ main() {
     install_packages
     setup_user_group
     setup_structure
+    setup_backup_dir
     backup_nginx_config
     check_nginx_port
     backup_and_install_systemd
