@@ -3,5 +3,6 @@
 .github/
 .resourcen/
 backend/venv/
-BACKUP_STRATEGIE.md
-DOKUMENTATIONSSTANDARD.md
+backup/
+backup_strategie.md
+dokumentationsstandard.md
