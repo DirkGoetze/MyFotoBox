@@ -66,6 +66,23 @@ README_DATA="# data\nDieses Verzeichnis enthält die persistenten Daten der Foto
 # Hilfsfunktionen
 # ==========================================================================='
 
+check_script_location() {
+    # -----------------------------------------------------------------------
+    # check_script_location
+    # -----------------------------------------------------------------------
+    # Funktion: Prüft, ob das Skript im Zielverzeichnis ($INSTALL_DIR) liegt
+    # ......... und bricht mit Fehler ab, falls ja (Self-Overwrite-Schutz 
+    # ......... für git clone)
+    local script_dir
+    script_dir="$(cd "$(dirname "$0")" && pwd)"
+
+    if [ "$script_dir" = "$INSTALL_DIR" ]; then
+        echo "[ERROR] Das Installationsskript darf nicht direkt im Zielverzeichnis ($INSTALL_DIR) ausgeführt werden!"
+        echo "Bitte das Skript z.B. aus dem Home- oder einem temporären Verzeichnis starten."
+        exit 99
+    fi
+}
+
 chk_is_root() {
     # -----------------------------------------------------------------------
     # chk_is_root
@@ -96,25 +113,19 @@ make_dir() {
     # -----------------------------------------------------------------------
     # make_dir
     # -----------------------------------------------------------------------
-    # Funktion: Legt ein Verzeichnis an, falls es nicht existiert und legt eine readme.md an
+    # Funktion: Legt ein Verzeichnis an, falls es nicht existiert
     # Rückgabe: 0 = OK, 1 = Fehler, 2 = kein Verzeichnis angegeben
     local dir="$1"
-    local readme_content="$2"
 
-    if [ -z "$dir" ]; then
-        return 2
-    fi
+    # Kein Verzeichnis angegeben
+    if [ -z "$dir" ]; then return 2; fi
 
+    # Prüfe, ob das Verzeichnis bereits existiert
     if [ ! -d "$dir" ]; then
         mkdir -p "$dir"
-        if [ ! -d "$dir" ]; then
-            return 1
-        fi
+        if [ ! -d "$dir" ]; then return 1; fi
     fi
-    # readme.md anlegen, falls nicht vorhanden und Inhalt übergeben wurde
-    if [ -n "$readme_content" ] && [ ! -f "$dir/readme.md" ]; then
-        echo -e "$readme_content" > "$dir/readme.md"
-    fi
+
     return 0
 }
 
@@ -122,8 +133,11 @@ install_package() {
     # -----------------------------------------------------------------------
     # install_package
     # -----------------------------------------------------------------------
-    # Funktion: Installiert ein einzelnes Systempaket in gewünschter Version 
-    # (optional)
+    # Funktion: Installiert ein einzelnes Systempaket in gewünschter Version
+    # ......... (optional, prüft Version und installiert ggf. gezielt)
+    # Rückgabe: 0 = OK, 1 = Fehler, 2 = Version installiert, nicht passend
+    # Parameter: $1 = Paketname, $2 = Version (optional)
+    # Extras...: Nutzt apt-get, prüft nach Installation erneut
     local pkg="$1"
     local version="$2"
 
@@ -133,7 +147,7 @@ install_package() {
         if [ "$installed_version" = "$version" ]; then
             return 0
         elif [ -n "$installed_version" ]; then
-            return 2  # Version installiert, aber nicht passend
+            return 2
         fi
         apt-get install -y -qq "$pkg=$version" >/dev/null 2>&1
     else
@@ -143,7 +157,6 @@ install_package() {
         apt-get install -y -qq "$pkg" >/dev/null 2>&1
     fi
 
-    # Prüfe nach Installation
     if [ -n "$version" ]; then
         local new_version
         new_version=$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null)
@@ -166,7 +179,9 @@ install_package_group() {
     # install_package_group
     # -----------------------------------------------------------------------
     # Funktion: Installiert alle Pakete einer übergebenen Gruppe
-    # Parameter: Array-Name (z.B. PACKAGES_NGINX)
+    # Parameter: $1 = Array-Name (z.B. PACKAGES_NGINX)
+    # Rückgabe: 0 = OK, 1 = Fehler, 2 = Version installiert, nicht passend
+    # Extras...: Ruft install_package für jedes Element auf, prüft Versionen
     local group_name="$1[@]"
     local group=("${!group_name}")
 
@@ -224,7 +239,10 @@ set_install_packages() {
     # -----------------------------------------------------------------------
     # set_install_packages
     # -----------------------------------------------------------------------
-    # Funktion: Installiert alle benötigten Systempakete (ohne NGINX) und prüft den Erfolg
+    # Funktion: Installiert alle benötigten Systempakete (ohne NGINX) und 
+    # ........  prüft den Erfolg
+    # Rückgabe: 0 = OK, 1 = Fehler bei apt-get update, 2 = Fehler Tools,
+    # ......... 3 = Fehler Python-Pakete, 4 = Fehler SQLite
     apt-get update -qq || return 1
     install_package_group PACKAGES_TOOLS || return 2
     install_package_group PACKAGES_PYTHON || return 3
@@ -237,6 +255,8 @@ set_user_group() {
     # set_user_group
     # -----------------------------------------------------------------------
     # Funktion: Legt Benutzer und Gruppe 'fotobox' an, prüft Rechte
+    # Rückgabe: 0 = OK, 1 = Fehler Benutzer, 2 = Fehler Gruppe, 
+    # ........  3 = Fehler Gruppenzuordnung
     if ! id -u fotobox &>/dev/null; then
         useradd -m fotobox || return 1
     fi
@@ -254,24 +274,31 @@ set_structure() {
     # set_structure
     # -----------------------------------------------------------------------
     # Funktion: Erstellt alle benötigten Verzeichnisse, klont das Projekt 
-    # per git (wenn leer), legt Backup- und Datenverzeichnis an und setzt 
-    # die notwendigen Rechte
-    if ! make_dir "$INSTALL_DIR" "$README_MAIN"; then
-        return 1
+    # ......... per git (wenn nötig), legt Backup- und Datenverzeichnis an
+    # ......... und setzt die notwendigen Rechte
+    # Rückgabe: 0 = OK, 1 = Fehler Installationsverzeichnis, 
+    # ......... 2 = Fehler git, 3 = Fehler git clone,
+    # ......... 4 = Fehler Backup, 5 = Fehler Konfiguration, 
+    # ......... 6 = Fehler Daten, 7 = Fehler Rechte
+    if [ ! -d "$INSTALL_DIR" ]; then
+        make_dir "$INSTALL_DIR" || return 1
     fi
-    if [ -z "$(ls -A "$INSTALL_DIR" 2>/dev/null)" ]; then
+    echo "DEBUG: Inhalt von $INSTALL_DIR vor Prüfung auf Projektstruktur:"
+    ls -la "$INSTALL_DIR"
+    if [ ! -d "$INSTALL_DIR/backend" ]; then
+        echo "DEBUG: Starte git clone, da backend/ nicht existiert"
         if ! command -v git >/dev/null 2>&1; then
             apt-get update -qq && apt-get install -y -qq git || return 2
         fi
         git clone "$GIT_REPO_URL" "$INSTALL_DIR" || return 3
     fi
-    if ! make_dir "$BACKUP_DIR" "$README_BACKUP"; then
+    if ! make_dir "$BACKUP_DIR"; then
         return 4
     fi
     if ! make_dir "$CONF_DIR"; then
         return 5
     fi
-    if ! make_dir "$DATA_DIR" "$README_DATA"; then
+    if ! make_dir "$DATA_DIR"; then
         return 6
     fi
     chown -R fotobox:fotobox "$INSTALL_DIR" || return 7
@@ -280,8 +307,8 @@ set_structure() {
 
 # set_systemd_service
 # ------------------------------------------------------------------------------
-# Funktion: Erstellt oder kopiert die systemd-Service-Datei
-# ------------------------------------------------------------------------------
+# Funktion: Erstellt oder kopiert die systemd-Service-Datei für das Backend
+# Rückgabe: keine (Seitenwirkung: legt Datei an, gibt Erfolgsmeldung aus)
 set_systemd_service() {
     if [ ! -f "$SYSTEMD_SERVICE" ]; then
         cat > "$SYSTEMD_SERVICE" <<EOF
@@ -306,7 +333,7 @@ EOF
 # set_systemd_install
 # ------------------------------------------------------------------------------
 # Funktion: Kopiert systemd-Service-Datei und startet Service
-# ------------------------------------------------------------------------------
+# Rückgabe: keine (Seitenwirkung: kopiert, startet und aktiviert Service)
 set_systemd_install() {
     local backup="$BACKUP_DIR/fotobox-backend.service.bak.$(date +%Y%m%d%H%M%S)"
     if [ -f "$SYSTEMD_DST" ]; then
@@ -610,13 +637,14 @@ dlg_backend_integration() {
 # Funktion: Hauptablauf der Erstinstallation
 # ------------------------------------------------------------------------------
 main() {
-    dlg_check_root              # Prüfe, ob Skript als root ausgeführt wird
-    dlg_check_distribution      # Prüfe, ob System auf Debian/Ubuntu basiert
-    dlg_prepare_system          # Installiere Systempakete und prüfe Erfolg
-    dlg_prepare_users           # Erstelle Benutzer und Gruppe 'fotobox'
-    dlg_prepare_structure       # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
-    dlg_nginx_installation      # NGINX-Konfiguration (Integration oder eigene Site)
-    dlg_backend_integration     # Python-Backend, venv, systemd-Service, Start
+    check_script_location         # Prüfe, ob Skript im Zielverzeichnis liegt
+    dlg_check_root               # Prüfe, ob Skript als root ausgeführt wird
+    dlg_check_distribution       # Prüfe, ob System auf Debian/Ubuntu basiert
+    dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
+    dlg_prepare_users            # Erstelle Benutzer und Gruppe 'fotobox'
+    dlg_prepare_structure        # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
+    dlg_nginx_installation       # NGINX-Konfiguration (Integration oder eigene Site)
+    dlg_backend_integration      # Python-Backend, venv, systemd-Service, Start
     if [ "$UNATTENDED" -eq 1 ]; then
         local logfile
         logfile=$(get_log_file)
