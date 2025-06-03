@@ -8,3 +8,4 @@ In diesem Ordner werden für jedes Event die Galerieansichten (optimierte Bilder
 - Die Anzeige der Galerie erfolgt eventbasiert und bildschirmoptimiert.
 - Die Verwaltung und Erzeugung der Galerie-Bilder erfolgt durch das Backend.
 - Siehe BACKUP_STRATEGIE.md: Auch diese Galerie-Ordner und Inhalte sind in die Backup-Logik einzubeziehen.
+Siehe policies/dokumentationsstandard.md, policies/review_policy.md, policies/ordnerstruktur_policy.md für alle Projekt-Policies.

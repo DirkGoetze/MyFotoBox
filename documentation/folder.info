@@ -1,0 +1,11 @@
+# Fotobox: Dokumentation
+
+Dieses Verzeichnis enthält alle Anleitungen, Hinweise und Hilfedateien zur Fotobox-Software.
+
+- `installation.md`: Schritt-für-Schritt-Anleitung zur Erstinstallation
+- `update.md`: Hinweise und Ablauf für Updates
+- `remove.md`: Anleitung zur Deinstallation
+
+Alle Dateien sind nach dem aktuellen Markdown-Standard formatiert (leere Zeilen um Listen, keine Inline-HTML, keine Bare-URLs).
+
+Siehe policies/dokumentationsstandard.md, policies/review_policy.md für alle Projekt-Policies.

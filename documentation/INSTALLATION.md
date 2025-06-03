@@ -3,11 +3,13 @@
 Diese Anleitung beschreibt Schritt für Schritt, wie Sie die Fotobox-Software auf einem Ubuntu- oder Debian-System installieren. Sie richtet sich an Linux-Einsteiger und erklärt alle wichtigen Funktionen des Installationsskripts.
 
 ## Voraussetzungen
+
 - Ein Ubuntu- oder Debian-basiertes System (z.B. Raspberry Pi OS, Ubuntu Server)
 - Root-Rechte (Sie müssen das Skript als Administrator ausführen)
 - Internetverbindung
 
 ## Vorbereitung
+
 Laden Sie das Installationspaket herunter oder klonen Sie das Repository:
 
 ```bash
@@ -16,6 +18,7 @@ cd fotobox2
 ```
 
 ## Installation starten
+
 Führen Sie das Installationsskript als root aus:
 
 ```bash
@@ -23,6 +26,7 @@ sudo bash fotobox.sh --install
 ```
 
 ## Was passiert bei der Installation?
+
 Das Skript übernimmt folgende Aufgaben (jeder Schritt wird im Terminal erklärt):
 
 1. **Systemprüfung**: Das Skript prüft, ob Sie root-Rechte haben und ob das System unterstützt wird.
@@ -38,18 +42,21 @@ Das Skript übernimmt folgende Aufgaben (jeder Schritt wird im Terminal erklärt
 11. **Abschlusstest**: Am Ende prüft das Skript, ob die Weboberfläche erreichbar ist. Sie erhalten eine Erfolgsmeldung oder Hinweise zur Fehlerbehebung.
 
 ## Beispiel für den Aufruf
+
 ```bash
 sudo bash fotobox.sh --install
 ```
 
 ## Hinweise
+
 - Nach der Installation können Sie die Fotobox im Browser aufrufen, z.B.:
-  - http://<IP-Adresse>:80/  (Standard)
-  - http://<IP-Adresse>:8080/ (falls Port 80 belegt war)
+  - [http://IP-ADRESSE:80/](http://IP-ADRESSE:80/)  (Standard)
+  - [http://IP-ADRESSE:8080/](http://IP-ADRESSE:8080/) (falls Port 80 belegt war)
 - Die Zugangsdaten für die Konfigurationsseite werden beim ersten Start der Weboberfläche festgelegt.
 - Alle wichtigen Schritte und Fehler werden in der Logdatei `/var/log/fotobox_install.log` protokolliert.
 
 ## Fehlerbehebung
+
 - Prüfen Sie, ob alle Dienste laufen:
   - `systemctl status fotobox-backend`
   - `systemctl status nginx`
@@ -59,6 +66,7 @@ sudo bash fotobox.sh --install
 ## Headless-/Unattended-Installation
 
 -------------------------------------------------------------------------------
+
 Die Fotobox-Installation unterstützt einen vollautomatischen, interaktiven und headless-tauglichen Modus. Dieser Modus ist besonders für unerfahrene Nutzer, automatisierte Deployments oder Installationen ohne Benutzerinteraktion (z.B. via SSH, Skripte, CI/CD) geeignet.
 
 ### Aktivierung des Headless-/Unattended-Modus
@@ -99,7 +107,7 @@ Nach Abschluss der Installation erscheint z.B.:
 
 ```text
 Installation abgeschlossen. Details siehe Logfile: /var/log/2025-06-03_install_fotobox.log
-Weboberfläche: http://192.168.1.100:80/
+Weboberfläche: [http://192.168.1.100:80/](http://192.168.1.100:80/)
 ```
 
 ### Hinweise und Besonderheiten

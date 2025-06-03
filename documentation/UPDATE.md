@@ -3,11 +3,13 @@
 Diese Anleitung erklärt, wie Sie die Fotobox-Software auf den neuesten Stand bringen. Sie richtet sich an Linux-Einsteiger und beschreibt alle wichtigen Funktionen des Update-Prozesses.
 
 ## Voraussetzungen
+
 - Die Fotobox ist bereits installiert und läuft auf Ihrem System.
 - Sie haben Root-Rechte (Administrator).
 - Internetverbindung ist vorhanden.
 
 ## Update starten
+
 Führen Sie das Update-Skript im Projektverzeichnis aus:
 
 ```bash
@@ -15,6 +17,7 @@ sudo bash fotobox.sh --update
 ```
 
 ## Was passiert beim Update?
+
 Das Skript übernimmt folgende Aufgaben (jeder Schritt wird im Terminal erklärt):
 
 1. **Backup**: Vor dem Update werden alle wichtigen Daten und Konfigurationen gesichert (Backend, Frontend, NGINX, systemd-Service). So können Sie bei Problemen jederzeit zurückkehren.
@@ -25,16 +28,19 @@ Das Skript übernimmt folgende Aufgaben (jeder Schritt wird im Terminal erklärt
 6. **Abschlusstest**: Das Skript prüft, ob die Weboberfläche nach dem Update erreichbar ist. Sie erhalten eine Erfolgsmeldung oder Hinweise zur Fehlerbehebung.
 
 ## Beispiel für den Aufruf
+
 ```bash
 sudo bash fotobox.sh --update
 ```
 
 ## Hinweise
+
 - Das Backup des alten Stands finden Sie im Projektordner unter `backup-update-<Datum>`. Sie können daraus bei Bedarf Dateien wiederherstellen.
 - Nach dem Update können Sie die Fotobox wie gewohnt im Browser aufrufen.
 - Alle wichtigen Schritte und Fehler werden in der Logdatei `/var/log/fotobox_install.log` protokolliert.
 
 ## Fehlerbehebung
+
 - Prüfen Sie, ob alle Dienste laufen:
   - `systemctl status fotobox-backend`
   - `systemctl status nginx`
