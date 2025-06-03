@@ -83,44 +83,6 @@ README_DATA="# data\nDieses Verzeichnis enthält die persistenten Daten der Foto
 # Hilfsfunktionen
 # ==========================================================================='
 
-print_step() {
-    # -----------------------------------------------------------------------
-    # print_step
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt einen Hinweis auf einen auszuführenden Schritt in Gelb aus
-    echo -e "\033[1;33m$1\033[0m"
-    log "STEP: $1"
-}
-
-print_error() {
-    # -----------------------------------------------------------------------
-    # print_error
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt eine Fehlermeldung farbig aus
-    echo -e "\033[1;31m  → Fehler: $1\033[0m"
-    log "ERROR: $1"
-}
-
-print_success() {
-    # -----------------------------------------------------------------------
-    # print_success
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt eine Erfolgsmeldung in Dunkelgrün aus
-    echo -e "\033[1;32m  → $1\033[0m"
-    log "SUCCESS: $1"
-}
-
-print_prompt() {
-    # -----------------------------------------------------------------------
-    # print_prompt
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt eine Nutzeraufforderung in Blau aus (nur, wenn nicht unattended)
-    if [ "$UNATTENDED" -eq 0 ]; then
-        echo -e "\033[1;34m$1\033[0m"
-    fi
-    log "PROMPT: $1"
-}
-
 chk_is_root() {
     # -----------------------------------------------------------------------
     # chk_is_root
@@ -271,119 +233,6 @@ install_package_group() {
     done
 }
 
-chk_nginx_reload() {
-    # -----------------------------------------------------------------------
-    # chk_nginx_reload
-    # -----------------------------------------------------------------------
-    # Funktion: Testet die NGINX-Konfiguration und lädt sie neu, falls fehlerfrei
-    # Rückgabe: 0 = OK, 1 = Syntaxfehler, 2 = Reload-Fehler
-    if nginx -t; then
-        if systemctl reload nginx; then
-            print_success "NGINX-Konfiguration erfolgreich neu geladen."
-            return 0
-        else
-            print_error "NGINX konnte nicht neu geladen werden!"
-            return 2
-        fi
-    else
-        print_error "Fehler in der NGINX-Konfiguration! Bitte prüfen."
-        return 1
-    fi
-}
-
-chk_nginx_installation() {
-    # -----------------------------------------------------------------------
-    # chk_nginx_installation
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob NGINX installiert ist, installiert ggf. nach (mit Rückfrage)
-    # Rückgabe: 0 = OK, 1 = Installation abgebrochen, 2 = Installationsfehler
-    if ! command -v nginx >/dev/null 2>&1; then
-        if [ "$UNATTENDED" -eq 1 ]; then
-            antwort="j"
-            log "Automatische Antwort (unattended) auf NGINX-Installationsabfrage: $antwort"
-        else
-            print_prompt "NGINX ist nicht installiert. Jetzt installieren? [J/n]"
-            read -r antwort
-        fi
-        if [[ "$antwort" =~ ^([nN])$ ]]; then
-            print_error "NGINX-Installation abgebrochen."
-            return 1
-        fi
-        apt-get update -qq && apt-get install -y -qq nginx
-        if ! command -v nginx >/dev/null 2>&1; then
-            print_error "NGINX konnte nicht installiert werden!"
-            return 2
-        fi
-        print_success "NGINX wurde erfolgreich installiert."
-    fi
-    return 0
-}
-
-chk_nginx_activ() {
-    # -----------------------------------------------------------------------
-    # chk_nginx_activ
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob NGINX nur im Default-Modus läuft oder weitere Sites aktiv sind
-    # Rückgabe: 0 = nur default aktiv, 1 = weitere Sites aktiv, 2 = Fehler
-    local enabled_sites
-    enabled_sites=$(ls /etc/nginx/sites-enabled 2>/dev/null | wc -l)
-    if [ "$enabled_sites" -eq 1 ] && [ -f /etc/nginx/sites-enabled/default ]; then
-        return 0
-    elif [ "$enabled_sites" -gt 1 ]; then
-        return 1
-    else
-        print_error "Konnte aktive NGINX-Sites nicht eindeutig ermitteln."
-        return 2
-    fi
-}
-
-chk_nginx_port() {
-    # -----------------------------------------------------------------------
-    # chk_nginx_port
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob der gewünschte Port (Default: 80) belegt ist
-    # Rückgabe: 0 = frei, 1 = belegt
-    local port=${1:-80}
-    if lsof -i :$port | grep LISTEN > /dev/null; then
-        return 1
-    else
-        return 0
-    fi
-}
-
-get_nginx_url() {
-    # -----------------------------------------------------------------------
-    # get_nginx_url
-    # -----------------------------------------------------------------------
-    # Funktion: Ermittelt die tatsächlich aktive URL der Fotobox anhand
-    # der NGINX-Konfiguration (Default-Integration oder eigene Site)
-    # Rückgabe: Gibt die URL als String auf stdout aus
-    local url=""
-    local ip_addr
-
-    ip_addr=$(hostname -I | awk '{print $1}')
-
-    # Prüfe, ob eigene Fotobox-Site aktiv ist
-    if [ -L /etc/nginx/sites-enabled/fotobox ] && grep -q "listen" /etc/nginx/sites-enabled/fotobox; then
-        # Port aus listen-Direktive extrahieren
-        local port
-        port=$(grep -Eo 'listen[[:space:]]+[0-9.]*(:[0-9]+)?' /etc/nginx/sites-enabled/fotobox | head -n1 | grep -Eo '[0-9]+$')
-        [ -z "$port" ] && port=80
-        url="http://$ip_addr:$port/"
-    elif [ -f /etc/nginx/sites-enabled/default ] && grep -q "# Fotobox-Integration BEGIN" /etc/nginx/sites-enabled/default; then
-        # Default-Site mit Integration, prüfe Port (meist 80) und Pfad
-        local port
-        port=$(grep -Eo 'listen[[:space:]]+[0-9.]*(:[0-9]+)?' /etc/nginx/sites-enabled/default | head -n1 | grep -Eo '[0-9]+$')
-        [ -z "$port" ] && port=80
-        url="http://$ip_addr/fotobox/"
-    else
-        # Fallback: Zeige beide Varianten an
-        url="http://$ip_addr:$FOTOBOX_PORT/ oder http://$ip_addr/fotobox/"
-    fi
-
-    echo "$url"
-}
-
 # ===========================================================================
 # Einstellungen (Systemanpassungen)
 # ===========================================================================
@@ -444,164 +293,6 @@ set_structure() {
     fi
     chown -R fotobox:fotobox "$INSTALL_DIR" || return 7
     return 0
-}
-
-set_nginx_port() {
-    # -----------------------------------------------------------------------
-    # set_nginx_port
-    # -----------------------------------------------------------------------
-    # Funktion: Fragt Nutzer nach Port, prüft Verfügbarkeit, setzt FOTOBOX_PORT
-    # Rückgabe: 0 = Port gesetzt, 1 = Abbruch
-    local port=80
-    while true; do
-        if [ "$UNATTENDED" -eq 1 ]; then
-            eingabe=""
-            log "Automatische Portwahl (unattended): Default 80"
-        else
-            print_prompt "Bitte gewünschten Port für die Fotobox-Weboberfläche angeben [Default: 80]:"
-            read -r eingabe
-        fi
-        if [ -z "$eingabe" ]; then
-            port=80
-        elif [[ "$eingabe" =~ ^[0-9]+$ ]]; then
-            port=$eingabe
-        else
-            print_error "Ungültige Eingabe. Bitte nur Zahlen verwenden."
-            continue
-        fi
-        chk_nginx_port "$port"
-        if [ $? -eq 0 ]; then
-            FOTOBOX_PORT=$port
-            print_success "Port $FOTOBOX_PORT wird verwendet."
-            return 0
-        else
-            print_error "Port $port ist bereits belegt. Bitte anderen Port wählen."
-            if [ "$UNATTENDED" -eq 1 ]; then
-                log "Abbruch durch unattended, da Port belegt."
-                return 1
-            else
-                print_prompt "Abbrechen? [j/N]"
-                read -r abbruch
-                if [[ "$abbruch" =~ ^([jJ]|[yY])$ ]]; then
-                    return 1
-                fi
-            fi
-        fi
-    done
-}
-
-set_nginx_cnf_internal() {
-    # -----------------------------------------------------------------------
-    # set_nginx_cnf_internal
-    # -----------------------------------------------------------------------
-    # Funktion: Integriert Fotobox in die Default-Konfiguration (Backup, reversibel)
-    # Rückgabe: 0 = OK, 1 = Fehler, 2 = Backup-Fehler, 3 = Reload-Fehler
-    local default_conf="/etc/nginx/sites-available/default"
-    local backup="$BACKUP_DIR/default.bak.$(date +%Y%m%d%H%M%S)"
-
-    if [ ! -f "$default_conf" ]; then
-        print_error "Default-Konfiguration nicht gefunden: $default_conf"
-        return 1
-    fi
-
-    cp "$default_conf" "$backup" || { print_error "Backup fehlgeschlagen!"; return 2; }
-
-    print_success "Backup der Default-Konfiguration nach $backup"
-
-    # Fotobox-Block einfügen, falls nicht vorhanden
-    if ! grep -q "# Fotobox-Integration BEGIN" "$default_conf"; then
-        sed -i '/^}/i \\n    # Fotobox-Integration BEGIN\n    location /fotobox/ {\n        alias /opt/fotobox/frontend/;\n        index start.html index.html;\n    }\n    location /fotobox/api/ {\n        proxy_pass http://127.0.0.1:5000/;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto $scheme;\n    }\n    # Fotobox-Integration END\n' "$default_conf"
-        print_success "Fotobox-Block in Default-Konfiguration eingefügt."
-    else
-        print_success "Fotobox-Block bereits in Default-Konfiguration vorhanden."
-    fi
-
-    chk_nginx_reload || return 3
-
-    return 0
-}
-
-set_nginx_cnf_external() {
-    # -----------------------------------------------------------------------
-    # set_nginx_cnf_external
-    # -----------------------------------------------------------------------
-    # Funktion: Legt eigene Fotobox-Konfiguration an, bindet sie ein (Backup, Symlink, reload)
-    # Rückgabe: 0 = OK, 1 = Fehler, 2 = Backup-Fehler, 3 = Symlink-Fehler, 4 = Reload-Fehler
-    local nginx_dst="$NGINX_DST"
-    local backup="$BACKUP_DIR/nginx-fotobox.conf.bak.$(date +%Y%m%d%H%M%S)"
-
-    if [ -f "$nginx_dst" ]; then
-        cp "$nginx_dst" "$backup" || { print_error "Backup fehlgeschlagen!"; return 2; }
-        print_success "Backup der bestehenden Fotobox-Konfiguration nach $backup"
-    fi
-
-    cp "$NGINX_CONF" "$nginx_dst" || { print_error "Kopieren der Konfiguration fehlgeschlagen!"; return 1; }
-
-    if [ ! -L /etc/nginx/sites-enabled/fotobox ]; then
-        ln -s "$nginx_dst" /etc/nginx/sites-enabled/fotobox || { print_error "Symlink konnte nicht erstellt werden!"; return 3; }
-        print_success "Symlink für Fotobox-Konfiguration erstellt."
-    fi
-
-    chk_nginx_reload || return 4
-
-    return 0
-}
-
-set_nginx_config() {
-    # -----------------------------------------------------------------------
-    # set_nginx_config
-    # -----------------------------------------------------------------------
-    # Funktion: Erstellt eine neue oder integriert Fotobox in bestehende 
-    # NGINX-Konfiguration
-    # Parameter: Modus ("new" oder "integrate"), optional: Zielpfad für Integration
-    # Rückgabe: 0 = OK, 1 = Fehler, 2 = Datei nicht gefunden, 3 = NGINX-Reload/Syntaxfehler
-    local mode="$1"
-    local target="$2"
-    local ip_addr
-    
-    ip_addr=$(hostname -I | awk '{print $1}')
-    if [ "$mode" = "new" ]; then
-        if [ -f "$NGINX_CONF" ]; then
-            return 0
-        fi
-        cat > "$NGINX_CONF" <<EOF
-server {
-    listen 0.0.0.0:$FOTOBOX_PORT;
-    server_name $ip_addr;
-    root $INSTALL_DIR/frontend;
-    index start.html index.html;
-    location / {
-        try_files $uri $uri/ =404;
-    }
-    location /api/ {
-        proxy_pass http://127.0.0.1:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-    location /photos/ {
-        proxy_pass http://127.0.0.1:5000/photos/;
-    }
-}
-EOF
-        # NGINX-Konfiguration testen und neu laden
-        if nginx -t && systemctl reload nginx; then
-            return 0
-        else
-            return 3
-        fi
-    elif [ "$mode" = "integrate" ]; then
-        if [ ! -f "$target" ]; then
-            return 2
-        fi
-        cp "$target" "$target.bak.$(date +%Y%m%d%H%M%S)"
-        sed -i '/^}/i \\n    # Fotobox-Integration BEGIN\n    location /fotobox/ {\n        alias /opt/fotobox/frontend/;\n        index start.html index.html;\n    }\n    location /fotobox/api/ {\n        proxy_pass http://127.0.0.1:5000/;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto $scheme;\n    }\n    # Fotobox-Integration END\n' "$target"
-        nginx -t && systemctl reload nginx
-        return 0
-    else
-        return 1
-    fi
 }
 
 # set_systemd_service
@@ -768,30 +459,40 @@ dlg_nginx_installation() {
     # -----------------------------------------------------------------------
     # dlg_nginx_installation
     # -----------------------------------------------------------------------
-    # Funktion: Führt die vollständige NGINX-Installation/Integration durch 
-    # Prüft Installation, erkennt Default/Multi-Site, bietet Integration 
-    # oder eigene Konfiguration an
+    # Funktion: Führt die vollständige NGINX-Installation/Integration durch
+    #           (nur noch zentrale Logik via webserver_manage.sh)
     # Rückgabe: 0 = OK, !=0 = Fehler
+    # ------------------------------------------------------------------------------
     print_step "[6/10] NGINX-Installation und Konfiguration ..."
 
-    chk_nginx_installation
-    rc=$?
-    if [ $rc -eq 1 ]; then
-        print_error "NGINX-Installation abgebrochen."
-        exit 1
-    elif [ $rc -eq 2 ]; then
-        print_error "NGINX konnte nicht installiert werden."
+    # NGINX-Installation prüfen/ausführen (zentral)
+    if [ "$UNATTENDED" -eq 1 ]; then
+        install_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" --json install)
+        install_rc=$?
+    else
+        install_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" install)
+        install_rc=$?
+    fi
+    if [ $install_rc -ne 0 ]; then
+        print_error "NGINX-Installation fehlgeschlagen: $install_result"
         exit 1
     fi
 
-    chk_nginx_activ
-    rc=$?
-    if [ $rc -eq 2 ]; then
+    # Betriebsmodus abfragen (default/multisite)
+    if [ "$UNATTENDED" -eq 1 ]; then
+        activ_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" --json activ)
+        activ_rc=$?
+    else
+        activ_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" activ)
+        activ_rc=$?
+    fi
+    if [ $activ_rc -eq 2 ]; then
         print_error "Konnte NGINX-Betriebsmodus nicht eindeutig ermitteln. Bitte prüfen Sie die Konfiguration."
         exit 1
     fi
 
-    if [ $rc -eq 0 ]; then
+    # Dialog: Default-Integration oder eigene Konfiguration
+    if [ $activ_rc -eq 0 ]; then
         if [ "$UNATTENDED" -eq 1 ]; then
             antwort="j"
             log "Automatische Antwort (unattended) auf Default-Integration: $antwort"
@@ -811,26 +512,48 @@ dlg_nginx_installation() {
                 print_error "Abbruch: Keine NGINX-Integration gewählt."
                 exit 1
             fi
-            set_nginx_port || { print_error "Abbruch durch Nutzer."; exit 1; }
-            set_nginx_cnf_external
-            rc=$?
-            if [ $rc -eq 0 ]; then
+            # Portwahl und externe Konfiguration (zentral)
+            if [ "$UNATTENDED" -eq 1 ]; then
+                port_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" --json setport)
+                port_rc=$?
+            else
+                port_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" setport)
+                port_rc=$?
+            fi
+            if [ $port_rc -ne 0 ]; then
+                print_error "Portwahl/Setzen fehlgeschlagen: $port_result"
+                exit 1
+            fi
+            if [ "$UNATTENDED" -eq 1 ]; then
+                ext_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" --json external)
+                ext_rc=$?
+            else
+                ext_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" external)
+                ext_rc=$?
+            fi
+            if [ $ext_rc -eq 0 ]; then
                 print_success "Eigene Fotobox-Konfiguration wurde angelegt und aktiviert."
             else
-                print_error "Fehler bei externer NGINX-Konfiguration (Code $rc)."
+                print_error "Fehler bei externer NGINX-Konfiguration (Code $ext_rc): $ext_result"
                 exit 1
             fi
         else
-            set_nginx_cnf_internal
-            rc=$?
-            if [ $rc -eq 0 ]; then
+            # Default-Integration (zentral)
+            if [ "$UNATTENDED" -eq 1 ]; then
+                int_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" --json internal)
+                int_rc=$?
+            else
+                int_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" internal)
+                int_rc=$?
+            fi
+            if [ $int_rc -eq 0 ]; then
                 print_success "Fotobox wurde in Default-Konfiguration integriert."
             else
-                print_error "Fehler bei Integration in Default-Konfiguration (Code $rc)."
+                print_error "Fehler bei Integration in Default-Konfiguration (Code $int_rc): $int_result"
                 exit 1
             fi
         fi
-    elif [ $rc -eq 1 ]; then
+    elif [ $activ_rc -eq 1 ]; then
         if [ "$UNATTENDED" -eq 1 ]; then
             antwort="j"
             log "Automatische Antwort (unattended) auf eigene Konfiguration: $antwort"
@@ -842,13 +565,29 @@ dlg_nginx_installation() {
             print_error "Abbruch: Keine NGINX-Integration gewählt."
             exit 1
         fi
-        set_nginx_port || { print_error "Abbruch durch Nutzer."; exit 1; }
-        set_nginx_cnf_external
-        rc=$?
-        if [ $rc -eq 0 ]; then
+        # Portwahl und externe Konfiguration (zentral)
+        if [ "$UNATTENDED" -eq 1 ]; then
+            port_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" --json setport)
+            port_rc=$?
+        else
+            port_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" setport)
+            port_rc=$?
+        fi
+        if [ $port_rc -ne 0 ]; then
+            print_error "Portwahl/Setzen fehlgeschlagen: $port_result"
+            exit 1
+        fi
+        if [ "$UNATTENDED" -eq 1 ]; then
+            ext_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" --json external)
+            ext_rc=$?
+        else
+            ext_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" external)
+            ext_rc=$?
+        fi
+        if [ $ext_rc -eq 0 ]; then
             print_success "Eigene Fotobox-Konfiguration wurde angelegt und aktiviert."
         else
-            print_error "Fehler bei externer NGINX-Konfiguration (Code $rc)."
+            print_error "Fehler bei externer NGINX-Konfiguration (Code $ext_rc): $ext_result"
             exit 1
         fi
     fi
@@ -894,12 +633,12 @@ main() {
         logfile=$(get_log_file)
         echo "Installation abgeschlossen. Details siehe Logfile: $logfile"
         local web_url
-        web_url=$(get_nginx_url)
+        web_url=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" --json geturl | grep -o 'http[s]*://[^" ]*')
         echo "Weboberfläche: $web_url"
     else
         print_success "Erstinstallation abgeschlossen."
         local web_url
-        web_url=$(get_nginx_url)
+        web_url=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" geturl)
         print_prompt "Bitte rufen Sie die Weboberfläche im Browser auf, um die Fotobox weiter zu konfigurieren und zu verwalten.\nURL: $web_url"
         echo "Weitere Wartung (Update, Deinstallation) erfolgt über die WebUI oder die Python-Skripte im backend/."
     fi
