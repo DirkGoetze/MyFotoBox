@@ -7,16 +7,9 @@
 # Nach erfolgreicher Installation erfolgt die weitere Verwaltung (Update, Deinstallation)
 # über die WebUI bzw. Python-Skripte im backend/.
 # ------------------------------------------------------------------------------
-# HINWEIS: Die Backup-/Restore-Strategie ist verbindlich in BACKUP_STRATEGIE.md dokumentiert
-# und für alle neuen Features, API-Endpunkte und Systemintegrationen einzuhalten.
-# ------------------------------------------------------------------------------
-# HINWEIS: Für Shellskripte gilt zusätzlich:
-# - Fehlerausgaben immer in Rot
-# - Ausgaben zu auszuführenden Schritten in Gelb
-# - Erfolgsmeldungen in Dunkelgrün
-# - Aufforderungen zur Nutzeraktion in Blau
-# - Alle anderen Ausgaben nach Systemstandard
-# Siehe Funktionsbeispiele und DOKUMENTATIONSSTANDARD.md
+# HINWEIS: Die Backup-/Restore-Strategie ist verbindlich in BACKUP_STRATEGIE.md 
+# dokumentiert und für alle neuen Features, API-Endpunkte und System-
+# integrationen einzuhalten.
 # ------------------------------------------------------------------------------
 
 set -e
@@ -24,25 +17,15 @@ set -e
 # ------------------------------------------------------------------------------
 # TODO: Verbesserungen und Optimierungen für zukünftige Versionen
 # ------------------------------------------------------------------------------
-# [x] Automatische Prüfung, ob NGINX-Default-Server auf Port 80 deaktiviert werden soll
 # [ ] Optionale Firewall-Konfiguration (z.B. ufw) für den gewählten Port
 # [ ] Automatische HTTPS-Konfiguration (Let's Encrypt)
 # [ ] Fortschrittsanzeige für lange Operationen (z.B. git clone, pip install)
 # [ ] Optionale E-Mail-Benachrichtigung nach erfolgreicher Installation
-# [x] Bessere Fehlerausgabe und Logging in Logdatei
-# [x] Unterstützung für weitere Linux-Distributionen prüfen
 # [ ] Mehrsprachige Installationsausgabe (DE/EN)
-# [x] Automatische Prüfung auf bereits laufende Fotobox-Instanz
-# [x] Optionale Integration in bestehende NGINX-Konfiguration (statt eigene Site)
-# [x] Verbesserte Rückabwicklung bei Fehlern (Rollback)
-# [x] Automatische Prüfung und ggf. Korrektur von Dateirechten
 # [ ] Optionale Installation als Docker-Container
-# [ ] Automatische Prüfung der Erreichbarkeit der Weboberfläche nach der Installation (z.B. per curl) und Ausgabe einer entsprechenden Erfolgsmeldung oder eines Hinweises zur Fehlerbehebung
-# [x] Optional: Unattended-/Headless-Modus (z.B. per --unattended-Flag):
-#     - Automatische Auswahl von Standardwerten bei Nutzerabfragen
-#     - Keine Interaktion erforderlich, geeignet für automatisierte Installationen
-#     - Fehlerausgaben und Statusmeldungen weiterhin klar und verständlich
-#     - Dialogfunktionen prüfen Modus und reagieren entsprechend
+# [ ] Automatische Prüfung der Erreichbarkeit der Weboberfläche nach der 
+#     Installation (z.B. per curl) und Ausgabe einer entsprechenden 
+#     Erfolgsmeldung oder eines Hinweises zur Fehlerbehebung
 # ------------------------------------------------------------------------------
 
 # ===========================================================================
@@ -460,17 +443,17 @@ dlg_nginx_installation() {
     # dlg_nginx_installation
     # -----------------------------------------------------------------------
     # Funktion: Führt die vollständige NGINX-Installation/Integration durch
-    #           (nur noch zentrale Logik via webserver_manage.sh)
+    #           (nur noch zentrale Logik via manage_nginx.sh)
     # Rückgabe: 0 = OK, !=0 = Fehler
     # ------------------------------------------------------------------------------
     print_step "[6/10] NGINX-Installation und Konfiguration ..."
 
     # NGINX-Installation prüfen/ausführen (zentral)
     if [ "$UNATTENDED" -eq 1 ]; then
-        install_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" --json install)
+        install_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" --json install)
         install_rc=$?
     else
-        install_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" install)
+        install_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" install)
         install_rc=$?
     fi
     if [ $install_rc -ne 0 ]; then
@@ -480,10 +463,10 @@ dlg_nginx_installation() {
 
     # Betriebsmodus abfragen (default/multisite)
     if [ "$UNATTENDED" -eq 1 ]; then
-        activ_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" --json activ)
+        activ_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" --json activ)
         activ_rc=$?
     else
-        activ_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" activ)
+        activ_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" activ)
         activ_rc=$?
     fi
     if [ $activ_rc -eq 2 ]; then
@@ -514,10 +497,10 @@ dlg_nginx_installation() {
             fi
             # Portwahl und externe Konfiguration (zentral)
             if [ "$UNATTENDED" -eq 1 ]; then
-                port_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" --json setport)
+                port_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" --json setport)
                 port_rc=$?
             else
-                port_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" setport)
+                port_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" setport)
                 port_rc=$?
             fi
             if [ $port_rc -ne 0 ]; then
@@ -525,10 +508,10 @@ dlg_nginx_installation() {
                 exit 1
             fi
             if [ "$UNATTENDED" -eq 1 ]; then
-                ext_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" --json external)
+                ext_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" --json external)
                 ext_rc=$?
             else
-                ext_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" external)
+                ext_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" external)
                 ext_rc=$?
             fi
             if [ $ext_rc -eq 0 ]; then
@@ -540,10 +523,10 @@ dlg_nginx_installation() {
         else
             # Default-Integration (zentral)
             if [ "$UNATTENDED" -eq 1 ]; then
-                int_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" --json internal)
+                int_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" --json internal)
                 int_rc=$?
             else
-                int_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" internal)
+                int_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" internal)
                 int_rc=$?
             fi
             if [ $int_rc -eq 0 ]; then
@@ -567,10 +550,10 @@ dlg_nginx_installation() {
         fi
         # Portwahl und externe Konfiguration (zentral)
         if [ "$UNATTENDED" -eq 1 ]; then
-            port_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" --json setport)
+            port_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" --json setport)
             port_rc=$?
         else
-            port_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" setport)
+            port_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" setport)
             port_rc=$?
         fi
         if [ $port_rc -ne 0 ]; then
@@ -578,10 +561,10 @@ dlg_nginx_installation() {
             exit 1
         fi
         if [ "$UNATTENDED" -eq 1 ]; then
-            ext_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" --json external)
+            ext_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" --json external)
             ext_rc=$?
         else
-            ext_result=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" external)
+            ext_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" external)
             ext_rc=$?
         fi
         if [ $ext_rc -eq 0 ]; then
@@ -633,12 +616,12 @@ main() {
         logfile=$(get_log_file)
         echo "Installation abgeschlossen. Details siehe Logfile: $logfile"
         local web_url
-        web_url=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" --json geturl | grep -o 'http[s]*://[^" ]*')
+        web_url=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" --json geturl | grep -o 'http[s]*://[^" ]*')
         echo "Weboberfläche: $web_url"
     else
         print_success "Erstinstallation abgeschlossen."
         local web_url
-        web_url=$(bash "$INSTALL_DIR/backend/scripts/webserver_manage.sh" geturl)
+        web_url=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" geturl)
         print_prompt "Bitte rufen Sie die Weboberfläche im Browser auf, um die Fotobox weiter zu konfigurieren und zu verwalten.\nURL: $web_url"
         echo "Weitere Wartung (Update, Deinstallation) erfolgt über die WebUI oder die Python-Skripte im backend/."
     fi

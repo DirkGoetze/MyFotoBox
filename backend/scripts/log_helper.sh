@@ -7,6 +7,14 @@
 # Optional kann ein Symlink /var/log/fotobox → /opt/fotobox/log/ angelegt werden,
 # damit Logs auch systemweit sichtbar sind.
 # ------------------------------------------------------------------------------
+# HINWEIS: Für Shellskripte gilt zusätzlich:
+# - Fehlerausgaben immer in Rot
+# - Ausgaben zu auszuführenden Schritten in Gelb
+# - Erfolgsmeldungen in Dunkelgrün
+# - Aufforderungen zur Nutzeraktion in Blau
+# - Alle anderen Ausgaben nach Systemstandard
+# Siehe Funktionsbeispiele und DOKUMENTATIONSSTANDARD.md
+# ------------------------------------------------------------------------------
 
 get_log_path() {
     # --------------------------------------------------------------------------
@@ -130,6 +138,15 @@ print_success() {
     # Funktion: Gibt eine Erfolgsmeldung in Dunkelgrün aus
     echo -e "\033[1;32m  → $1\033[0m"
     log "SUCCESS: $1"
+}
+
+print_info() {
+    # -----------------------------------------------------------------------
+    # print_info
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt allgemeine Informationen nach Systemstandard aus
+    echo -e "\033[0m$1\033[0m"
+    log "INFO: $1"
 }
 
 print_prompt() {
