@@ -1,12 +1,13 @@
-# BACKUP_STRATEGIE.md
--------------------------------------------------------------------------------
+# Backup-Policy für das Fotobox-Projekt
+
 Backup- und Restore-Strategie für das Fotobox-Projekt
--------------------------------------------------------------------------------
 
 ## Ziel
+
 Alle Funktionen und Erweiterungen des Projekts müssen eine nachvollziehbare, versionierte und platzsparende Backup-/Restore-Strategie berücksichtigen. Diese Vorgabe ist verbindlich und dauerhaft für alle neuen Features und Systemintegrationen einzuhalten.
 
 ## Grundprinzipien
+
 - **Inkrementelle, dateibasierte Sicherung**: Es werden nur geänderte oder neue Dateien gesichert.
 - **Metadaten-Log**: Jede Sicherung wird mit Metadaten (Zeitpunkt, Version, Dateiliste, Prüfsummen) dokumentiert.
 - **Versionierung**: Backups sind eindeutig versioniert und nachvollziehbar.
@@ -14,6 +15,7 @@ Alle Funktionen und Erweiterungen des Projekts müssen eine nachvollziehbare, ve
 - **Wiederherstellbarkeit**: Restore-Prozesse sind dokumentiert und getestet.
 
 ## Umsetzung
+
 - Die Python-Utility-Skripte (`manage_update.py`, `manage_uninstall.py`) implementieren diese Strategie und dienen als Referenz.
 - Neue API-Endpunkte, Systemintegrationen oder Features müssen diese Strategie berücksichtigen und dokumentieren.
 - Änderungen an der Backup-/Restore-Logik sind in der Dokumentation zu vermerken.
@@ -33,5 +35,3 @@ Die Backup-/Restore-Regeln gelten für **jede Änderung am System**, unabhängig
 ## Entwicklerhinweis
 
 Vor Merge neuer Features ist zu prüfen, ob die Backup-/Restore-Strategie eingehalten wird. Bei Abweichungen ist eine Begründung und Dokumentation erforderlich.
-
--------------------------------------------------------------------------------
