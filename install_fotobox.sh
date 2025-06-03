@@ -19,7 +19,7 @@ set -e
 # ------------------------------------------------------------------------------
 # [ ] Optionale Firewall-Konfiguration (z.B. ufw) für den gewählten Port
 # [ ] Automatische HTTPS-Konfiguration (Let's Encrypt)
-# [ ] Fortschrittsanzeige für lange Operationen (z.B. git clone, pip install)
+# [x] Fortschrittsanzeige für lange Operationen (z.B. git clone, pip install)
 # [ ] Optionale E-Mail-Benachrichtigung nach erfolgreicher Installation
 # [ ] Mehrsprachige Installationsausgabe (DE/EN)
 # [ ] Optionale Installation als Docker-Container
@@ -29,38 +29,45 @@ set -e
 # ------------------------------------------------------------------------------
 
 # ===========================================================================
-# Globale Konstanten
+# Globale Konstanten (Vorgaben und Defaults für die Installation)
 # ===========================================================================
 # ---------------------------------------------------------------------------
-# Projekt Einstellungen
+# Einstellungen: Projekt und Repository
 # ---------------------------------------------------------------------------
 PACKAGES_TOOLS=(git lsof)
 GIT_REPO_URL="https://github.com/DirkGoetze/MyFotoBox.git"
 INSTALL_DIR="/opt/fotobox"
-README_MAIN="# fotobox\nDies ist das Hauptverzeichnis der Fotobox-Installation. Es enthält alle relevanten Unterverzeichnisse, Konfigurationen und Daten."
-BACKUP_DIR="$INSTALL_DIR/backup"
-README_BACKUP="# backup\nDieses Verzeichnis wird automatisch durch die Installations- und Update-Skripte erzeugt und enthält Backups von Konfigurationsdateien und Logs. Es ist nicht Teil des Repositorys."
-CONF_DIR="$INSTALL_DIR/conf"
-README_CONF="# conf\nDieses Verzeichnis enthält alle Konfigurationsdateien der Fotobox. Es wird automatisch angelegt und ist nicht Teil des Repositorys."
 # ---------------------------------------------------------------------------
-# NGINX Einstellungen
+# Einstellungen: Ordnerstruktur
+# ---------------------------------------------------------------------------
+BACKUP_DIR="$INSTALL_DIR/backup"
+CONF_DIR="$INSTALL_DIR/conf"
+BASH_DIR="$INSTALL_DIR/backend/scripts"
+# ---------------------------------------------------------------------------
+# Einstellungen: NGINX 
 # ---------------------------------------------------------------------------
 PACKAGES_NGINX=(nginx)
 NGINX_CONF="$CONF_DIR/nginx-fotobox.conf"
-SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
 NGINX_DST="/etc/nginx/sites-available/fotobox"
 FOTOBOX_PORT=80
+# ---------------------------------------------------------------------------
+# Einstellungen: Backend Service 
+# ---------------------------------------------------------------------------
+SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
 SYSTEMD_DST="/etc/systemd/system/fotobox-backend.service"
 # ---------------------------------------------------------------------------
-# Python Einstellungen
+# Einstellungen: Python 
 # ---------------------------------------------------------------------------
 PACKAGES_PYTHON=(python3 python3-venv python3-pip)
 # ---------------------------------------------------------------------------
-# SQLite Einstellungen
+# Einstellungen: SQLite 
 # ---------------------------------------------------------------------------
 PACKAGES_SQLITE=(sqlite3)
 DATA_DIR="$INSTALL_DIR/data"
-README_DATA="# data\nDieses Verzeichnis enthält die persistenten Daten der Fotobox (z.B. SQLite-Datenbank, Fotos, Einstellungen). Es wird automatisch angelegt und ist nicht Teil des Repositorys."
+# ---------------------------------------------------------------------------
+# Einstellungen: Debug-Modus
+# ---------------------------------------------------------------------------
+DEBUG_MOD=0
 
 # ==========================================================================='
 # Hilfsfunktionen
@@ -109,6 +116,99 @@ chk_distribution() {
     return 0
 }
 
+set_fallback_security_settings() {
+    # -----------------------------------------------------------------------
+    # set_fallback_security_settings
+    # -----------------------------------------------------------------------
+    # Funktion: Setzt Fallback-Definitionen für Logging- und Print-Funktionen,
+    # ......... falls diese nicht durch ein zentrales Logging-Hilfsskript 
+    # ......... bereitgestellt werden. Kapselt alle sicherheitsrelevanten 
+    # ......... und benutzerfreundlichen Defaults an einer zentralen Stelle.
+    # .........
+    # Farbgebung, Einrückung und Pfeile gemäß policies/cli_ausgabe_policy.md
+
+    # - log: Dummy-Logger, falls kein Logging verfügbar ist
+    type log &>/dev/null || log() {
+        local LOG_FILE="fotobox_fallback_$(date '+%Y-%m-%d').log"
+        if [ -z "$1" ]; then
+            # Keine Nachricht: Logrotation nicht implementiert im Fallback
+            return
+        fi
+        echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG_FILE"
+    }
+
+    # - print_step: Schrittbezeichnung fett/gelb, am Zeilenanfang
+    type print_step &>/dev/null || print_step()    {
+        echo -e "\033[1;33m$*\033[0m"
+        log "STEP: $*"
+    }
+
+    # - print_info: Information neutral, eingerückt, ohne Farbe/Tag
+    type print_info &>/dev/null || print_info()    {
+        echo -e "  $*"
+        log "INFO: $*"
+    }
+
+    # - print_success: Erfolg grün, eingerückt, mit Pfeil und [OK]-Tag
+    type print_success &>/dev/null || print_success() {
+        echo -e "\033[1;32m  → [OK]\033[0m $*"
+        log "SUCCESS: $*"
+    }
+
+    # - print_warning: Warnung gelb, eingerückt, mit Pfeil und Tag
+    type print_warning &>/dev/null || print_warning() {
+        echo -e "\033[1;33m  → [WARN]\033[0m $*"
+        log "WARNING: $*"
+    }
+    
+    # - print_error: Fehler rot, eingerückt, mit Pfeil und Tag
+    type print_error &>/dev/null || print_error()   {
+        echo -e "\033[1;31m  → [ERROR]\033[0m $*\033[0m" >&2
+        log "ERROR: $*"
+    }
+
+    # - print_prompt: Prompt blau, Leerzeile davor und danach (nur wenn nicht unattended)
+    type print_prompt &>/dev/null || print_prompt()  {
+        if [ "$UNATTENDED" -eq 0 ]; then
+            echo -e "\n\033[1;34m$*\033[0m\n"
+        fi
+        log "PROMPT: $*"
+    }
+
+}
+
+debug_print() {
+    # -----------------------------------------------------------------------
+    # debug_print
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt Debug-Ausgaben aus, wenn DEBUG_MOD=1 gesetzt ist
+    # Parameter: $* = Debug-Nachricht
+    # Extras...: Einheitliches Format, Policy-konform
+    if [ "$DEBUG_MOD" -eq 1 ]; then
+        echo -e "\033[1;35m  → [DEBUG]\033[0m $*"
+        log "DEBUG: $*"
+    fi
+}
+
+show_spinner() {
+    # -----------------------------------------------------------------------
+    # show_spinner
+    # -----------------------------------------------------------------------
+    # Funktion: Zeigt eine Animation, solange der übergebene Prozess läuft
+    # Parameter: $1 = PID des zu überwachenden Prozesses
+    # Rückgabe: keine
+    local pid="$1"
+    local delay=0.1
+    local spinstr='|/-\\'
+    local i=0
+    while kill -0 "$pid" 2>/dev/null; do
+        i=$(( (i+1) %4 ))
+        printf " [${spinstr:$i:1}]\r"
+        sleep $delay
+    done
+    printf "    \r"
+}
+
 make_dir() {
     # -----------------------------------------------------------------------
     # make_dir
@@ -117,11 +217,12 @@ make_dir() {
     # Rückgabe: 0 = OK, 1 = Fehler, 2 = kein Verzeichnis angegeben
     local dir="$1"
 
+    debug_print "make_dir: Prüfe $dir"
     # Kein Verzeichnis angegeben
     if [ -z "$dir" ]; then return 2; fi
-
     # Prüfe, ob das Verzeichnis bereits existiert
     if [ ! -d "$dir" ]; then
+        debug_print "make_dir: $dir existiert nicht, versuche mkdir -p"
         mkdir -p "$dir"
         if [ ! -d "$dir" ]; then return 1; fi
     fi
@@ -141,9 +242,11 @@ install_package() {
     local pkg="$1"
     local version="$2"
 
+    debug_print "install_package: Prüfe $pkg $version"
     if [ -n "$version" ]; then
         local installed_version
         installed_version=$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null)
+        debug_print "install_package: installierte Version von $pkg: $installed_version"
         if [ "$installed_version" = "$version" ]; then
             return 0
         elif [ -n "$installed_version" ]; then
@@ -156,10 +259,10 @@ install_package() {
         fi
         apt-get install -y -qq "$pkg" >/dev/null 2>&1
     fi
-
     if [ -n "$version" ]; then
         local new_version
         new_version=$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null)
+        debug_print "install_package: neue Version von $pkg: $new_version"
         if [ "$new_version" = "$version" ]; then
             return 0
         else
@@ -185,6 +288,7 @@ install_package_group() {
     local group_name="$1[@]"
     local group=("${!group_name}")
 
+    debug_print "install_package_group: Starte für Gruppe $group_name"
     for entry in "${group[@]}"; do
         local pkg
         local version
@@ -195,8 +299,10 @@ install_package_group() {
             pkg="$entry"
             version=""
         fi
+        debug_print "install_package_group: Installiere $pkg $version"
         install_package "$pkg" "$version"
         result=$?
+        debug_print "install_package_group: Ergebnis für $pkg: $result"
         if [ $result -eq 0 ]; then
             print_success "$pkg${version:+ ($version)} ist bereits installiert."
         elif [ $result -eq 2 ]; then
@@ -243,7 +349,14 @@ set_install_packages() {
     # ........  prüft den Erfolg
     # Rückgabe: 0 = OK, 1 = Fehler bei apt-get update, 2 = Fehler Tools,
     # ......... 3 = Fehler Python-Pakete, 4 = Fehler SQLite
-    apt-get update -qq || return 1
+    print_step "Führe apt-get update aus ..."
+    (apt-get update -qq) &> "$INSTALL_DIR/apt_update.log" &
+    show_spinner $!
+    if [ $? -ne 0 ]; then
+        print_error "Fehler bei apt-get update. Log-Auszug:"
+        tail -n 10 "$INSTALL_DIR/apt_update.log"
+        return 1
+    fi
     install_package_group PACKAGES_TOOLS || return 2
     install_package_group PACKAGES_PYTHON || return 3
     install_package_group PACKAGES_SQLITE || return 4
@@ -276,33 +389,68 @@ set_structure() {
     # ......... per git (wenn nötig), legt Backup- und Datenverzeichnis an
     # ......... und setzt die notwendigen Rechte
     # Rückgabe: 0 = OK, 1 = Fehler Installationsverzeichnis, 
-    # ......... 2 = Fehler git, 3 = Fehler git clone,
+    # ......... 2 = Fehler git, 10 = git clone fehlgeschlagen (Struktur/Rechte gesetzt),
     # ......... 4 = Fehler Backup, 5 = Fehler Konfiguration, 
     # ......... 6 = Fehler Daten, 7 = Fehler Rechte
+    # Extras...: Gibt bei git-Fehlern eine Warnung aus, setzt aber Struktur/Rechte
+    
+    debug_print "set_structure: Starte mit INSTALL_DIR=$INSTALL_DIR, BACKUP_DIR=$BACKUP_DIR, CONF_DIR=$CONF_DIR, DATA_DIR=$DATA_DIR, BASH_DIR=$BASH_DIR"
     if [ ! -d "$INSTALL_DIR" ]; then
+        debug_print "set_structure: INSTALL_DIR $INSTALL_DIR existiert nicht, versuche make_dir"
         make_dir "$INSTALL_DIR" || return 1
     fi
-    ls -la "$INSTALL_DIR"
+    local clone_failed=0
     if [ ! -d "$INSTALL_DIR/backend" ]; then
+        debug_print "set_structure: Backend-Verzeichnis fehlt, prüfe git"
         if ! command -v git >/dev/null 2>&1; then
-            apt-get update -qq && apt-get install -y -qq git || return 2
+            debug_print "set_structure: git nicht gefunden, versuche Nachinstallation"
+            print_step "Installiere git ..."
+            (apt-get update -qq && apt-get install -y -qq git) &> "$INSTALL_DIR/apt_git.log" &
+            show_spinner $!
+            if ! command -v git >/dev/null 2>&1; then
+                debug_print "set_structure: git-Installation fehlgeschlagen"
+                print_error "Fehler beim Nachinstallieren von git. Log-Auszug:"
+                tail -n 10 "$INSTALL_DIR/apt_git.log"
+                return 2
+            fi
         fi
-        git clone "$GIT_REPO_URL" "$INSTALL_DIR" || return 3
+        print_step "Klone Projekt-Repository ..."
+        debug_print "set_structure: Klone $GIT_REPO_URL nach $INSTALL_DIR"
+        (git clone "$GIT_REPO_URL" "$INSTALL_DIR") &> "$INSTALL_DIR/git_clone.log" &
+        show_spinner $!
+        if [ ! -d "$INSTALL_DIR/backend" ]; then
+            debug_print "set_structure: Klonen fehlgeschlagen, backend-Verzeichnis fehlt"
+            print_error "Warnung: Klonen des Projekts per git fehlgeschlagen (evtl. Verzeichnis nicht leer?). Log-Auszug:"
+            tail -n 10 "$INSTALL_DIR/git_clone.log"
+            clone_failed=1
+        fi
     fi
     if ! make_dir "$BACKUP_DIR"; then
+        debug_print "set_structure: BACKUP_DIR $BACKUP_DIR konnte nicht angelegt werden"
         return 4
     fi
     if ! make_dir "$CONF_DIR"; then
+        debug_print "set_structure: CONF_DIR $CONF_DIR konnte nicht angelegt werden"
         return 5
     fi
     if ! make_dir "$DATA_DIR"; then
+        debug_print "set_structure: DATA_DIR $DATA_DIR konnte nicht angelegt werden"
         return 6
     fi
     # Nach dem Klonen: Ausführbarkeitsrechte für alle Skripte im backend/scripts setzen
-    if [ -d "$INSTALL_DIR/backend/scripts" ]; then
-        chmod +x "$INSTALL_DIR/backend/scripts"/*.sh
+    if [ -d "$BASH_DIR" ]; then
+        debug_print "set_structure: Setze Ausführbarkeitsrechte für $BASH_DIR/*.sh"
+        chmod +x "$BASH_DIR"/*.sh
     fi
-    chown -R fotobox:fotobox "$INSTALL_DIR" || return 7
+    chown -R fotobox:fotobox "$INSTALL_DIR" || {
+        debug_print "set_structure: chown auf $INSTALL_DIR fehlgeschlagen"
+        return 7
+    }
+    if [ "$clone_failed" -eq 1 ]; then
+        debug_print "set_structure: clone_failed=1, Rückgabe 10"
+        return 10
+    fi
+    debug_print "set_structure: erfolgreich abgeschlossen"
     return 0
 }
 
@@ -459,6 +607,8 @@ dlg_prepare_structure() {
     elif [ $rc -eq 7 ]; then
         print_error "Rechte für $INSTALL_DIR konnten nicht gesetzt werden!"
         exit 1
+    elif [ $rc -eq 10 ]; then
+        print_warning "Klonen des Projekts per git fehlgeschlagen, aber Verzeichnisstruktur und Rechte wurden gesetzt.\nBitte prüfen Sie, ob das Zielverzeichnis bereits (teilweise) belegt ist oder eine abgebrochene Installation vorliegt."
     elif [ $rc -ne 0 ]; then
         print_error "Unbekannter Fehler bei der Verzeichnisstruktur (Code $rc)."
         exit 1
@@ -476,38 +626,43 @@ dlg_nginx_installation() {
     # ------------------------------------------------------------------------------
     print_step "[6/10] NGINX-Installation und Konfiguration ..."
 
+    debug_print "dlg_nginx_installation: Starte NGINX-Dialog, UNATTENDED=$UNATTENDED, BASH_DIR=$BASH_DIR"
     # Prüfen, ob manage_nginx.sh existiert
-    if [ ! -f "$INSTALL_DIR/backend/scripts/manage_nginx.sh" ]; then
+    if [ ! -f "$BASH_DIR/manage_nginx.sh" ]; then
+        debug_print "dlg_nginx_installation: manage_nginx.sh nicht gefunden unter $BASH_DIR"
         print_error "manage_nginx.sh nicht gefunden! Die Projektstruktur wurde vermutlich noch nicht geklont."
         exit 1
     fi
-
     # NGINX-Installation prüfen/ausführen (zentral)
     if [ "$UNATTENDED" -eq 1 ]; then
-        install_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" --json install)
+        debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json install"
+        install_result=$(bash "$BASH_DIR/manage_nginx.sh" --json install)
         install_rc=$?
     else
-        install_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" install)
+        debug_print "dlg_nginx_installation: Starte manage_nginx.sh install"
+        install_result=$(bash "$BASH_DIR/manage_nginx.sh" install)
         install_rc=$?
     fi
+    debug_print "dlg_nginx_installation: install_rc=$install_rc, install_result=$install_result"
     if [ $install_rc -ne 0 ]; then
         print_error "NGINX-Installation fehlgeschlagen: $install_result"
         exit 1
     fi
-
     # Betriebsmodus abfragen (default/multisite)
     if [ "$UNATTENDED" -eq 1 ]; then
-        activ_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" --json activ)
+        debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json activ"
+        activ_result=$(bash "$BASH_DIR/manage_nginx.sh" --json activ)
         activ_rc=$?
     else
-        activ_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" activ)
+        debug_print "dlg_nginx_installation: Starte manage_nginx.sh activ"
+        activ_result=$(bash "$BASH_DIR/manage_nginx.sh" activ)
         activ_rc=$?
     fi
+    debug_print "dlg_nginx_installation: activ_rc=$activ_rc, activ_result=$activ_result"
     if [ $activ_rc -eq 2 ]; then
         print_error "Konnte NGINX-Betriebsmodus nicht eindeutig ermitteln. Bitte prüfen Sie die Konfiguration."
         exit 1
     fi
-
     # Dialog: Default-Integration oder eigene Konfiguration
     if [ $activ_rc -eq 0 ]; then
         if [ "$UNATTENDED" -eq 1 ]; then
@@ -517,6 +672,7 @@ dlg_nginx_installation() {
             print_prompt "NGINX läuft nur im Default-Modus. Fotobox in Default-Konfiguration integrieren? [J/n]"
             read -r antwort
         fi
+        debug_print "dlg_nginx_installation: Antwort auf Default-Integration: $antwort"
         if [[ "$antwort" =~ ^([nN])$ ]]; then
             if [ "$UNATTENDED" -eq 1 ]; then
                 antwort2="j"
@@ -525,29 +681,36 @@ dlg_nginx_installation() {
                 print_prompt "Stattdessen eigene Fotobox-Konfiguration anlegen? [J/n]"
                 read -r antwort2
             fi
+            debug_print "dlg_nginx_installation: Antwort auf eigene Konfiguration: $antwort2"
             if [[ "$antwort2" =~ ^([nN])$ ]]; then
                 print_error "Abbruch: Keine NGINX-Integration gewählt."
                 exit 1
             fi
             # Portwahl und externe Konfiguration (zentral)
             if [ "$UNATTENDED" -eq 1 ]; then
-                port_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" --json setport)
+                debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json setport"
+                port_result=$(bash "$BASH_DIR/manage_nginx.sh" --json setport)
                 port_rc=$?
             else
-                port_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" setport)
+                debug_print "dlg_nginx_installation: Starte manage_nginx.sh setport"
+                port_result=$(bash "$BASH_DIR/manage_nginx.sh" setport)
                 port_rc=$?
             fi
+            debug_print "dlg_nginx_installation: port_rc=$port_rc, port_result=$port_result"
             if [ $port_rc -ne 0 ]; then
                 print_error "Portwahl/Setzen fehlgeschlagen: $port_result"
                 exit 1
             fi
             if [ "$UNATTENDED" -eq 1 ]; then
-                ext_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" --json external)
+                debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json external"
+                ext_result=$(bash "$BASH_DIR/manage_nginx.sh" --json external)
                 ext_rc=$?
             else
-                ext_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" external)
+                debug_print "dlg_nginx_installation: Starte manage_nginx.sh external"
+                ext_result=$(bash "$BASH_DIR/manage_nginx.sh" external)
                 ext_rc=$?
             fi
+            debug_print "dlg_nginx_installation: ext_rc=$ext_rc, ext_result=$ext_result"
             if [ $ext_rc -eq 0 ]; then
                 print_success "Eigene Fotobox-Konfiguration wurde angelegt und aktiviert."
             else
@@ -557,12 +720,15 @@ dlg_nginx_installation() {
         else
             # Default-Integration (zentral)
             if [ "$UNATTENDED" -eq 1 ]; then
-                int_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" --json internal)
+                debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json internal"
+                int_result=$(bash "$BASH_DIR/manage_nginx.sh" --json internal)
                 int_rc=$?
             else
-                int_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" internal)
+                debug_print "dlg_nginx_installation: Starte manage_nginx.sh internal"
+                int_result=$(bash "$BASH_DIR/manage_nginx.sh" internal)
                 int_rc=$?
             fi
+            debug_print "dlg_nginx_installation: int_rc=$int_rc, int_result=$int_result"
             if [ $int_rc -eq 0 ]; then
                 print_success "Fotobox wurde in Default-Konfiguration integriert."
             else
@@ -578,29 +744,36 @@ dlg_nginx_installation() {
             print_prompt "NGINX betreibt mehrere Sites. Eigene Fotobox-Konfiguration anlegen? [J/n]"
             read -r antwort
         fi
+        debug_print "dlg_nginx_installation: Antwort auf eigene Konfiguration (multisite): $antwort"
         if [[ "$antwort" =~ ^([nN])$ ]]; then
             print_error "Abbruch: Keine NGINX-Integration gewählt."
             exit 1
         fi
         # Portwahl und externe Konfiguration (zentral)
         if [ "$UNATTENDED" -eq 1 ]; then
-            port_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" --json setport)
+            debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json setport"
+            port_result=$(bash "$BASH_DIR/manage_nginx.sh" --json setport)
             port_rc=$?
         else
-            port_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" setport)
+            debug_print "dlg_nginx_installation: Starte manage_nginx.sh setport"
+            port_result=$(bash "$BASH_DIR/manage_nginx.sh" setport)
             port_rc=$?
         fi
+        debug_print "dlg_nginx_installation: port_rc=$port_rc, port_result=$port_result"
         if [ $port_rc -ne 0 ]; then
             print_error "Portwahl/Setzen fehlgeschlagen: $port_result"
             exit 1
         fi
         if [ "$UNATTENDED" -eq 1 ]; then
-            ext_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" --json external)
+            debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json external"
+            ext_result=$(bash "$BASH_DIR/manage_nginx.sh" --json external)
             ext_rc=$?
         else
-            ext_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" external)
+            debug_print "dlg_nginx_installation: Starte manage_nginx.sh external"
+            ext_result=$(bash "$BASH_DIR/manage_nginx.sh" external)
             ext_rc=$?
         fi
+        debug_print "dlg_nginx_installation: ext_rc=$ext_rc, ext_result=$ext_result"
         if [ $ext_rc -eq 0 ]; then
             print_success "Eigene Fotobox-Konfiguration wurde angelegt und aktiviert."
         else
@@ -608,6 +781,7 @@ dlg_nginx_installation() {
             exit 1
         fi
     fi
+    debug_print "dlg_nginx_installation: Dialog erfolgreich abgeschlossen"
     return 0
 }
 
@@ -623,8 +797,22 @@ dlg_backend_integration() {
         python3 -m venv "$INSTALL_DIR/backend/venv" || { print_error "Konnte venv nicht anlegen!"; exit 1; }
     fi
     # Abhängigkeiten installieren
-    "$INSTALL_DIR/backend/venv/bin/pip" install --upgrade pip >/dev/null 2>&1
-    "$INSTALL_DIR/backend/venv/bin/pip" install -r "$INSTALL_DIR/backend/requirements.txt" >/dev/null 2>&1 || { print_error "Konnte Python-Abhängigkeiten nicht installieren!"; exit 1; }
+    print_step "Installiere/aktualisiere pip ..."
+    ("$INSTALL_DIR/backend/venv/bin/pip" install --upgrade pip) &> "$INSTALL_DIR/pip_upgrade.log" &
+    show_spinner $!
+    if [ $? -ne 0 ]; then
+        print_error "Fehler beim Upgrade von pip. Log-Auszug:"
+        tail -n 10 "$INSTALL_DIR/pip_upgrade.log"
+        exit 1
+    fi
+    print_step "Installiere Python-Abhängigkeiten ..."
+    ("$INSTALL_DIR/backend/venv/bin/pip" install -r "$INSTALL_DIR/backend/requirements.txt") &> "$INSTALL_DIR/pip_requirements.log" &
+    show_spinner $!
+    if [ $? -ne 0 ]; then
+        print_error "Konnte Python-Abhängigkeiten nicht installieren! Log-Auszug:"
+        tail -n 10 "$INSTALL_DIR/pip_requirements.log"
+        exit 1
+    fi
     # systemd-Service anlegen und starten
     set_systemd_service
     set_systemd_install
@@ -651,12 +839,12 @@ main() {
         logfile=$(get_log_file)
         echo "Installation abgeschlossen. Details siehe Logfile: $logfile"
         local web_url
-        web_url=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" --json geturl | grep -o 'http[s]*://[^" ]*')
+        web_url=$(bash "$BASH_DIR/manage_nginx.sh" --json geturl | grep -o 'http[s]*://[^" ]*')
         echo "Weboberfläche: $web_url"
     else
         print_success "Erstinstallation abgeschlossen."
         local web_url
-        web_url=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" geturl)
+        web_url=$(bash "$BASH_DIR/manage_nginx.sh" geturl)
         print_prompt "Bitte rufen Sie die Weboberfläche im Browser auf, um die Fotobox weiter zu konfigurieren und zu verwalten.\nURL: $web_url"
         echo "Weitere Wartung (Update, Deinstallation) erfolgt über die WebUI oder die Python-Skripte im backend/."
     fi
@@ -666,22 +854,21 @@ main() {
 # UNATTENDED-Variable initialisieren, falls nicht gesetzt
 : "${UNATTENDED:=0}"
 
-# Fallback-Definitionen für Logging/Print-Funktionen (werden ggf. überschrieben)
-print_step()    { echo "[STEP] $*"; }
-print_error()   { echo "[ERROR] $*" >&2; }
-print_success() { echo "[OK] $*"; }
-print_prompt()  { echo "[PROMPT] $*"; }
-log()           { :; }
+# Fallback-Definitionen für Logging/Print-Funktionen zentral setzen
+set_fallback_security_settings
 
 # Logging-Hilfsskript einbinden (zentral für alle Fotobox-Skripte)
 if [ -f "$(dirname "$0")/backend/scripts/log_helper.sh" ]; then
     source "$(dirname "$0")/backend/scripts/log_helper.sh"
 else
-    echo "WARNUNG: Logging-Hilfsskript nicht gefunden! Logging deaktiviert." >&2
+    print_warning "Logging-Hilfsskript nicht gefunden! Logging deaktiviert."
     log() { :; }
 fi
 
 # Log-Initialisierung (Rotation) direkt nach Skriptstart 
 log
+log "Installationsskript gestartet: $(date '+%Y-%m-%d %H:%M:%S')"
+
 # Hauptfunktion aufrufen 
 main
+

@@ -1,9 +1,11 @@
 # Fotobox
 
-Kurzanleitung zur Nutzung des Installationsskripts:
+Kurzanleitung zum Herunterladen und Starten des Installationsskripts:
 
 ```sh
-sudo ./fotobox.sh --install
+wget https://raw.githubusercontent.com/DirkGoetze/fotobox2/main/install_fotobox.sh
+chmod +x install_fotobox.sh
+sudo ./install_fotobox.sh
 ```
 
 Für ausführliche Informationen zu Installation, Update und Deinstallation siehe:

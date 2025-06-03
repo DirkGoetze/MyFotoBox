@@ -118,26 +118,9 @@ print_step() {
     # print_step
     # -----------------------------------------------------------------------
     # Funktion: Gibt einen Hinweis auf einen auszuführenden Schritt in Gelb aus
-    echo -e "\033[1;33m$1\033[0m"
-    log "STEP: $1"
-}
-
-print_error() {
-    # -----------------------------------------------------------------------
-    # print_error
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt eine Fehlermeldung farbig aus
-    echo -e "\033[1;31m  → Fehler: $1\033[0m"
-    log "ERROR: $1"
-}
-
-print_success() {
-    # -----------------------------------------------------------------------
-    # print_success
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt eine Erfolgsmeldung in Dunkelgrün aus
-    echo -e "\033[1;32m  → $1\033[0m"
-    log "SUCCESS: $1"
+    # Parameter: $* = Meldungstext
+    echo -e "\033[1;33m$*\033[0m"
+    log "STEP: $*"
 }
 
 print_info() {
@@ -145,8 +128,39 @@ print_info() {
     # print_info
     # -----------------------------------------------------------------------
     # Funktion: Gibt allgemeine Informationen nach Systemstandard aus
-    echo -e "\033[0m$1\033[0m"
-    log "INFO: $1"
+    # Parameter: $* = Meldungstext
+    echo -e "\033[0m$*\033[0m"
+    log "INFO: $*"
+}
+
+print_success() {
+    # -----------------------------------------------------------------------
+    # print_success
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt eine Erfolgsmeldung in Dunkelgrün aus
+    # Parameter: $* = Meldungstext
+    echo -e "\033[1;32m  → [OK]\033[0m $*"
+    log "SUCCESS: $*"
+}
+
+print_warning() {
+    # -----------------------------------------------------------------------
+    # print_warning
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt eine Warnung in gelber Farbe aus 
+    # Parameter: $* = Warnungstext
+    echo -e "\033[1;33m  → [WARN]\033[0m $*"
+    log "WARNING: $*"
+}
+
+print_error() {
+    # -----------------------------------------------------------------------
+    # print_error
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt eine Fehlermeldung farbig aus
+    # Parameter: $* = Fehlertext
+    echo -e "\033[1;31m  → [ERROR]\033[0m $*\033[0m"
+    log "ERROR: $*"
 }
 
 print_prompt() {
@@ -154,9 +168,10 @@ print_prompt() {
     # print_prompt
     # -----------------------------------------------------------------------
     # Funktion: Gibt eine Nutzeraufforderung in Blau aus (nur, wenn nicht unattended)
+    # Parameter: $* = Eingabeaufforderungstext
     if [ "$UNATTENDED" -eq 0 ]; then
-        echo -e "\033[1;34m$1\033[0m"
+        echo -e "\033[1;34m$*\033[0m"
     fi
-    log "PROMPT: $1"
+    log "PROMPT: $*"
 }
 
