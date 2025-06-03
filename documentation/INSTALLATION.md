@@ -120,3 +120,23 @@ Weboberfläche: [http://192.168.1.100:80/](http://192.168.1.100:80/)
 -------------------------------------------------------------------------------
 
 Mit dieser Anleitung sollte die Installation auch für Einsteiger problemlos gelingen. Bei Fragen hilft die README.md im Projektverzeichnis weiter.
+
+## Systembenutzer und Gruppe: Sicherheit ohne Home-Verzeichnis
+
+Das Installationsskript legt den Systembenutzer und die Gruppe `fotobox` **ohne Home-Verzeichnis** und **ohne Login-Shell** an. Dies ist Best Practice für System- und Dienstkonten unter Linux und wird wie folgt umgesetzt:
+
+- Der Nutzer wird mit `useradd -r -M -s /usr/sbin/nologin fotobox` angelegt.
+- Es wird **kein** Verzeichnis wie `/home/fotobox` erstellt.
+- Die Anmeldung am System ist für diesen Nutzer nicht möglich.
+- Die Fotobox-Software und alle Dienste laufen sicher und getrennt von anderen Systemdiensten.
+- Alle Konfigurations-, Daten- und Logverzeichnisse werden explizit im Projektordner verwaltet.
+
+### Begründung und Vorteile
+
+- **Sicherheit:** Kein unnötiges Home-Verzeichnis, keine interaktive Anmeldung möglich.
+- **Klarheit:** Keine Verwirrung durch leere Home-Verzeichnisse für reine Systemnutzer.
+- **Best Practice:** Entspricht den Empfehlungen für Service-Accounts auf Linux-Systemen.
+- **Keine Einschränkung:** Die Fotobox benötigt kein Home-Verzeichnis für den Betrieb.
+
+**Hinweis:**
+Diese Vorgehensweise ist Standard für Systemdienste und wird z.B. auch für Nutzer wie `nginx`, `www-data` oder `systemd-network` verwendet. Siehe auch [Linux-Dokumentation zu Systembenutzern](https://refspecs.linuxfoundation.org/LSB_3.0.0/LSB-3.0.0.html#UIDMIN).

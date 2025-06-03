@@ -254,11 +254,10 @@ set_user_group() {
     # -----------------------------------------------------------------------
     # set_user_group
     # -----------------------------------------------------------------------
-    # Funktion: Legt Benutzer und Gruppe 'fotobox' an, prüft Rechte
-    # Rückgabe: 0 = OK, 1 = Fehler Benutzer, 2 = Fehler Gruppe, 
-    # ........  3 = Fehler Gruppenzuordnung
+    # Funktion: Legt Systembenutzer und Gruppe 'fotobox' ohne Home-Verzeichnis an, prüft Rechte
+    # Rückgabe: 0 = OK, 1 = Fehler Benutzer, 2 = Fehler Gruppe, 3 = Fehler Gruppenzuordnung
     if ! id -u fotobox &>/dev/null; then
-        useradd -m fotobox || return 1
+        useradd -r -M -s /usr/sbin/nologin fotobox || return 1
     fi
     if ! getent group fotobox &>/dev/null; then
         groupadd fotobox || return 2
@@ -283,10 +282,8 @@ set_structure() {
     if [ ! -d "$INSTALL_DIR" ]; then
         make_dir "$INSTALL_DIR" || return 1
     fi
-    echo "DEBUG: Inhalt von $INSTALL_DIR vor Prüfung auf Projektstruktur:"
     ls -la "$INSTALL_DIR"
     if [ ! -d "$INSTALL_DIR/backend" ]; then
-        echo "DEBUG: Starte git clone, da backend/ nicht existiert"
         if ! command -v git >/dev/null 2>&1; then
             apt-get update -qq && apt-get install -y -qq git || return 2
         fi
@@ -300,6 +297,10 @@ set_structure() {
     fi
     if ! make_dir "$DATA_DIR"; then
         return 6
+    fi
+    # Nach dem Klonen: Ausführbarkeitsrechte für alle Skripte im backend/scripts setzen
+    if [ -d "$INSTALL_DIR/backend/scripts" ]; then
+        chmod +x "$INSTALL_DIR/backend/scripts"/*.sh
     fi
     chown -R fotobox:fotobox "$INSTALL_DIR" || return 7
     return 0
