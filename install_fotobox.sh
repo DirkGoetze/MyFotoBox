@@ -83,50 +83,6 @@ README_DATA="# data\nDieses Verzeichnis enthält die persistenten Daten der Foto
 # Hilfsfunktionen
 # ==========================================================================='
 
-log() {
-    # -----------------------------------------------------------------------
-    # log
-    # -----------------------------------------------------------------------
-    # Hilfsfunktion zur Erzeugung eines einfachen Log mit Rotation und Komprimierung
-    local LOG_PATH
-    if [ -d "/var/log" ]; then
-        LOG_PATH="/var/log"
-    elif [ -d "/tmp" ]; then
-        LOG_PATH="/tmp"
-    else
-        LOG_PATH="."
-    fi
-    local LOG_FILE="${LOG_PATH}/$(date "+%Y-%m-%d")_$(basename "$0" .sh).log"
-    local MAX_ROTATE=5
-    if [ -z "$1" ]; then
-        # Logrotation und Komprimierung
-        if [ -f "${LOG_FILE}.${MAX_ROTATE}.gz" ]; then
-            rm -f "${LOG_FILE}.${MAX_ROTATE}.gz"
-        fi
-        for ((i=MAX_ROTATE-1; i>=2; i--)); do
-            if [ -f "${LOG_FILE}.${i}.gz" ]; then
-                mv "${LOG_FILE}.${i}.gz" "${LOG_FILE}.$((i+1)).gz"
-            fi
-        done
-        if [ -f "${LOG_FILE}.1" ]; then
-            gzip -c "${LOG_FILE}.1" > "${LOG_FILE}.2.gz"
-            rm -f "${LOG_FILE}.1"
-        fi
-        if [ -f "${LOG_FILE}" ]; then
-            mv "${LOG_FILE}" "${LOG_FILE}.1"
-        fi
-        if [ ! -f "${LOG_FILE}" ]; then
-            touch "${LOG_FILE}" || return 1
-        fi
-        echo "" >> "${LOG_FILE}"
-    else
-        if [ ! -f "${LOG_FILE}" ]; then
-            touch "${LOG_FILE}" || return 1
-        fi
-        echo "$(date "+%Y-%m-%d %H:%M:%S") $1" >> "${LOG_FILE}"
-    fi
-}
-
 print_step() {
     # -----------------------------------------------------------------------
     # print_step
@@ -152,22 +108,6 @@ print_success() {
     # Funktion: Gibt eine Erfolgsmeldung in Dunkelgrün aus
     echo -e "\033[1;32m  → $1\033[0m"
     log "SUCCESS: $1"
-}
-
-dialog_logfile_path() {
-    # -----------------------------------------------------------------------
-    # dialog_logfile_path
-    # -----------------------------------------------------------------------
-    # Gibt den Pfad zur aktuellen Logdatei aus
-    local LOG_PATH
-    if [ -d "/var/log" ]; then
-        LOG_PATH="/var/log"
-    elif [ -d "/tmp" ]; then
-        LOG_PATH="/tmp"
-    else
-        LOG_PATH="."
-    fi
-    echo "${LOG_PATH}/$(date "+%Y-%m-%d")_$(basename "$0" .sh).log"
 }
 
 print_prompt() {
@@ -951,7 +891,7 @@ main() {
     dlg_backend_integration     # Python-Backend, venv, systemd-Service, Start
     if [ "$UNATTENDED" -eq 1 ]; then
         local logfile
-        logfile=$(dialog_logfile_path)
+        logfile=$(get_log_file)
         echo "Installation abgeschlossen. Details siehe Logfile: $logfile"
         local web_url
         web_url=$(get_nginx_url)
@@ -964,6 +904,14 @@ main() {
         echo "Weitere Wartung (Update, Deinstallation) erfolgt über die WebUI oder die Python-Skripte im backend/."
     fi
 }
+
+# Logging-Hilfsskript einbinden (zentral für alle Fotobox-Skripte)
+if [ -f "$(dirname "$0")/backend/scripts/log_helper.sh" ]; then
+    source "$(dirname "$0")/backend/scripts/log_helper.sh"
+else
+    echo "WARNUNG: Logging-Hilfsskript nicht gefunden! Logging deaktiviert." >&2
+    log() { :; }
+fi
 
 # Log-Initialisierung (Rotation) direkt nach Skriptstart --------------------
 log
