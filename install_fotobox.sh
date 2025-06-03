@@ -35,7 +35,7 @@ set -e
 # Projekt Einstellungen
 # ---------------------------------------------------------------------------
 PACKAGES_TOOLS=(git lsof)
-GIT_REPO_URL="https://github.com/DirkGoetze/fotobox2.git"
+GIT_REPO_URL="https://github.com/DirkGoetze/MyFotoBox.git"
 INSTALL_DIR="/opt/fotobox"
 README_MAIN="# fotobox\nDies ist das Hauptverzeichnis der Fotobox-Installation. Es enthält alle relevanten Unterverzeichnisse, Konfigurationen und Daten."
 BACKUP_DIR="$INSTALL_DIR/backup"
@@ -448,6 +448,12 @@ dlg_nginx_installation() {
     # ------------------------------------------------------------------------------
     print_step "[6/10] NGINX-Installation und Konfiguration ..."
 
+    # Prüfen, ob manage_nginx.sh existiert
+    if [ ! -f "$INSTALL_DIR/backend/scripts/manage_nginx.sh" ]; then
+        print_error "manage_nginx.sh nicht gefunden! Die Projektstruktur wurde vermutlich noch nicht geklont."
+        exit 1
+    fi
+
     # NGINX-Installation prüfen/ausführen (zentral)
     if [ "$UNATTENDED" -eq 1 ]; then
         install_result=$(bash "$INSTALL_DIR/backend/scripts/manage_nginx.sh" --json install)
@@ -627,6 +633,17 @@ main() {
     fi
 }
 
+# ------------------------------------------------------------------------------
+# UNATTENDED-Variable initialisieren, falls nicht gesetzt
+: "${UNATTENDED:=0}"
+
+# Fallback-Definitionen für Logging/Print-Funktionen (werden ggf. überschrieben)
+print_step()    { echo "[STEP] $*"; }
+print_error()   { echo "[ERROR] $*" >&2; }
+print_success() { echo "[OK] $*"; }
+print_prompt()  { echo "[PROMPT] $*"; }
+log()           { :; }
+
 # Logging-Hilfsskript einbinden (zentral für alle Fotobox-Skripte)
 if [ -f "$(dirname "$0")/backend/scripts/log_helper.sh" ]; then
     source "$(dirname "$0")/backend/scripts/log_helper.sh"
@@ -635,7 +652,7 @@ else
     log() { :; }
 fi
 
-# Log-Initialisierung (Rotation) direkt nach Skriptstart --------------------
+# Log-Initialisierung (Rotation) direkt nach Skriptstart 
 log
-# Hauptfunktion aufrufen ----------------------------------------------------
+# Hauptfunktion aufrufen 
 main
