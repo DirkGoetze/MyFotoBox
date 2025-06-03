@@ -26,6 +26,7 @@ set -e
 # [ ] Automatische Prüfung der Erreichbarkeit der Weboberfläche nach der 
 #     Installation (z.B. per curl) und Ausgabe einer entsprechenden 
 #     Erfolgsmeldung oder eines Hinweises zur Fehlerbehebung
+# [ ] Automatisierte Firewall-Einrichtung und -Verwaltung über backend/scripts/manage_firewall.sh integrieren (Policy-konform)
 # ------------------------------------------------------------------------------
 
 # ===========================================================================
