@@ -9,6 +9,9 @@
 # Unterordner 'backend/scripts/' abgelegt werden 
 # ------------------------------------------------------------------------------
 
+# Policy-Hinweis: Dieses Skript ist ein reines Funktions-/Modulskript und enthält keine main()-Funktion mehr.
+# Die Nutzung als eigenständiges CLI-Programm ist nicht vorgesehen. Die Policy zur main()-Funktion gilt nur für Hauptskripte.
+
 # ==============================================================================
 # TODO-/Checkliste für manage_nginx.sh (Stand: 2025-06-04)
 # ==============================================================================
@@ -17,7 +20,7 @@
 # [x] LOG-Logik aus log_helper.sh überall konsistent verwenden (Logik vereinheitlichen)
 # [x] Debug-Modus: DEBUG_MOD-Variable, zentrale debug()-Funktion in log_helper.sh ausgelagert, gezielte Debug-Ausgaben in kritischen Abschnitten/Funktionen
 # [x] Alle Ausgaben (echo, printf, etc.) auf konsistente Rückmeldungen umstellen
-# [ ] Alle Benutzereingaben (read, select, etc.) durch Parameter/Defaults ersetzen
+# [x] Alle Benutzereingaben (read, select, etc.) durch Parameter/Defaults ersetzen
 # [ ] Interaktive Schleifenlogik (z.B. Portwahl) in aufrufende Programme auslagern
 # [ ] Funktionen einzeln testbar gestalten (Parameter statt globaler State)
 # [ ] Seiteneffekte (z.B. globale Variablen) minimieren und dokumentieren
@@ -351,6 +354,7 @@ set_nginx_port() {
     # set_nginx_port
     # -----------------------------------------------------------------------
     # Funktion: Fragt gewünschten Port und Abbruchentscheidung als Parameter ab, prüft Port und gibt Ergebnis zurück.
+    # HINWEIS: Interaktive Schleifenlogik (z.B. wiederholte Portabfrage) wurde entfernt. Wiederholungen/Benutzereingaben müssen im aufrufenden Programm erfolgen!
     local mode="$1"
     local port="${2:-80}"
     local abort_decision="${3:-N}"
@@ -499,64 +503,6 @@ set_nginx_cnf_external() {
     return 0
 }
 
-
-
-
-main() {
-    # -----------------------------------------------------------------------
-    # main
-    # -----------------------------------------------------------------------
-    # Funktion: Steuert den Aufruf des Skripts (install, update, backup)
-
-    case "$1" in
-        install)
-            log "${main_txt_0001}"
-            chk_nginx_installation "$MODE" || { log "${main_txt_0002}"; exit 1; }
-            set_nginx_port "$MODE" || { log "${main_txt_0003}"; exit 1; }
-            set_nginx_cnf_external "$MODE" || { log "${main_txt_0004}"; exit 1; }
-            log "${main_txt_0005}"
-            ;;
-        update)
-            log "Starte NGINX-Update (manage_nginx.sh)"
-            chk_nginx_installation "$MODE" || { log "Fehler: NGINX-Update fehlgeschlagen"; exit 1; }
-            set_nginx_cnf_external "$MODE" || { log "Fehler: NGINX-Konfiguration fehlgeschlagen"; exit 1; }
-            log "NGINX-Update abgeschlossen."
-            ;;
-        backup)
-            log "Starte NGINX-Backup (manage_nginx.sh)"
-            local nginx_dst="/etc/nginx/sites-available/fotobox"
-            local backup="/opt/fotobox/backup/nginx-fotobox.conf.bak.$(date +%Y%m%d%H%M%S)"
-            if [ -f "$nginx_dst" ]; then
-                cp "$nginx_dst" "$backup" && { if [ "$MODE" = "json" ]; then json_out "success" "Backup der Konfiguration nach $backup" 0; else log "Backup der Konfiguration nach $backup"; fi; } || { if [ "$MODE" = "json" ]; then json_out "error" "Backup fehlgeschlagen!" 1; else log "Fehler: Backup fehlgeschlagen!"; fi; }
-            else
-                if [ "$MODE" = "json" ]; then json_out "error" "Keine Konfiguration zum Sichern gefunden." 2; else log "Keine Konfiguration zum Sichern gefunden."; fi
-            fi
-            ;;
-        rollback)
-            log "Starte NGINX-Rollback (manage_nginx.sh)"
-            local backup_dir="/opt/fotobox/backup"
-            local nginx_dst="/etc/nginx/sites-available/fotobox"
-            local last_backup
-            last_backup=$(ls -1t "$backup_dir"/nginx-fotobox.conf.bak.* 2>/dev/null | head -n1)
-            if [ -n "$last_backup" ] && [ -f "$last_backup" ]; then
-                cp "$last_backup" "$nginx_dst" && { if [ "$MODE" = "json" ]; then json_out "success" "Rollback durchgeführt: $last_backup -> $nginx_dst" 0; else log "Rollback durchgeführt: $last_backup -> $nginx_dst"; fi; } || { if [ "$MODE" = "json" ]; then json_out "error" "Rollback fehlgeschlagen!" 1; else log "Fehler: Rollback fehlgeschlagen!"; fi; }
-                chk_nginx_reload "$MODE"
-            else
-                if [ "$MODE" = "json" ]; then json_out "error" "Kein Backup für Rollback gefunden." 2; else log "Kein Backup für Rollback gefunden."; fi
-            fi
-            ;;
-        *)
-            if [ "$MODE" = "json" ]; then
-                json_out "error" "Verwendung: $0 [--json] {install|update|backup|rollback}" 99
-            else
-                log "Verwendung: $0 [--json] {install|update|backup|rollback}"
-            fi
-            log "Fehler: Falsche Skriptverwendung (manage_nginx.sh)"
-            exit 1
-            ;;
-    esac
-}
-
 # Logging-Hilfsskript einbinden 
 if [ -f "$(dirname "$0")/log_helper.sh" ]; then
     source "$(dirname "$0")/log_helper.sh"
@@ -573,4 +519,4 @@ if [ "$1" = "--json" ]; then
 fi
 
 # Skript-Start
-main "$@"
+# main "$@"

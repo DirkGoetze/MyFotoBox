@@ -687,21 +687,32 @@ dlg_nginx_installation() {
                 print_error "Abbruch: Keine NGINX-Integration gewählt."
                 exit 1
             fi
-            # Portwahl und externe Konfiguration (zentral)
-            if [ "$UNATTENDED" -eq 1 ]; then
-                debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json setport"
-                port_result=$(bash "$BASH_DIR/manage_nginx.sh" --json setport)
-                port_rc=$?
-            else
-                debug_print "dlg_nginx_installation: Starte manage_nginx.sh setport"
-                port_result=$(bash "$BASH_DIR/manage_nginx.sh" setport)
-                port_rc=$?
-            fi
+            # Portwahl und externe Konfiguration (zentral, jetzt mit Schleife)
+            port_rc=1
+            while [ $port_rc -ne 0 ]; do
+                if [ "$UNATTENDED" -eq 1 ]; then
+                    debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json setport 80 j (unattended)"
+                    port_result=$(bash "$BASH_DIR/manage_nginx.sh" --json setport 80 j)
+                    port_rc=$?
+                else
+                    print_prompt "Bitte gewünschten Port für die Fotobox-Weboberfläche angeben [Default: 80]:"
+                    read -r user_port
+                    if [ -z "$user_port" ]; then user_port=80; fi
+                    debug_print "dlg_nginx_installation: Starte manage_nginx.sh setport $user_port N (interaktiv)"
+                    port_result=$(bash "$BASH_DIR/manage_nginx.sh" setport "$user_port" N)
+                    port_rc=$?
+                    if [ $port_rc -ne 0 ]; then
+                        print_error "Portwahl/Setzen fehlgeschlagen: $port_result"
+                        print_prompt "Anderen Port wählen? [J/n]"
+                        read -r retry
+                        if [[ "$retry" =~ ^([nN])$ ]]; then
+                            print_error "Abbruch durch Benutzer bei Portwahl."
+                            exit 1
+                        fi
+                    fi
+                fi
+            done
             debug_print "dlg_nginx_installation: port_rc=$port_rc, port_result=$port_result"
-            if [ $port_rc -ne 0 ]; then
-                print_error "Portwahl/Setzen fehlgeschlagen: $port_result"
-                exit 1
-            fi
             if [ "$UNATTENDED" -eq 1 ]; then
                 debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json external"
                 ext_result=$(bash "$BASH_DIR/manage_nginx.sh" --json external)
