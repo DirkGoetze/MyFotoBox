@@ -1,18 +1,33 @@
 <!--
-Projekt: Fotobox
+# Copilot/KI-Policy – Fotobox-Projekt
+
+---
+
+## Inhaltsverzeichnis
+
+1. [Projektüberblick & Hinweise](#projektüberblick--hinweise)
+2. [Code-Kommentar- und Dokumentationsstandard](#code-kommentar--und-dokumentationsstandard)
+3. [Review- und Änderungs-Policy](#review--und-änderungs-policy)
+4. [CLI-Ausgabe-Policy](#cli-ausgabe-policy)
+5. [Ausnahmen & Gültigkeit](#ausnahmen--gültigkeit)
+
+---
+
+## Projektüberblick & Hinweise
+
 - Backend: Python (z.B. Flask) für Kamerasteuerung und Fotoverwaltung
 - Frontend: HTML/JS für Weboberfläche (Fotos aufnehmen, anzeigen)
 - Zielplattform: Linux (Entwicklung aktuell auf Windows)
-
-Spezielle Hinweise:
 - Backend sollte REST-API für Fotoaufnahme und -abruf bereitstellen
 - Frontend kommuniziert per HTTP mit Backend
 - Kameraansteuerung ggf. über Python-Module (z.B. picamera, subprocess)
 - Platzhalter für Kamera-Code, falls Entwicklung ohne Hardware erfolgt
 
-# Dokumentationsstandard für alle Skripttypen (Bash, Python, HTML, CSS, JS)
+---
 
-Das folgende Schema für Funktionskommentare ist für alle Quellcodedateien im Projekt verbindlich – unabhängig von der Sprache (Bash, Python, JavaScript, HTML, CSS). Die Rahmenlinien, Einrückungen und Struktur werden jeweils mit den passenden Kommentarzeichen der jeweiligen Sprache umgesetzt. Ziel ist eine einheitliche, sofort erkennbare Dokumentation aller Funktionsblöcke.
+## Code-Kommentar- und Dokumentationsstandard
+
+Das folgende Schema für Funktionskommentare ist für alle Quellcodedateien im Projekt verbindlich – unabhängig von der Sprache (Bash, Python, JavaScript, HTML, CSS).
 
 **Allgemeine Vorgaben:**
 
@@ -100,9 +115,11 @@ _CSS (für größere Block-Kommentare):_
 }
 ```
 
-# Copilot Review Policy für Quellcodedateien (Bash, Python, HTML, CSS, JS, ...)
+---
 
-Bei jeder Überprüfung einer Quellcodedatei (Bash-Skripte, Python-Skripte, HTML-, CSS-, JS-Dateien etc.) in diesem Projekt sind folgende Vorgaben zwingend zu beachten:
+## Review- und Änderungs-Policy
+
+### Copilot Review Policy für Quellcodedateien (Bash, Python, HTML, CSS, JS, ...)
 
 - Prüfe Syntax und Ausführung bzw. Funktionalität für alle relevanten Modi (z.B. Installation, Update, Deinstallation, Laufzeit, Interaktion)
 - Suche nach möglichen Fehlerquellen und Schwierigkeiten, die eine korrekte Ausführung oder Darstellung verhindern könnten (z.B. Rechte, Konfigurationskonsistenz, Abhängigkeiten, veraltete Software, Distributionen, Hardware, Browser-Kompatibilität)
@@ -113,7 +130,15 @@ Bei jeder Überprüfung einer Quellcodedatei (Bash-Skripte, Python-Skripte, HTML
 - Dokumentations- und Kommentarstandard gemäß DOKUMENTATIONSSTANDARD.md
 - Für Shellskripte gilt: Nur Bash-Syntax und -Funktionen prüfen und verwenden, keine SH-Mischformen.
 
-Diese Vorgaben sind bei jeder Überprüfung und Bearbeitung durch Copilot einzuhalten.
+#### Dialogorientierte Copilot-Funktionsprüfung (Review-Workflow)
+
+1. Bei jeder Chat-Eingabe mit der Vorgabe „Prüfe jede Funktion: [Vorgabe]“ analysiert Copilot jede betroffene Funktion einzeln.
+2. Für jede Funktion wird der Analyse- und Änderungsvorschlag einzeln präsentiert und mit dem Nutzer abgestimmt.
+3. Nach Nutzerentscheidung wird für jede Funktion eine der folgenden Optionen umgesetzt:
+   a) Änderungen werden direkt in den Code übernommen.
+   b) Änderungen werden als TODO-Block in die Funktion eingetragen.
+   c) Änderungen werden verworfen (keine Anpassung).
+4. Dieser dialogorientierte Review-Prozess ist für alle Copilot-/KI-gestützten Funktionsprüfungen im gesamten Projekt verbindlich.
 
 - Achte bei Markdown-Dateien auf korrekte Formatierung:
   - Überschriften (z.B. # Titel) immer mit Leerzeile davor und danach
@@ -123,21 +148,9 @@ Diese Vorgaben sind bei jeder Überprüfung und Bearbeitung durch Copilot einzuh
   - Keine doppelten Überschriften oder Listen ohne Abstand
   - Siehe DOKUMENTATIONSSTANDARD.md und https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
 
--------------------------------------------------------------------------------
-# Ausnahme: Keine Prüfung von Unterordnern in 'frontend/fonts/'
--------------------------------------------------------------------------------
-# Ordner und Dateien unterhalb von 'frontend/fonts/' (insbesondere 'fontawesome-free-5.15.4-web/')
-# sind explizit von allen Policy- und Dokumentationsprüfungen ausgenommen.
-# Diese stammen aus externen Quellen (z.B. FontAwesome) und sind nicht Bestandteil des eigenen Projekts.
-# Änderungen, Prüfungen oder Anpassungen an diesen Dateien sind nicht zulässig und nicht erforderlich.
-# Die Policy-Prüfung bezieht sich ausschließlich auf eigene Projektdateien.
-#
-# (Siehe auch dokumentationsstandard.md und JAVASCRIPT_POLICY.md)
--->
-
 ---
 
-## Ergänzung: CLI-Ausgabe-Policy (siehe policies/cli_ausgabe_policy.md)
+## CLI-Ausgabe-Policy
 
 - Bei allen Shell-, Python- und Node.js-CLI-Skripten sind die Farb- und Strukturregeln aus `policies/cli_ausgabe_policy.md` einzuhalten.
 - Ampelfarben: Grün = Erfolg, Gelb = Warnung, Rot = Fehler, Blau = Benutzerinteraktion, Standard = Info.
@@ -146,4 +159,19 @@ Diese Vorgaben sind bei jeder Überprüfung und Bearbeitung durch Copilot einzuh
 - Barrierefreiheit: Keine reine Farbcodierung, immer Textsymbole ergänzen.
 - Copilot muss bei jeder Review und Codegenerierung auf diese Policy prüfen und Verstöße melden.
 
+---
+
+## Ausnahmen & Gültigkeit
+
+### Ausnahme: Keine Prüfung von Unterordnern in 'frontend/fonts/'
+
+- Ordner und Dateien unterhalb von 'frontend/fonts/' (insbesondere 'fontawesome-free-5.15.4-web/') sind explizit von allen Policy- und Dokumentationsprüfungen ausgenommen.
+- Diese stammen aus externen Quellen (z.B. FontAwesome) und sind nicht Bestandteil des eigenen Projekts.
+- Änderungen, Prüfungen oder Anpassungen an diesen Dateien sind nicht zulässig und nicht erforderlich.
+- Die Policy-Prüfung bezieht sich ausschließlich auf eigene Projektdateien.
+- (Siehe auch dokumentationsstandard.md und JAVASCRIPT_POLICY.md)
+
+---
+
 # HINWEIS: Diese Datei ist die zentrale und einzig gültige Policy-Quelle für Copilot- und KI-Anweisungen im Projekt. Andere Versionen oder Kopien (z.B. im .github-Ordner oder Hauptordner) sind zu ignorieren und werden nicht mehr gepflegt.
+-->
