@@ -353,6 +353,45 @@ get_nginx_url() {
     return 0
 }
 
+get_nginx_port() {
+    # -----------------------------------------------------------------------
+    # get_nginx_port
+    # -----------------------------------------------------------------------
+    # Funktion: Ermittelt den aktuell verwendeten Port der Fotobox-Weboberfläche.
+    # Prüft eigene Fotobox-Konfiguration, Default-Konfiguration und liefert Fallback.
+    # Parameter: $1 = Modus (text|json), optional (Standard: text)
+    # Rückgabe: Portnummer (echo/JSON), 0 = OK, 1 = Fehler
+    local mode="${1:-text}"
+    local port=""
+    local conf_file=""
+    # 1. Eigene Fotobox-Konfiguration prüfen
+    if [ -L /etc/nginx/sites-enabled/fotobox ] && [ -f /etc/nginx/sites-enabled/fotobox ]; then
+        conf_file="/etc/nginx/sites-enabled/fotobox"
+    elif [ -f /etc/nginx/sites-enabled/default ] && grep -q "# Fotobox-Integration BEGIN" /etc/nginx/sites-enabled/default; then
+        conf_file="/etc/nginx/sites-enabled/default"
+    fi
+    if [ -n "$conf_file" ]; then
+        port=$(grep -Eo 'listen[[:space:]]+[0-9.]*(:[0-9]+)?' "$conf_file" | head -n1 | grep -Eo '[0-9]+$')
+        if [ -z "$port" ]; then
+            port=80
+        fi
+        if [ "$mode" = "json" ]; then
+            json_out "success" "$port" 0
+        else
+            echo "$port"
+        fi
+        return 0
+    else
+        # Keine passende Konfiguration gefunden, Fallback
+        if [ "$mode" = "json" ]; then
+            json_out "info" "80" 1
+        else
+            echo "80"
+        fi
+        return 1
+    fi
+}
+
 set_nginx_port() {
     # -----------------------------------------------------------------------
     # set_nginx_port
@@ -361,6 +400,7 @@ set_nginx_port() {
     # HINWEIS: Interaktive Schleifenlogik (z.B. wiederholte Portabfrage) wurde entfernt. Wiederholungen/Benutzereingaben müssen im aufrufenden Programm erfolgen!
     # Parameter: $1 = Modus (text|json), $2 = Port (Default: 80), $3 = Abbruchentscheidung (Default: N)
     # Rückgabe: 0 = Port frei, 1 = Fehler/Abbruch
+    # Seiteneffekt: Exportiert FOTOBOX_PORT als Umgebungsvariable (wird von nachfolgenden Skripten genutzt)
     local mode="$1"
     local port="${2:-80}"
     local abort_decision="${3:-N}"
@@ -507,6 +547,223 @@ set_nginx_cnf_external() {
     # Konfiguration neu laden
     chk_nginx_reload "$mode" || { log "NGINX-Konfiguration konnte nach externer Integration nicht neu geladen werden!"; return 4; }
     return 0
+}
+
+# ---------------------------------------------------------------------------
+# Erweiterte Getter/Setter für WebUI- und Automatisierungs-Support
+# ---------------------------------------------------------------------------
+
+get_nginx_config_type() {
+    # Gibt zurück, ob die Fotobox als eigene Site (external) oder in der Default-Site (internal) eingebunden ist.
+    # Rückgabe: "internal" oder "external"
+    # Optional: $1 = Modus (text|json)
+    local mode="${1:-text}"
+    local type="internal"
+    if [ -L /etc/nginx/sites-enabled/fotobox ]; then
+        type="external"
+    fi
+    if [ "$mode" = "json" ]; then
+        json_out "success" "$type" 0
+    else
+        echo "$type"
+    fi
+}
+
+set_nginx_config_type() {
+    # Setzt den Konfigurationstyp (internal/external) und passt die aktive Konfiguration/Symlinks an.
+    # Parameter: $1 = Typ ("internal"|"external"), $2 = Modus (text|json)
+    # Rückgabe: 0 = OK, >0 = Fehler
+    local type="$1"
+    local mode="${2:-text}"
+    if [ "$type" = "external" ]; then
+        # Externe Konfiguration aktivieren
+        if [ ! -L /etc/nginx/sites-enabled/fotobox ]; then
+            ln -s /etc/nginx/sites-available/fotobox /etc/nginx/sites-enabled/fotobox || { log "Symlink für externe Konfiguration konnte nicht erstellt werden!"; return 1; }
+        fi
+        # Default deaktivieren (optional)
+        # rm -f /etc/nginx/sites-enabled/default
+    elif [ "$type" = "internal" ]; then
+        # Externe Konfiguration deaktivieren
+        rm -f /etc/nginx/sites-enabled/fotobox
+        # Default aktivieren (optional)
+        # ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+    else
+        log "Ungültiger Konfigurationstyp: $type"
+        return 2
+    fi
+    chk_nginx_reload "$mode"
+    return $?
+}
+
+set_nginx_port_value() {
+    # Setzt den Port in der aktiven Konfiguration (passt Konfigurationsdatei an, reload)
+    # Parameter: $1 = Port, $2 = Modus (text|json)
+    # Rückgabe: 0 = OK, >0 = Fehler
+    local port="$1"
+    local mode="${2:-text}"
+    local conf_file=""
+    if [ -L /etc/nginx/sites-enabled/fotobox ] && [ -f /etc/nginx/sites-enabled/fotobox ]; then
+        conf_file="/etc/nginx/sites-available/fotobox"
+    elif [ -f /etc/nginx/sites-enabled/default ] && grep -q "# Fotobox-Integration BEGIN" /etc/nginx/sites-enabled/default; then
+        conf_file="/etc/nginx/sites-available/default"
+    else
+        log "Keine passende Konfiguration gefunden!"; return 1
+    fi
+    if [ -z "$port" ] || ! [[ "$port" =~ ^[0-9]+$ ]]; then
+        log "Ungültiger Port: $port"; return 2
+    fi
+    # Port in listen-Zeile ersetzen
+    sed -i -E "s/(listen[[:space:]]+)[0-9.]*(:[0-9]+)?/\1$port/" "$conf_file" || { log "Port konnte nicht gesetzt werden!"; return 3; }
+    chk_nginx_reload "$mode"
+    return $?
+}
+
+get_nginx_bind_address() {
+    # Gibt die aktuelle Bind-Adresse (listen ...) zurück
+    # Optional: $1 = Modus (text|json)
+    local mode="${1:-text}"
+    local conf_file=""
+    local bind_addr=""
+    if [ -L /etc/nginx/sites-enabled/fotobox ] && [ -f /etc/nginx/sites-enabled/fotobox ]; then
+        conf_file="/etc/nginx/sites-available/fotobox"
+    elif [ -f /etc/nginx/sites-enabled/default ] && grep -q "# Fotobox-Integration BEGIN" /etc/nginx/sites-enabled/default; then
+        conf_file="/etc/nginx/sites-available/default"
+    fi
+    if [ -n "$conf_file" ]; then
+        bind_addr=$(grep -Eo 'listen[[:space:]]+[0-9.]*' "$conf_file" | head -n1 | awk '{print $2}')
+        [ -z "$bind_addr" ] && bind_addr="0.0.0.0"
+    else
+        bind_addr="0.0.0.0"
+    fi
+    if [ "$mode" = "json" ]; then
+        json_out "success" "$bind_addr" 0
+    else
+        echo "$bind_addr"
+    fi
+}
+
+set_nginx_bind_address() {
+    # Setzt die Bind-Adresse in der aktiven Konfiguration
+    # Parameter: $1 = IP, $2 = Modus (text|json)
+    # Rückgabe: 0 = OK, >0 = Fehler
+    local ip="$1"
+    local mode="${2:-text}"
+    local conf_file=""
+    if [ -L /etc/nginx/sites-enabled/fotobox ] && [ -f /etc/nginx/sites-enabled/fotobox ]; then
+        conf_file="/etc/nginx/sites-available/fotobox"
+    elif [ -f /etc/nginx/sites-enabled/default ] && grep -q "# Fotobox-Integration BEGIN" /etc/nginx/sites-enabled/default; then
+        conf_file="/etc/nginx/sites-available/default"
+    else
+        log "Keine passende Konfiguration gefunden!"; return 1
+    fi
+    if [ -z "$ip" ]; then log "Ungültige IP-Adresse!"; return 2; fi
+    # Bind-Adresse in listen-Zeile ersetzen
+    sed -i -E "s/(listen[[:space:]]+)[0-9.]+/\1$ip/" "$conf_file" || { log "Bind-Adresse konnte nicht gesetzt werden!"; return 3; }
+    chk_nginx_reload "$mode"
+    return $?
+}
+
+get_nginx_server_name() {
+    # Gibt den aktuellen server_name zurück
+    # Optional: $1 = Modus (text|json)
+    local mode="${1:-text}"
+    local conf_file=""
+    local server_name=""
+    if [ -L /etc/nginx/sites-enabled/fotobox ] && [ -f /etc/nginx/sites-enabled/fotobox ]; then
+        conf_file="/etc/nginx/sites-available/fotobox"
+    elif [ -f /etc/nginx/sites-enabled/default ] && grep -q "# Fotobox-Integration BEGIN" /etc/nginx/sites-enabled/default; then
+        conf_file="/etc/nginx/sites-available/default"
+    fi
+    if [ -n "$conf_file" ]; then
+        server_name=$(grep -Eo 'server_name[[:space:]]+[^;]+' "$conf_file" | head -n1 | awk '{print $2}')
+        [ -z "$server_name" ] && server_name="_"
+    else
+        server_name="_"
+    fi
+    if [ "$mode" = "json" ]; then
+        json_out "success" "$server_name" 0
+    else
+        echo "$server_name"
+    fi
+}
+
+set_nginx_server_name() {
+    # Setzt den server_name in der aktiven Konfiguration
+    # Parameter: $1 = Name, $2 = Modus (text|json)
+    # Rückgabe: 0 = OK, >0 = Fehler
+    local name="$1"
+    local mode="${2:-text}"
+    local conf_file=""
+    if [ -L /etc/nginx/sites-enabled/fotobox ] && [ -f /etc/nginx/sites-enabled/fotobox ]; then
+        conf_file="/etc/nginx/sites-available/fotobox"
+    elif [ -f /etc/nginx/sites-enabled/default ] && grep -q "# Fotobox-Integration BEGIN" /etc/nginx/sites-enabled/default; then
+        conf_file="/etc/nginx/sites-available/default"
+    fi
+    if [ -z "$name" ]; then log "Ungültiger Servername!"; return 2; fi
+    sed -i -E "s/(server_name[[:space:]]+)[^;]+/\1$name/" "$conf_file" || { log "Servername konnte nicht gesetzt werden!"; return 3; }
+    chk_nginx_reload "$mode"
+    return $?
+}
+
+get_nginx_webroot_path() {
+    # Gibt den aktuellen URL-Pfad (location ...) zurück
+    # Optional: $1 = Modus (text|json)
+    local mode="${1:-text}"
+    local conf_file=""
+    local path=""
+    if [ -L /etc/nginx/sites-enabled/fotobox ] && [ -f /etc/nginx/sites-enabled/fotobox ]; then
+        conf_file="/etc/nginx/sites-available/fotobox"
+    elif [ -f /etc/nginx/sites-enabled/default ] && grep -q "# Fotobox-Integration BEGIN" /etc/nginx/sites-enabled/default; then
+        conf_file="/etc/nginx/sites-available/default"
+    fi
+    if [ -n "$conf_file" ]; then
+        path=$(grep -Eo 'location[[:space:]]+/[^ ]*' "$conf_file" | grep -v '/api' | head -n1 | awk '{print $2}')
+        [ -z "$path" ] && path="/fotobox/"
+    else
+        path="/fotobox/"
+    fi
+    if [ "$mode" = "json" ]; then
+        json_out "success" "$path" 0
+    else
+        echo "$path"
+    fi
+}
+
+set_nginx_webroot_path() {
+    # Setzt den URL-Pfad in der aktiven Konfiguration
+    # Parameter: $1 = Pfad, $2 = Modus (text|json)
+    # Rückgabe: 0 = OK, >0 = Fehler
+    local path="$1"
+    local mode="${2:-text}"
+    local conf_file=""
+    if [ -L /etc/nginx/sites-enabled/fotobox ] && [ -f /etc/nginx/sites-enabled/fotobox ]; then
+        conf_file="/etc/nginx/sites-available/fotobox"
+    elif [ -f /etc/nginx/sites-enabled/default ] && grep -q "# Fotobox-Integration BEGIN" /etc/nginx/sites-enabled/default; then
+        conf_file="/etc/nginx/sites-available/default"
+    fi
+    if [ -z "$path" ]; then log "Ungültiger Pfad!"; return 2; fi
+    sed -i -E "0,/location[[:space:]]+\/[a-zA-Z0-9_-]+\//s//location $path/" "$conf_file" || { log "Webroot-Pfad konnte nicht gesetzt werden!"; return 3; }
+    chk_nginx_reload "$mode"
+    return $?
+}
+
+get_nginx_status() {
+    # Gibt eine strukturierte Übersicht der aktuellen Konfiguration zurück (JSON)
+    # Optional: $1 = Modus (text|json)
+    local mode="${1:-json}"
+    local config_type port bind_addr server_name webroot_path url reachable
+    config_type=$(get_nginx_config_type text)
+    port=$(get_nginx_port text)
+    bind_addr=$(get_nginx_bind_address text)
+    server_name=$(get_nginx_server_name text)
+    webroot_path=$(get_nginx_webroot_path text)
+    url="http://$server_name:$port$webroot_path"
+    reachable=true
+    if [ "$mode" = "json" ]; then
+        echo "{\"config_type\":\"$config_type\",\"bind_address\":\"$bind_addr\",\"port\":$port,\"server_name\":\"$server_name\",\"webroot_path\":\"$webroot_path\",\"reachable\":$reachable,\"url\":\"$url\"}"
+    else
+        echo "Typ: $config_type, Bind: $bind_addr, Port: $port, Name: $server_name, Pfad: $webroot_path, URL: $url"
+    fi
 }
 
 # Logging-Hilfsskript einbinden 

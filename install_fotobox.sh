@@ -50,7 +50,16 @@ BASH_DIR="$INSTALL_DIR/backend/scripts"
 PACKAGES_NGINX=(nginx)
 NGINX_CONF="$CONF_DIR/nginx-fotobox.conf"
 NGINX_DST="/etc/nginx/sites-available/fotobox"
-FOTOBOX_PORT=80
+# ---------------------------------------------------------------------------
+# WICHTIG: Die Port-Konfiguration der Fotobox-Weboberfläche darf NICHT mehr
+# über eine globale Variable (z.B. FOTOBOX_PORT) erfolgen. Der aktuell
+# verwendete Port ist ausschließlich über die Getter-Funktion
+#   get_nginx_port
+# aus backend/scripts/manage_nginx.sh zu beziehen.
+# Beispiel für Shell-Skripte:
+#   source "$BASH_DIR/manage_nginx.sh"
+#   port=$(get_nginx_port)
+# Policy: Siehe policies/copilot-instructions.md
 # ---------------------------------------------------------------------------
 # Einstellungen: Backend Service 
 # ---------------------------------------------------------------------------
@@ -846,18 +855,25 @@ main() {
     dlg_prepare_structure        # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
     dlg_nginx_installation       # NGINX-Konfiguration (Integration oder eigene Site)
     dlg_backend_integration      # Python-Backend, venv, systemd-Service, Start
+    # --- NEU: NGINX-Konfiguration nach Installation ausgeben (Policy-konform, modular) ---
+    source "$BASH_DIR/manage_nginx.sh"
+    local nginx_status_json
+    nginx_status_json=$(get_nginx_status json)
+    local nginx_port nginx_bind nginx_servername nginx_webroot nginx_url
+    nginx_port=$(echo "$nginx_status_json" | grep -o '"port":[0-9]*' | grep -o '[0-9]*')
+    nginx_bind=$(echo "$nginx_status_json" | grep -o '"bind_address":"[^"]*"' | cut -d'"' -f4)
+    nginx_servername=$(echo "$nginx_status_json" | grep -o '"server_name":"[^"]*"' | cut -d'"' -f4)
+    nginx_webroot=$(echo "$nginx_status_json" | grep -o '"webroot_path":"[^"]*"' | cut -d'"' -f4)
+    nginx_url=$(echo "$nginx_status_json" | grep -o '"url":"[^"]*"' | cut -d'"' -f4)
+    log "NGINX-Konfiguration nach Installation: Port=$nginx_port, Bind=$nginx_bind, Servername=$nginx_servername, Webroot=$nginx_webroot, URL=$nginx_url"
     if [ "$UNATTENDED" -eq 1 ]; then
         local logfile
         logfile=$(get_log_file)
         echo "Installation abgeschlossen. Details siehe Logfile: $logfile"
-        local web_url
-        web_url=$(bash "$BASH_DIR/manage_nginx.sh" --json geturl | grep -o 'http[s]*://[^" ]*')
-        echo "Weboberfläche: $web_url"
+        echo "Weboberfläche: $nginx_url"
     else
         print_success "Erstinstallation abgeschlossen."
-        local web_url
-        web_url=$(bash "$BASH_DIR/manage_nginx.sh" geturl)
-        print_prompt "Bitte rufen Sie die Weboberfläche im Browser auf, um die Fotobox weiter zu konfigurieren und zu verwalten.\nURL: $web_url"
+        print_prompt "Bitte rufen Sie die Weboberfläche im Browser auf, um die Fotobox weiter zu konfigurieren und zu verwalten.\nURL: $nginx_url"
         echo "Weitere Wartung (Update, Deinstallation) erfolgt über die WebUI oder die Python-Skripte im backend/."
     fi
 }

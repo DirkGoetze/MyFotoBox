@@ -63,7 +63,7 @@ Diese Policy ist für alle eigenen Shellskripte, Python- und Node.js-CLI-Tools i
 
 ---
 
-# Copilot Review Policy – Ergänzung
+## Copilot Review Policy – Ergänzung
 
 - Bei jeder Prüfung von CLI-Ausgaben ist die Einhaltung der Farb- und Strukturregeln aus `cli_ausgabe_policy.md` zu kontrollieren.
 - Abweichungen sind zu dokumentieren und zu begründen.
