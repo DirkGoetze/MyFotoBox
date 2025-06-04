@@ -101,6 +101,8 @@ log() {
     #  (Fallback: /var/log/fotobox/ oder /tmp/fotobox/)
     # - Rotation und Komprimierung werden von chk_log_file übernommen
     # - Legt Logdatei neu an, falls sie fehlt oder verschoben wurde
+    # TODO: Im Fehlerfall MUSS die aufrufende Funktion (Funktionsname) als verpflichtender Parameter an log() übergeben werden, damit Fehler eindeutig zugeordnet werden können.
+    # TODO: Wenn DEBUG aktiv ist, MUSS im Fehlerfall die Datei (Skript/Programm), in der der Fehler aufgetreten ist, als verpflichtender Parameter an log() übergeben werden.
     local LOG_FILE
     LOG_FILE="$(get_log_file)"
     if [ -z "$1" ]; then
