@@ -12,25 +12,10 @@
 # Policy-Hinweis: Dieses Skript ist ein reines Funktions-/Modulskript und enthält keine main()-Funktion mehr.
 # Die Nutzung als eigenständiges CLI-Programm ist nicht vorgesehen. Die Policy zur main()-Funktion gilt nur für Hauptskripte.
 
-# ==============================================================================
-# TODO-/Checkliste für manage_nginx.sh (Stand: 2025-06-04)
-# ==============================================================================
-# [x] Rückgabewerte/Fehlercodes aller Funktionen klar und einheitlich definieren
-# [x] Rückgabewerte: Jede Funktion MUSS einen Fehlercode (0=OK, >0=Fehler) oder eine strukturierte Rückgabe (JSON für Python, String/Array/Zahl für Shell) liefern
-# [x] LOG-Logik aus log_helper.sh überall konsistent verwenden (Logik vereinheitlichen)
-# [x] Debug-Modus: DEBUG_MOD-Variable, zentrale debug()-Funktion in log_helper.sh ausgelagert, gezielte Debug-Ausgaben in kritischen Abschnitten/Funktionen
-# [x] Alle Ausgaben (echo, printf, etc.) auf konsistente Rückmeldungen umstellen
-# [x] Alle Benutzereingaben (read, select, etc.) durch Parameter/Defaults ersetzen
-# [x] Interaktive Schleifenlogik (z.B. Portwahl) in aufrufende Programme auslagern
-# [x] Funktionen einzeln testbar gestalten (Parameter statt globaler State)
-# [x] Seiteneffekte (z.B. globale Variablen) minimieren und dokumentieren
-# [x] DOKUMENTATIONSSTANDARD.md für alle Funktionsblöcke einhalten
-# [x] Abwärtskompatibilität für interaktive Nutzung sicherstellen
-# [x] Automatisierte Tests für alle Betriebsmodi vorsehen
-# [x] Unterstützung für verschiedene NGINX-Konfigurationen (Default, externe Site)
-# [ ] Port Prüfung überarbeiten, ggf Abhänigkeit von lsof umgehen
-# [ ] Debug-Modus für eigene JavaScript-Komponenten: Lokaler und globaler Debug-Schalter (analog zu Bash: DEBUG_MOD_LOCAL, DEBUG_MOD_GLOBAL) und zentrale debug()-Funktion für konsistente Debug-Ausgaben in zukünftigen JS-Modulen implementieren. (Aktuell nicht relevant, aber für spätere Frontend-Entwicklung vormerken)
-# ==============================================================================
+# ===============================================================================
+# TODO-/Checkliste für manage_nginx.sh wurde gemäß Policy ausgelagert.
+# Bitte siehe: backend/scripts/manage_nginx.sh.todo
+# ===============================================================================
 
 # ===========================================================================
 # Funktionstexte (für spätere Mehrsprachigkeit als Konstanten ausgelagert)
@@ -218,12 +203,10 @@ chk_nginx_installation() {
     local install_decision="${2:-J}"
     # Prüfen, ob nginx installiert ist
     if ! command -v nginx >/dev/null 2>&1; then  # Falls nicht installiert
-        log "$chk_nginx_installation_txt_0001"
         log_or_json "$mode" "prompt" "$chk_nginx_installation_txt_0002" 10
         # Kein read mehr, Entscheidung kommt als Parameter
         # Prüfen, ob der Nutzer die Installation abgelehnt hat
         if [[ "$install_decision" =~ ^([nN])$ ]]; then
-            log "$chk_nginx_installation_txt_0003"
             log_or_json "$mode" "error" "$chk_nginx_installation_txt_0003" 1
             return 1
         fi
@@ -231,11 +214,9 @@ chk_nginx_installation() {
         apt-get update -qq && apt-get install -y -qq nginx
         # Nach der Installation erneut prüfen, ob nginx jetzt verfügbar ist
         if ! command -v nginx >/dev/null 2>&1; then
-            log "$chk_nginx_installation_txt_0004"
             log_or_json "$mode" "error" "$chk_nginx_installation_txt_0004" 2
             return 2
         fi
-        log "$chk_nginx_installation_txt_0005"
         log_or_json "$mode" "success" "$chk_nginx_installation_txt_0005" 0
     else
         log "$chk_nginx_installation_txt_0006"
@@ -258,20 +239,17 @@ chk_nginx_reload() {
         # Konfiguration ist fehlerfrei
         if systemctl reload nginx; then
             # Reload erfolgreich
-            log "${chk_nginx_reload_txt_0002}"
             log_or_json "$mode" "success" "${chk_nginx_reload_txt_0002}" 0
             return 0
         else
             # Reload fehlgeschlagen, Fehlerdetails ausgeben
             local status_out
             status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
-            log "${chk_nginx_reload_txt_0003}\n$status_out"
             log_or_json "$mode" "error" "${chk_nginx_reload_txt_0006}" 2
             return 2
         fi
     else
         # Konfiguration fehlerhaft
-        log "${chk_nginx_reload_txt_0004}"
         log_or_json "$mode" "error" "${chk_nginx_reload_txt_0004}" 1
         return 1
     fi
@@ -288,25 +266,42 @@ chk_nginx_port() {
     # Seiteneffekte: keine
     local port=${1:-80}
     local mode="${2:-text}"
-    log "${chk_nginx_port_txt_0001}"
-    # Prüfen, ob lsof verfügbar ist
-    if ! command -v lsof >/dev/null 2>&1; then
-        # lsof nicht verfügbar
-        log "${chk_nginx_port_txt_0002}"
-        log_or_json "$mode" "error" "${chk_nginx_port_txt_0002}" 2
+    # log "${chk_nginx_port_txt_0001}"  # ENTFERNT
+    # Prüfen, ob lsof, ss oder netstat verfügbar ist
+    if command -v lsof >/dev/null 2>&1; then
+        # Prüfen, ob der Port belegt ist (lsof)
+        if lsof -i :$port | grep LISTEN > /dev/null; then
+            log "$(printf "$chk_nginx_port_txt_0003" "$port")"
+            return 1
+        else
+            log "$(printf "$chk_nginx_port_txt_0004" "$port")"
+            return 0
+        fi
+    elif command -v ss >/dev/null 2>&1; then
+        # Prüfen, ob der Port belegt ist (ss)
+        if ss -tuln | grep -E ":$port[[:space:]]" > /dev/null; then
+            log "$(printf "$chk_nginx_port_txt_0003" "$port")"
+            return 1
+        else
+            log "$(printf "$chk_nginx_port_txt_0004" "$port")"
+            return 0
+        fi
+    elif command -v netstat >/dev/null 2>&1; then
+        # Prüfen, ob der Port belegt ist (netstat)
+        if netstat -tuln | grep -E ":$port[[:space:]]" > /dev/null; then
+            log "$(printf "$chk_nginx_port_txt_0003" "$port")"
+            return 1
+        else
+            log "$(printf "$chk_nginx_port_txt_0004" "$port")"
+            return 0
+        fi
+    else
+        # Keines der Tools verfügbar
+        # log "${chk_nginx_port_txt_0002} (lsof/ss/netstat fehlen)"  # ENTFERNT
+        log_or_json "$mode" "error" "${chk_nginx_port_txt_0002} (lsof/ss/netstat fehlen)" 2
         return 2
     fi
-    # Prüfen, ob der Port belegt ist
-    if lsof -i :$port | grep LISTEN > /dev/null; then
-        # Port ist belegt
-        log "$(printf "$chk_nginx_port_txt_0003" "$port")"
-        return 1
-    else
-        # Port ist frei
-        log "$(printf "$chk_nginx_port_txt_0004" "$port")"
-        return 0
-    fi
-    log "${chk_nginx_port_txt_0005}"
+    # log "${chk_nginx_port_txt_0005}"  # ENTFERNT
 }
 
 chk_nginx_activ() {

@@ -190,3 +190,9 @@ _CSS (für größere Block-Kommentare):_
 - Diese Regel gilt für alle Sprachen und alle Quellcodedateien im Projekt.
 
 ---
+
+## Policy: Auslagerung von TODO-Listen
+
+TODO-Listen oder einzelne TODO-Anweisungen für Funktionen in einem Skript sind in eine separate Datei nach dem Schema '[skriptname].todo' im gleichen Verzeichnis wie das dazugehörige Skript auszulagern. Die Zuordnung zu Funktionen ist durch Angabe des Funktionsnamens sicherzustellen.
+
+---
