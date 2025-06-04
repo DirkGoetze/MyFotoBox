@@ -15,7 +15,7 @@
 # [x] Rückgabewerte/Fehlercodes aller Funktionen klar und einheitlich definieren
 # [x] Rückgabewerte: Jede Funktion MUSS einen Fehlercode (0=OK, >0=Fehler) oder eine strukturierte Rückgabe (JSON für Python, String/Array/Zahl für Shell) liefern
 # [x] LOG-Logik aus log_helper.sh überall konsistent verwenden (Logik vereinheitlichen)
-# [ ] Debug-Modus integrieren: DEBUG_MOD-Variable, zentrale debug()-Funktion, gezielte Debug-Ausgaben in kritischen Abschnitten/Funktionen
+# [x] Debug-Modus: DEBUG_MOD-Variable, zentrale debug()-Funktion in log_helper.sh ausgelagert, gezielte Debug-Ausgaben in kritischen Abschnitten/Funktionen
 # [ ] Alle Ausgaben (echo, printf, etc.) auf konsistente Rückmeldungen umstellen
 # [ ] Alle Benutzereingaben (read, select, etc.) durch Parameter/Defaults ersetzen
 # [ ] Interaktive Schleifenlogik (z.B. Portwahl) in aufrufende Programme auslagern
