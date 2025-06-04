@@ -21,8 +21,8 @@
 # [x] Debug-Modus: DEBUG_MOD-Variable, zentrale debug()-Funktion in log_helper.sh ausgelagert, gezielte Debug-Ausgaben in kritischen Abschnitten/Funktionen
 # [x] Alle Ausgaben (echo, printf, etc.) auf konsistente Rückmeldungen umstellen
 # [x] Alle Benutzereingaben (read, select, etc.) durch Parameter/Defaults ersetzen
-# [ ] Interaktive Schleifenlogik (z.B. Portwahl) in aufrufende Programme auslagern
-# [ ] Funktionen einzeln testbar gestalten (Parameter statt globaler State)
+# [x] Interaktive Schleifenlogik (z.B. Portwahl) in aufrufende Programme auslagern
+# [x] Funktionen einzeln testbar gestalten (Parameter statt globaler State)
 # [ ] Seiteneffekte (z.B. globale Variablen) minimieren und dokumentieren
 # [ ] DOKUMENTATIONSSTANDARD.md für alle Funktionsblöcke einhalten
 # [ ] Abwärtskompatibilität für interaktive Nutzung sicherstellen
@@ -243,13 +243,17 @@ chk_nginx_port() {
     # chk_nginx_port
     # -----------------------------------------------------------------------
     # Funktion: Prüft, ob der gewünschte Port belegt ist oder frei.
+    # Parameter: $1 = Port (Default: 80)
+    # .........  $2 = Modus (text|json), optional (Standard: text)
+    # Rückgabe: 0 = frei, 1 = belegt, 2 = Fehler
     local port=${1:-80}
+    local mode="${2:-text}"
     log "${chk_nginx_port_txt_0001}"
     # Prüfen, ob lsof verfügbar ist
     if ! command -v lsof >/dev/null 2>&1; then
         # lsof nicht verfügbar
         log "${chk_nginx_port_txt_0002}"
-        if [ "$MODE" = "json" ]; then
+        if [ "$mode" = "json" ]; then
             json_out "error" "${chk_nginx_port_txt_0002}" 2
         else
             log "${chk_nginx_port_txt_0002}"
@@ -355,6 +359,8 @@ set_nginx_port() {
     # -----------------------------------------------------------------------
     # Funktion: Fragt gewünschten Port und Abbruchentscheidung als Parameter ab, prüft Port und gibt Ergebnis zurück.
     # HINWEIS: Interaktive Schleifenlogik (z.B. wiederholte Portabfrage) wurde entfernt. Wiederholungen/Benutzereingaben müssen im aufrufenden Programm erfolgen!
+    # Parameter: $1 = Modus (text|json), $2 = Port (Default: 80), $3 = Abbruchentscheidung (Default: N)
+    # Rückgabe: 0 = Port frei, 1 = Fehler/Abbruch
     local mode="$1"
     local port="${2:-80}"
     local abort_decision="${3:-N}"
@@ -373,7 +379,7 @@ set_nginx_port() {
         return 1
     fi
     # Port prüfen
-    chk_nginx_port "$port"
+    chk_nginx_port "$port" "$mode"
     if [ $? -eq 0 ]; then
         # Port ist frei und wird verwendet
         log "$(printf "$set_nginx_port_txt_0005" "$port")"

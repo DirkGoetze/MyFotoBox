@@ -174,4 +174,15 @@ _CSS (für größere Block-Kommentare):_
 ---
 
 # HINWEIS: Diese Datei ist die zentrale und einzig gültige Policy-Quelle für Copilot- und KI-Anweisungen im Projekt. Andere Versionen oder Kopien (z.B. im .github-Ordner oder Hauptordner) sind zu ignorieren und werden nicht mehr gepflegt.
--->
+
+---
+
+## Policy: Erhalt von Funktionskommentaren und Kontrollstruktur-Kommentaren
+
+- Bei automatischen oder KI-gestützten Codeänderungen dürfen bestehende Funktionskommentare, Blockkommentare und erläuternde Kommentare zu Kontrollstrukturen (z.B. Hinweise auf entfernte Interaktivität, Parameterübergabe, Schleifenlogik) nicht entfernt oder verkürzt werden.
+- Kommentare, die die ursprüngliche oder geänderte Logik für Menschen nachvollziehbar machen (z.B. warum eine Schleife entfernt wurde, wie Parameterübergabe statt Benutzereingabe funktioniert), sind stets zu erhalten und ggf. zu aktualisieren.
+- Automatisierte Refaktorierungen müssen sicherstellen, dass alle erklärenden Kommentare zu Funktionsschnittstellen, Parametern, Rückgabewerten und Besonderheiten (wie ausgelagerte Interaktivität) erhalten bleiben.
+- Bei Änderungen an Funktionssignaturen oder -logik ist der Kommentarblock entsprechend zu aktualisieren, aber niemals zu entfernen oder zu verkürzen.
+- Diese Regel gilt für alle Sprachen und alle Quellcodedateien im Projekt.
+
+---
