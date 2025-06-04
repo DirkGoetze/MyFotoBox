@@ -79,10 +79,10 @@ get_nginx_url_txt_0004="Fehler bei der URL-Ermittlung."
 # set_nginx_port
 set_nginx_port_txt_0001="Portauswahl für Fotobox-Weboberfläche gestartet."
 set_nginx_port_txt_0002="Bitte gewünschten Port für die Fotobox-Weboberfläche angeben [Default: 80]:"
-set_nginx_port_txt_0003="Ungültige Eingabe bei Portauswahl: %s"
-set_nginx_port_txt_0004="Ungültige Eingabe. Bitte nur Zahlen verwenden."
+set_nginx_port_txt_0003="Ungültige Eingabe: '%s'. Bitte eine gültige Portnummer angeben."
+set_nginx_port_txt_0004="Fehler beim Schreiben des Ports in die Konfiguration."
 set_nginx_port_txt_0005="Port %s wird verwendet."
-set_nginx_port_txt_0006="Port %s ist bereits belegt. Bitte anderen Port wählen."
+set_nginx_port_txt_0006="Keine passende NGINX-Konfiguration gefunden. Port kann nicht gesetzt werden."
 set_nginx_port_txt_0007="Abbrechen? [j/N]"
 set_nginx_port_txt_0008="Portauswahl abgebrochen."
 
@@ -107,7 +107,7 @@ set_nginx_cnf_external_txt_0008="NGINX-Konfiguration konnte nach externer Integr
 # ===========================================================================
 
 # ===========================================================================
-# Hilfsfunktionen zum Prüfen der aktuellen NGINX-Konfiguration
+# Hilfsfunktionen
 # ===========================================================================
 
 json_out() {
@@ -115,8 +115,11 @@ json_out() {
     # Hilfsfunktion JSON-Ausgabe
     # -----------------------------------------------------------------------
     # Funktion: Gibt eine JSON-formatierte Antwort aus
-    # Parameter: $1 = Status (success, error, info, prompt), 
-    # .........  $2 = Nachricht, $3 = optionaler Code
+    # Parameter: $1 = Status (success, error, info, prompt)
+    #            $2 = Nachricht
+    #            $3 = optionaler Fehlercode (optional)
+    # Rückgabe:  Gibt JSON-String auf stdout aus
+    # Seiteneffekte: keine
     local status="$1"
     local message="$2"
     local code="$3"
@@ -129,14 +132,40 @@ json_out() {
     fi
 }
 
+log_or_json() {
+    # -----------------------------------------------------------------------
+    # log_or_json
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt eine Nachricht entweder als JSON (für Web/Python) oder als Log (Shell) aus
+    # Parameter: $1 = Modus (text|json)
+    #            $2 = Status (success, error, info, prompt)
+    #            $3 = Nachricht
+    #            $4 = optionaler Fehlercode (optional)
+    # Rückgabe:  Gibt Nachricht auf stdout aus (Log oder JSON)
+    # Seiteneffekte: ruft log() auf (Logfile-Ausgabe möglich)
+    local mode="$1"
+    local status="$2"
+    local message="$3"
+    local code="$4"
+    if [ "$mode" = "json" ]; then
+        json_out "$status" "$message" "$code"
+    else
+        log "$message"
+    fi
+}
+
 backup_nginx_config() {
     # -----------------------------------------------------------------------
     # backup_nginx_config
     # -----------------------------------------------------------------------
     # Funktion: Legt ein Backup der übergebenen NGINX-Konfigurationsdatei im zentralen Backup-Ordner an
-    # und erzeugt eine maschinenlesbare Metadaten-Datei (.meta.json)
-    # Parameter: $1 = Quellpfad, $2 = Konfigurationstyp (internal/external), $3 = Aktion (z.B. set_port), $4 = Modus (text|json)
-    # Rückgabe: 0 = OK, 1 = Fehler
+    #           und erzeugt eine maschinenlesbare Metadaten-Datei (.meta.json)
+    # Parameter: $1 = Quellpfad der Konfigurationsdatei
+    #            $2 = Konfigurationstyp (internal/external)
+    #            $3 = Aktion (z.B. set_port)
+    #            $4 = Modus (text|json)
+    # Rückgabe:  0 = OK, 1 = Fehler
+    # Seiteneffekte: Schreibt Backup- und Metadaten-Dateien ins Dateisystem
     local src="$1"
     local config_type="$2"
     local action="$3"
@@ -181,27 +210,21 @@ chk_nginx_installation() {
     # chk_nginx_installation
     # -----------------------------------------------------------------------
     # Funktion: Prüft, ob NGINX installiert ist, installiert ggf. nach (mit Rückfrage)
-    # Rückgabe: 0 = OK, 1 = Installation abgebrochen, 2 = Installationsfehler
+    # Parameter: $1 = Modus (text|json)
+    #            $2 = Installationsentscheidung (J/n), optional (Default: J)
+    # Rückgabe:  0 = OK, 1 = Installation abgebrochen, 2 = Installationsfehler
+    # Seiteneffekte: Installiert ggf. nginx über apt-get
     local mode="$1"
     local install_decision="${2:-J}"
     # Prüfen, ob nginx installiert ist
     if ! command -v nginx >/dev/null 2>&1; then  # Falls nicht installiert
         log "$chk_nginx_installation_txt_0001"
-        if [ "$mode" = "json" ]; then
-            json_out "prompt" "$chk_nginx_installation_txt_0002" 10
-            # Kein read mehr, Entscheidung kommt als Parameter
-        else
-            log "$chk_nginx_installation_txt_0002"
-            # Kein read mehr, Entscheidung kommt als Parameter
-        fi
+        log_or_json "$mode" "prompt" "$chk_nginx_installation_txt_0002" 10
+        # Kein read mehr, Entscheidung kommt als Parameter
         # Prüfen, ob der Nutzer die Installation abgelehnt hat
         if [[ "$install_decision" =~ ^([nN])$ ]]; then
             log "$chk_nginx_installation_txt_0003"
-            if [ "$mode" = "json" ]; then
-                json_out "error" "$chk_nginx_installation_txt_0003" 1
-            else
-                log "$chk_nginx_installation_txt_0003"
-            fi
+            log_or_json "$mode" "error" "$chk_nginx_installation_txt_0003" 1
             return 1
         fi
         # Installation von nginx durchführen
@@ -209,21 +232,12 @@ chk_nginx_installation() {
         # Nach der Installation erneut prüfen, ob nginx jetzt verfügbar ist
         if ! command -v nginx >/dev/null 2>&1; then
             log "$chk_nginx_installation_txt_0004"
-            if [ "$mode" = "json" ]; then
-                json_out "error" "$chk_nginx_installation_txt_0004" 2
-            else
-                log "$chk_nginx_installation_txt_0004"
-            fi
+            log_or_json "$mode" "error" "$chk_nginx_installation_txt_0004" 2
             return 2
         fi
         log "$chk_nginx_installation_txt_0005"
-        if [ "$mode" = "json" ]; then
-            json_out "success" "$chk_nginx_installation_txt_0005" 0
-        else
-            log "$chk_nginx_installation_txt_0005"
-        fi
+        log_or_json "$mode" "success" "$chk_nginx_installation_txt_0005" 0
     else
-        # nginx ist bereits installiert
         log "$chk_nginx_installation_txt_0006"
     fi
     return 0
@@ -234,6 +248,9 @@ chk_nginx_reload() {
     # chk_nginx_reload
     # -----------------------------------------------------------------------
     # Funktion: Testet die NGINX-Konfiguration und lädt sie neu, falls fehlerfrei.
+    # Parameter: $1 = Modus (text|json)
+    # Rückgabe:  0 = OK, 1 = Konfigurationsfehler, 2 = Reload-Fehler
+    # Seiteneffekte: Reload von nginx (systemctl reload nginx)
     local mode="$1"
     log "${chk_nginx_reload_txt_0001}"
     # Prüfen, ob die NGINX-Konfiguration fehlerfrei ist
@@ -242,32 +259,20 @@ chk_nginx_reload() {
         if systemctl reload nginx; then
             # Reload erfolgreich
             log "${chk_nginx_reload_txt_0002}"
-            if [ "$mode" = "json" ]; then
-                json_out "success" "${chk_nginx_reload_txt_0002}" 0
-            else
-                log "${chk_nginx_reload_txt_0002}"
-            fi
+            log_or_json "$mode" "success" "${chk_nginx_reload_txt_0002}" 0
             return 0
         else
             # Reload fehlgeschlagen, Fehlerdetails ausgeben
             local status_out
             status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
             log "${chk_nginx_reload_txt_0003}\n$status_out"
-            if [ "$mode" = "json" ]; then
-                json_out "error" "${chk_nginx_reload_txt_0006}" 2
-            else
-                log "${chk_nginx_reload_txt_0006}"
-            fi
+            log_or_json "$mode" "error" "${chk_nginx_reload_txt_0006}" 2
             return 2
         fi
     else
         # Konfiguration fehlerhaft
         log "${chk_nginx_reload_txt_0004}"
-        if [ "$mode" = "json" ]; then
-            json_out "error" "${chk_nginx_reload_txt_0004}" 1
-        else
-            log "${chk_nginx_reload_txt_0004}"
-        fi
+        log_or_json "$mode" "error" "${chk_nginx_reload_txt_0004}" 1
         return 1
     fi
 }
@@ -278,8 +283,9 @@ chk_nginx_port() {
     # -----------------------------------------------------------------------
     # Funktion: Prüft, ob der gewünschte Port belegt ist oder frei.
     # Parameter: $1 = Port (Default: 80)
-    # .........  $2 = Modus (text|json), optional (Standard: text)
-    # Rückgabe: 0 = frei, 1 = belegt, 2 = Fehler
+    #            $2 = Modus (text|json), optional (Standard: text)
+    # Rückgabe:  0 = frei, 1 = belegt, 2 = Fehler
+    # Seiteneffekte: keine
     local port=${1:-80}
     local mode="${2:-text}"
     log "${chk_nginx_port_txt_0001}"
@@ -287,11 +293,7 @@ chk_nginx_port() {
     if ! command -v lsof >/dev/null 2>&1; then
         # lsof nicht verfügbar
         log "${chk_nginx_port_txt_0002}"
-        if [ "$mode" = "json" ]; then
-            json_out "error" "${chk_nginx_port_txt_0002}" 2
-        else
-            log "${chk_nginx_port_txt_0002}"
-        fi
+        log_or_json "$mode" "error" "${chk_nginx_port_txt_0002}" 2
         return 2
     fi
     # Prüfen, ob der Port belegt ist
@@ -312,37 +314,28 @@ chk_nginx_activ() {
     # chk_nginx_activ
     # -----------------------------------------------------------------------
     # Funktion: Prüft, ob NGINX nur im Default-Modus läuft oder weitere Sites aktiv sind.
+    # Parameter: $1 = Modus (text|json)
+    # Rückgabe:  0 = Nur Default-Site aktiv, 1 = Mehrere Sites aktiv, 2 = Status unklar
+    # Seiteneffekte: keine
     local mode="$1"
     local enabled_sites
     enabled_sites=$(ls /etc/nginx/sites-enabled 2>/dev/null | wc -l)
     # Prüfen, ob nur die Default-Site aktiv ist
     if [ "$enabled_sites" -eq 1 ] && [ -f /etc/nginx/sites-enabled/default ]; then
         # Nur Default-Site aktiv
-        if [ "$mode" = "json" ]; then
-            json_out "success" "${chk_nginx_activ_txt_0001}" 0
-        else
-            log "${chk_nginx_activ_txt_0001}"
-        fi
+        log_or_json "$mode" "success" "${chk_nginx_activ_txt_0001}" 0
         log "${chk_nginx_activ_txt_0004}"
         log "${chk_nginx_activ_txt_0007}"
         return 0
     elif [ "$enabled_sites" -gt 1 ]; then
         # Mehrere Sites aktiv
-        if [ "$mode" = "json" ]; then
-            json_out "success" "${chk_nginx_activ_txt_0002}" 1
-        else
-            log "${chk_nginx_activ_txt_0002}"
-        fi
+        log_or_json "$mode" "success" "${chk_nginx_activ_txt_0002}" 1
         log "${chk_nginx_activ_txt_0005}"
         log "${chk_nginx_activ_txt_0007}"
         return 1
     else
         # Status unklar
-        if [ "$mode" = "json" ]; then
-            json_out "error" "${chk_nginx_activ_txt_0003}" 2
-        else
-            log "${chk_nginx_activ_txt_0003}"
-        fi
+        log_or_json "$mode" "error" "${chk_nginx_activ_txt_0003}" 2
         log "${chk_nginx_activ_txt_0006}"
         log "${chk_nginx_activ_txt_0008}"
         return 2
@@ -358,6 +351,8 @@ get_nginx_url() {
     # get_nginx_url
     # -----------------------------------------------------------------------
     # Funktion: Ermittelt die tatsächlich aktive URL der Fotobox anhand der NGINX-Konfiguration.
+    # Parameter: $1 = Modus (text|json), optional (Standard: text)
+    # Rückgabe:  URL-String (http://IP:Port/) oder Fehlercode
     local mode="$1"
     local url=""
     local ip_addr
@@ -451,16 +446,16 @@ set_nginx_port() {
     elif [ -f /etc/nginx/sites-enabled/default ] && grep -q "# Fotobox-Integration BEGIN" /etc/nginx/sites-enabled/default; then
         conf_file="/etc/nginx/sites-available/default"
     else
-        log "$set_nginx_port_txt_0006"
+        log_or_json "$mode" "error" "$set_nginx_port_txt_0006" 1
         return 1
     fi
     if [ -z "$port" ] || ! [[ "$port" =~ ^[0-9]+$ ]]; then
-        log "$(printf "$set_nginx_port_txt_0003" "$port")"
+        log_or_json "$mode" "error" "$(printf "$set_nginx_port_txt_0003" "$port")" 2
         return 2
     fi
     backup_nginx_config "$conf_file" "$(get_nginx_config_type text)" "set_nginx_port" "$mode" || return 3
-    sed -i -E "s/(listen[[:space:]]+)[0-9.]*(:[0-9]+)?/\1$port/" "$conf_file" || { log "$set_nginx_port_txt_0004"; return 4; }
-    log "$(printf "$set_nginx_port_txt_0005" "$port")"
+    sed -i -E "s/(listen[[:space:]]+)[0-9.]*(:[0-9]+)?/\1$port/" "$conf_file" || { log_or_json "$mode" "error" "$set_nginx_port_txt_0004" 4; return 4; }
+    log_or_json "$mode" "success" "$(printf "$set_nginx_port_txt_0005" "$port")" 0
     chk_nginx_reload "$mode"
     return $?
 }
@@ -507,10 +502,10 @@ set_nginx_bind_address() {
     elif [ -f /etc/nginx/sites-enabled/default ] && grep -q "# Fotobox-Integration BEGIN" /etc/nginx/sites-enabled/default; then
         conf_file="/etc/nginx/sites-available/default"
     fi
-    if [ -z "$ip" ]; then log "${set_nginx_bind_address_txt_0004}"; return 2; fi
+    if [ -z "$ip" ]; then log_or_json "$mode" "error" "$set_nginx_bind_address_txt_0004" 2; return 2; fi
     backup_nginx_config "$conf_file" "$(get_nginx_config_type text)" "set_nginx_bind_address" "$mode" || return 3
-    sed -i -E "s/(listen[[:space:]]+)[0-9.]+/\1$ip/" "$conf_file" || { log "${set_nginx_bind_address_txt_0002}"; return 4; }
-    log "${set_nginx_bind_address_txt_0001}"
+    sed -i -E "s/(listen[[:space:]]+)[0-9.]+/\1$ip/" "$conf_file" || { log_or_json "$mode" "error" "$set_nginx_bind_address_txt_0002" 4; return 4; }
+    log_or_json "$mode" "success" "$set_nginx_bind_address_txt_0001" 0
     chk_nginx_reload "$mode"
     return $?
 }
@@ -557,10 +552,10 @@ set_nginx_server_name() {
     elif [ -f /etc/nginx/sites-enabled/default ] && grep -q "# Fotobox-Integration BEGIN" /etc/nginx/sites-enabled/default; then
         conf_file="/etc/nginx/sites-available/default"
     fi
-    if [ -z "$name" ]; then log "${set_nginx_server_name_txt_0003}"; return 2; fi
+    if [ -z "$name" ]; then log_or_json "$mode" "error" "$set_nginx_server_name_txt_0003" 2; return 2; fi
     backup_nginx_config "$conf_file" "$(get_nginx_config_type text)" "set_nginx_server_name" "$mode" || return 3
-    sed -i -E "s/(server_name[[:space:]]+)[^;]+/\1$name/" "$conf_file" || { log "${set_nginx_server_name_txt_0002}"; return 4; }
-    log "${set_nginx_server_name_txt_0001}"
+    sed -i -E "s/(server_name[[:space:]]+)[^;]+/\1$name/" "$conf_file" || { log_or_json "$mode" "error" "$set_nginx_server_name_txt_0002" 4; return 4; }
+    log_or_json "$mode" "success" "$set_nginx_server_name_txt_0001" 0
     chk_nginx_reload "$mode"
     return $?
 }
@@ -607,10 +602,10 @@ set_nginx_webroot_path() {
     elif [ -f /etc/nginx/sites-enabled/default ] && grep -q "# Fotobox-Integration BEGIN" /etc/nginx/sites-enabled/default; then
         conf_file="/etc/nginx/sites-available/default"
     fi
-    if [ -z "$path" ]; then log "${set_nginx_webroot_path_txt_0003}"; return 2; fi
+    if [ -z "$path" ]; then log_or_json "$mode" "error" "$set_nginx_webroot_path_txt_0003" 2; return 2; fi
     backup_nginx_config "$conf_file" "$(get_nginx_config_type text)" "set_nginx_webroot_path" "$mode" || return 3
-    sed -i -E "0,/location[[:space:]]+\/[a-zA-Z0-9_-]+\//s//location $path/" "$conf_file" || { log "${set_nginx_webroot_path_txt_0002}"; return 4; }
-    log "${set_nginx_webroot_path_txt_0001}"
+    sed -i -E "0,/location[[:space:]]+\/[a-zA-Z0-9_-]+\//s//location $path/" "$conf_file" || { log_or_json "$mode" "error" "$set_nginx_webroot_path_txt_0002" 4; return 4; }
+    log_or_json "$mode" "success" "$set_nginx_webroot_path_txt_0001" 0
     chk_nginx_reload "$mode"
     return $?
 }
@@ -705,41 +700,18 @@ conf_nginx_port() {
     if [[ -z "$port" ]]; then
         port=80
     elif ! [[ "$port" =~ ^[0-9]+$ ]]; then
-        # Ungültige Eingabe
-        log "$(printf "$set_nginx_port_txt_0003" "$port")"
-        if [ "$mode" = "json" ]; then
-            json_out "error" "$set_nginx_port_txt_0004" 12
-        else
-            log "$set_nginx_port_txt_0004"
-        fi
+        log_or_json "$mode" "error" "$(printf "$set_nginx_port_txt_0003" "$port")" 12
         return 1
     fi
-    # Port prüfen
     chk_nginx_port "$port" "$mode"
     if [ $? -eq 0 ]; then
-        # Port ist frei und wird verwendet
-        log "$(printf "$set_nginx_port_txt_0005" "$port")"
-        if [ "$mode" = "json" ]; then
-            json_out "success" "$(printf "$set_nginx_port_txt_0005" "$port")" 0
-        else
-            log "$(printf "$set_nginx_port_txt_0005" "$port")"
-        fi
+        log_or_json "$mode" "success" "$(printf "$set_nginx_port_txt_0005" "$port")" 0
         return 0
     else
-        # Port ist belegt, ggf. Abbruch prüfen
-        log "$(printf "$set_nginx_port_txt_0006" "$port")"
-        if [ "$mode" = "json" ]; then
-            json_out "error" "$(printf "$set_nginx_port_txt_0006" "$port")" 13
-            json_out "prompt" "$set_nginx_port_txt_0007" 14
-            # Kein read mehr, Entscheidung kommt als Parameter
-        else
-            log "$(printf "$set_nginx_port_txt_0006" "$port")"
-            log "$set_nginx_port_txt_0007"
-            # Kein read mehr, Entscheidung kommt als Parameter
-        fi
+        log_or_json "$mode" "error" "$(printf "$set_nginx_port_txt_0006" "$port")" 13
+        log_or_json "$mode" "prompt" "$set_nginx_port_txt_0007" 14
         if [[ "$abort_decision" =~ ^([jJ]|[yY])$ ]]; then
-            # Abbruch durch Benutzer/Parameter
-            log "$set_nginx_port_txt_0008"
+            log_or_json "$mode" "info" "$set_nginx_port_txt_0008" 1
             return 1
         fi
     fi
@@ -758,44 +730,21 @@ set_nginx_cnf_internal() {
     log "${set_nginx_cnf_internal_txt_0001}"
     # Prüfen, ob Default-Konfiguration existiert
     if [ ! -f "$default_conf" ]; then
-        log "${set_nginx_cnf_internal_txt_0002}"
-        if [ "$mode" = "json" ]; then
-            json_out "error" "${set_nginx_cnf_internal_txt_0002}" 1
-        else
-            log "${set_nginx_cnf_internal_txt_0002}"
-        fi
+        log_or_json "$mode" "error" "$set_nginx_cnf_internal_txt_0002" 1
         return 1
     fi
 
     # Backup der Default-Konfiguration anlegen
     backup_nginx_config "$default_conf" "internal" "set_nginx_cnf_internal" "$mode" || return 2
-    log "${set_nginx_cnf_internal_txt_0004}"
-    if [ "$mode" = "json" ]; then
-        json_out "success" "${set_nginx_cnf_internal_txt_0004}" 0
-    else
-        log "${set_nginx_cnf_internal_txt_0004}"
-    fi
-
+    log_or_json "$mode" "success" "$set_nginx_cnf_internal_txt_0004" 0
     # Prüfen, ob Fotobox-Block bereits vorhanden ist
     if ! grep -q "# Fotobox-Integration BEGIN" "$default_conf"; then
         sed -i '/^}/i \\n    # Fotobox-Integration BEGIN\n    location /fotobox/ {\n        alias /opt/fotobox/frontend/;\n        index start.html index.html;\n    }\n    location /fotobox/api/ {\n        proxy_pass http://127.0.0.1:5000/;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto $scheme;\n    }\n    # Fotobox-Integration END\n' "$default_conf"
-        log "${set_nginx_cnf_internal_txt_0005}"
-        if [ "$mode" = "json" ]; then
-            json_out "success" "${set_nginx_cnf_internal_txt_0005}" 0
-        else
-            log "${set_nginx_cnf_internal_txt_0005}"
-        fi
+        log_or_json "$mode" "success" "$set_nginx_cnf_internal_txt_0005" 0
     else
-        log "${set_nginx_cnf_internal_txt_0006}"
-        if [ "$mode" = "json" ]; then
-            json_out "info" "${set_nginx_cnf_internal_txt_0006}" 0
-        else
-            log "${set_nginx_cnf_internal_txt_0006}"
-        fi
+        log_or_json "$mode" "info" "$set_nginx_cnf_internal_txt_0006" 0
     fi
-
-    # Konfiguration neu laden
-    chk_nginx_reload "$mode" || { log "NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"; return 3; }
+    chk_nginx_reload "$mode" || { log_or_json "$mode" "error" "NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!" 3; return 3; }
     return 0
 }
 
@@ -814,30 +763,16 @@ set_nginx_cnf_external() {
     # Prüfen, ob bereits eine Zielkonfiguration existiert
     if [ -f "$nginx_dst" ]; then
         backup_nginx_config "$nginx_dst" "external" "set_nginx_cnf_external" "$mode" || return 2
-        log "${set_nginx_cnf_external_txt_0003}"
-        if [ "$mode" = "json" ]; then
-            json_out "success" "${set_nginx_cnf_external_txt_0003}" 0
-        else
-            log "${set_nginx_cnf_external_txt_0003}"
-        fi
+        log_or_json "$mode" "success" "$set_nginx_cnf_external_txt_0003" 0
     fi
-
     # Neue Konfiguration kopieren
-    cp "$conf_src" "$nginx_dst" || { log "${set_nginx_cnf_external_txt_0004}"; if [ "$mode" = "json" ]; then json_out "error" "Kopieren der Konfiguration fehlgeschlagen!" 1; else log "Kopieren der Konfiguration fehlgeschlagen!"; fi; return 1; }
-    log "${set_nginx_cnf_external_txt_0005}"
-
+    cp "$conf_src" "$nginx_dst" || { log_or_json "$mode" "error" "$set_nginx_cnf_external_txt_0004" 1; return 1; }
+    log_or_json "$mode" "success" "$set_nginx_cnf_external_txt_0005" 0
     # Prüfen, ob Symlink existiert, sonst anlegen
     if [ ! -L /etc/nginx/sites-enabled/fotobox ]; then
-        ln -s "$nginx_dst" /etc/nginx/sites-enabled/fotobox || { log "${set_nginx_cnf_external_txt_0006}"; if [ "$mode" = "json" ]; then json_out "error" "Symlink konnte nicht erstellt werden!" 3; else log "Symlink konnte nicht erstellt werden!"; fi; return 3; }
-        log "${set_nginx_cnf_external_txt_0007}"
-        if [ "$mode" = "json" ]; then
-            json_out "success" "${set_nginx_cnf_external_txt_0007}" 0
-        else
-            log "${set_nginx_cnf_external_txt_0007}"
-        fi
+        ln -s "$nginx_dst" /etc/nginx/sites-enabled/fotobox || { log_or_json "$mode" "error" "$set_nginx_cnf_external_txt_0006" 3; return 3; }
+        log_or_json "$mode" "success" "$set_nginx_cnf_external_txt_0007" 0
     fi
-
-    # Konfiguration neu laden
-    chk_nginx_reload "$mode" || { log "NGINX-Konfiguration konnte nach externer Integration nicht neu geladen werden!"; return 4; }
+    chk_nginx_reload "$mode" || { log_or_json "$mode" "error" "NGINX-Konfiguration konnte nach externer Integration nicht neu geladen werden!" 4; return 4; }
     return 0
 }

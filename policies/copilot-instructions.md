@@ -38,6 +38,10 @@ Das folgende Schema für Funktionskommentare ist für alle Quellcodedateien im P
 - Nach der Definition aller lokalen Variablen/Konstanten innerhalb der Funktion folgt immer eine Leerzeile, bevor der eigentliche Funktionscode beginnt.
 - Für Shellskripte ist ausschließlich Bash-Syntax zu verwenden (keine SH-Kompatibilität oder Mischformen).
 
+**Entscheidungsdokumentation:**
+
+In Funktionsblöcken müssen alle relevanten Entscheidungen (z. B. Verzweigungen, Rückgabewerte, Fehlerbehandlung) durch strukturierte Kommentare dokumentiert werden. Die Kommentare sollen den Zweck der Entscheidung, die möglichen Alternativen und deren Auswirkungen auf den Programmablauf kurz erläutern. Dies gilt insbesondere für Kontrollstrukturen wie if/else, case, Schleifen und Fehlerbehandlungen.
+
 **Beispiele für verschiedene Sprachen:**
 
 _Bash:_
