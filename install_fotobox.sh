@@ -48,8 +48,6 @@ BASH_DIR="$INSTALL_DIR/backend/scripts"
 # Einstellungen: NGINX 
 # ---------------------------------------------------------------------------
 PACKAGES_NGINX=(nginx)
-NGINX_CONF="$CONF_DIR/nginx-fotobox.conf"
-NGINX_DST="/etc/nginx/sites-available/fotobox"
 # ---------------------------------------------------------------------------
 # WICHTIG: Die Port-Konfiguration der Fotobox-Weboberfläche darf NICHT mehr
 # über eine globale Variable (z.B. FOTOBOX_PORT) erfolgen. Der aktuell
@@ -59,6 +57,8 @@ NGINX_DST="/etc/nginx/sites-available/fotobox"
 # Beispiel für Shell-Skripte:
 #   source "$BASH_DIR/manage_nginx.sh"
 #   port=$(get_nginx_port)
+# Die Konfigurationspfade für NGINX werden ausschließlich über 
+# manage_nginx.sh (Getter/Setter) verwaltet.
 # Policy: Siehe policies/copilot-instructions.md
 # ---------------------------------------------------------------------------
 # Einstellungen: Backend Service 
