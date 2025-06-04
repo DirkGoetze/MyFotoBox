@@ -7,3 +7,5 @@ backup/
 backup_strategie.md
 dokumentationsstandard.md
 fotobox2.code-workspace
+backend/tests/
+frontend/tests/

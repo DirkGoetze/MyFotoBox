@@ -26,7 +26,7 @@
 # [x] Seiteneffekte (z.B. globale Variablen) minimieren und dokumentieren
 # [x] DOKUMENTATIONSSTANDARD.md für alle Funktionsblöcke einhalten
 # [x] Abwärtskompatibilität für interaktive Nutzung sicherstellen
-# [ ] Automatisierte Tests für alle Betriebsmodi vorsehen
+# [x] Automatisierte Tests für alle Betriebsmodi vorsehen
 # [ ] Unterstützung für verschiedene NGINX-Konfigurationen (Default, externe Site)
 # [ ] Port Prüfung überarbeiten, ggf Abhänigkeit von lsof umgehen
 # [ ] Debug-Modus für eigene JavaScript-Komponenten: Lokaler und globaler Debug-Schalter (analog zu Bash: DEBUG_MOD_LOCAL, DEBUG_MOD_GLOBAL) und zentrale debug()-Funktion für konsistente Debug-Ausgaben in zukünftigen JS-Modulen implementieren. (Aktuell nicht relevant, aber für spätere Frontend-Entwicklung vormerken)
