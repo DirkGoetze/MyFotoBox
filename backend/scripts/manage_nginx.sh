@@ -24,8 +24,8 @@
 # [x] Interaktive Schleifenlogik (z.B. Portwahl) in aufrufende Programme auslagern
 # [x] Funktionen einzeln testbar gestalten (Parameter statt globaler State)
 # [x] Seiteneffekte (z.B. globale Variablen) minimieren und dokumentieren
-# [ ] DOKUMENTATIONSSTANDARD.md für alle Funktionsblöcke einhalten
-# [ ] Abwärtskompatibilität für interaktive Nutzung sicherstellen
+# [x] DOKUMENTATIONSSTANDARD.md für alle Funktionsblöcke einhalten
+# [x] Abwärtskompatibilität für interaktive Nutzung sicherstellen
 # [ ] Automatisierte Tests für alle Betriebsmodi vorsehen
 # [ ] Unterstützung für verschiedene NGINX-Konfigurationen (Default, externe Site)
 # [ ] Port Prüfung überarbeiten, ggf Abhänigkeit von lsof umgehen
