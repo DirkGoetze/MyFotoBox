@@ -23,7 +23,7 @@
 # [x] Alle Benutzereingaben (read, select, etc.) durch Parameter/Defaults ersetzen
 # [x] Interaktive Schleifenlogik (z.B. Portwahl) in aufrufende Programme auslagern
 # [x] Funktionen einzeln testbar gestalten (Parameter statt globaler State)
-# [ ] Seiteneffekte (z.B. globale Variablen) minimieren und dokumentieren
+# [x] Seiteneffekte (z.B. globale Variablen) minimieren und dokumentieren
 # [ ] DOKUMENTATIONSSTANDARD.md für alle Funktionsblöcke einhalten
 # [ ] Abwärtskompatibilität für interaktive Nutzung sicherstellen
 # [ ] Automatisierte Tests für alle Betriebsmodi vorsehen
@@ -451,16 +451,16 @@ set_nginx_port() {
     elif [ -f /etc/nginx/sites-enabled/default ] && grep -q "# Fotobox-Integration BEGIN" /etc/nginx/sites-enabled/default; then
         conf_file="/etc/nginx/sites-available/default"
     else
-        log "${set_nginx_port_value_txt_0003}"
+        log "$set_nginx_port_txt_0006"
         return 1
     fi
     if [ -z "$port" ] || ! [[ "$port" =~ ^[0-9]+$ ]]; then
-        log "$(printf "$set_nginx_port_value_txt_0004" "$port")"
+        log "$(printf "$set_nginx_port_txt_0003" "$port")"
         return 2
     fi
     backup_nginx_config "$conf_file" "$(get_nginx_config_type text)" "set_nginx_port" "$mode" || return 3
-    sed -i -E "s/(listen[[:space:]]+)[0-9.]*(:[0-9]+)?/\1$port/" "$conf_file" || { log "${set_nginx_port_value_txt_0002}"; return 4; }
-    log "${set_nginx_port_value_txt_0001}"
+    sed -i -E "s/(listen[[:space:]]+)[0-9.]*(:[0-9]+)?/\1$port/" "$conf_file" || { log "$set_nginx_port_txt_0004"; return 4; }
+    log "$(printf "$set_nginx_port_txt_0005" "$port")"
     chk_nginx_reload "$mode"
     return $?
 }
