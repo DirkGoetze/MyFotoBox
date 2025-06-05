@@ -377,11 +377,11 @@ set_install_packages() {
     # Rückgabe: 0 = OK, 1 = Fehler bei apt-get update, 2 = Fehler Tools,
     # ......... 3 = Fehler Python-Pakete, 4 = Fehler SQLite
     print_step "Führe apt-get update aus ..."
-    (apt-get update -qq) &> "$INSTALL_DIR/apt_update.log" &
+    (apt-get update -qq) &> "$LOG_DIR/apt_update.log" &
     show_spinner $!
     if [ $? -ne 0 ]; then
         print_error "Fehler bei apt-get update. Log-Auszug:"
-        tail -n 10 "$INSTALL_DIR/apt_update.log"
+        tail -n 10 "$LOG_DIR/apt_update.log"
         return 1
     fi
     install_package_group PACKAGES_TOOLS || return 2
@@ -814,19 +814,19 @@ dlg_backend_integration() {
     fi
     # Abhängigkeiten installieren
     print_step "Installiere/aktualisiere pip ..."
-    ("$INSTALL_DIR/backend/venv/bin/pip" install --upgrade pip) &> "$INSTALL_DIR/pip_upgrade.log" &
+    ("$INSTALL_DIR/backend/venv/bin/pip" install --upgrade pip) &> "$LOG_DIR/pip_upgrade.log" &
     show_spinner $!
     if [ $? -ne 0 ]; then
         print_error "Fehler beim Upgrade von pip. Log-Auszug:"
-        tail -n 10 "$INSTALL_DIR/pip_upgrade.log"
+        tail -n 10 "$LOG_DIR/pip_upgrade.log"
         exit 1
     fi
     print_step "Installiere Python-Abhängigkeiten ..."
-    ("$INSTALL_DIR/backend/venv/bin/pip" install -r "$INSTALL_DIR/backend/requirements.txt") &> "$INSTALL_DIR/pip_requirements.log" &
+    ("$INSTALL_DIR/backend/venv/bin/pip" install -r "$INSTALL_DIR/backend/requirements.txt") &> "$LOG_DIR/pip_requirements.log" &
     show_spinner $!
     if [ $? -ne 0 ]; then
         print_error "Konnte Python-Abhängigkeiten nicht installieren! Log-Auszug:"
-        tail -n 10 "$INSTALL_DIR/pip_requirements.log"
+        tail -n 10 "$LOG_DIR/pip_requirements.log"
         exit 1
     fi
     # systemd-Service anlegen und starten
