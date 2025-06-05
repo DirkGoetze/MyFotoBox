@@ -266,7 +266,6 @@ chk_nginx_port() {
     # Seiteneffekte: keine
     local port=${1:-80}
     local mode="${2:-text}"
-    # log "${chk_nginx_port_txt_0001}"  # ENTFERNT
     # Prüfen, ob lsof, ss oder netstat verfügbar ist
     if command -v lsof >/dev/null 2>&1; then
         # Prüfen, ob der Port belegt ist (lsof)
@@ -297,7 +296,6 @@ chk_nginx_port() {
         fi
     else
         # Keines der Tools verfügbar
-        # log "${chk_nginx_port_txt_0002} (lsof/ss/netstat fehlen)"  # ENTFERNT
         log_or_json "$mode" "error" "${chk_nginx_port_txt_0002} (lsof/ss/netstat fehlen)" 2
         return 2
     fi
