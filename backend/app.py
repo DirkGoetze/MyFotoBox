@@ -154,19 +154,26 @@ def api_backup():
 # -------------------------------------------------------------------------------
 @app.route('/api/update', methods=['GET', 'POST'])
 def api_update():
-    import subprocess, sys
-    repo_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    import sys
+    import urllib.request
+    local_version = None
+    remote_version = None
+    try:
+        with open(os.path.join(os.path.dirname(__file__), '../conf/version.inf'), 'r') as f:
+            local_version = f.read().strip()
+    except Exception:
+        pass
+    try:
+        url = 'https://raw.githubusercontent.com/DirkGoetze/MyFotoBox/main/conf/version.inf'
+        with urllib.request.urlopen(url, timeout=5) as response:
+            remote_version = response.read().decode('utf-8').strip()
+    except Exception:
+        pass
     if request.method == 'GET':
-        try:
-            subprocess.run(['git', '-C', repo_dir, 'fetch'], check=True)
-            local = subprocess.check_output(['git', '-C', repo_dir, 'rev-parse', 'HEAD']).strip()
-            remote = subprocess.check_output(['git', '-C', repo_dir, 'rev-parse', '@{u}']).strip()
-            update_available = (local != remote)
-            return jsonify({'update_available': update_available})
-        except subprocess.CalledProcessError as e:
-            return jsonify({'update_available': False, 'error': 'Git-Fehler', 'details': str(e)}), 500
-        except Exception as e:
-            return jsonify({'update_available': False, 'error': 'Unbekannter Fehler', 'details': str(e)}), 500
+        if local_version and remote_version:
+            update_available = (local_version != remote_version)
+            return jsonify({'update_available': update_available, 'local_version': local_version, 'remote_version': remote_version})
+        return jsonify({'update_available': False, 'error': 'Versionsvergleich nicht möglich', 'local_version': local_version, 'remote_version': remote_version}), 500
     # POST: Führe Update nur aus, wenn Update verfügbar
     proc = subprocess.Popen([sys.executable, 'manage_update.py'], cwd=os.path.dirname(__file__), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate(timeout=120)

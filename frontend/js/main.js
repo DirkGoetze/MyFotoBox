@@ -176,6 +176,8 @@ if(document.getElementById('backupBtn')) {
 if(document.getElementById('updateBtn')) {
     const updateBtn = document.getElementById('updateBtn');
     const updateInfoText = document.getElementById('updateInfoText');
+    const versionInfo = document.getElementById('versionInfo');
+    const updateExplanation = document.getElementById('updateExplanation');
     updateBtn.onclick = function() {
         const status = document.getElementById('updateStatus');
         status.textContent = 'Update läuft ...';
@@ -188,21 +190,45 @@ if(document.getElementById('updateBtn')) {
                 status.textContent = 'Fehler beim Update!';
             });
     };
-    // Prüfe, ob ein Update verfügbar ist
+    // Prüfe, ob ein Update verfügbar ist und zeige immer den Button
     fetch('/api/update', { method: 'GET' })
         .then(r => r.json())
         .then(data => {
+            // Zeige Button immer, aber aktiviere/deaktiviere je nach Update
+            updateBtn.style.display = '';
+            updateBtn.disabled = !data.update_available;
             if(data.update_available) {
-                updateBtn.style.display = '';
-                if(updateInfoText) updateInfoText.style.display = 'none';
+                updateBtn.classList.remove('disabled');
+                updateBtn.title = '';
+                if(updateInfoText) {
+                    updateInfoText.style.display = 'none';
+                }
+                if(versionInfo) {
+                    versionInfo.innerHTML = `Lokale Version: <b>${data.local_version||'-'}</b><br>Online-Version: <b>${data.remote_version||'-'}</b>`;
+                }
+                if(updateExplanation) {
+                    updateExplanation.textContent = 'Es ist ein Update verfügbar. Bitte führen Sie das Update aus, um die neueste Version zu erhalten.';
+                }
             } else {
-                updateBtn.style.display = 'none';
-                if(updateInfoText) updateInfoText.style.display = '';
+                updateBtn.classList.add('disabled');
+                updateBtn.title = 'System ist aktuell';
+                if(updateInfoText) {
+                    updateInfoText.style.display = '';
+                }
+                if(versionInfo) {
+                    versionInfo.innerHTML = `Lokale Version: <b>${data.local_version||'-'}</b><br>Online-Version: <b>${data.remote_version||'-'}</b>`;
+                }
+                if(updateExplanation) {
+                    updateExplanation.textContent = 'Ihr System ist auf dem aktuellen Stand.';
+                }
             }
         })
         .catch(()=>{
-            updateBtn.style.display = 'none';
-            if(updateInfoText) updateInfoText.style.display = '';
+            updateBtn.style.display = '';
+            updateBtn.disabled = true;
+            if(updateInfoText) updateInfoText.style.display = 'none';
+            if(versionInfo) versionInfo.innerHTML = 'Versionsprüfung fehlgeschlagen.';
+            if(updateExplanation) updateExplanation.textContent = 'Die Update-Prüfung konnte nicht durchgeführt werden.';
         });
 }
 
