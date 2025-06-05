@@ -211,5 +211,24 @@ def take_photo():
     # time.sleep(1) # Simuliert Fotoaufnahme
     return jsonify({'status': 'ok'})
 
+# -------------------------------------------------------------------------------
+# /api/nginx_status (GET)
+# -------------------------------------------------------------------------------
+@app.route('/api/nginx_status', methods=['GET'])
+def api_nginx_status():
+    """
+    Gibt die aktuelle NGINX-Konfiguration als JSON zurück (liefert die Ausgabe von manage_nginx.sh get_nginx_status json).
+    """
+    import subprocess
+    script_path = os.path.join(os.path.dirname(__file__), 'scripts', 'manage_nginx.sh')
+    try:
+        result = subprocess.run(['bash', script_path, 'get_nginx_status', 'json'], capture_output=True, text=True, timeout=10)
+        if result.returncode == 0 and result.stdout.strip().startswith('{'):
+            return result.stdout, 200, {'Content-Type': 'application/json'}
+        else:
+            return jsonify({'error': 'Fehler beim Auslesen der NGINX-Konfiguration', 'details': result.stderr}), 500
+    except Exception as e:
+        return jsonify({'error': 'Exception beim Auslesen der NGINX-Konfiguration', 'details': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

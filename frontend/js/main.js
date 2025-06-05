@@ -101,6 +101,7 @@ if (document.getElementById('loginForm')) {
             document.getElementById('configForm').style.display = '';
             document.getElementById('updateForm').style.display = '';
             loadConfigFromServer();
+            loadNginxConfig(); // NGINX-Konfiguration nach Login laden
         } else {
             document.getElementById('loginStatus').textContent = 'Falsches Passwort!';
         }
@@ -150,6 +151,33 @@ if (document.getElementById('loginForm')) {
                 document.getElementById('updateStatus').textContent = 'Fehler beim Update/Backup!';
             });
     };
+    // Nach erfolgreichem Login: NGINX-Konfiguration laden und anzeigen
+    function loadNginxConfig() {
+        const section = document.getElementById('nginxConfigSection');
+        const info = document.getElementById('nginxConfigInfo');
+        if(!section || !info) return;
+        section.style.display = 'block';
+        info.textContent = 'Lade Webserver-Konfiguration ...';
+        fetch('/api/nginx_status')
+            .then(r => r.json())
+            .then(cfg => {
+                if(cfg.error) {
+                    info.innerHTML = '<span style="color:red">Fehler: '+(cfg.details||cfg.error)+'</span>';
+                } else {
+                    info.innerHTML =
+                        `<b>Typ:</b> ${cfg.config_type}<br>`+
+                        `<b>Bind-Adresse:</b> ${cfg.bind_address}<br>`+
+                        `<b>Port:</b> ${cfg.port}<br>`+
+                        `<b>Servername:</b> ${cfg.server_name}<br>`+
+                        `<b>Webroot:</b> ${cfg.webroot_path}<br>`+
+                        `<b>URL:</b> <a href="${cfg.url}" target="_blank">${cfg.url}</a><br>`+
+                        `<b>Erreichbar:</b> ${cfg.reachable ? 'Ja' : 'Nein'}`;
+                }
+            })
+            .catch(e => {
+                info.innerHTML = '<span style="color:red">Fehler beim Laden der Webserver-Konfiguration.</span>';
+            });
+    }
 }
 
 // ------------------------------------------------------------------------------
