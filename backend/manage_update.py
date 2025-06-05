@@ -3,9 +3,33 @@ import subprocess
 import sys
 from datetime import datetime
 import shutil
+import glob
 
 BACKUP_DIR = os.path.join(os.path.dirname(__file__), '../backup')
-LOGFILE = os.path.join(BACKUP_DIR, 'update.log')
+LOG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../backup/logs'))
+os.makedirs(LOG_DIR, exist_ok=True)
+
+def get_log_file():
+    try:
+        log_file = subprocess.check_output(['bash', os.path.join(os.path.dirname(__file__), 'scripts', 'log_helper.sh'), 'get_log_file'])
+        return log_file.decode().strip()
+    except Exception as e:
+        # Fallback: Schreibe ins Backup-Verzeichnis
+        backup_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../backup/logs'))
+        os.makedirs(backup_dir, exist_ok=True)
+        return os.path.join(backup_dir, f"{datetime.now():%Y-%m-%d}_fotobox.log")
+
+LOGFILE = get_log_file()
+
+MAX_LOGFILES = 5
+
+def rotate_logs():
+    logs = sorted(glob.glob(os.path.join(LOG_DIR, '*_update.log')))
+    while len(logs) > MAX_LOGFILES:
+        os.remove(logs[0])
+        logs = sorted(glob.glob(os.path.join(LOG_DIR, '*_update.log')))
+rotate_logs()
+
 DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
 DB_PATH = os.path.join(DATA_DIR, 'fotobox_settings.db')
 
@@ -17,9 +41,25 @@ os.makedirs(BACKUP_DIR, exist_ok=True)
 # Funktion: Schreibt eine Lognachricht mit Zeitstempel in die Logdatei
 # Parameter: msg (str) – Nachricht
 # -------------------------------------------------------------------------------
-def log(msg):
-    with open(LOGFILE, 'a') as f:
-        f.write(f"[{datetime.now()}] {msg}\n")
+def log(msg, level="INFO", func=None, file=None):
+    # Vor jedem Log-Eintrag: Logrotation und Komprimierung wie in chk_log_file
+    try:
+        subprocess.run(['bash', os.path.join(os.path.dirname(__file__), 'scripts', 'log_helper.sh'), 'chk_log_file'])
+    except Exception:
+        pass
+    # Log-Eintrag über log_helper.sh schreiben (Formatierung, Loglevel, Funktionsname, Datei)
+    try:
+        args = ['bash', os.path.join(os.path.dirname(__file__), 'scripts', 'log_helper.sh'), 'log', f"{level}: {msg}"]
+        if func:
+            args.append(func)
+        if file:
+            args.append(file)
+        subprocess.run(args)
+    except Exception:
+        # Fallback: Direkt in die Logdatei schreiben
+        log_file = get_log_file() if 'get_log_file' in globals() else f"backup/logs/{datetime.now():%Y-%m-%d}_fotobox.log"
+        with open(log_file, 'a') as f:
+            f.write(f"[{datetime.now():%Y-%m-%d %H:%M:%S}] [{level}] {msg}\n")
 
 # -------------------------------------------------------------------------------
 # run

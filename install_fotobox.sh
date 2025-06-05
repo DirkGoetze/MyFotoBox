@@ -29,6 +29,7 @@ INSTALL_DIR="/opt/fotobox"
 BACKUP_DIR="$INSTALL_DIR/backup"
 CONF_DIR="$INSTALL_DIR/conf"
 BASH_DIR="$INSTALL_DIR/backend/scripts"
+LOG_DIR="$INSTALL_DIR/log"
 # ---------------------------------------------------------------------------
 # Einstellungen: NGINX 
 # ---------------------------------------------------------------------------
@@ -207,20 +208,52 @@ make_dir() {
     # -----------------------------------------------------------------------
     # make_dir
     # -----------------------------------------------------------------------
-    # Funktion: Legt ein Verzeichnis an, falls es nicht existiert
-    # Rückgabe: 0 = OK, 1 = Fehler, 2 = kein Verzeichnis angegeben
+    # Funktion: Legt ein Verzeichnis an, prüft und setzt Rechte, loggt alle Schritte
+    # Rückgabe: 0 = OK, 1 = kein Verzeichnis angegeben, 2 = Fehler beim Anlegen oder Rechte setzen
     local dir="$1"
+    local user="fotobox"
+    local group="fotobox"
+    local mode="755"
 
-    debug_print "make_dir: Prüfe $dir"
-    # Kein Verzeichnis angegeben
-    if [ -z "$dir" ]; then return 2; fi
-    # Prüfe, ob das Verzeichnis bereits existiert
+    if [ -z "$dir" ]; then
+        log "make_dir: Kein Verzeichnis angegeben!"
+        debug_print "make_dir: Kein Verzeichnis angegeben!"
+        return 1
+    fi
     if [ ! -d "$dir" ]; then
         debug_print "make_dir: $dir existiert nicht, versuche mkdir -p"
         mkdir -p "$dir"
-        if [ ! -d "$dir" ]; then return 1; fi
+        if [ ! -d "$dir" ]; then
+            log "make_dir: Fehler beim Anlegen von $dir!"
+            debug_print "make_dir: Fehler beim Anlegen von $dir!"
+            return 2
+        fi
+        log "make_dir: Verzeichnis $dir wurde neu angelegt."
+    else
+        debug_print "make_dir: $dir existiert bereits."
     fi
-
+    # Rechte prüfen und ggf. setzen
+    local owner_group
+    owner_group=$(stat -c '%U:%G' "$dir")
+    if [ "$owner_group" != "$user:$group" ]; then
+        chown "$user:$group" "$dir" || {
+            log "make_dir: Fehler beim Setzen von chown $user:$group für $dir!"
+            debug_print "make_dir: Fehler beim Setzen von chown $user:$group für $dir!"
+            return 2
+        }
+        log "make_dir: chown $user:$group für $dir gesetzt."
+    fi
+    local perms
+    perms=$(stat -c '%a' "$dir")
+    if [ "$perms" != "$mode" ]; then
+        chmod "$mode" "$dir" || {
+            log "make_dir: Fehler beim Setzen von chmod $mode für $dir!"
+            debug_print "make_dir: Fehler beim Setzen von chmod $mode für $dir!"
+            return 2
+        }
+        log "make_dir: chmod $mode für $dir gesetzt."
+    fi
+    debug_print "make_dir: $dir ist vorhanden, Rechte und Eigentümer korrekt."
     return 0
 }
 
@@ -383,9 +416,9 @@ set_structure() {
     #           Klon-Logik wurde entfernt. Gibt Fehler aus, falls Kernverzeichnisse fehlen.
     set -e
     debug_print "set_structure: Starte mit INSTALL_DIR=$INSTALL_DIR"
-    if [ ! -d "$INSTALL_DIR" ]; then
-        debug_print "set_structure: INSTALL_DIR $INSTALL_DIR existiert nicht, versuche make_dir"
-        make_dir "$INSTALL_DIR" || return 1
+    if ! make_dir "$INSTALL_DIR"; then
+        debug_print "set_structure: INSTALL_DIR $INSTALL_DIR konnte nicht angelegt werden"
+        return 1
     fi
     # Prüfe, ob das Backend-Verzeichnis und wichtige Dateien existieren
     if [ ! -d "$INSTALL_DIR/backend" ] || [ ! -d "$INSTALL_DIR/backend/scripts" ] || [ ! -f "$INSTALL_DIR/backend/requirements.txt" ]; then
@@ -397,21 +430,24 @@ set_structure() {
         debug_print "set_structure: BACKUP_DIR $BACKUP_DIR konnte nicht angelegt werden"
         return 4
     fi
-    debug_print "set_structure: Starte mit CONF_DIR=$CONF_DIR"
-    if ! make_dir "$CONF_DIR"; then
-        debug_print "set_structure: CONF_DIR $CONF_DIR konnte nicht angelegt werden"
-        return 5
-    fi
     debug_print "set_structure: Starte mit DATA_DIR=$DATA_DIR"
     if ! make_dir "$DATA_DIR"; then
         debug_print "set_structure: DATA_DIR $DATA_DIR konnte nicht angelegt werden"
         return 6
     fi
-    debug_print "set_structure: Starte mit DATA_DIR=$BASH_DIR"
+    debug_print "set_structure: Starte mit BASH_DIR=$BASH_DIR"
     if [ -d "$BASH_DIR" ]; then
         debug_print "set_structure: Setze Ausführbarkeitsrechte für $BASH_DIR/*.sh"
         chmod +x "$BASH_DIR"/*.sh
     fi
+    debug_print "set_structure: Starte mit LOG_DIR=$LOG_DIR"
+    if ! make_dir "$LOG_DIR"; then
+        debug_print "set_structure: Logverzeichnis $LOG_DIR konnte nicht angelegt werden"
+        return 8
+    fi
+    # Policy: Nach jedem schreibenden Schritt im Projektverzeichnis Rechte prüfen und ggf. korrigieren.
+    # Die Rechtevergabe für einzelne Verzeichnisse erfolgt bereits in make_dir.
+    # Das folgende chown -R dient als zusätzlicher Schutz, um Policy-Konformität sicherzustellen.
     chown -R fotobox:fotobox "$INSTALL_DIR" || {
         debug_print "set_structure: chown auf $INSTALL_DIR fehlgeschlagen"
         return 7
@@ -572,6 +608,9 @@ dlg_prepare_structure() {
         exit 1
     elif [ $rc -eq 7 ]; then
         print_error "Rechte für $INSTALL_DIR konnten nicht gesetzt werden!"
+        exit 1
+    elif [ $rc -eq 8 ]; then
+        print_error "Logverzeichnis $INSTALL_DIR/log konnte nicht angelegt werden!"
         exit 1
     elif [ $rc -eq 10 ]; then
         print_warning "Klonen des Projekts per git fehlgeschlagen, aber Verzeichnisstruktur und Rechte wurden gesetzt.\nBitte prüfen Sie, ob das Zielverzeichnis bereits (teilweise) belegt ist oder eine abgebrochene Installation vorliegt."
@@ -809,6 +848,7 @@ main() {
     dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
     dlg_prepare_users            # Erstelle Benutzer und Gruppe 'fotobox'
     dlg_prepare_structure        # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
+    # Logverzeichnis explizit anlegen und Rechte setzen (jetzt in set_structure gekapselt)
     dlg_nginx_installation       # NGINX-Konfiguration (Integration oder eigene Site)
     dlg_backend_integration      # Python-Backend, venv, systemd-Service, Start
     # --- NEU: NGINX-Konfiguration nach Installation ausgeben (Policy-konform, modular) ---

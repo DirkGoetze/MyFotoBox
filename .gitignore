@@ -2,10 +2,14 @@
 .vscode/
 .github/
 .resourcen/
+# Ordner, die von Git ignoriert werden sollen
+# Diese Dateien und Ordner werden nicht versioniert
+backend/tests/
+backend/scripts/tests/
 backend/venv/
 backup/
-backup_strategie.md
-dokumentationsstandard.md
-fotobox2.code-workspace
-backend/tests/
+data/
 frontend/tests/
+# Dateien die von Git ignoriert werden sollen
+# Diese Dateien werden nicht versioniert
+fotobox2.code-workspace
