@@ -1,5 +1,10 @@
 # Ablaufdiagramm für die Installation (install_fotobox.sh)
 
+<!--
+Dieses Diagramm folgt der Policy für Softwarediagramme:
+Siehe policies/softwarediagramm_policy.md
+-->
+
 +-------------------------------------------------------------------------------+
 | Start: Aufruf install_fotobox.sh                                              |
 +-------------------------------------------------------------------------------+
@@ -123,3 +128,4 @@ Legende:
 - Fehlerfälle/Austrittspunkte sind nach rechts ausgelagert und klar erkennbar.
 - Die Reihenfolge entspricht dem Ablauf von install_fotobox.sh.
 - Details zu Systempaketen, Benutzeranlage, Verzeichnisstruktur, Rechte, NGINX und Backend sind jetzt explizit aufgeführt.
+- Diagramm- und Formatvorgaben: Siehe policies/softwarediagramm_policy.md
