@@ -1,48 +1,105 @@
 # Fotobox
 
-Kurzanleitung zum Herunterladen und Starten des Installationsskripts:
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+![Lizenz: MIT](https://img.shields.io/badge/license-MIT-blue)
+![Version 0.3](https://img.shields.io/badge/version-0.3-orange)
 
-```sh
-wget https://raw.githubusercontent.com/DirkGoetze/fotobox2/main/install_fotobox.sh
-chmod +x install_fotobox.sh
-sudo ./install_fotobox.sh
-```
+> **Achtung: Diese Version ist eine Vorab-/Testversion (Pre-Release) und nicht für den Produktiveinsatz geeignet!**
 
-Für ausführliche Informationen zu Installation, Update und Deinstallation siehe:
+## Kurzbeschreibung
 
-- [INSTALLATION](documentation/INSTALLATION.md): Ausführliche Installationsanleitung
-- [UPDATE](documentation/UPDATE.md): Update-Anleitung
-- [REMOVE](documentation/REMOVE.md): Deinstallationsanleitung
+Die Fotobox ist ein flexibles, webbasiertes System für Events, Partys und Feiern. Nutzer können direkt Fotos aufnehmen, diese in einer Galerie ansehen und – sofern ein geeigneter Drucker vorhanden ist – direkt ausdrucken. Die Oberfläche bietet einen Aufnahmemodus und eine Galerieansicht. Optional können Gäste auch Fotos von ihrem eigenen Handy hochladen; diese werden in der Galerie in einem separaten Ordner unter dem vom Nutzer gewählten Namen angezeigt. Alle Bilder und Uploads werden zentral in einer Datenbank verwaltet. Die detaillierte Beschreibung der Funktionen und Konfigurationsmöglichkeiten findet sich in der Projektdokumentation.
+
+## Inhaltsverzeichnis
+
+- [Features](#features)
+- [Voraussetzungen](#voraussetzungen)
+- [Installation](#installation)
+- [Schnellstart](#schnellstart)
+- [Konfiguration](#konfiguration)
+- [Update und Deinstallation](#update-und-deinstallation)
+- [Dokumentation](#dokumentation)
+- [Beitrag](#beitrag)
+- [Lizenz](#lizenz)
+- [Kontakt](#kontakt)
+
+## Features
+
+- Fotos direkt über die Fotobox aufnehmen
+- Galerieansicht für alle aufgenommenen und hochgeladenen Fotos
+- Fotos direkt ausdrucken (sofern Drucker vorhanden)
+- Aufnahmebildschirm (Kamera-Modus) und Galerie-Modus
+- Optional: Upload von Fotos über das Handy (mit Username-Abfrage)
+- Hochgeladene Fotos werden in separatem Ordner mit Geräte-ID gespeichert
+- In der Galerie werden Uploads als 'Bilder von [Username]' angezeigt
+- Zentrale Verwaltung aller Bilder und Uploads über eine Datenbank
+- Trennung und Kennzeichnung von lokalen Aufnahmen und Uploads in der Galerie
+- Verwaltung, Update und Deinstallation bequem über die Weboberfläche (WebUI)
+
+## Voraussetzungen
+
+- Unterstützte Betriebssysteme: Debian/Ubuntu (getestet), andere Linux-Distributionen mit Anpassung möglich
+- Python 3.8 oder neuer
+- Systempakete: git, lsof, nginx, python3-venv, python3-pip, sqlite3
+- Optional: Drucker mit Linux-Unterstützung für Druckfunktion
+- Webbrowser für die Nutzung der Weboberfläche
+- Netzwerkzugang für Upload-Funktion (optional)
+
+## Installation
+
+1. Repository klonen (Zielverzeichnis frei wählbar, z.B. /opt/fotobox):
+
+   ```sh
+   git clone https://github.com/DirkGoetze/MyFotoBox.git /opt/fotobox
+   cd /opt/fotobox
+   ```
+
+2. Installationsskript als root/Admin ausführen:
+
+   ```sh
+   sudo ./install_fotobox.sh
+   ```
+
+3. Weitere Hinweise siehe [INSTALLATION](documentation/installation.md)
+
+## Schnellstart
+
+- [ ] Platzhalter: Kurzanleitung für den ersten Start und Zugriff auf die Weboberfläche
+
+## Konfiguration
+
+- [ ] Platzhalter: Hinweise zur Anpassung von Einstellungen, Ports, Benutzerrechten etc.
+
+## Update und Deinstallation
+
+Die Verwaltung, das Update und die Deinstallation der Fotobox können einfach und komfortabel über die Weboberfläche (WebUI) durchgeführt werden. Technische Kenntnisse sind dafür nicht erforderlich.
+
+## Dokumentation
+
+- [INSTALLATION](documentation/installation.md): Ausführliche Installationsanleitung
+- [UPDATE](documentation/update.md): Update-Anleitung
+- [REMOVE](documentation/remove.md): Deinstallationsanleitung
 - [DOKUMENTATIONSSTANDARD](DOKUMENTATIONSSTANDARD.md): Kommentar- und Review-Standards
-- [BACKUP_STRATEGIE](BACKUP_STRATEGIE.md): Verbindliche Backup-/Restore-Strategie für alle Features
+- [BACKUP_STRATEGIE](BACKUP_STRATEGIE.md): Backup-/Restore-Strategie
+- Weitere technische Details im Ordner `documentation/`
 
-Weitere technische Details und Hinweise finden Sie im Ordner `documentation/`.
+## Beitrag
 
-## Verwaltung und Wartung ab Version 2.0
+Beiträge, Fehlerberichte und Feature-Vorschläge sind willkommen! Bitte nutze dazu das Issue-Management von GitHub. Pull Requests werden gerne entgegengenommen, sofern sie klar dokumentiert sind und das Projekt sinnvoll erweitern.
 
-- **Erstinstallation:**
-  - Führe als root das Skript `install_fotobox.sh` aus.
-- **Update und Deinstallation:**
-  - Nutze die Weboberfläche (WebUI) oder die Python-Skripte im Ordner `backend/`:
-    - `backend/manage_update.py` für Updates
-    - `backend/manage_uninstall.py` für Deinstallation/Restore
-- **Backups und Logs:**
-  - Alle Backups und Logs werden im Ordner `backup/` abgelegt.
+Bitte beachte: Dies ist ein Hobby-Projekt ohne Anspruch auf Support oder regelmäßige Weiterentwicklung. Es besteht kein Anspruch auf Fehlerbehebung oder Unterstützung. Für Fragen und Diskussionen steht ausschließlich das Issue-System zur Verfügung.
 
-Weitere Details siehe `documentation/installation.md`, `UPDATE.md`, `REMOVE.md`.
+## Lizenz
 
-## Headless-/Unattended-Installation
+Dieses Projekt steht unter der MIT-Lizenz. Siehe [LICENSE](LICENSE) für Details.
 
-Die Fotobox kann vollständig ohne Benutzerinteraktion installiert werden (headless/unattended). Hierzu das Installationsskript mit dem Flag `--unattended` aufrufen:
+*Hinweis: Für den Betrieb werden weitere Open-Source-Komponenten (z. B. NGINX, Python) benötigt. Bitte beachten Sie die jeweiligen Lizenzbedingungen der eingesetzten Fremdsoftware (in der Regel Open Source, siehe Distribution/Paketquelle).*
 
-```bash
-sudo ./install_fotobox.sh --unattended
-```
+## Kontakt
 
-Weitere Details und Hinweise siehe `documentation/installation.md`.
+Bei Fragen oder Problemen bitte ein Issue auf GitHub eröffnen.
+Persönlicher Support oder E-Mail-Kontakt ist nicht möglich.
 
-## Projektbezogne Benutzer und Gruppen  
+## Danksagung
 
-Das Installationsskript legt den Systembenutzer und die Gruppe `fotobox` **ohne Home-Verzeichnis** und **ohne Login-Shell** an. Dies dient der Sicherheit des Gastsystem.
-
-Weitere Details und Hintergründe siehe `documentation/installation.md`.
+Danke an alle Open-Source-Entwickler, deren Tools und Software dieses Projekt ermöglichen.

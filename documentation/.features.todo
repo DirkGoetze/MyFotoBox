@@ -1,0 +1,19 @@
+# TODO-Liste: Features und Funktionen für Version 1.0 der Fotobox
+
+- [ ] Nutzer kann Fotos direkt über die Fotobox aufnehmen
+- [ ] Nutzer kann aufgenommene Fotos in einer Galerie ansehen
+- [ ] Möglichkeit, Fotos direkt auszudrucken (sofern Drucker vorhanden und eingerichtet)
+- [ ] Bereitstellung eines Aufnahmebildschirms (Kamera-Modus)
+- [ ] Bereitstellung einer Galerieansicht für alle Fotos
+- [ ] Option: Gäste können Fotos vom eigenen Handy hochladen
+    - [ ] Upload-Maske mit Abfrage eines Usernamens
+    - [ ] Hochgeladene Fotos werden in separatem Ordner mit Geräte-ID gespeichert
+    - [ ] In der Galerie werden diese Fotos als 'Bilder von [Username]' angezeigt
+- [ ] Verwaltung aller Fotos (Aufnahmen und Uploads) über eine zentrale Datenbank
+- [ ] Trennung und Kennzeichnung von lokalen Aufnahmen und Uploads in der Galerie
+- [ ] Ausführliche Dokumentation der einzelnen Funktionen in der Projektdokumentation
+- Verwaltung, Update und Deinstallation über die WebUI (Weboberfläche) möglich
+- Update: Über die WebUI oder das Skript `backend/manage_update.py`
+- Deinstallation: Über die WebUI oder das Skript `backend/manage_uninstall.py`
+- Details siehe [UPDATE](documentation/update.md) und [REMOVE](documentation/remove.md)
+- [ ] Für spätere Versionen: Konkrete Credits für verwendete Open-Source-Bibliotheken und Tools ergänzen (siehe README.md Danksagung).

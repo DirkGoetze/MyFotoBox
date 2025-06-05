@@ -13,3 +13,22 @@
 # [ ] Automatisierte Firewall-Einrichtung und -Verwaltung über backend/scripts/manage_firewall.sh integrieren (Policy-konform)
 # ------------------------------------------------------------------------------
 
+# ------------------------------------------------------------------------------
+# TODO-Liste: Umstellung der Installationslogik auf "Klonen & dann Skript ausführen"
+# (Policy-konform, alle Schritte für die Umstellung der bisherigen Logik)
+# ------------------------------------------------------------------------------
+# 
+# - [x] README.md anpassen: Klare Schritt-für-Schritt-Anleitung für Klonen, Verzeichniswechsel und Ausführen des Installationsskripts als Admin.
+# - [x] Hinweis in README.md: Zielverzeichnis kann frei gewählt werden (z. B. /opt/fotobox, /srv/fotobox, ~/fotobox).
+# - [x] Hinweis in README.md: Nach dem Klonen in das Zielverzeichnis wechseln (cd /opt/fotobox).
+# - [x] Hinweis in README.md: Installationsskript als root/Admin ausführen (z. B. sudo ./install_fotobox.sh).
+# - [ ] install_fotobox.sh anpassen: Prüfung, ob das Skript im Projektverzeichnis ausgeführt wird (Self-Overwrite-Schutz entfernen oder anpassen).
+# - [ ] install_fotobox.sh: Klonen des Repos aus dem Skript entfernen (Projekt ist bereits geklont).
+# - [ ] install_fotobox.sh: Prüfung, ob notwendige Unterverzeichnisse und Dateien vorhanden sind (Fehlerausgabe, falls nicht).
+# - [ ] install_fotobox.sh: Alle weiteren Initialisierungs- und Einrichtungsschritte wie bisher (Systempakete, User, Rechte, Backend, systemd, NGINX).
+# - [ ] Dokumentation (installation.md) anpassen: Neuer Ablauf, keine Klon-Logik mehr im Skript.
+# - [ ] Optional: Hinweis auf Policy und Rechtevergabe nach dem Klonen (z. B. chown, falls als root geklont wurde).
+# - [ ] Optional: Testskript anpassen, falls es die alte Logik prüft.
+# - [ ] Review: Policy-Konformität und Rückgabewerte nach Umstellung prüfen.
+# ------------------------------------------------------------------------------
+
