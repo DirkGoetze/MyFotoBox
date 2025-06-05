@@ -40,7 +40,7 @@ Die Fotobox ist ein flexibles, webbasiertes System für Events, Partys und Feier
 
 - Unterstützte Betriebssysteme: Debian/Ubuntu (getestet), andere Linux-Distributionen mit Anpassung möglich
 - Python 3.8 oder neuer
-- Systempakete: git, lsof, nginx, python3-venv, python3-pip, sqlite3
+- Systempakete: git, lsof, nginx, python3-venv, python3-pip, sqlite3 (Hinweis: Die notwendigen Systempakete werden bei der Installation über das Installationsskript automatisch mit installiert)
 - Optional: Drucker mit Linux-Unterstützung für Druckfunktion
 - Webbrowser für die Nutzung der Weboberfläche
 - Netzwerkzugang für Upload-Funktion (optional)
