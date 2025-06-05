@@ -14,21 +14,6 @@
 
 set -e
 
-# ------------------------------------------------------------------------------
-# TODO: Verbesserungen und Optimierungen für zukünftige Versionen
-# ------------------------------------------------------------------------------
-# [ ] Optionale Firewall-Konfiguration (z.B. ufw) für den gewählten Port
-# [ ] Automatische HTTPS-Konfiguration (Let's Encrypt)
-# [x] Fortschrittsanzeige für lange Operationen (z.B. git clone, pip install)
-# [ ] Optionale E-Mail-Benachrichtigung nach erfolgreicher Installation
-# [ ] Mehrsprachige Installationsausgabe (DE/EN)
-# [ ] Optionale Installation als Docker-Container
-# [ ] Automatische Prüfung der Erreichbarkeit der Weboberfläche nach der 
-#     Installation (z.B. per curl) und Ausgabe einer entsprechenden 
-#     Erfolgsmeldung oder eines Hinweises zur Fehlerbehebung
-# [ ] Automatisierte Firewall-Einrichtung und -Verwaltung über backend/scripts/manage_firewall.sh integrieren (Policy-konform)
-# ------------------------------------------------------------------------------
-
 # ===========================================================================
 # Globale Konstanten (Vorgaben und Defaults für die Installation)
 # ===========================================================================
@@ -404,7 +389,7 @@ set_structure() {
     # ......... 6 = Fehler Daten, 7 = Fehler Rechte
     # Extras...: Gibt bei git-Fehlern eine Warnung aus, setzt aber Struktur/Rechte
     
-    debug_print "set_structure: Starte mit INSTALL_DIR=$INSTALL_DIR, BACKUP_DIR=$BACKUP_DIR, CONF_DIR=$CONF_DIR, DATA_DIR=$DATA_DIR, BASH_DIR=$BASH_DIR"
+    debug_print "set_structure: Starte mit INSTALL_DIR=$INSTALL_DIR"
     if [ ! -d "$INSTALL_DIR" ]; then
         debug_print "set_structure: INSTALL_DIR $INSTALL_DIR existiert nicht, versuche make_dir"
         make_dir "$INSTALL_DIR" || return 1
@@ -426,28 +411,39 @@ set_structure() {
         fi
         print_step "Klone Projekt-Repository ..."
         debug_print "set_structure: Klone $GIT_REPO_URL nach $INSTALL_DIR"
-        (git clone "$GIT_REPO_URL" "$INSTALL_DIR") &> "$INSTALL_DIR/git_clone.log" &
-        show_spinner $!
-        if [ ! -d "$INSTALL_DIR/backend" ]; then
-            debug_print "set_structure: Klonen fehlgeschlagen, backend-Verzeichnis fehlt"
-            print_error "Warnung: Klonen des Projekts per git fehlgeschlagen (evtl. Verzeichnis nicht leer?). Log-Auszug:"
-            tail -n 10 "$INSTALL_DIR/git_clone.log"
+        # Prüfe, ob das Zielverzeichnis leer ist
+        if [ "$(ls -A \"$INSTALL_DIR\")" ]; then
+            debug_print "set_structure: Zielverzeichnis $INSTALL_DIR ist nicht leer. Klonen wird abgebrochen."
+            print_error "Das Zielverzeichnis $INSTALL_DIR ist nicht leer. Das Klonen wird abgebrochen, um Datenverlust zu vermeiden. Bitte leeren Sie das Verzeichnis oder wählen Sie ein anderes Installationsverzeichnis."
+            return 10
+        fi
+        # Klone das Repository und prüfe Rückgabewert
+        git clone "$GIT_REPO_URL" "$INSTALL_DIR" &> "$INSTALL_DIR/git_clone.log"
+        clone_rc=$?
+        if [ $clone_rc -ne 0 ] || [ ! -d "$INSTALL_DIR/backend" ]; then
+            debug_print "set_structure: Klonen fehlgeschlagen, backend-Verzeichnis fehlt oder git clone Fehler ($clone_rc)"
+            print_error "Warnung: Klonen des Projekts per git fehlgeschlagen (Fehlercode $clone_rc). Log-Auszug:"
+            cat "$INSTALL_DIR/git_clone.log"
             clone_failed=1
         fi
     fi
+    debug_print "set_structure: Starte mit BACKUP_DIR=$BACKUP_DIR"
     if ! make_dir "$BACKUP_DIR"; then
         debug_print "set_structure: BACKUP_DIR $BACKUP_DIR konnte nicht angelegt werden"
         return 4
     fi
+    debug_print "set_structure: Starte mit CONF_DIR=$CONF_DIR"
     if ! make_dir "$CONF_DIR"; then
         debug_print "set_structure: CONF_DIR $CONF_DIR konnte nicht angelegt werden"
         return 5
     fi
+    debug_print "set_structure: Starte mit DATA_DIR=$DATA_DIR"
     if ! make_dir "$DATA_DIR"; then
         debug_print "set_structure: DATA_DIR $DATA_DIR konnte nicht angelegt werden"
         return 6
     fi
     # Nach dem Klonen: Ausführbarkeitsrechte für alle Skripte im backend/scripts setzen
+    debug_print "set_structure: Starte mit DATA_DIR=$BASH_DIR"
     if [ -d "$BASH_DIR" ]; then
         debug_print "set_structure: Setze Ausführbarkeitsrechte für $BASH_DIR/*.sh"
         chmod +x "$BASH_DIR"/*.sh

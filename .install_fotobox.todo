@@ -1,0 +1,15 @@
+# ------------------------------------------------------------------------------
+# TODO: Verbesserungen und Optimierungen für zukünftige Versionen
+# ------------------------------------------------------------------------------
+# [ ] Optionale Firewall-Konfiguration (z.B. ufw) für den gewählten Port
+# [ ] Automatische HTTPS-Konfiguration (Let's Encrypt)
+# [x] Fortschrittsanzeige für lange Operationen (z.B. git clone, pip install)
+# [ ] Optionale E-Mail-Benachrichtigung nach erfolgreicher Installation
+# [ ] Mehrsprachige Installationsausgabe (DE/EN)
+# [ ] Optionale Installation als Docker-Container
+# [ ] Automatische Prüfung der Erreichbarkeit der Weboberfläche nach der 
+#     Installation (z.B. per curl) und Ausgabe einer entsprechenden 
+#     Erfolgsmeldung oder eines Hinweises zur Fehlerbehebung
+# [ ] Automatisierte Firewall-Einrichtung und -Verwaltung über backend/scripts/manage_firewall.sh integrieren (Policy-konform)
+# ------------------------------------------------------------------------------
+
