@@ -62,7 +62,7 @@ DATA_DIR="$INSTALL_DIR/data"
 # ---------------------------------------------------------------------------
 # Einstellungen: Debug-Modus
 # ---------------------------------------------------------------------------
-DEBUG_MOD=1
+DEBUG_MOD=0
 
 # ==========================================================================='
 # Hilfsfunktionen
@@ -821,6 +821,17 @@ main() {
     nginx_servername=$(echo "$nginx_status_json" | grep -o '"server_name":"[^"]*"' | cut -d'"' -f4)
     nginx_webroot=$(echo "$nginx_status_json" | grep -o '"webroot_path":"[^"]*"' | cut -d'"' -f4)
     nginx_url=$(echo "$nginx_status_json" | grep -o '"url":"[^"]*"' | cut -d'"' -f4)
+    # Prüfe auf Platzhalter und generiere ggf. alternative URL
+    if [[ "$nginx_servername" == "_" || -z "$nginx_servername" ]]; then
+        # Versuche, die lokale IP zu ermitteln
+        local ipaddr
+        ipaddr=$(hostname -I | awk '{print $1}')
+        if [ -n "$ipaddr" ]; then
+            nginx_url="http://$ipaddr:$nginx_port$nginx_webroot"
+        else
+            nginx_url="http://localhost:$nginx_port$nginx_webroot"
+        fi
+    fi
     log "NGINX-Konfiguration nach Installation: Port=$nginx_port, Bind=$nginx_bind, Servername=$nginx_servername, Webroot=$nginx_webroot, URL=$nginx_url"
     if [ "$UNATTENDED" -eq 1 ]; then
         local logfile

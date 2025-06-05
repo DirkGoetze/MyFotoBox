@@ -215,8 +215,8 @@ print_debug() {
 # Debug-Modus: Lokal und global steuerbar
 # DEBUG_MOD_LOCAL: Nur Debug für dieses Skript (Standard: 0)
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
-DEBUG_MOD_LOCAL="${DEBUG_MOD_LOCAL:-0}"
-DEBUG_MOD_GLOBAL="${DEBUG_MOD_GLOBAL:-0}"
+DEBUG_MOD_LOCAL=0
+DEBUG_MOD_GLOBAL=0
 
 debug() {
     # -----------------------------------------------------------------------

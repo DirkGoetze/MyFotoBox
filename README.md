@@ -52,6 +52,7 @@ Die Fotobox ist ein flexibles, webbasiertes System für Events, Partys und Feier
    ```sh
    git clone https://github.com/DirkGoetze/MyFotoBox.git /opt/fotobox
    cd /opt/fotobox
+   sudo chmod +x install_fotobox.sh   # Installationsskript ausführbar machen
    ```
 
 2. Installationsskript als root/Admin ausführen:
