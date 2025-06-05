@@ -1,0 +1,5 @@
+# TODO-Liste für main.js (Stand: 2025-06-05)
+
+- [ ] Passwortschutz: Die Passwortprüfung ist aktuell clientseitig und unsicher (hardcodiert). Die Prüfung MUSS serverseitig erfolgen (API-Call, Token, etc.).
+- [ ] Implementiere einen sicheren /api/login-Endpunkt im Backend und passe das Frontend entsprechend an.
+- [ ] Entferne alle Klartext-Passwörter und TODO-Kommentare zur Passwortprüfung aus dem Frontend-Code, sobald die sichere Lösung umgesetzt ist.
