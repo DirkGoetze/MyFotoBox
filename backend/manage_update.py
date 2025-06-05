@@ -183,6 +183,23 @@ def migrate_and_init_db():
     subprocess.run(['python3', os.path.join(os.path.dirname(__file__), 'manage_database.py'), 'migrate'])
     subprocess.run(['python3', os.path.join(os.path.dirname(__file__), 'manage_database.py'), 'init'])
 
+def get_local_version():
+    version_file = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'conf', 'version.inf'))
+    try:
+        with open(version_file, 'r') as f:
+            return f.read().strip()
+    except Exception:
+        return None
+
+def get_remote_version():
+    import urllib.request
+    url = 'https://raw.githubusercontent.com/DirkGoetze/MyFotoBox/main/conf/version.inf'
+    try:
+        with urllib.request.urlopen(url, timeout=5) as response:
+            return response.read().decode('utf-8').strip()
+    except Exception:
+        return None
+
 # -------------------------------------------------------------------------------
 # main
 # -------------------------------------------------------------------------------
@@ -190,6 +207,22 @@ def migrate_and_init_db():
 # -------------------------------------------------------------------------------
 def main():
     print('Starte Update der Fotobox ...')
+    local_version = get_local_version()
+    remote_version = get_remote_version()
+    if local_version and remote_version:
+        if local_version == remote_version:
+            print(f'Fotobox ist bereits auf dem neuesten Stand (Version {local_version}).')
+            log(f'Keine Aktualisierung nötig. Lokale Version: {local_version}, Remote-Version: {remote_version}')
+            return
+        else:
+            print(f'Update verfügbar: Lokal {local_version}, Remote {remote_version}. Update wird durchgeführt ...')
+            log(f'Update: Lokal {local_version}, Remote {remote_version}')
+    elif local_version:
+        print(f'Lokale Version: {local_version}. Remote-Version konnte nicht ermittelt werden.')
+    elif remote_version:
+        print(f'Remote-Version: {remote_version}. Lokale Version konnte nicht ermittelt werden.')
+    else:
+        print('Versionsvergleich nicht möglich. Update wird trotzdem durchgeführt.')
     # -------------------------------------------------------------------------------
     # backup_dir_erzeugen
     # -------------------------------------------------------------------------------
