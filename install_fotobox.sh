@@ -892,9 +892,6 @@ main() {
 # Fallback-Definitionen für Logging/Print-Funktionen zentral setzen
 set_fallback_security_settings
 
-# Log-Initialisierung (Rotation) direkt nach Skriptstart
-log
-
 # Logging-Hilfsskript einbinden (zentral für alle Fotobox-Skripte)
 if [ -f "$(dirname "$0")/backend/scripts/log_helper.sh" ]; then
     source "$(dirname "$0")/backend/scripts/log_helper.sh"
@@ -902,6 +899,8 @@ else
     print_warning "Logging-Hilfsskript nicht gefunden! Logging deaktiviert."
 fi
 
+# Log-Initialisierung (Rotation) direkt nach Skriptstart
+log
 log "Installationsskript gestartet: $(date '+%Y-%m-%d %H:%M:%S')"
 
 # Hauptfunktion aufrufen 
