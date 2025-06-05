@@ -10,20 +10,24 @@ Diese Anleitung beschreibt Schritt für Schritt, wie Sie die Fotobox-Software au
 
 ## Vorbereitung
 
-Laden Sie das Installationspaket herunter oder klonen Sie das Repository:
+Klonen Sie das Repository und wechseln Sie ins Projektverzeichnis:
 
 ```bash
 git clone https://github.com/DirkGoetze/fotobox2.git
 cd fotobox2
 ```
 
+**Hinweis:** Das Installationsskript enthält keine Klon-Logik mehr. Sie müssen das Repository vorab selbst klonen und das Skript im Projektverzeichnis ausführen.
+
 ## Installation starten
 
-Führen Sie das Installationsskript als root aus:
+Führen Sie das Installationsskript als root im geklonten Projektverzeichnis aus:
 
 ```bash
-sudo bash fotobox.sh --install
+sudo ./install_fotobox.sh --install
 ```
+
+Das Skript prüft, ob alle notwendigen Unterverzeichnisse und Dateien vorhanden sind. Fehlen wichtige Komponenten (z.B. `backend/`, `backend/scripts/`, `backend/requirements.txt`), bricht das Skript mit einer Fehlermeldung ab.
 
 ## Was passiert bei der Installation?
 
@@ -44,7 +48,7 @@ Das Skript übernimmt folgende Aufgaben (jeder Schritt wird im Terminal erklärt
 ## Beispiel für den Aufruf
 
 ```bash
-sudo bash fotobox.sh --install
+sudo ./install_fotobox.sh --install
 ```
 
 ## Hinweise

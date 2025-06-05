@@ -72,16 +72,15 @@ check_script_location() {
     # -----------------------------------------------------------------------
     # check_script_location
     # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob das Skript im Zielverzeichnis ($INSTALL_DIR) liegt
-    # ......... und bricht mit Fehler ab, falls ja (Self-Overwrite-Schutz 
-    # ......... für git clone)
-    local script_dir
+    # Funktion: Prüft, ob das Skript sich selbst überschreiben würde (Self-Overwrite-Schutz)
+    #           und gibt ggf. eine Warnung aus. Ein Abbruch erfolgt nur noch,
+    #           wenn das Skript direkt überschrieben werden würde.
+    local script_path script_dir
+    script_path="$(readlink -f "$0")"
     script_dir="$(cd "$(dirname "$0")" && pwd)"
-
-    if [ "$script_dir" = "$INSTALL_DIR" ]; then
-        echo "[ERROR] Das Installationsskript darf nicht direkt im Zielverzeichnis ($INSTALL_DIR) ausgeführt werden!"
-        echo "Bitte das Skript z.B. aus dem Home- oder einem temporären Verzeichnis starten."
-        exit 99
+    if [ "$script_path" = "$INSTALL_DIR/install_fotobox.sh" ]; then
+        echo "[WARN] Das Installationsskript liegt im Zielverzeichnis ($INSTALL_DIR) und könnte sich selbst überschreiben."
+        echo "Die Ausführung ist dennoch möglich, da das Repository bereits geklont wurde."
     fi
 }
 
@@ -380,52 +379,18 @@ set_structure() {
     # -----------------------------------------------------------------------
     # set_structure
     # -----------------------------------------------------------------------
-    # Funktion: Erstellt alle benötigten Verzeichnisse, klont das Projekt 
-    # ......... per git (wenn nötig), legt Backup- und Datenverzeichnis an
-    # ......... und setzt die notwendigen Rechte
-    # Rückgabe: 0 = OK, 1 = Fehler Installationsverzeichnis, 
-    # ......... 2 = Fehler git, 10 = git clone fehlgeschlagen (Struktur/Rechte gesetzt),
-    # ......... 4 = Fehler Backup, 5 = Fehler Konfiguration, 
-    # ......... 6 = Fehler Daten, 7 = Fehler Rechte
-    # Extras...: Gibt bei git-Fehlern eine Warnung aus, setzt aber Struktur/Rechte
-    
+    # Funktion: Erstellt alle benötigten Verzeichnisse und prüft, ob die Projektstruktur vorhanden ist.
+    #           Klon-Logik wurde entfernt. Gibt Fehler aus, falls Kernverzeichnisse fehlen.
+    set -e
     debug_print "set_structure: Starte mit INSTALL_DIR=$INSTALL_DIR"
     if [ ! -d "$INSTALL_DIR" ]; then
         debug_print "set_structure: INSTALL_DIR $INSTALL_DIR existiert nicht, versuche make_dir"
         make_dir "$INSTALL_DIR" || return 1
     fi
-    local clone_failed=0
-    if [ ! -d "$INSTALL_DIR/backend" ]; then
-        debug_print "set_structure: Backend-Verzeichnis fehlt, prüfe git"
-        if ! command -v git >/dev/null 2>&1; then
-            debug_print "set_structure: git nicht gefunden, versuche Nachinstallation"
-            print_step "Installiere git ..."
-            (apt-get update -qq && apt-get install -y -qq git) &> "$INSTALL_DIR/apt_git.log" &
-            show_spinner $!
-            if ! command -v git >/dev/null 2>&1; then
-                debug_print "set_structure: git-Installation fehlgeschlagen"
-                print_error "Fehler beim Nachinstallieren von git. Log-Auszug:"
-                tail -n 10 "$INSTALL_DIR/apt_git.log"
-                return 2
-            fi
-        fi
-        print_step "Klone Projekt-Repository ..."
-        debug_print "set_structure: Klone $GIT_REPO_URL nach $INSTALL_DIR"
-        # Prüfe, ob das Zielverzeichnis leer ist
-        if [ "$(ls -A \"$INSTALL_DIR\")" ]; then
-            debug_print "set_structure: Zielverzeichnis $INSTALL_DIR ist nicht leer. Klonen wird abgebrochen."
-            print_error "Das Zielverzeichnis $INSTALL_DIR ist nicht leer. Das Klonen wird abgebrochen, um Datenverlust zu vermeiden. Bitte leeren Sie das Verzeichnis oder wählen Sie ein anderes Installationsverzeichnis."
-            return 10
-        fi
-        # Klone das Repository und prüfe Rückgabewert
-        git clone "$GIT_REPO_URL" "$INSTALL_DIR" &> "$INSTALL_DIR/git_clone.log"
-        clone_rc=$?
-        if [ $clone_rc -ne 0 ] || [ ! -d "$INSTALL_DIR/backend" ]; then
-            debug_print "set_structure: Klonen fehlgeschlagen, backend-Verzeichnis fehlt oder git clone Fehler ($clone_rc)"
-            print_error "Warnung: Klonen des Projekts per git fehlgeschlagen (Fehlercode $clone_rc). Log-Auszug:"
-            cat "$INSTALL_DIR/git_clone.log"
-            clone_failed=1
-        fi
+    # Prüfe, ob das Backend-Verzeichnis und wichtige Dateien existieren
+    if [ ! -d "$INSTALL_DIR/backend" ] || [ ! -d "$INSTALL_DIR/backend/scripts" ] || [ ! -f "$INSTALL_DIR/backend/requirements.txt" ]; then
+        print_error "Fehler: Die Projektstruktur ist unvollständig. Bitte stellen Sie sicher, dass das Repository vollständig geklont wurde (inkl. backend/, backend/scripts/, backend/requirements.txt)."
+        return 10
     fi
     debug_print "set_structure: Starte mit BACKUP_DIR=$BACKUP_DIR"
     if ! make_dir "$BACKUP_DIR"; then
@@ -442,7 +407,6 @@ set_structure() {
         debug_print "set_structure: DATA_DIR $DATA_DIR konnte nicht angelegt werden"
         return 6
     fi
-    # Nach dem Klonen: Ausführbarkeitsrechte für alle Skripte im backend/scripts setzen
     debug_print "set_structure: Starte mit DATA_DIR=$BASH_DIR"
     if [ -d "$BASH_DIR" ]; then
         debug_print "set_structure: Setze Ausführbarkeitsrechte für $BASH_DIR/*.sh"
@@ -452,10 +416,6 @@ set_structure() {
         debug_print "set_structure: chown auf $INSTALL_DIR fehlgeschlagen"
         return 7
     }
-    if [ "$clone_failed" -eq 1 ]; then
-        debug_print "set_structure: clone_failed=1, Rückgabe 10"
-        return 10
-    fi
     debug_print "set_structure: erfolgreich abgeschlossen"
     return 0
 }
