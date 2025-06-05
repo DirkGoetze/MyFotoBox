@@ -193,6 +193,6 @@ _CSS (für größere Block-Kommentare):_
 
 ## Policy: Auslagerung von TODO-Listen
 
-TODO-Listen oder einzelne TODO-Anweisungen für Funktionen in einem Skript sind in eine separate Datei nach dem Schema '[skriptname].todo' im gleichen Verzeichnis wie das dazugehörige Skript auszulagern. Die Zuordnung zu Funktionen ist durch Angabe des Funktionsnamens sicherzustellen.
+TODO-Listen oder einzelne TODO-Anweisungen für Funktionen in einem Skript sind in eine separate, versteckte Datei nach dem Schema '.[skriptname].todo' (z. B. `.manage_nginx.todo`) im gleichen Verzeichnis wie das dazugehörige Skript auszulagern. Die Zuordnung zu Funktionen ist durch Angabe des Funktionsnamens sicherzustellen.
 
 ---
