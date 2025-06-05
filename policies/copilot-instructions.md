@@ -195,4 +195,37 @@ _CSS (für größere Block-Kommentare):_
 
 TODO-Listen oder einzelne TODO-Anweisungen für Funktionen in einem Skript sind in eine separate, versteckte Datei nach dem Schema '.[skriptname].todo' (z. B. `.manage_nginx.todo`) im gleichen Verzeichnis wie das dazugehörige Skript auszulagern. Die Zuordnung zu Funktionen ist durch Angabe des Funktionsnamens sicherzustellen.
 
+## Policy: Rückgabewerte und Fehlercodes
+
+- 0 = OK
+- 1 = Allgemeiner Fehler
+- 2 = Konfigurationsfehler
+- 3 = Backup-Fehler
+- 4 = Reload-Fehler
+- 10+ = Interaktive/sonstige Fehlerfälle
+Die Rückgabewerte sind in allen Funktionskommentaren und der Implementierung konsistent zu verwenden
+
+## Policy: Rückgabewert-Codierung nach Fehler-Schwere
+
+Für alle Skripte und Funktionen im Projekt gilt folgende verbindliche Skala für Rückgabewerte:
+
+| Wert | Bedeutung                                                                 |
+|------|--------------------------------------------------------------------------|
+| 0    | OK (kein Fehler)                                                        |
+| 1    | Kritischer Fehler (System nicht funktionsfähig, Datenverlust, Sicherheit)|
+| 2    | Schwerer Fehler (z.B. Konfigurationsfehler, Dienst nicht startbar)       |
+| 3    | Backup-Fehler (Datenintegrität gefährdet, System läuft weiter)           |
+| 4    | Reload-Fehler (Konfigurationsänderung nicht aktiv, System läuft weiter)  |
+| 5    | Funktionsfehler (Teilfunktion schlägt fehl, Hauptfunktion läuft)         |
+| 6    | Warnung (z.B. veraltete Konfiguration, keine unmittelbare Auswirkung)    |
+| 7    | Nicht-kritischer Fehler (temporäre Störung, Wiederholung möglich)        |
+| 8    | Hinweis/Info (z.B. optionale Funktion nicht verfügbar)                   |
+| 9    | Geringfügige Abweichung (kosmetische Fehler, keine Auswirkung)           |
+| 10+  | Interaktive/Sonderfälle (z.B. Benutzerabbruch, Symlink-Fehler, Sonstiges)|
+
+- Die Rückgabewerte sind in allen Funktionskommentaren und der Implementierung konsistent zu verwenden.
+- Bei neuen Funktionen ist diese Skala strikt einzuhalten.
+- Bei bestehenden Funktionen sind Abweichungen zu dokumentieren und mittelfristig zu beheben.
+- Ziel ist eine eindeutige, priorisierbare Fehlerauswertung und einheitliche Fehlerbehandlung im gesamten Projekt.
+
 ---

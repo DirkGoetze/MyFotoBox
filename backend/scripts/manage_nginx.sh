@@ -12,11 +12,6 @@
 # Policy-Hinweis: Dieses Skript ist ein reines Funktions-/Modulskript und enthält keine main()-Funktion mehr.
 # Die Nutzung als eigenständiges CLI-Programm ist nicht vorgesehen. Die Policy zur main()-Funktion gilt nur für Hauptskripte.
 
-# ===============================================================================
-# TODO-/Checkliste für manage_nginx.sh wurde gemäß Policy ausgelagert.
-# Bitte siehe: backend/scripts/manage_nginx.sh.todo
-# ===============================================================================
-
 # ===========================================================================
 # Funktionstexte (für spätere Mehrsprachigkeit als Konstanten ausgelagert)
 # ===========================================================================
@@ -716,7 +711,7 @@ set_nginx_cnf_internal() {
     # set_nginx_cnf_internal
     # -----------------------------------------------------------------------
     # Funktion: Integriert Fotobox in die Default-Konfiguration von NGINX
-    # Rückgabe: 0 = OK, 1 = Fehler, 2 = Backup-Fehler, 3 = Reload-Fehler
+    # Rückgabe: 0 = OK, 1 = Fehler, 2 = Backup-Fehler, 4 = Reload-Fehler
     local mode="$1"
     local default_conf="/etc/nginx/sites-available/default"
 
@@ -737,7 +732,7 @@ set_nginx_cnf_internal() {
     else
         log_or_json "$mode" "info" "$set_nginx_cnf_internal_txt_0006" 0
     fi
-    chk_nginx_reload "$mode" || { log_or_json "$mode" "error" "NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!" 3; return 3; }
+    chk_nginx_reload "$mode" || { log_or_json "$mode" "error" "NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!" 4; return 4; }
     return 0
 }
 
@@ -746,8 +741,7 @@ set_nginx_cnf_external() {
     # set_nginx_cnf_external
     # -----------------------------------------------------------------------
     # Funktion: Legt eigene Fotobox-Konfiguration an, bindet sie ein 
-    # Rückgabe: 0 = OK, 1 = Fehler, 2 = Backup-Fehler, 
-    # ........  3 = Symlink-Fehler, 4 = Reload-Fehler
+    # Rückgabe: 0 = OK, 1 = Fehler, 2 = Backup-Fehler, 4 = Reload-Fehler, 10 = Symlink-Fehler
     local mode="$1"
     local nginx_dst="/etc/nginx/sites-available/fotobox"
     local conf_src="/opt/fotobox/conf/nginx-fotobox.conf"
@@ -763,9 +757,10 @@ set_nginx_cnf_external() {
     log_or_json "$mode" "success" "$set_nginx_cnf_external_txt_0005" 0
     # Prüfen, ob Symlink existiert, sonst anlegen
     if [ ! -L /etc/nginx/sites-enabled/fotobox ]; then
-        ln -s "$nginx_dst" /etc/nginx/sites-enabled/fotobox || { log_or_json "$mode" "error" "$set_nginx_cnf_external_txt_0006" 3; return 3; }
+        ln -s "$nginx_dst" /etc/nginx/sites-enabled/fotobox || { log_or_json "$mode" "error" "$set_nginx_cnf_external_txt_0006" 10; return 10; }
         log_or_json "$mode" "success" "$set_nginx_cnf_external_txt_0007" 0
     fi
     chk_nginx_reload "$mode" || { log_or_json "$mode" "error" "NGINX-Konfiguration konnte nach externer Integration nicht neu geladen werden!" 4; return 4; }
     return 0
 }
+
