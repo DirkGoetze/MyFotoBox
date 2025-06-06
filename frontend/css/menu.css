@@ -1,0 +1,113 @@
+/* menu.css
+   Enthält alle Styles für das Overlay-Menü und das Hamburger-Menü
+*/
+
+.hamburger {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 2em;
+    height: 2em;
+    cursor: pointer;
+    margin-left: 1em;
+    z-index: 1100;
+}
+.hamburger span {
+    display: block;
+    height: 0.25em;
+    width: 100%;
+    background: #fff;
+    margin: 0.3em 0;
+    border-radius: 2px;
+    transition: 0.3s;
+}
+#headerMenu {
+    display: none;
+    position: fixed;
+    top: 3.2em;
+    right: 0;
+    background: #fff;
+    color: #222;
+    min-width: 180px;
+    box-shadow: 0 2px 16px #2223;
+    border-radius: 0 0 0.7em 0.7em;
+    z-index: 1100;
+    font-size: 1.1em;
+    padding: 0.7em 0.5em;
+}
+#headerMenu a {
+    display: block;
+    color: #222;
+    text-decoration: none;
+    padding: 0.6em 1.2em;
+    border-radius: 0.4em;
+    margin-bottom: 0.2em;
+    transition: background 0.2s;
+}
+#headerMenu a:hover {
+    background: #38d39f22;
+}
+body.dark #headerMenu {
+    background: #222;
+    color: #f4f7fa;
+}
+body.dark #headerMenu a {
+    color: #f4f7fa;
+}
+body.dark #headerMenu a:hover {
+    background: #38d39f44;
+}
+@media (min-width: 901px) {
+    .hamburger {
+        display: none !important;
+    }
+    #headerMenu {
+        display: flex !important;
+        position: static;
+        flex-direction: row;
+        background: none;
+        box-shadow: none;
+        min-width: unset;
+        padding: 0;
+        font-size: 1em;
+        align-items: center;
+        gap: 1.5em;
+    }
+    #headerMenu a {
+        color: #fff;
+        background: none;
+        padding: 0.3em 0.7em;
+        margin-bottom: 0;
+    }
+    #headerMenu a:hover {
+        background: #38d39f44;
+    }
+}
+@media (max-width: 900px) {
+    .hamburger {
+        display: flex;
+    }
+    #headerMenu {
+        display: none;
+        position: fixed;
+        top: 3.2em;
+        right: 0;
+        background: #fff;
+        color: #222;
+        min-width: 180px;
+        box-shadow: 0 2px 16px #2223;
+        border-radius: 0 0 0.7em 0.7em;
+        z-index: 1100;
+        font-size: 1.1em;
+        padding: 0.7em 0.5em;
+        flex-direction: column;
+        gap: 0;
+    }
+    #headerMenu a {
+        color: #222;
+        background: none;
+        padding: 0.6em 1.2em;
+        border-radius: 0.4em;
+        margin-bottom: 0.2em;
+    }
+}

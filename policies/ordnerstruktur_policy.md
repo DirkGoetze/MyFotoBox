@@ -8,5 +8,6 @@ Diese Policy regelt die Ablage und Trennung von Skripttypen und Ressourcen im Pr
 - Die Struktur ist in einer `.folder.info` im jeweiligen Ordner zu dokumentieren.
 - Analoges gilt für das Frontend (z.B. js/, css/, images/ etc.).
 - Änderungen an der Ordnerstruktur müssen diese Policy berücksichtigen und dokumentiert werden.
+- Für Details zur Frontend-Struktur und Trennung siehe policies/frontend_policy.md.
 
 *Siehe auch policies/dokumentationsstandard.md für weitere Details.*

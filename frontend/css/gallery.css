@@ -1,0 +1,92 @@
+/* gallery.css
+   Enthält alle Styles für Galerie- und Aufnahmeansicht (index.html, gallery.html)
+*/
+
+#galleryView { display: none; }
+#galleryPhotos img {
+    max-width: 300px;
+    margin: 0.5em;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px #888;
+}
+#photos img {
+    max-width: 200px;
+    margin: 0.5em;
+}
+#backBtn { margin-top: 1em; }
+#captureView, #galleryView {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.5em 1em;
+    background: rgba(255,255,255,0.95);
+    border-radius: 12px;
+    box-shadow: 0 2px 16px #2222;
+}
+#photos, #galleryPhotos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1em;
+    justify-content: flex-start;
+}
+#photos img, #galleryPhotos img {
+    max-width: 180px;
+    width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px #888;
+}
+@media (max-width: 600px) {
+    #captureView, #galleryView {
+        padding: 0.7em 0.2em;
+        border-radius: 0;
+        box-shadow: none;
+    }
+    #photos img, #galleryPhotos img {
+        max-width: 95vw;
+    }
+}
+.header-title {
+    flex: 1;
+    text-align: center;
+}
+.camera-preview {
+    width: 100%;
+    max-width: 600px;
+    height: 340px;
+    background: #2223;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 1em 0 2em 0;
+    color: #aaa;
+    font-size: 1.2em;
+}
+.take-photo-btn {
+    font-size: 1.5em;
+    padding: 1em 2.5em;
+    display: flex;
+    align-items: center;
+    gap: 0.7em;
+    background: linear-gradient(90deg,#38d39f 0%,#4e9cff 100%);
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px #2223;
+    cursor: pointer;
+    transition: background 0.2s,transform 0.2s;
+}
+.take-photo-btn i {
+    font-size: 1.3em;
+}
+.menu-overlay {
+    display: none;
+    position: fixed;
+    top: 3.2em;
+    right: 0;
+    background: #fff;
+    min-width: 180px;
+    box-shadow: 0 2px 16px #2223;
+    border-radius: 0 0 0.7em 0.7em;
+    z-index: 1100;
+    font-size: 1.1em;
+    padding: 0.7em 0.5em;
+}

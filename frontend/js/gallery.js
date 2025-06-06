@@ -70,3 +70,46 @@ if (document.getElementById('showGallery')) {
     loadPhotos();
     showCaptureView();
 }
+
+// ------------------------------------------------------------------------------
+// gallery.js
+// ------------------------------------------------------------------------------
+// Funktion: Lädt die Galerie-Bilder dynamisch aus dem Backend und baut das DOM
+//           für die Galerieansicht (gallery.html) auf.
+// ------------------------------------------------------------------------------
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Prüfen, ob wir auf der gallery.html sind
+    const galleryDiv = document.getElementById('galleryPhotos');
+    if (!galleryDiv) return;
+
+    // Funktion: Lädt die Bildliste per API und rendert sie in die Galerie
+    async function loadGalleryPhotos() {
+        try {
+            const res = await fetch('/api/gallery');
+            if (!res.ok) throw new Error('Fehler beim Laden der Galerie');
+            const data = await res.json();
+            galleryDiv.innerHTML = '';
+            if (!data.photos || data.photos.length === 0) {
+                galleryDiv.innerHTML = '<div class="gallery-empty">Noch keine Fotos vorhanden.</div>';
+                return;
+            }
+            // Dynamischer DOM-Aufbau
+            data.photos.forEach(photo => {
+                const img = document.createElement('img');
+                img.src = '/photos/gallery/' + photo;
+                img.alt = 'Foto';
+                img.loading = 'lazy';
+                img.className = 'gallery-img';
+                galleryDiv.appendChild(img);
+            });
+        } catch (err) {
+            galleryDiv.innerHTML = '<div class="gallery-error">Fehler beim Laden der Galerie.</div>';
+        }
+    }
+
+    // Initialer Aufruf
+    loadGalleryPhotos();
+
+    // Optional: Später kann hier ein Polling oder WebSocket für Live-Updates ergänzt werden
+});

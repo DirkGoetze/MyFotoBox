@@ -1,57 +1,88 @@
+<!--
+Projektstruktur- und Trennungsregel für Webprojekte (Stand: 2025-06-07)
+
+1. HTML-Dateien (frontend/*.html):
+   - Enthalten ausschließlich die Seitenstruktur und semantisches Markup.
+   - Keine eingebetteten Styles (<style>) oder Skripte (<script>), außer für minimale Initialisierung.
+
+2. CSS-Dateien (frontend/css/*.css):
+   - Enthalten alle Styles, jeweils thematisch oder seitenbezogen getrennt (z.B. splash.css, gallery.css).
+   - Keine Inline-Styles in HTML-Attributen.
+
+3. JavaScript-Dateien (frontend/js/*.js):
+   - Enthalten alle clientseitigen Logiken, Event-Handler und API-Kommunikation.
+   - Pro Seite oder Thema eigene Datei (z.B. main.js, gallery.js, config.js).
+
+4. Bilder & Medien (frontend/picture/, frontend/photos/):
+   - Statische Bilder, Logos, Hintergründe: im Ordner picture/.
+   - Nutzerfotos und Galerie: im Ordner photos/ (ggf. Unterordner wie gallery/).
+
+5. Fonts & Icons (frontend/fonts/):
+   - Externe Schriftarten und Iconsets (z.B. FontAwesome) liegen in fonts/.
+
+6. Dokumentation (documentation/):
+   - Alle Markdown- und Dokumentationsdateien, inkl. Routing- und Strukturübersicht.
+
+7. Policies (policies/):
+   - Projektweite Regeln, Coding-Guidelines und Ausnahmen.
+
+8. Keine Vermischung:
+   - HTML, CSS, JS, Bilder, Fonts und Dokumentation sind strikt in eigenen Ordnern zu halten.
+   - Keine gemischten Inhalte in einem Ordner.
+
+Diese Regel ist verbindlich für alle künftigen Erweiterungen und Refactorings.
+-->
+<!-- Splash Screen für die Fotobox-App -->
 <!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
     <title>Fotobox</title>
     <link rel="stylesheet" href="fonts/fontawesome-free-5.15.4-web/css/all.min.css">
-    <!-- <link rel="stylesheet" href="css/style.css"> //-->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/splash.css">
 </head>
 <body>
-    <!-- ----------------------------------------------------------------------------
-         index.html
-     -----------------------------------------------------------------------------
-     Funktion: Hauptseite der Fotobox-Weboberfläche. Zeigt Startoptionen und Navigation.
-     [Optional: Enthält Verlinkungen zu Aufnahme, Galerie und Einstellungen.]
-     ----------------------------------------------------------------------------- -->
-    <!-- header-block
-    -------------------------------------------------------------------------------
-    # Funktion: Header mit Hamburger-Menü für alle Seiten
-    -------------------------------------------------------------------------------
-    -->
-    <header id="mainHeader">
-        <button class="hamburger" id="hamburgerBtn" tabindex="0" aria-label="Menü öffnen" aria-expanded="false">
-            <i class="fas fa-bars" aria-hidden="true"></i>
-        </button>
-        <span id="headerTitle" style="flex:1;text-align:center;">Fotobox</span>
-        <!-- Das Menü wird als Overlay dargestellt und ist initial ausgeblendet -->
-        <nav id="headerMenu" aria-label="Hauptmenü" style="display:none;position:fixed;top:3.2em;right:0;background:#fff;min-width:180px;box-shadow:0 2px 16px #2223;border-radius:0 0 0.7em 0.7em;z-index:1100;font-size:1.1em;padding:0.7em 0.5em;">
-            <a href="index.html">Aufnahme</a>
-            <a href="gallery.html">Galerie</a>
-            <a href="config.html">Einstellungen</a>
-        </nav>
-    </header>
-    <div id="captureView">
-        <div id="eventName"></div>
-        <div id="cameraPreview" style="width:100%;max-width:600px;height:340px;background:#2223;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:1em 0 2em 0;color:#aaa;font-size:1.2em;">
-            Kamera-Vorschau (Platzhalter)
-        </div>
-        <button id="takePhotoBtn" class="main-btn" style="font-size:1.5em;padding:1em 2.5em;display:flex;align-items:center;gap:0.7em;background:linear-gradient(90deg,#38d39f 0%,#4e9cff 100%);border:none;border-radius:12px;box-shadow:0 2px 8px #2223;cursor:pointer;transition:background 0.2s,transform 0.2s;">
-            <i class="fas fa-camera" aria-hidden="true" style="font-size:1.3em;"></i>
-            <span id="takePhotoBtnText">Foto aufnehmen</span>
-        </button>
+    <div class="splash-overlay" id="splashOverlay">
+        <img src="picture/background.jpg" alt="Fotobox Event" class="splash-image">
+        <div class="splash-title">Willkommen zur Fotobox</div>
+        <div class="progressbar"><div class="progress" id="progressBar"></div></div>
+        <div class="splash-hint">Bitte einen Moment Geduld ...</div>
     </div>
-    <!-- footer-block
-    -------------------------------------------------------------------------------
-    # Funktion: Footer mit Copyright und Event-/Projektnamen für alle Seiten
-    -------------------------------------------------------------------------------
-    -->
-    <footer id="mainFooter">
-        <span id="footerText">© 2025 Fotobox</span>
-    </footer>
-    <script src="js/main.js"></script>
-    <script src="js/gallery.js"></script>
-    <!-- -----------------------------------------------------------------------------
-         TODO-Liste für index.html wurde gemäß Policy ausgelagert.
-         Siehe: .index.todo
-         ----------------------------------------------------------------------------- -->
+    <script>
+    // Splash-Overlay mit Progressbar und Passwort-Check
+    const splashDuration = 8000; // ms
+    const progressBar = document.getElementById('progressBar');
+    let start = Date.now();
+    function animateProgress() {
+        const elapsed = Date.now() - start;
+        const percent = Math.min(100, (elapsed / splashDuration) * 100);
+        progressBar.style.width = percent + '%';
+        if (elapsed < splashDuration) {
+            requestAnimationFrame(animateProgress);
+        }
+    }
+    animateProgress();
+
+    // Simulierte Passwort-Prüfung (hier: API-Call)
+    async function checkPasswordSet() {
+        try {
+            const res = await fetch('/api/settings');
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            return !!data.admin_password;
+        } catch {
+            return false;
+        }
+    }
+    setTimeout(async () => {
+        const isSet = await checkPasswordSet();
+        if (isSet) {
+            window.location.href = 'capture.html';
+        } else {
+            window.location.href = 'install.html';
+        }
+    }, splashDuration);
+    </script>
+</body>
 </html>

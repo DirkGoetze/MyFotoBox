@@ -1,0 +1,32 @@
+/* header.css
+   Enthält alle Styles für den Header inkl. zentriertem Eventnamen und Responsive-Design
+*/
+
+header#mainHeader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    z-index: 1000;
+    background: linear-gradient(90deg, #4e9cff 0%, #38d39f 100%);
+    color: #fff;
+    font-size: 1.5em;
+    font-weight: bold;
+    padding: 0.7em 1.5em 0.7em 1.5em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0;
+    box-sizing: border-box;
+    overflow-x: auto;
+}
+body.dark header#mainHeader {
+    background: linear-gradient(90deg, #222 0%, #444 100%);
+    color: #f4f7fa;
+}
+@media (max-width: 600px) {
+    header#mainHeader {
+        font-size: 1.1em;
+        padding: 0.5em 0.7em;
+    }
+}

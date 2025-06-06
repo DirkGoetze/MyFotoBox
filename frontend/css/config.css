@@ -1,0 +1,78 @@
+/* config.css
+   Enthält alle Styles für die Konfigurationsseite (config.html)
+*/
+
+.settings-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 0.3em;
+    margin-bottom: 1em;
+}
+.settings-table td.label {
+    width: 28%;
+    font-weight: bold;
+    text-align: left;
+    padding-right: 1em;
+    vertical-align: middle;
+}
+.settings-table td {
+    padding: 0.3em 0.2em;
+    vertical-align: middle;
+}
+.settings-table td.desc {
+    width: 38%;
+    color: #666;
+    font-size: 0.97em;
+    text-align: left;
+    padding-left: 1em;
+}
+@media (max-width: 700px) {
+    .settings-table td.label, .settings-table td.desc {
+        display: block;
+        width: 100%;
+        padding: 0.2em 0;
+    }
+    .settings-table tr {
+        display: block;
+        margin-bottom: 1em;
+    }
+    .settings-table td {
+        display: block;
+        width: 100%;
+    }
+}
+form fieldset {
+    margin-bottom: 1.5em;
+}
+#autosaveToast {
+    position: fixed;
+    top: 1.5em;
+    right: 2em;
+    min-width: 220px;
+    max-width: 90vw;
+    z-index: 9999;
+    padding: 1em 2em;
+    border-radius: 8px;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #fff;
+    box-shadow: 0 2px 12px #2225;
+    opacity: 0.97;
+    display: none;
+    transition: opacity 0.3s;
+}
+#autosaveToast.success {
+    background: linear-gradient(90deg, #38d39f 0%, #4e9cff 100%);
+}
+#autosaveToast.error {
+    background: linear-gradient(90deg, #ff4e4e 0%, #ffb938 100%);
+}
+@media (max-width: 600px) {
+    #autosaveToast {
+        right: 0.5em;
+        left: 0.5em;
+        min-width: unset;
+        padding: 0.7em 0.5em;
+        font-size: 1em;
+    }
+}
