@@ -110,16 +110,38 @@ if (document.getElementById('loginForm')) {
         pwOverlay.style.justifyContent = 'center';
         pwOverlay.style.zIndex = '9999';
         pwOverlay.innerHTML = `
-            <form id="pwLoginForm" style="background:#fff;padding:2.5em 2.5em 2em 2.5em;min-width:320px;max-width:90vw;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.25);position:relative;display:flex;flex-direction:column;align-items:center;">
-                <h2 style="margin-top:0;margin-bottom:1.5em;">Einstellungen Login</h2>
-                <label style="width:100%;margin-bottom:1em;font-size:1.1em;">Passwort:<br>
-                    <input type="password" id="adminPasswordOverlay" style="width:100%;padding:0.5em;font-size:1.1em;margin-top:0.5em;border-radius:8px;border:1px solid #bbb;" required autocomplete="current-password">
-                </label>
-                <div style="font-size:0.95em;color:#666;margin-bottom:1em;">Hinweis: Passwort muss mindestens 4 Zeichen lang sein.</div>
-                <button type="submit" style="width:100%;padding:0.7em;font-size:1.1em;border-radius:8px;background:#0078d7;color:#fff;border:none;cursor:pointer;">Login</button>
-                <span id="loginStatusOverlay" style="color:#c00;margin-top:1em;min-height:1.5em;display:block;"></span>
-            </form>`;
+        <form id="pwLoginForm" style="background:#fff;padding:2.5em 2.5em 2em 2.5em;min-width:320px;max-width:90vw;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.25);position:relative;display:flex;flex-direction:column;align-items:center;">
+            <h2 style="margin-top:0;margin-bottom:1.5em;">Einstellungen Login</h2>
+            <label style="width:100%;margin-bottom:1em;font-size:1.1em;">Passwort:<br>
+                <input type="password" id="adminPasswordOverlay" style="width:100%;padding:0.5em;font-size:1.1em;margin-top:0.5em;border-radius:8px;border:1px solid #bbb;" required autocomplete="current-password">
+            </label>
+            <div style="font-size:0.95em;color:#666;margin-bottom:1em;">Hinweis: Passwort muss mindestens 4 Zeichen lang sein.</div>
+            <div style="display:flex;gap:1em;width:100%;justify-content:space-between;">
+                <button type="submit" style="flex:1;padding:0.7em;font-size:1.1em;border-radius:8px;background:#0078d7;color:#fff;border:none;cursor:pointer;">Login</button>
+                <button type="button" id="pwLoginCancelBtn" style="flex:1;padding:0.7em;font-size:1.1em;border-radius:8px;background:#aaa;color:#222;border:none;cursor:pointer;">Abbrechen</button>
+            </div>
+            <span id="loginStatusOverlay" style="color:#c00;margin-top:1em;min-height:1.5em;display:block;"></span>
+        </form>`;
         document.body.appendChild(pwOverlay);
+        // Schließen bei Klick außerhalb des Formulars
+        pwOverlay.addEventListener('mousedown', function(e) {
+            if (e.target === pwOverlay) {
+                pwOverlay.style.display = 'none';
+                document.getElementById('loginForm').style.display = '';
+            }
+        });
+        // Schließen mit ESC
+        document.addEventListener('keydown', function escHandler(e) {
+            if (pwOverlay.style.display !== 'none' && e.key === 'Escape') {
+                pwOverlay.style.display = 'none';
+                document.getElementById('loginForm').style.display = '';
+            }
+        });
+        // Abbrechen-Button
+        document.getElementById('pwLoginCancelBtn').onclick = function() {
+            pwOverlay.style.display = 'none';
+            document.getElementById('loginForm').style.display = '';
+        };
     } else {
         pwOverlay.style.display = 'flex';
     }
