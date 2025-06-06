@@ -92,20 +92,54 @@ if (document.getElementById('showGallery')) {
 
 // config.html Funktionen
 if (document.getElementById('loginForm')) {
-    // Passwortschutz
-    const ADMIN_PASS = 'fotobox2025'; // TODO: Sicher speichern!
-    document.getElementById('loginForm').onsubmit = function(e) {
+    // Overlay für Passwort-Login erzeugen
+    let pwOverlay = document.getElementById('pwLoginOverlay');
+    if (!pwOverlay) {
+        pwOverlay = document.createElement('div');
+        pwOverlay.id = 'pwLoginOverlay';
+        pwOverlay.style.position = 'fixed';
+        pwOverlay.style.top = '0';
+        pwOverlay.style.left = '0';
+        pwOverlay.style.width = '100vw';
+        pwOverlay.style.height = '100vh';
+        pwOverlay.style.background = 'rgba(0,0,0,0.5)';
+        pwOverlay.style.display = 'flex';
+        pwOverlay.style.alignItems = 'center';
+        pwOverlay.style.justifyContent = 'center';
+        pwOverlay.style.zIndex = '9999';
+        pwOverlay.innerHTML = `
+            <form id="pwLoginForm" style="background:#fff;padding:2.5em 2.5em 2em 2.5em;min-width:320px;max-width:90vw;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.25);position:relative;display:flex;flex-direction:column;align-items:center;">
+                <h2 style="margin-top:0;margin-bottom:1.5em;">Einstellungen Login</h2>
+                <label style="width:100%;margin-bottom:1em;font-size:1.1em;">Passwort:<br>
+                    <input type="password" id="adminPasswordOverlay" style="width:100%;padding:0.5em;font-size:1.1em;margin-top:0.5em;border-radius:8px;border:1px solid #bbb;" required autocomplete="current-password">
+                </label>
+                <button type="submit" style="width:100%;padding:0.7em;font-size:1.1em;border-radius:8px;background:#0078d7;color:#fff;border:none;cursor:pointer;">Login</button>
+                <span id="loginStatusOverlay" style="color:#c00;margin-top:1em;min-height:1.5em;display:block;"></span>
+            </form>`;
+        document.body.appendChild(pwOverlay);
+    } else {
+        pwOverlay.style.display = 'flex';
+    }
+    // Altes Formular ausblenden
+    document.getElementById('loginForm').style.display = 'none';
+    // Overlay-Login-Logik
+    document.getElementById('pwLoginForm').onsubmit = function(e) {
         e.preventDefault();
-        if(document.getElementById('adminPassword').value === ADMIN_PASS) {
-            document.getElementById('loginForm').style.display = 'none';
+        const pw = document.getElementById('adminPasswordOverlay').value;
+        if(pw === ADMIN_PASS) {
+            pwOverlay.style.display = 'none';
             document.getElementById('configForm').style.display = '';
             document.getElementById('updateForm').style.display = '';
             loadConfigFromServer();
-            loadNginxConfig(); // NGINX-Konfiguration nach Login laden
+            loadNginxConfig();
         } else {
-            document.getElementById('loginStatus').textContent = 'Falsches Passwort!';
+            document.getElementById('loginStatusOverlay').textContent = 'Falsches Passwort!';
         }
     };
+    // Fokus auf Passwortfeld setzen
+    setTimeout(()=>{
+        document.getElementById('adminPasswordOverlay').focus();
+    }, 100);
     // Einstellungen vom Server laden (angepasst für Auflösung)
     function loadConfigFromServer() {
         fetch('/api/settings').then(r=>r.json()).then(config => {
