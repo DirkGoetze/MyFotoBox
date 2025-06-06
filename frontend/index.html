@@ -22,8 +22,9 @@
         <button class="hamburger" id="hamburgerBtn" tabindex="0" aria-label="Menü öffnen" aria-expanded="false">
             <i class="fas fa-bars" aria-hidden="true"></i>
         </button>
-        <span id="headerTitle">Fotobox</span>
-        <nav id="headerMenu" aria-label="Hauptmenü">
+        <span id="headerTitle" style="flex:1;text-align:center;">Fotobox</span>
+        <!-- Das Menü wird als Overlay dargestellt und ist initial ausgeblendet -->
+        <nav id="headerMenu" aria-label="Hauptmenü" style="display:none;position:fixed;top:3.2em;right:0;background:#fff;min-width:180px;box-shadow:0 2px 16px #2223;border-radius:0 0 0.7em 0.7em;z-index:1100;font-size:1.1em;padding:0.7em 0.5em;">
             <a href="index.html">Aufnahme</a>
             <a href="gallery.html">Galerie</a>
             <a href="config.html">Einstellungen</a>
@@ -48,6 +49,7 @@
         <span id="footerText">© 2025 Fotobox</span>
     </footer>
     <script src="js/main.js"></script>
+    <script src="js/gallery.js"></script>
     <!-- -----------------------------------------------------------------------------
          TODO-Liste für index.html wurde gemäß Policy ausgelagert.
          Siehe: .index.todo
