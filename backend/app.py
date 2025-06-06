@@ -76,7 +76,7 @@ def check_first_run():
 @app.route('/')
 def root():
     if check_first_run():
-        return redirect(url_for('config'))
+        return redirect('/setup.html')
     return send_from_directory('../frontend', 'index.html')
 
 # -------------------------------------------------------------------------------
@@ -107,6 +107,8 @@ def logout():
 @app.route('/config')
 @login_required
 def config():
+    if check_first_run():
+        return redirect('/setup.html')
     return render_template_string('<h2>Fotobox Konfiguration</h2>\n    <a href="/logout">Logout</a>')
 
 # -------------------------------------------------------------------------------
