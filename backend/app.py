@@ -2,6 +2,7 @@ import sqlite3
 from flask import Flask, request, jsonify, session, redirect, url_for, render_template_string, send_from_directory
 import os
 import subprocess
+import bcrypt
 
 # -------------------------------------------------------------------------------
 # DB_PATH und Datenverzeichnis sicherstellen
@@ -17,13 +18,9 @@ app.secret_key = os.environ.get('FOTOBOX_SECRET_KEY', 'fotobox_default_secret')
 subprocess.run(['python3', os.path.join(os.path.dirname(__file__), 'manage_database.py'), 'init'])
 
 # -------------------------------------------------------------------------------
-# check_password
-# -------------------------------------------------------------------------------
-# Funktion: Prüft das eingegebene Passwort gegen den gespeicherten SHA256-Hash
-# Rückgabe: True/False
+# check_password (bcrypt)
 # -------------------------------------------------------------------------------
 def check_password(pw):
-    import sqlite3, hashlib
     con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
     cur.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
@@ -33,7 +30,10 @@ def check_password(pw):
     if not row:
         return False
     hashval = row[0]
-    return hashlib.sha256(pw.encode()).hexdigest() == hashval
+    try:
+        return bcrypt.checkpw(pw.encode(), hashval.encode())
+    except Exception:
+        return False
 
 # -------------------------------------------------------------------------------
 # login_required
@@ -110,6 +110,19 @@ def config():
     return render_template_string('<h2>Fotobox Konfiguration</h2>\n    <a href="/logout">Logout</a>')
 
 # -------------------------------------------------------------------------------
+# /api/login (POST)
+# -------------------------------------------------------------------------------
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    data = request.get_json(force=True)
+    pw = data.get('password', '')
+    if check_password(pw):
+        session['logged_in'] = True
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False}), 401
+
+# -------------------------------------------------------------------------------
 # /api/settings (GET, POST)
 # -------------------------------------------------------------------------------
 @app.route('/api/settings', methods=['GET', 'POST'])
@@ -122,6 +135,10 @@ def api_settings():
         for key in ['camera_mode', 'resolution_width', 'resolution_height', 'storage_path', 'event_name', 'show_splash', 'photo_timer']:
             if key in data:
                 cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, str(data[key])))
+        # Admin-Passwort setzen/ändern
+        if 'admin_password' in data and data['admin_password'] and len(data['admin_password']) >= 4:
+            hashval = bcrypt.hashpw(data['admin_password'].encode(), bcrypt.gensalt()).decode()
+            cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", ('config_password', hashval))
         db.commit()
         db.close()
         return jsonify({'status': 'ok'})

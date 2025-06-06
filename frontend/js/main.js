@@ -6,6 +6,8 @@
 // [Optional: Event-Handler, AJAX, DOM-Manipulation.]
 // ------------------------------------------------------------------------------
 
+// Globale Konstante für das Admin-Passwort (nur Demo, produktiv serverseitig prüfen!)
+// const ADMIN_PASS = 'fotobox2025'; // ENTFERNT, jetzt serverseitig
 // ------------------------------------------------------------------------------
 // Funktionsblock: Galerie- und Aufnahmeansicht (index.html)
 // ------------------------------------------------------------------------------
@@ -113,6 +115,7 @@ if (document.getElementById('loginForm')) {
                 <label style="width:100%;margin-bottom:1em;font-size:1.1em;">Passwort:<br>
                     <input type="password" id="adminPasswordOverlay" style="width:100%;padding:0.5em;font-size:1.1em;margin-top:0.5em;border-radius:8px;border:1px solid #bbb;" required autocomplete="current-password">
                 </label>
+                <div style="font-size:0.95em;color:#666;margin-bottom:1em;">Hinweis: Passwort muss mindestens 4 Zeichen lang sein.</div>
                 <button type="submit" style="width:100%;padding:0.7em;font-size:1.1em;border-radius:8px;background:#0078d7;color:#fff;border:none;cursor:pointer;">Login</button>
                 <span id="loginStatusOverlay" style="color:#c00;margin-top:1em;min-height:1.5em;display:block;"></span>
             </form>`;
@@ -123,17 +126,32 @@ if (document.getElementById('loginForm')) {
     // Altes Formular ausblenden
     document.getElementById('loginForm').style.display = 'none';
     // Overlay-Login-Logik
-    document.getElementById('pwLoginForm').onsubmit = function(e) {
+    document.getElementById('pwLoginForm').onsubmit = async function(e) {
         e.preventDefault();
         const pw = document.getElementById('adminPasswordOverlay').value;
-        if(pw === ADMIN_PASS) {
-            pwOverlay.style.display = 'none';
-            document.getElementById('configForm').style.display = '';
-            document.getElementById('updateForm').style.display = '';
-            loadConfigFromServer();
-            loadNginxConfig();
+        if(pw.length < 4) {
+            document.getElementById('loginStatusOverlay').textContent = 'Passwort zu kurz! (mind. 4 Zeichen)';
+            return;
+        }
+        // Passwort per API prüfen
+        const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: pw })
+        });
+        if(res.ok) {
+            const data = await res.json();
+            if(data.success) {
+                pwOverlay.style.display = 'none';
+                document.getElementById('configForm').style.display = '';
+                document.getElementById('updateForm').style.display = '';
+                loadConfigFromServer();
+                loadNginxConfig();
+            } else {
+                document.getElementById('loginStatusOverlay').textContent = 'Falsches Passwort!';
+            }
         } else {
-            document.getElementById('loginStatusOverlay').textContent = 'Falsches Passwort!';
+            document.getElementById('loginStatusOverlay').textContent = 'Fehler bei der Anmeldung!';
         }
     };
     // Fokus auf Passwortfeld setzen
@@ -150,9 +168,11 @@ if (document.getElementById('loginForm')) {
             if(config.event_name) document.getElementById('event_name').value = config.event_name;
             if(config.gallery_timeout_ms) document.getElementById('gallery_timeout').value = Math.round(config.gallery_timeout_ms/1000);
             if(config.photo_timer) document.getElementById('photo_timer').value = config.photo_timer;
+            // Admin-Passwortfeld leeren
+            if(document.getElementById('admin_password')) document.getElementById('admin_password').value = '';
         });
     }
-    // Einstellungen speichern
+    // Einstellungen speichern (inkl. Passwort)
     document.getElementById('configForm').onsubmit = function(e) {
         e.preventDefault();
         const config = {
@@ -163,6 +183,14 @@ if (document.getElementById('loginForm')) {
             event_name: document.getElementById('event_name').value,
             gallery_timeout_ms: parseInt(document.getElementById('gallery_timeout').value,10)*1000||60000
         };
+        // Admin-Passwort setzen/ändern, wenn Feld ausgefüllt
+        const newPass = document.getElementById('admin_password')?.value;
+        if(newPass && newPass.length >= 4) config.admin_password = newPass;
+        if(newPass && newPass.length > 0 && newPass.length < 4) {
+            document.getElementById('status').textContent = 'Passwort zu kurz! (mind. 4 Zeichen)';
+            setTimeout(()=>document.getElementById('status').textContent='', 2500);
+            return;
+        }
         fetch('/api/settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -170,6 +198,7 @@ if (document.getElementById('loginForm')) {
         }).then(()=>{
             document.getElementById('status').textContent = 'Gespeichert!';
             setTimeout(()=>document.getElementById('status').textContent='', 1500);
+            if(newPass) document.getElementById('admin_password').value = '';
         });
     };
     // Update/Backup auslösen

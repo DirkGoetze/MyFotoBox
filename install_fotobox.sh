@@ -821,7 +821,7 @@ dlg_backend_integration() {
         tail -n 10 "$LOG_DIR/pip_upgrade.log"
         exit 1
     fi
-    print_step "Installiere Python-Abhängigkeiten ..."
+    print_step "Installiere Python-Abhängigkeiten ... (inkl. bcrypt für sichere Passwörter)"
     ("$INSTALL_DIR/backend/venv/bin/pip" install -r "$INSTALL_DIR/backend/requirements.txt") &> "$LOG_DIR/pip_requirements.log" &
     show_spinner $!
     if [ $? -ne 0 ]; then
