@@ -153,35 +153,10 @@ if (document.getElementById('loginForm')) {
     };
     // Nach erfolgreichem Login: NGINX-Konfiguration laden und anzeigen
     function loadNginxConfig() {
-        // Overlay-Box erzeugen, falls nicht vorhanden
-        let overlay = document.getElementById('nginxConfigOverlay');
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.id = 'nginxConfigOverlay';
-            overlay.style.position = 'fixed';
-            overlay.style.top = '0';
-            overlay.style.left = '0';
-            overlay.style.width = '100vw';
-            overlay.style.height = '100vh';
-            overlay.style.background = 'rgba(0,0,0,0.5)';
-            overlay.style.display = 'flex';
-            overlay.style.alignItems = 'center';
-            overlay.style.justifyContent = 'center';
-            overlay.style.zIndex = '9999';
-            overlay.innerHTML = `
-                <div id="nginxConfigFloatingBox" style="background:#fff;padding:2em 2.5em;min-width:320px;max-width:90vw;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.25);position:relative;">
-                    <button id="closeNginxConfigOverlay" style="position:absolute;top:0.5em;right:0.5em;background:none;border:none;font-size:1.5em;cursor:pointer;line-height:1;color:#888;">&times;</button>
-                    <h2 style="margin-top:0">Webserver-Konfiguration (NGINX)</h2>
-                    <div id="nginxConfigInfo" style="font-size:1em;color:#333;padding:0.5em 0;"></div>
-                </div>`;
-            document.body.appendChild(overlay);
-            document.getElementById('closeNginxConfigOverlay').onclick = function() {
-                overlay.style.display = 'none';
-            };
-        } else {
-            overlay.style.display = 'flex';
-        }
+        const section = document.getElementById('nginxConfigSection');
         const info = document.getElementById('nginxConfigInfo');
+        if(!section || !info) return;
+        section.style.display = 'block';
         info.textContent = 'Lade Webserver-Konfiguration ...';
         fetch('/api/nginx_status')
             .then(r => r.json())
