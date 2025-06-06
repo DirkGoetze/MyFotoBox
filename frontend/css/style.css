@@ -477,7 +477,6 @@ body {
 body.dark #headerMenu {
     background: #222;
     color: #f4f7fa;
-    box-shadow: 0 2px 16px #0008;
 }
 body.dark #headerMenu a {
     color: #f4f7fa;
