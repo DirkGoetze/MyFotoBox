@@ -29,21 +29,30 @@
         <span id="headerTitle" class="header-title">Fotobox</span>
         <!-- Das Menü wird als Overlay dargestellt und ist initial ausgeblendet -->
         <nav id="headerMenu" aria-label="Hauptmenü" class="menu-overlay">
-            <a href="capture.html">Aufnahme</a>
             <a href="gallery.html">Galerie</a>
+            <a href="contact.html">Kontakt</a>
             <a href="settings.html">Einstellungen</a>
         </nav>
-    </header>
-    <div id="captureView">
-        <div id="eventName"></div>
-        <div id="cameraPreview" class="camera-preview">
-            Kamera-Vorschau (Platzhalter)
+        <div class="header-date-time">
+            <span id="headerDate"></span><br>
+            <span id="headerTime"></span>
         </div>
-        <button id="takePhotoBtn" class="main-btn take-photo-btn">
-            <i class="fas fa-camera" aria-hidden="true"></i>
-            <span id="takePhotoBtnText">Foto aufnehmen</span>
-        </button>
-    </div>
+    </header>
+    <main>
+        <nav class="breadcrumb">
+            <span class="breadcrumb-home"><a href="capture.html"><i class="fas fa-home"></i></a></span> 
+        </nav>
+        <div id="captureView">
+            <div id="eventName"></div>
+            <div id="cameraPreview" class="camera-preview">
+                Kamera-Vorschau (Platzhalter)
+            </div>
+            <button id="takePhotoBtn" class="main-btn take-photo-btn">
+                <i class="fas fa-camera" aria-hidden="true"></i>
+                <span id="takePhotoBtnText">Foto aufnehmen</span>
+            </button>
+        </div>
+    </main>
     <!-- footer-block
     -------------------------------------------------------------------------------
     # Funktion: Footer mit Copyright und Event-/Projektnamen für alle Seiten
@@ -53,9 +62,5 @@
         <span id="footerText">© 2025 Fotobox</span>
     </footer>
     <script src="js/main.js"></script>
-    <script src="js/gallery.js"></script>
-    <!-- -----------------------------------------------------------------------------
-         TODO-Liste für index.html wurde gemäß Policy ausgelagert.
-         Siehe: .index.todo
-         ----------------------------------------------------------------------------- -->
+</body>
 </html>

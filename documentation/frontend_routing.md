@@ -47,3 +47,17 @@ Policies und Dokumentation sind aktuell und werden als Referenz genutzt.
 ** 5. Nächster Schritt
 
 Die eigentliche Implementierung des Routingprozesses (z.B. Splash-Logik, Weiterleitungen, Backend-Anpassungen) kann jetzt auf Basis dieser Struktur und Policies erfolgen.
+
+## Zusammenfassungen der Design Regeln für die Menüführung und den allgemeine Aufbau der Seiten
+
+- Alle Seiten haben einen Header und einen Footer. 
+
+-- Der Header zeigt den Eventtitel wie in der Datenbank hinterlegt zenrtiert an. Wurde noch kein Eventtitel vergeben, ist die Projektbezeichnung als Fallback zu verwenden.
+-- Das Menü ist an der linken Seite des Header anzuordnen. Es besteht in der Standard Ansicht nur aus dem Hamburger Icon. Wird das Menü durch anklicken des Hamburger geöffnet,
+   wird ein Overlay mit allen erreichbaren Seiten (capture.html, gallery.html, contact.html und settings.html) angezeigt. Diese sind untereinander angeordnet. Die aktuelle Seite ist nicht im Menü enthalten oder wird durch eine andere Darstellung kenntlich gemacht. Hier wäre die Praxis vorzuziehen, die am weitesten verbreitet ist. Die Seite 'install.html' ist nicht über die Menü Struktur zu erreichen.
+-- Rechts im Header wird das Datum im Format "dd.mm.yyyy" und darunter die Uhrzeit im Format "hh:mm" angezeigt.
+-- Der Footer ist am unteren Bildrand fixiert. Er zeigt nur den Projektnamen und den Copyright Hinweis, so wie schon implementiert.
+-- Im Content Bereich wird auf allen Seiten die nicht HOME sind, ein Breadcrumb Menü angezeigt, das interaktiv sein sollte und einen schnellen Wechsel zu HOME Seite ermöglicht. 
+   Dieser Link ist durch ein Haussymbol anzuzeigen, währen alle anderen Seitennamen / Routen durch ' > Seite' angezeigt werden sollten. Das Breadcrumb Menü sollte sich durch Hinterlegung in einer anderen Farbe oder eine Varianz der Hintergrundfarbe der Seite vom Rest abheben.
+-- Alle HTML Elemente sollten einer durchgehenden Farbgebung folgen und Varianten für Light und Darkmodus habe.
+-- Es ist auf Barriere Freiheit zu achten. Insbesonder bei der Lesbarkeit.

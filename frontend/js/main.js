@@ -412,3 +412,39 @@ document.addEventListener('DOMContentLoaded', function() {
         handleFooterVisibility();
     }
 });
+
+// Globale Initialisierung für Header: Datum/Uhrzeit, Eventtitel, Menü-Hervorhebung
+(function() {
+    // Datum und Uhrzeit
+    function updateDateTime() {
+        const dateEl = document.getElementById('headerDate');
+        const timeEl = document.getElementById('headerTime');
+        if (!dateEl || !timeEl) return;
+        const now = new Date();
+        dateEl.textContent = now.toLocaleDateString('de-DE');
+        timeEl.textContent = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    }
+    setInterval(updateDateTime, 1000);
+    updateDateTime();
+
+    // Eventtitel dynamisch setzen
+    const headerTitle = document.getElementById('headerTitle');
+    if (headerTitle) {
+        fetch('/api/settings').then(r => r.json()).then(data => {
+            headerTitle.textContent = data.event_title || 'Fotobox';
+        }).catch(() => {
+            headerTitle.textContent = 'Fotobox';
+        });
+    }
+
+    // Aktuelle Seite im Menü hervorheben
+    const menuLinks = document.querySelectorAll('#headerMenu a');
+    if (menuLinks.length) {
+        const current = window.location.pathname.split('/').pop() || 'capture.html';
+        menuLinks.forEach(link => {
+            if (link.getAttribute('href') === current) {
+                link.classList.add('active');
+            }
+        });
+    }
+})();

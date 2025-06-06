@@ -16,39 +16,33 @@
     <link rel="stylesheet" href="css/gallery.css">
 </head>
 <body>
-    <!-- header-block
-    -------------------------------------------------------------------------------
-    # Funktion: Header mit Projektnamen für Galerieansicht
-    -------------------------------------------------------------------------------
-    -->
     <header id="mainHeader">
         <button class="hamburger" id="hamburgerBtn" tabindex="0" aria-label="Menü öffnen" aria-expanded="false">
             <i class="fas fa-bars" aria-hidden="true"></i>
         </button>
         <span id="headerTitle">Fotobox</span>
-        <nav id="headerMenu" aria-label="Hauptmenü">
+        <nav id="headerMenu" aria-label="Hauptmenü" class="menu-overlay">
             <a href="capture.html">Aufnahme</a>
-            <a href="gallery.html">Galerie</a>
+            <a href="contact.html">Kontakt</a>
             <a href="settings.html">Einstellungen</a>
         </nav>
+        <div class="header-date-time">
+            <span id="headerDate"></span><br>
+            <span id="headerTime"></span>
+        </div>
     </header>
-    <!-- Brotkrumen-Navigation unter dem Header -->
-    <nav class="breadcrumb">
-        <a href="capture.html">Home</a> &gt; <span>Galerie</span>
-    </nav>
-    <div id="galleryView">
-        <h1>Galerie</h1>
-        <div id="galleryPhotos"></div>
-    </div>
-    <!-- footer-block
-    -------------------------------------------------------------------------------
-    # Funktion: Footer mit Copyright und Projektnamen für alle Seiten
-    -------------------------------------------------------------------------------
-    -->
+    <main>
+        <nav class="breadcrumb">
+            <a href="capture.html"><i class="fas fa-home"></i></a> &gt; <span>Galerie</span>
+        </nav>
+        <div id="galleryView">
+            <h1>Galerie</h1>
+            <div id="galleryPhotos"></div>
+        </div>
+    </main>
     <footer id="mainFooter">
         <span id="footerText">© 2025 Fotobox</span>
     </footer>
     <script src="js/main.js"></script>
-    <script src="js/gallery.js"></script>
 </body>
 </html>

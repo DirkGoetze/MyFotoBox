@@ -2,13 +2,12 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Fotobox Einstellungen</title>
+    <title>Kontakt | Fotobox</title>
     <link rel="stylesheet" href="fonts/fontawesome-free-5.15.4-web/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/header.css">
     <link rel="stylesheet" href="css/footer.css">
     <link rel="stylesheet" href="css/menu.css">
-    <link rel="stylesheet" href="css/config.css">
 </head>
 <body>
     <header id="mainHeader">
@@ -20,6 +19,7 @@
             <a href="capture.html">Aufnahme</a>
             <a href="gallery.html">Galerie</a>
             <a href="contact.html">Kontakt</a>
+            <a href="settings.html">Einstellungen</a>
         </nav>
         <div class="header-date-time">
             <span id="headerDate"></span><br>
@@ -28,31 +28,14 @@
     </header>
     <main>
         <nav class="breadcrumb">
-            <a href="capture.html"><i class="fas fa-home"></i></a> &gt; <span>Einstellungen</span>
+            <a href="capture.html"><i class="fas fa-home"></i></a> &gt; <span>Kontakt</span>
         </nav>
-        <form id="loginForm" style="margin-bottom:2em;">
-            <label>Passwort für Einstellungen:
-                <input type="password" id="adminPassword" required>
-            </label>
-            <button type="submit">Login</button>
-            <span id="loginStatus"></span>
-        </form>
-        <form id="configForm" style="display:none;">
-            <fieldset>
-                <legend>Anzeige</legend>
-                <table class="settings-table">
-                    <tr>
-                        <td class="label">Farbschema</td>
-                        <td><select name="color_mode" id="color_mode">
-                            <option value="auto">Automatisch (nach Tageszeit)</option>
-                            <option value="light">Hell</option>
-                            <option value="dark">Dunkel</option>
-                        </select></td>
-                    </tr>
-                </table>
-            </fieldset>
-            <!-- ...weitere Einstellungen... -->
-        </form>
+        <h1>Kontakt</h1>
+        <p>Hier können Sie Kontakt aufnehmen oder erfahren, wie Sie Ihre Fotos erhalten.</p>
+        <ul>
+            <li>E-Mail: <a href="mailto:info@fotobox.de">info@fotobox.de</a></li>
+            <li>Telefon: 01234 / 567890</li>
+        </ul>
     </main>
     <footer id="mainFooter">
         <span id="footerText">© 2025 Fotobox</span>
