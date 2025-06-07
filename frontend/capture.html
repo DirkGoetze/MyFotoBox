@@ -26,12 +26,10 @@
         <button class="hamburger" id="hamburgerBtn" tabindex="0" aria-label="Menü öffnen" aria-expanded="false">
             <i class="fas fa-bars" aria-hidden="true"></i>
         </button>
-        <span id="headerTitle" class="header-title">Fotobox</span>
+        <a id="headerTitleLink" href="capture.html"><span id="headerTitle" class="header-title">Fotobox</span></a>
         <!-- Das Menü wird als Overlay dargestellt und ist initial ausgeblendet -->
         <nav id="headerMenu" aria-label="Hauptmenü" class="menu-overlay">
-            <a href="gallery.html">Galerie</a>
-            <a href="contact.html">Kontakt</a>
-            <a href="settings.html">Einstellungen</a>
+            <!-- Menü-Links werden dynamisch per JS eingefügt -->
         </nav>
         <div class="header-date-time">
             <span id="headerDate"></span><br>
@@ -39,9 +37,6 @@
         </div>
     </header>
     <main>
-        <nav class="breadcrumb">
-            <span class="breadcrumb-home"><a href="capture.html"><i class="fas fa-home"></i></a></span> 
-        </nav>
         <div id="captureView">
             <div id="eventName"></div>
             <div id="cameraPreview" class="camera-preview">

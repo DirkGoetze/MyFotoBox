@@ -448,3 +448,41 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 })();
+
+// Dynamische Generierung des Overlay-Menüs, aktuelle Seite wird ausgeblendet
+(function() {
+    const menuItems = [
+        { href: 'capture.html', label: 'Aufnahme' },
+        { href: 'gallery.html', label: 'Galerie' },
+        { href: 'contact.html', label: 'Kontakt' },
+        { href: 'settings.html', label: 'Einstellungen' }
+    ];
+    const current = window.location.pathname.split('/').pop() || 'capture.html';
+    const menu = document.getElementById('headerMenu');
+    if (menu) {
+        menu.innerHTML = '';
+        menuItems.forEach(item => {
+            if (item.href !== current) {
+                const a = document.createElement('a');
+                a.href = item.href;
+                a.textContent = item.label;
+                menu.appendChild(a);
+            }
+        });
+    }
+    // Hamburger-Menü-Logik (Öffnen/Schließen)
+    const hamburger = document.getElementById('hamburgerBtn');
+    if (hamburger && menu) {
+        hamburger.onclick = function() {
+            const expanded = hamburger.getAttribute('aria-expanded') === 'true';
+            hamburger.setAttribute('aria-expanded', !expanded);
+            menu.style.display = expanded ? 'none' : 'block';
+        };
+        document.addEventListener('click', function(e) {
+            if (!menu.contains(e.target) && e.target !== hamburger) {
+                menu.style.display = 'none';
+                hamburger.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+})();
