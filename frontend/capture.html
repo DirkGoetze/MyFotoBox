@@ -21,25 +21,22 @@
     -------------------------------------------------------------------------------
     # Funktion: Header mit Hamburger-Menü für alle Seiten
     -------------------------------------------------------------------------------
-    -->
-    <header id="mainHeader">
-        <div class="header-left">
-            <div class="hamburger-container">
-                <button class="hamburger" id="hamburgerBtn" aria-label="Menü öffnen">
-                    <div class="hamburger-inner">
-                        <div class="hamburger-bar"></div>
-                        <div class="hamburger-bar"></div>
-                        <div class="hamburger-bar"></div>
-                    </div>
-                </button>
-            </div>
+    -->    <header id="mainHeader">
+        <!-- Test Hamburger Menü -->
+        <div class="header-left">            <button id="hamburgerBtn">
+                ☰
+            </button>
         </div>
         <a id="headerTitleLink" href="capture.html"><span id="headerTitle" class="header-title">Fotobox</span></a>
+
         <div class="header-date-time">
-            <span id="headerDate"></span><br>
             <span id="headerTime"></span>
-        </div>
-    </header>
+            <span id="headerDate"></span><br>
+        </div>    </header>
+    <!-- Menü-Overlay außerhalb des Headers -->
+    <div id="menuOverlay">
+        <!-- Menüpunkte werden per JavaScript hinzugefügt -->
+    </div>
     <!-- main-block //-->
     <main>
         <div id="captureView">

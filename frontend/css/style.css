@@ -6,9 +6,14 @@
  ------------------------------------------------------------------------------ */
 body {
     font-family: Arial, sans-serif;
-    margin: 2em;
+    margin: 0;
+    padding-top: 0; /* Entferne das Padding vom Body */
     background: #f4f7fa;
     color: #222;
+}
+
+main {
+    padding: 80px 2em 2em 2em; /* Platz für den festen Header + seitliches Padding */
 }
 #photos img { max-width: 200px; margin: 0.5em; }
 #menu { margin-bottom: 1em; }
@@ -541,8 +546,8 @@ body.dark #headerMenu a:hover {
 
 /* Brotkrumen-Navigation (Breadcrumb) */
 .breadcrumb {
-    margin: 1.2em 0 1.5em 0;
-    padding: 0.3em 1em;
+    margin: 0 0 1.5em 0; /* Kein oberer Margin mehr, da main bereits Padding hat */
+    padding: 0.6em 1em;
     font-size: 1.05em;
     color: #555;
     background: #f4f7fa;
@@ -550,6 +555,7 @@ body.dark #headerMenu a:hover {
     display: flex;
     align-items: center;
     gap: 0.5em;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); /* Leichter Schatten für Tiefeneffekt */
 }
 .breadcrumb a {
     color: #38d39f;

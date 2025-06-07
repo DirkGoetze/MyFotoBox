@@ -9,26 +9,19 @@
     <link rel="stylesheet" href="css/footer.css">
     <link rel="stylesheet" href="css/menu.css">
 </head>
-<body>    <header id="mainHeader">
-        <div class="header-left">
-            <button class="hamburger" id="hamburgerBtn" tabindex="0" aria-label="Menü öffnen" aria-expanded="false">
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
+<body>    <header id="mainHeader">        <div class="header-left">            <button id="hamburgerBtn">
+                ☰
             </button>
-            <!-- WICHTIG: Menü wird per JavaScript gefüllt und gesteuert -->
-            <div id="hamburgerMenuContainer" style="display:none;">
-                <nav id="headerMenu" aria-label="Hauptmenü" class="menu-overlay">
-                    <!-- Wird komplett per JavaScript befüllt -->
-                </nav>
-            </div>
         </div>
-        <a id="headerTitleLink" href="capture.html"><span id="headerTitle" class="header-title">Fotobox</span></a>
+        <a id="headerTitleLink" href="index.html"><span id="headerTitle" class="header-title">Fotobox</span></a>
         <div class="header-date-time">
             <span id="headerDate"></span><br>
             <span id="headerTime"></span>
-        </div>
-    </header>
+        </div>    </header>
+    <!-- Menü-Overlay außerhalb des Headers -->
+    <div id="menuOverlay">
+        <!-- Menüpunkte werden per JavaScript hinzugefügt -->
+    </div>
     <main>
         <nav class="breadcrumb">
             <a href="capture.html"><i class="fas fa-home"></i></a> &gt; <span>Kontakt</span>

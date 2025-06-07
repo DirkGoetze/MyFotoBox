@@ -1,175 +1,87 @@
-/* menu.css
-   Enthält alle Styles für das Overlay-Menü und das Hamburger-Menü
-*/
+/* Vereinfachte Styles für Hamburger-Button mit besserer Sichtbarkeit */
 
-.hamburger {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: center;
-    width: 2.5em;
-    height: 2em;
+.header-left {
+    border: none; /* Entferne den blauen Rand */
+    position: relative;
+    z-index: 1000; /* Stelle sicher, dass es über anderen Elementen ist */
+}
+
+#hamburgerBtn {
+    background-color: transparent;
+    color: white;
+    padding: 10px;
+    font-size: 24px;
+    border: none; /* Entferne den roten Rand */
     cursor: pointer;
-    margin-left: 0.5em;
-    z-index: 1100;
-    background: rgba(255, 255, 255, 0.1);
-    border: none;
-    outline: none;
-    padding: 0.5em;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
-.hamburger:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-.hamburger-line {
-    display: block;
-    width: 100%;
-    height: 3px;
-    background-color: white;
-    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.hamburger:focus {
-    outline: 2px solid rgba(255,255,255,0.4);
-    border-radius: 4px;
-}
-/* Container für das gesamte Hamburger-Menü */
-#hamburgerMenuContainer {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    z-index: 1000;
-    width: 200px;
+/* Menü-Overlay */
+#menuOverlay {
+    display: none;
+    position: fixed;
+    top: 70px; /* Anpassen an die Höhe des Headers + Padding */
+    left: 20px;
+    background-color: #222; /* Dunklerer Hintergrund für besseren Kontrast */
+    padding: 15px;
+    border-radius: 8px;
+    border: none; /* Debug-Rahmen entfernt */
+    min-width: 220px;
+    max-width: 80%;
+    z-index: 9999; /* Sehr hoher z-index um Überlagerung zu vermeiden */
+    box-shadow: 0 5px 25px rgba(0,0,0,0.5); /* Verstärkter Schatten für bessere Sichtbarkeit */
+    backdrop-filter: blur(5px); /* Verschwommener Hintergrund für modernen Look */
+    -webkit-backdrop-filter: blur(5px); /* Für Safari-Support */
 }
 
-/* Overlay-Hintergrund für bessere UX auf mobilen Geräten */
-#hamburgerMenuContainer::before {
+#menuOverlay.visible {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Overlay-Hintergrund, der erscheint, wenn das Menü aktiv ist */
+#menuOverlay.visible::before {
     content: '';
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0);
-    transition: background 0.3s;
-    pointer-events: none;
-    z-index: -1;
-    display: none; /* Standardmäßig ausgeblendet */
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: -1; /* Hinter dem eigentlichen Menü */
+    animation: fadeInBg 0.3s ease-out;
 }
 
-#hamburgerMenuContainer:has(#headerMenu.visible)::before {
-    background: rgba(0, 0, 0, 0.3);
-    pointer-events: auto;
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-/* Das eigentliche Menü und dessen Overlay */
-#headerMenu, .menu-overlay {
+@keyframes fadeInBg {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+#menuOverlay a {
     display: block;
-    visibility: hidden;
-    opacity: 0;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    background: #fff;
-    color: #222;
-    min-width: 180px;
-    box-shadow: 0 2px 16px #2223;
-    border-radius: 0 0 0.7em 0.7em;
-    z-index: 1100;
-    font-size: 1.1em;
-    padding: 0.7em 0.5em;
-    transition: visibility 0.3s, opacity 0.3s;
-    margin-top: 4px; /* Abstand zum Header */
-}
-
-/* Diese Regel wird per JavaScript gesetzt, wenn das Menü angezeigt werden soll */
-#headerMenu.visible {
-    visibility: visible;
-    opacity: 1;
-}
-
-/* Zeige den Overlay-Hintergrund an, wenn das Menü sichtbar ist */
-#hamburgerMenuContainer:has(#headerMenu.visible)::before {
-    display: block;
-    background: rgba(0, 0, 0, 0.3);
-    pointer-events: auto;
-}
-#headerMenu a {
-    display: block;
-    color: #222;
+    padding: 12px 15px;
+    color: #ffffff; /* Reinweiß */
+    background-color: #444; /* Hellerer Hintergrund für die Links */
     text-decoration: none;
-    padding: 0.6em 1.2em;
-    border-radius: 0.4em;
-    margin-bottom: 0.2em;
-    transition: background 0.2s, color 0.2s, transform 0.2s; /* Verbesserte Transition mit Transform */
-    font-weight: 500; /* Etwas fetter für bessere Lesbarkeit */
+    border: none; /* Debug-Rahmen entfernt */
+    border-radius: 6px;
+    margin: 10px 0; /* Größerer Abstand */
+    font-weight: bold;
+    font-size: 18px; /* Noch größere Schrift */
+    text-shadow: 1px 1px 1px black; /* Text-Schatten für bessere Lesbarkeit */
+    transition: all 0.2s ease;
 }
-#headerMenu a:hover {
-    background: #38d39f22;
-    transform: translateX(4px); /* Leichte Bewegung beim Hover für bessere UX */
-}
-body.dark #headerMenu {
-    background: #222;
-    color: #f4f7fa;
-}
-body.dark #headerMenu a {
-    color: #f4f7fa;
-}
-body.dark #headerMenu a:hover {
-    background: #38d39f44;
-}
-@media (min-width: 901px) {
-    .hamburger {
-        display: none !important;
-    }
-    #headerMenu {
-        display: flex !important;
-        position: static;
-        flex-direction: row;
-        background: none;
-        box-shadow: none;
-        min-width: unset;
-        padding: 0;
-        font-size: 1em;
-        align-items: center;
-        gap: 1.5em;
-    }
-    #headerMenu a {
-        color: #fff;
-        background: none;
-        padding: 0.3em 0.7em;
-        margin-bottom: 0;
-    }
-    #headerMenu a:hover {
-        background: #38d39f44;
-    }
-}
-@media (max-width: 900px) {
-    .hamburger {
-        display: flex;
-    }
-    #headerMenu {
-        display: none;
-        position: fixed;
-        top: 3.2em;
-        right: 0;
-        background: #fff;
-        color: #222;
-        min-width: 180px;
-        box-shadow: 0 2px 16px #2223;
-        border-radius: 0 0 0.7em 0.7em;
-        z-index: 1100;
-        font-size: 1.1em;
-        padding: 0.7em 0.5em;
-        flex-direction: column;
-        gap: 0;
-    }
-    #headerMenu a {
-        color: #222;
-        background: none;
-        padding: 0.6em 1.2em;
-        border-radius: 0.4em;
-        margin-bottom: 0.2em;
-    }
+
+#menuOverlay a:hover {
+    background-color: #666;
+    color: #ffff00; /* Gelb beim Hover */
 }
