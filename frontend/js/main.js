@@ -464,50 +464,58 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Menü-Container finden
     const menu = document.getElementById('headerMenu');
-    
-    // Nur fortfahren, wenn das Menü-Element gefunden wurde
+      // Nur fortfahren, wenn das Menü-Element gefunden wurde
     if (menu) {
         // Existierende Menüeinträge entfernen (falls vorhanden)
         menu.innerHTML = '';
         
-        // Sicherstellen, dass das Menü anfangs ausgeblendet ist
-        menu.style.display = 'none';
+        // Stellen wir sicher, dass das Menü mit der CSS-Klasse richtig gesteuert wird
+        menu.classList.remove('visible');
         
         // Nur Menüeinträge für andere Seiten als die aktuelle hinzufügen
         menuItems.forEach(item => {
-            if (item.href !== current) {
+            // install.html explizit ausschließen und die aktuelle Seite
+            if (item.href !== current && item.href !== 'install.html') {
                 const a = document.createElement('a');
                 a.href = item.href;
                 a.textContent = item.label;
                 menu.appendChild(a);
             }
         });
-    }
-
-    // Hamburger-Menü-Logik (Öffnen/Schließen)
+    }    // Hamburger-Menü-Logik (Öffnen/Schließen)
     const hamburger = document.getElementById('hamburgerBtn');
-    if (hamburger && menu) {
+    const menuContainer = document.getElementById('hamburgerMenuContainer');
+    if (hamburger && menu && menuContainer) {
         hamburger.onclick = function(e) {
             e.preventDefault(); // Verhindert ungewolltes Verhalten
             const expanded = hamburger.getAttribute('aria-expanded') === 'true';
             hamburger.setAttribute('aria-expanded', !expanded);
             
-            // Klasse hinzufügen/entfernen anstatt direkt style.display zu setzen
+            // Menü ein- oder ausblenden
             if (expanded) {
-                menu.style.display = 'none';
                 menu.classList.remove('visible');
+                // Nach der Animation den Container ausblenden
+                setTimeout(() => {
+                    menuContainer.style.display = 'none';
+                }, 300);
             } else {
-                menu.style.display = 'block';
-                menu.classList.add('visible');
+                menuContainer.style.display = 'block';
+                // Kleiner Timeout damit erst der Container sichtbar ist
+                setTimeout(() => {
+                    menu.classList.add('visible');
+                }, 10);
             }
         };
         
         // Menü schließen, wenn außerhalb geklickt wird
         document.addEventListener('click', function(e) {
             if (!menu.contains(e.target) && e.target !== hamburger) {
-                menu.style.display = 'none';
                 menu.classList.remove('visible');
                 hamburger.setAttribute('aria-expanded', 'false');
+                // Nach der Animation den Container ausblenden
+                setTimeout(() => {
+                    menuContainer.style.display = 'none';
+                }, 300);
             }
         });
     }
