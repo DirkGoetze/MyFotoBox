@@ -488,6 +488,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (hamburger && menu && menuContainer) {
         hamburger.onclick = function(e) {
             e.preventDefault(); // Verhindert ungewolltes Verhalten
+            e.stopPropagation(); // Verhindert, dass das Klick-Event zum Document weitergeleitet wird
             const expanded = hamburger.getAttribute('aria-expanded') === 'true';
             hamburger.setAttribute('aria-expanded', !expanded);
             
@@ -496,25 +497,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 menu.classList.remove('visible');
                 // Nach der Animation den Container ausblenden
                 setTimeout(() => {
-                    menuContainer.style.display = 'none';
+                    if (menuContainer) menuContainer.style.display = 'none';
                 }, 300);
             } else {
                 menuContainer.style.display = 'block';
                 // Kleiner Timeout damit erst der Container sichtbar ist
                 setTimeout(() => {
-                    menu.classList.add('visible');
+                    if (menu) menu.classList.add('visible');
                 }, 10);
             }
         };
-        
-        // Menü schließen, wenn außerhalb geklickt wird
+          // Menü schließen, wenn außerhalb geklickt wird
         document.addEventListener('click', function(e) {
-            if (!menu.contains(e.target) && e.target !== hamburger) {
+            if (menu && !menu.contains(e.target) && e.target !== hamburger) {
                 menu.classList.remove('visible');
-                hamburger.setAttribute('aria-expanded', 'false');
+                if (hamburger) hamburger.setAttribute('aria-expanded', 'false');
                 // Nach der Animation den Container ausblenden
                 setTimeout(() => {
-                    menuContainer.style.display = 'none';
+                    if (menuContainer) menuContainer.style.display = 'none';
                 }, 300);
             }
         });
