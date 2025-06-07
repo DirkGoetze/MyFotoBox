@@ -61,11 +61,17 @@ function initMenu() {
                 menuOverlay.appendChild(link);
             }
         });
-        
-        // Klick-Handler für den Hamburger-Button
+          // Klick-Handler für den Hamburger-Button
         hamburgerBtn.addEventListener('click', function(event) {
             event.stopPropagation(); // Stoppt das Event von der Weiterleitung
             menuOverlay.classList.toggle('visible');
+            
+            // Toggle body overflow, um Scrollbars zu verhindern, wenn das Menü offen ist
+            if (menuOverlay.classList.contains('visible')) {
+                document.body.style.overflow = 'hidden'; // Verhindert Scrollen, wenn Menü geöffnet
+            } else {
+                document.body.style.overflow = ''; // Stellt Standard wieder her
+            }
         });
         
         // Klick außerhalb des Menüs schließt es
@@ -74,12 +80,20 @@ function initMenu() {
                 !menuOverlay.contains(event.target) && 
                 event.target !== hamburgerBtn) {
                 menuOverlay.classList.remove('visible');
+                document.body.style.overflow = ''; // Stellt Scrolling wieder her
             }
         });
-        
-        // Stoppe Bubbling, wenn auf ein Menüelement geklickt wird
+          // Stoppe Bubbling, wenn auf ein Menüelement geklickt wird
         menuOverlay.addEventListener('click', function(event) {
             event.stopPropagation();
+        });
+        
+        // Escape-Taste schließt das Menü
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && menuOverlay.classList.contains('visible')) {
+                menuOverlay.classList.remove('visible');
+                document.body.style.overflow = ''; // Stellt Scrolling wieder her
+            }
         });
     }
 }
@@ -133,9 +147,23 @@ function handleFooterVisibility() {
 
 // Header-Titel dynamisch setzen
 function setHeaderTitle(title) {
+    // Fallback-Titel, wenn kein Titel übergeben wurde
+    const displayTitle = title && title.trim() ? title : 'Fotobox';
+    
+    // Titel im Header setzen
     const headerTitle = document.getElementById('headerTitle');
     if (headerTitle) {
-        headerTitle.textContent = title || 'Fotobox';
+        headerTitle.textContent = displayTitle;
+    }
+    
+    // Zusätzlich den Titel im Browser-Tab aktualisieren
+    document.title = displayTitle;
+    
+    // Im Footer den Copyright-Text aktualisieren, falls vorhanden
+    const footerText = document.getElementById('footerText');
+    if (footerText) {
+        const currentYear = new Date().getFullYear();
+        footerText.textContent = `© ${currentYear} ${displayTitle}`;
     }
 }
 
@@ -181,15 +209,18 @@ function initPageSpecificFeatures() {
     const isCapturePage = path.includes('capture.html') || document.getElementById('captureView');
     const isGalleryPage = path.includes('gallery.html') || document.getElementById('galleryView');
     const isSettingsPage = path.includes('settings.html') || document.getElementById('configForm');
+    const isSplashPage = path.includes('index.html') || document.getElementById('splashOverlay');
     
-    // Initialisiere Features für die Aufnahmeseite
-    if (isCapturePage) {
-        // Lade Eventname aus API für Anzeige
+    // Lade Event-Titel aus API für alle Seiten außer Splash und Install
+    if (!isSplashPage && !path.includes('install.html')) {
         fetch('/api/settings').then(r => r.json()).then(config => {
-            if (config.event_name && document.getElementById('eventName')) {
+            // Setze den Event-Titel im Header
+            setHeaderTitle(config.event_name || 'Fotobox');
+            
+            // Nur für capture.html: Zeige Event-Name im Content-Bereich
+            if (isCapturePage && config.event_name && document.getElementById('eventName')) {
                 document.getElementById('eventName').textContent = config.event_name;
             }
-            setHeaderTitle(config.event_name || 'Fotobox');
         }).catch(() => {
             setHeaderTitle('Fotobox');
         });

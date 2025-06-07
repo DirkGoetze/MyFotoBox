@@ -2,21 +2,64 @@
    Enthält alle Styles für die Konfigurationsseite (config.html)
 */
 
+/* Login-Formular */
+#loginForm {
+    max-width: 500px;
+    margin: 2em auto;
+    padding: 1.5em;
+    background: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+#loginForm label {
+    display: block;
+    margin-bottom: 1em;
+    font-weight: bold;
+}
+
+#loginForm input[type="password"] {
+    width: 100%;
+    padding: 0.7em;
+    font-size: 1em;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    margin-top: 0.5em;
+}
+
+#loginForm button {
+    padding: 0.8em 2em;
+    background-color: #0078d7;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    margin-top: 1em;
+}
+
+/* Konfigurationsformular */
+#configForm {
+    margin-bottom: 2em;
+}
+
 .settings-table {
     width: 100%;
     border-collapse: separate;
-    border-spacing: 0 0.3em;
+    border-spacing: 0 0.5em;
     margin-bottom: 1em;
 }
+
 .settings-table td.label {
-    width: 28%;
+    width: 30%;
     font-weight: bold;
     text-align: left;
     padding-right: 1em;
     vertical-align: middle;
 }
+
 .settings-table td {
-    padding: 0.3em 0.2em;
+    padding: 0.4em;
     vertical-align: middle;
 }
 .settings-table td.desc {
@@ -26,6 +69,73 @@
     text-align: left;
     padding-left: 1em;
 }
+
+.settings-table input[type="text"],
+.settings-table input[type="date"],
+.settings-table input[type="number"],
+.settings-table input[type="password"],
+.settings-table select {
+    width: 100%;
+    padding: 0.7em;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+}
+
+.settings-table .hint {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 0.4em;
+}
+
+/* Fieldsets für Gruppierung */
+fieldset {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 1em 1.5em;
+    margin-bottom: 1.5em;
+}
+
+fieldset legend {
+    font-weight: bold;
+    padding: 0 0.5em;
+}
+
+/* Buttons im Formular */
+.form-actions {
+    margin-top: 2em;
+    display: flex;
+    gap: 1em;
+    justify-content: flex-start;
+}
+
+.form-actions button {
+    padding: 0.8em 1.5em;
+    border-radius: 4px;
+    border: none;
+    font-size: 1em;
+    cursor: pointer;
+}
+
+.save-btn {
+    background-color: #0078d7;
+    color: white;
+}
+
+.reset-btn {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.save-btn:hover {
+    background-color: #0067be;
+}
+
+.reset-btn:hover {
+    background-color: #e0e0e0;
+}
+
+/* Responsive Design */
 @media (max-width: 700px) {
     .settings-table td.label, .settings-table td.desc {
         display: block;

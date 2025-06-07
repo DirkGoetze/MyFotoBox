@@ -249,5 +249,46 @@ def api_nginx_status():
     except Exception as e:
         return jsonify({'error': 'Exception beim Auslesen der NGINX-Konfiguration', 'details': str(e)}), 500
 
+# -------------------------------------------------------------------------------
+# /api/gallery (GET)
+# -------------------------------------------------------------------------------
+# Funktion: Gibt eine Liste der Fotos im gallery-Ordner zurück
+# -------------------------------------------------------------------------------
+@app.route('/api/gallery', methods=['GET'])
+def api_gallery():
+    gallery_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'photos', 'gallery'))
+    os.makedirs(gallery_dir, exist_ok=True)
+    
+    # Dateien auflisten und nach Datum sortieren (neuste zuerst)
+    files = []
+    for f in os.listdir(gallery_dir):
+        if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+            files.append(f)
+    
+    # Sortiere nach Dateiänderungsdatum (neuste zuerst)
+    files.sort(key=lambda x: os.path.getmtime(os.path.join(gallery_dir, x)), reverse=True)
+    
+    return jsonify({'photos': files})
+
+# -------------------------------------------------------------------------------
+# /api/photos (GET)
+# -------------------------------------------------------------------------------
+# Funktion: Gibt eine Liste der Originalfotos zurück
+# -------------------------------------------------------------------------------
+@app.route('/api/photos', methods=['GET'])
+def api_photos():
+    photos_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'photos', 'originals'))
+    os.makedirs(photos_dir, exist_ok=True)
+    
+    files = []
+    for f in os.listdir(photos_dir):
+        if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+            files.append(f)
+    
+    # Sortiere nach Dateiänderungsdatum (neuste zuerst)
+    files.sort(key=lambda x: os.path.getmtime(os.path.join(photos_dir, x)), reverse=True)
+    
+    return jsonify({'photos': files})
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
