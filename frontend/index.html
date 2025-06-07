@@ -62,15 +62,14 @@ Diese Regel ist verbindlich für alle künftigen Erweiterungen und Refactorings.
             requestAnimationFrame(animateProgress);
         }
     }
-    animateProgress();
-
-    // Simulierte Passwort-Prüfung (hier: API-Call)
+    animateProgress();    // Prüft, ob ein Passwort gesetzt ist über den speziellen Endpunkt
     async function checkPasswordSet() {
         try {
-            const res = await fetch('/api/settings');
+            // Verwende den speziellen Endpunkt zur Passwortprüfung
+            const res = await fetch('/api/check_password_set');
             if (!res.ok) throw new Error();
             const data = await res.json();
-            return !!data.admin_password;
+            return data.password_set;
         } catch {
             return false;
         }

@@ -290,5 +290,15 @@ def api_photos():
     
     return jsonify({'photos': files})
 
+# -------------------------------------------------------------------------------
+# /api/check_password_set (GET)
+# -------------------------------------------------------------------------------
+# Funktion: Prüft, ob ein Admin-Passwort gesetzt ist (für Erstinstallation)
+# -------------------------------------------------------------------------------
+@app.route('/api/check_password_set', methods=['GET'])
+def api_check_password_set():
+    is_password_set = not check_first_run()
+    return jsonify({'password_set': is_password_set})
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
