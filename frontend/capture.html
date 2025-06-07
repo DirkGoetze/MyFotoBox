@@ -21,18 +21,17 @@
     -------------------------------------------------------------------------------
     # Funktion: Header mit Hamburger-Menü für alle Seiten
     -------------------------------------------------------------------------------
-    -->    <header id="mainHeader">
+    -->
+    <header id="mainHeader">
         <div class="header-left">
-            <button class="hamburger" id="hamburgerBtn" tabindex="0" aria-label="Menü öffnen" aria-expanded="false">
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-                <span class="hamburger-line"></span>
-            </button>
-            <!-- WICHTIG: Menü wird per JavaScript gefüllt und gesteuert -->
-            <div id="hamburgerMenuContainer" style="display:none;">
-                <nav id="headerMenu" aria-label="Hauptmenü" class="menu-overlay">
-                    <!-- Wird komplett per JavaScript befüllt -->
-                </nav>
+            <div class="hamburger-container">
+                <button class="hamburger" id="hamburgerBtn" aria-label="Menü öffnen">
+                    <div class="hamburger-inner">
+                        <div class="hamburger-bar"></div>
+                        <div class="hamburger-bar"></div>
+                        <div class="hamburger-bar"></div>
+                    </div>
+                </button>
             </div>
         </div>
         <a id="headerTitleLink" href="capture.html"><span id="headerTitle" class="header-title">Fotobox</span></a>
@@ -41,6 +40,7 @@
             <span id="headerTime"></span>
         </div>
     </header>
+    <!-- main-block //-->
     <main>
         <div id="captureView">
             <div id="eventName"></div>
