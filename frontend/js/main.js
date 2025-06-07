@@ -34,8 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function initMenu() {
     // Menü-Elemente definieren - ohne install.html gemäß Anforderungen
     const menuItems = [
-        { text: 'Startseite', href: 'index.html' },
-        { text: 'Fotos aufnehmen', href: 'capture.html' },
+        { text: 'Home', href: 'capture.html' }, // Geändert: "Home" statt "Startseite"
         { text: 'Galerie', href: 'gallery.html' },
         { text: 'Kontakt', href: 'contact.html' },
         { text: 'Einstellungen', href: 'settings.html' }
