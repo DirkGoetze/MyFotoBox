@@ -21,17 +21,19 @@
     -------------------------------------------------------------------------------
     # Funktion: Header mit Hamburger-Menü für alle Seiten
     -------------------------------------------------------------------------------
-    -->
-    <header id="mainHeader">
-        <button class="hamburger" id="hamburgerBtn" tabindex="0" aria-label="Menü öffnen" aria-expanded="false">
-            <i class="fas fa-bars" aria-hidden="true"></i>
-        </button>
-        <a id="headerTitleLink" href="capture.html"><span id="headerTitle" class="header-title">Fotobox</span></a>        <!-- WICHTIG: Menü wird per JavaScript gefüllt und gesteuert -->
-        <div id="hamburgerMenuContainer" style="display:none;">
-            <nav id="headerMenu" aria-label="Hauptmenü" class="menu-overlay">
-                <!-- Wird komplett per JavaScript befüllt -->
-            </nav>
+    -->    <header id="mainHeader">
+        <div class="header-left">
+            <button class="hamburger" id="hamburgerBtn" tabindex="0" aria-label="Menü öffnen" aria-expanded="false">
+                <i class="fas fa-bars" aria-hidden="true"></i>
+            </button>
+            <!-- WICHTIG: Menü wird per JavaScript gefüllt und gesteuert -->
+            <div id="hamburgerMenuContainer" style="display:none;">
+                <nav id="headerMenu" aria-label="Hauptmenü" class="menu-overlay">
+                    <!-- Wird komplett per JavaScript befüllt -->
+                </nav>
+            </div>
         </div>
+        <a id="headerTitleLink" href="capture.html"><span id="headerTitle" class="header-title">Fotobox</span></a>
         <div class="header-date-time">
             <span id="headerDate"></span><br>
             <span id="headerTime"></span>

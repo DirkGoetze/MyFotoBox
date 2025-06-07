@@ -50,13 +50,18 @@ Die eigentliche Implementierung des Routingprozesses (z.B. Splash-Logik, Weiterl
 
 ## Zusammenfassungen der Design Regeln für die Menüführung und den allgemeine Aufbau der Seiten
 
+- Menübestandteile aus älteren Versionen sind nach jeder Änderung am Menü aus der Ansicht durch auskommentieren zu entfernen .
 - Alle Seiten haben einen Header und einen Footer. 
-
 -- Der Header zeigt den Eventtitel wie in der Datenbank hinterlegt zenrtiert an. Wurde noch kein Eventtitel vergeben, ist die Projektbezeichnung als Fallback zu verwenden.
--- Das Menü ist an der linken Seite des Header anzuordnen. Es besteht in der Standard Ansicht nur aus dem Hamburger Icon. Wird das Menü durch anklicken des Hamburger geöffnet,
-   wird ein Overlay mit allen erreichbaren Seiten (capture.html, gallery.html, contact.html und settings.html) angezeigt. Diese sind untereinander angeordnet. Die aktuelle Seite ist nicht im Menü enthalten oder wird durch eine andere Darstellung kenntlich gemacht. Hier wäre die Praxis vorzuziehen, die am weitesten verbreitet ist. Die Seite 'install.html' ist nicht über die Menü Struktur zu erreichen.
+-- Das Menü ist an der linken Seite des Header anzuordnen. 
+-- Es besteht in der Standard Ansicht nur aus dem Hamburger Icon das immer sichtbar ist.
+-- Wird das Menü durch anklicken des Hamburger geöffnet, wird ein Overlay mit allen erreichbaren Seiten (capture.html, gallery.html, contact.html und settings.html) angezeigt.
+-- Diese sind untereinander angeordnet, so wie es bei Desktop Programmen üblich ist.
+-- Die aktuelle Seite ist nicht im Menü enthalten.
+-- Die Seite 'install.html' ist nicht über die Menü Struktur zu erreichen.
+-- Sie kann über das Haus Symbol im Breadcrumb Menü oder Anklicken des Eventtitel/Projekttitel im Header erreicht werden.
 -- Rechts im Header wird das Datum im Format "dd.mm.yyyy" und darunter die Uhrzeit im Format "hh:mm" angezeigt.
--- Der Footer ist am unteren Bildrand fixiert. Er zeigt nur den Projektnamen und den Copyright Hinweis, so wie schon implementiert.
+-- Der Footer ist am unteren Bildrand fixiert. Er zeigt nur den Projektnamen und den Copyright Hinweis.
 -- Im Content Bereich wird auf allen Seiten die nicht HOME sind, ein Breadcrumb Menü angezeigt, das interaktiv sein sollte und einen schnellen Wechsel zu HOME Seite ermöglicht. 
    Dieser Link ist durch ein Haussymbol anzuzeigen, währen alle anderen Seitennamen / Routen durch ' > Seite' angezeigt werden sollten. Das Breadcrumb Menü sollte sich durch Hinterlegung in einer anderen Farbe oder eine Varianz der Hintergrundfarbe der Seite vom Rest abheben.
 -- Alle HTML Elemente sollten einer durchgehenden Farbgebung folgen und Varianten für Light und Darkmodus habe.

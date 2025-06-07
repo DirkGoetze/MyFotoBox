@@ -13,9 +13,9 @@ header#mainHeader {
     font-size: 1.5em;
     font-weight: bold;
     padding: 0.7em 1.5em 0.7em 1.5em;
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: space-between;
     margin: 0;
     box-sizing: border-box;
     overflow-x: auto;
@@ -29,4 +29,35 @@ body.dark header#mainHeader {
         font-size: 1.1em;
         padding: 0.5em 0.7em;
     }
+}
+
+/* Positionierung der Header-Elemente */
+.header-left {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    position: relative; /* Für absolute Positionierung des Menüs */
+}
+
+.header-title {
+    text-align: center;
+    min-width: 150px;
+    font-size: 1.2em;
+    flex-grow: 1;
+    justify-self: center; /* Zentriert im Grid-Layout */
+}
+
+.header-date-time {
+    text-align: right;
+    justify-self: flex-end;
+}
+
+/* Style für den Header-Titel-Link */
+#headerTitleLink {
+    color: #fff;
+    text-decoration: none;
+    font-weight: bold;
+    text-align: center;
+    width: 100%;
+    justify-self: center;
 }
