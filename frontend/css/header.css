@@ -18,15 +18,16 @@
 }
 
 .header-left {
-    flex: 1;
+    flex: 0 0 auto; /* Nicht wachsen, nicht schrumpfen, Basisgröße aus Inhalt */
     display: flex;
     justify-content: flex-start;
     border: none; /* Debug-Rahmen */
     overflow: visible; /* Erlaubt, dass das Menü über den Header hinausragt, ohne Scrollbars zu erzeugen */
+    margin-right: 10px;
 }
 
 .header-title {
-    flex: 2;
+    flex: 1; /* Erlaubt dem Titel zu wachsen und den verfügbaren Platz zu nutzen */
     font-size: 1.5rem;
     font-weight: bold;
     text-align: center;
@@ -37,15 +38,16 @@
 }
 
 .header-date-time {
-    flex: 1;
+    flex: 0 0 auto; /* Nicht wachsen, nicht schrumpfen, Basisgröße aus Inhalt */
     text-align: right;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-end; /* Rechtsbündige Ausrichtung */
     justify-content: center;
     border: none; /* Debug-Rahmen */
     overflow: hidden; /* Verhindert Scrollbars */
     white-space: nowrap; /* Verhindert Zeilenumbrüche */
+    margin-left: 10px; /* Abstand zum Titel */
 }
 
 /* Zeitanzeige größer und fett */
@@ -53,6 +55,8 @@
     font-size: 1.5rem; /* H2-ähnliche Größe */
     font-weight: bold;
     line-height: 1.2;
+    text-align: right; /* Zusätzlich rechtsbündige Ausrichtung sicherstellen */
+    width: 100%; /* Volle Breite im Container */
 }
 
 /* Datum kleiner und regular */
@@ -60,6 +64,8 @@
     font-size: 0.9rem; /* H4-ähnliche Größe */
     font-weight: normal;
     color: rgba(255, 255, 255, 0.85); /* Leicht abgestuft für visuelle Hierarchie */
+    text-align: right; /* Zusätzlich rechtsbündige Ausrichtung sicherstellen */
+    width: 100%; /* Volle Breite im Container */
 }
 
 #headerTitleLink {

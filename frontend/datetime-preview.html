@@ -34,36 +34,41 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
             height: 50px;
         }
-        
-        .header-left {
-            flex: 1;
+          .header-left {
+            flex: 0 0 auto;
+            margin-right: 10px;
         }
         
         .header-title {
-            flex: 2;
+            flex: 1;
             text-align: center;
             font-size: 1.5rem;
             font-weight: bold;
         }
         
         .header-date-time {
-            flex: 1;
+            flex: 0 0 auto;
             text-align: right;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: flex-end;
+            margin-left: 10px;
         }
         
         #headerTime {
             font-size: 1.5rem;
             font-weight: bold;
             line-height: 1.2;
+            text-align: right;
+            width: 100%;
         }
         
         #headerDate {
             font-size: 0.9rem;
             font-weight: normal;
             color: rgba(255, 255, 255, 0.85);
+            text-align: right;
+            width: 100%;
         }
         
         .title {
@@ -99,33 +104,31 @@
         
         <div class="before-after">
             <div class="before">
-                <h2>Vorher</h2>
-                <div class="header-mockup">
+                <h2>Vorher</h2>                <div class="header-mockup">
                     <div class="header-left">☰</div>
-                    <div class="header-title">Fotobox</div>
+                    <div class="header-title">Hochzeit von Max und Lisa</div>
                     <div style="flex: 1; text-align: right; font-size: 0.9rem;">
-                        <span>07.06.2025</span><br>
+                        <span>08.06.2025</span><br>
                         <span>14:30</span>
                     </div>
                 </div>
             </div>
             
             <div class="after">
-                <h2>Nachher</h2>
-                <div class="header-mockup">
+                <h2>Nachher</h2>                <div class="header-mockup">
                     <div class="header-left">☰</div>
-                    <div class="header-title">Fotobox</div>
+                    <div class="header-title">Hochzeit von Max und Lisa</div>
                     <div class="header-date-time">
                         <span id="headerTime">14:30</span>
-                        <span id="headerDate">07.06.2025</span>
+                        <span id="headerDate">08.06.2025</span>
                     </div>
                 </div>
             </div>
         </div>
-        
-        <div style="text-align: center; margin-top: 20px; color: #555;">
+          <div style="text-align: center; margin-top: 20px; color: #555;">
             <p>In der neuen Version wird die Uhrzeit prominenter in größerer Schrift angezeigt, während das Datum dezenter darunter erscheint.</p>
-            <p>Die Elemente sind zueinander zentriert und bieten eine klarere visuelle Hierarchie.</p>
+            <p>Die Elemente sind rechtsbündig ausgerichtet und nehmen nur den minimal notwendigen Platz ein.</p>
+            <p>Dadurch erhält der Eventname in der Mitte mehr Raum und bleibt auch bei längeren Namen gut lesbar.</p>
         </div>
     </div>
 </body>
