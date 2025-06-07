@@ -39,10 +39,27 @@
 .header-date-time {
     flex: 1;
     text-align: right;
-    font-size: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     border: none; /* Debug-Rahmen */
     overflow: hidden; /* Verhindert Scrollbars */
     white-space: nowrap; /* Verhindert Zeilenumbrüche */
+}
+
+/* Zeitanzeige größer und fett */
+#headerTime {
+    font-size: 1.5rem; /* H2-ähnliche Größe */
+    font-weight: bold;
+    line-height: 1.2;
+}
+
+/* Datum kleiner und regular */
+#headerDate {
+    font-size: 0.9rem; /* H4-ähnliche Größe */
+    font-weight: normal;
+    color: rgba(255, 255, 255, 0.85); /* Leicht abgestuft für visuelle Hierarchie */
 }
 
 #headerTitleLink {
