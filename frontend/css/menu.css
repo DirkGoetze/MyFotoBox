@@ -21,8 +21,8 @@
     border-radius: 2px;
     transition: 0.3s;
 }
-#headerMenu {
-    display: none;
+#headerMenu, .menu-overlay {
+    display: none !important; /* !important garantiert, dass keine andere Regel dies überschreibt */
     position: fixed;
     top: 3.2em;
     right: 0;
@@ -34,6 +34,10 @@
     z-index: 1100;
     font-size: 1.1em;
     padding: 0.7em 0.5em;
+}
+/* Diese Regel wird per JavaScript gesetzt, wenn das Menü angezeigt werden soll */
+#headerMenu.visible {
+    display: block !important;
 }
 #headerMenu a {
     display: block;

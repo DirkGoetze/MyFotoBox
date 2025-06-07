@@ -451,16 +451,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Dynamische Generierung des Overlay-Menüs, aktuelle Seite wird ausgeblendet
 (function() {
+    // Menüeinträge definieren - dies ist die Quelle der Wahrheit für das Menü
     const menuItems = [
         { href: 'capture.html', label: 'Aufnahme' },
         { href: 'gallery.html', label: 'Galerie' },
         { href: 'contact.html', label: 'Kontakt' },
         { href: 'settings.html', label: 'Einstellungen' }
     ];
+    
+    // Aktuelle Seite ermitteln
     const current = window.location.pathname.split('/').pop() || 'capture.html';
+    
+    // Menü-Container finden
     const menu = document.getElementById('headerMenu');
+    
+    // Nur fortfahren, wenn das Menü-Element gefunden wurde
     if (menu) {
+        // Existierende Menüeinträge entfernen (falls vorhanden)
         menu.innerHTML = '';
+        
+        // Sicherstellen, dass das Menü anfangs ausgeblendet ist
+        menu.style.display = 'none';
+        
+        // Nur Menüeinträge für andere Seiten als die aktuelle hinzufügen
         menuItems.forEach(item => {
             if (item.href !== current) {
                 const a = document.createElement('a');
@@ -470,17 +483,30 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
     // Hamburger-Menü-Logik (Öffnen/Schließen)
     const hamburger = document.getElementById('hamburgerBtn');
     if (hamburger && menu) {
-        hamburger.onclick = function() {
+        hamburger.onclick = function(e) {
+            e.preventDefault(); // Verhindert ungewolltes Verhalten
             const expanded = hamburger.getAttribute('aria-expanded') === 'true';
             hamburger.setAttribute('aria-expanded', !expanded);
-            menu.style.display = expanded ? 'none' : 'block';
+            
+            // Klasse hinzufügen/entfernen anstatt direkt style.display zu setzen
+            if (expanded) {
+                menu.style.display = 'none';
+                menu.classList.remove('visible');
+            } else {
+                menu.style.display = 'block';
+                menu.classList.add('visible');
+            }
         };
+        
+        // Menü schließen, wenn außerhalb geklickt wird
         document.addEventListener('click', function(e) {
             if (!menu.contains(e.target) && e.target !== hamburger) {
                 menu.style.display = 'none';
+                menu.classList.remove('visible');
                 hamburger.setAttribute('aria-expanded', 'false');
             }
         });
