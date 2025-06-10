@@ -87,11 +87,13 @@ Content-Type: application/json
 ```
 
 Antwort:
+
 ```json
 {
     "success": false
 }
 ```
+
 (Status-Code: 401)
 
 ### 2. Fehlende Parameter (400)
@@ -106,12 +108,14 @@ Content-Type: application/json
 ```
 
 Antwort:
+
 ```json
 {
     "error": "Fehlende Parameter",
     "details": "Mindestens ein Parameter muss angegeben werden"
 }
 ```
+
 (Status-Code: 400)
 
 ### 3. Serverfehler (500)
@@ -121,14 +125,16 @@ GET /api/gallery
 ```
 
 Antwort (wenn beispielsweise das Verzeichnis fehlt oder nicht lesbar ist):
+
 ```json
 {
     "error": "Fehler beim Auflisten der Galerie-Bilder",
     "details": "Verzeichnis nicht lesbar oder nicht vorhanden"
 }
 ```
+
 (Status-Code: 500)
 
-**Stand:** 10. Juni 2025
+**Stand:** 11. Juni 2025
 
 Diese Fehlerbehandlungs-Policy ist verbindlich für alle Backend-Entwicklungen am Fotobox-Projekt.

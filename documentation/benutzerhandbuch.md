@@ -20,14 +20,16 @@ Die Fotobox ist ein flexibles, webbasiertes System für Events, Partys und Feier
 ## Erste Schritte
 
 Nach der [Installation](installation.md) der Fotobox können Sie die Weboberfläche über einen Browser aufrufen:
-- Bei lokaler Installation: http://localhost:8080 (oder den von Ihnen konfigurierten Port)
-- Bei Netzwerkinstallation: Die IP-Adresse oder den Hostnamen des Geräts, auf dem die Fotobox läuft
+
+* Bei lokaler Installation: `http://localhost:8080` (oder den von Ihnen konfigurierten Port)
+* Bei Netzwerkinstallation: Die IP-Adresse oder den Hostnamen des Geräts, auf dem die Fotobox läuft
 
 Beim ersten Start werden Sie durch die Ersteinrichtung geführt, bei der Sie grundlegende Einstellungen vornehmen können:
-- Event-Name festlegen
-- Admin-Passwort setzen
-- Kamera-Einstellungen anpassen
-- Speicherort für Fotos wählen
+
+* Event-Name festlegen
+* Admin-Passwort setzen
+* Kamera-Einstellungen anpassen
+* Speicherort für Fotos wählen
 
 ## Die Benutzeroberfläche
 
@@ -35,10 +37,10 @@ Die Fotobox besteht aus mehreren Seiten, die über das Menü erreichbar sind:
 
 ### Navigation
 
-- Das **Menü** (☰) in der linken oberen Ecke öffnet die Navigation zu allen verfügbaren Seiten
-- Der **Event-Titel** in der Mitte des Headers zeigt den Namen Ihrer Veranstaltung
-- Das **Haus-Symbol** im Breadcrumb-Menü führt Sie zurück zur Aufnahme Seite, der Hauptseite der Fotobox
-- **Uhrzeit und Datum** werden auf jeder Seite rechts im Header angezeigt
+* Das **Menü** (☰) in der linken oberen Ecke öffnet die Navigation zu allen verfügbaren Seiten
+* Der **Event-Titel** in der Mitte des Headers zeigt den Namen Ihrer Veranstaltung
+* Das **Haus-Symbol** im Breadcrumb-Menü führt Sie zurück zur Aufnahme Seite, der Hauptseite der Fotobox
+* **Uhrzeit und Datum** werden auf jeder Seite rechts im Header angezeigt
 
 ### Verfügbare Seiten
 
@@ -50,6 +52,7 @@ Die Fotobox besteht aus mehreren Seiten, die über das Menü erreichbar sind:
 ## Fotos aufnehmen
 
 Auf der Home-Seite können Sie:
+
 1. Die Kamera-Vorschau sehen
 2. Den "Foto aufnehmen"-Button drücken, um ein Bild zu erstellen
 3. Optional einen Countdown vor der Aufnahme nutzen
@@ -59,28 +62,33 @@ Die aufgenommenen Fotos werden automatisch gespeichert und sind sofort in der Ga
 ## Galerie anzeigen
 
 In der Galerie-Ansicht werden alle Fotos chronologisch angezeigt (neueste zuerst). Sie können:
-- Durch die Fotos blättern
-- Die Vollbildansicht eines Fotos öffnen
-- Nach einer gewissen Zeit der Inaktivität kehrt die Anzeige automatisch zur Home-Seite zurück
+
+* Durch die Fotos blättern
+* Die Vollbildansicht eines Fotos öffnen
+* Nach einer gewissen Zeit der Inaktivität kehrt die Anzeige automatisch zur Home-Seite zurück
 
 ## Einstellungen anpassen
 
 Im Einstellungsbereich (passwortgeschützt) können Sie folgende Parameter anpassen:
 
 ### Event-Einstellungen
-- Event-Name ändern
-- Event-Datum festlegen
+
+* Event-Name ändern
+* Event-Datum festlegen
 
 ### Anzeige-Einstellungen
-- Farbschema wählen (Hell/Dunkel/Auto)
-- Countdown-Dauer für Fotos anpassen
+
+* Farbschema wählen (Hell/Dunkel/Auto)
+* Countdown-Dauer für Fotos anpassen
 
 ### Kamera-Einstellungen
-- Kamera auswählen (falls mehrere vorhanden)
-- Blitzlicht-Modus einstellen
+
+* Kamera auswählen (falls mehrere vorhanden)
+* Blitzlicht-Modus einstellen
 
 ### Admin-Einstellungen
-- Admin-Passwort ändern
+
+* Admin-Passwort ändern
 
 ## Kontaktinformationen
 
@@ -91,19 +99,19 @@ Auf der Kontaktseite können Sie Informationen hinterlegen, wie Ihre Gäste die 
 ### Häufige Probleme
 
 1. **Kamera wird nicht erkannt**
-   - Prüfen Sie, ob die Kamera angeschlossen und eingeschaltet ist
-   - Aktualisieren Sie die Seite oder starten Sie den Browser neu
+   * Prüfen Sie, ob die Kamera angeschlossen und eingeschaltet ist
+   * Aktualisieren Sie die Seite oder starten Sie den Browser neu
 
 2. **Fotos werden nicht gespeichert**
-   - Überprüfen Sie die Berechtigungen des Foto-Verzeichnisses
-   - Stellen Sie sicher, dass ausreichend Speicherplatz vorhanden ist
+   * Überprüfen Sie die Berechtigungen des Foto-Verzeichnisses
+   * Stellen Sie sicher, dass ausreichend Speicherplatz vorhanden ist
 
 3. **Einstellungen können nicht gespeichert werden**
-   - Prüfen Sie, ob die Datenbank beschreibbar ist
-   - Stellen Sie sicher, dass Sie das richtige Admin-Passwort verwenden
+   * Prüfen Sie, ob die Datenbank beschreibbar ist
+   * Stellen Sie sicher, dass Sie das richtige Admin-Passwort verwenden
 
 ### Support
 
 Bei weiteren Problemen konsultieren Sie bitte die [Projektwebseite](https://github.com/DirkGoetze/fotobox2) oder erstellen Sie ein Issue im GitHub-Repository.
 
-**Stand:** 10. Juni 2025
+**Stand:** 11. Juni 2025

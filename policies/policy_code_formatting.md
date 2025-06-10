@@ -12,6 +12,7 @@ Diese Policy definiert verbindliche Regeln für die Formatierung von Quellcode i
 ## HTML-Dateien
 
 1. **Dokumentstruktur**: Klare Trennung und einheitliche Struktur:
+
    ```html
    <!-- Dateipfad und Beschreibung -->
    <!DOCTYPE html>
@@ -27,7 +28,7 @@ Diese Policy definiert verbindliche Regeln für die Formatierung von Quellcode i
        <main>...</main>
        
        <!-- Footer -->
-       <footer>...</footer>
+              <footer>...</footer>
        
        <!-- Skripte -->
        <script src="..."></script>
