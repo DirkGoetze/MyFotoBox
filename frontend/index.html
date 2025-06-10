@@ -1,38 +1,11 @@
-<!--
-Projektstruktur- und Trennungsregel für Webprojekte (Stand: 2025-06-07)
-
-1. HTML-Dateien (frontend/*.html):
-   - Enthalten ausschließlich die Seitenstruktur und semantisches Markup.
-   - Keine eingebetteten Styles (<style>) oder Skripte (<script>), außer für minimale Initialisierung.
-
-2. CSS-Dateien (frontend/css/*.css):
-   - Enthalten alle Styles, jeweils thematisch oder seitenbezogen getrennt (z.B. splash.css, gallery.css).
-   - Keine Inline-Styles in HTML-Attributen.
-
-3. JavaScript-Dateien (frontend/js/*.js):
-   - Enthalten alle clientseitigen Logiken, Event-Handler und API-Kommunikation.
-   - Pro Seite oder Thema eigene Datei (z.B. main.js, gallery.js, config.js).
-
-4. Bilder & Medien (frontend/picture/, frontend/photos/):
-   - Statische Bilder, Logos, Hintergründe: im Ordner picture/.
-   - Nutzerfotos und Galerie: im Ordner photos/ (ggf. Unterordner wie gallery/).
-
-5. Fonts & Icons (frontend/fonts/):
-   - Externe Schriftarten und Iconsets (z.B. FontAwesome) liegen in fonts/.
-
-6. Dokumentation (documentation/):
-   - Alle Markdown- und Dokumentationsdateien, inkl. Routing- und Strukturübersicht.
-
-7. Policies (policies/):
-   - Projektweite Regeln, Coding-Guidelines und Ausnahmen.
-
-8. Keine Vermischung:
-   - HTML, CSS, JS, Bilder, Fonts und Dokumentation sind strikt in eigenen Ordnern zu halten.
-   - Keine gemischten Inhalte in einem Ordner.
-
-Diese Regel ist verbindlich für alle künftigen Erweiterungen und Refactorings.
--->
-<!-- Splash Screen für die Fotobox-App -->
+<!-- 
+-------------------------------------------------------------------------
+    index.html
+-------------------------------------------------------------------------
+ Funktion: Splash Screen für die Fotobox-App. Zeigt einen Ladebildschirm
+ und leitet je nach Setup-Status weiter zu install.html oder capture.html.
+------------------------------------------------------------------------- 
+//-->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -43,45 +16,13 @@ Diese Regel ist verbindlich für alle künftigen Erweiterungen und Refactorings.
     <link rel="stylesheet" href="css/splash.css">
 </head>
 <body>
-    <div class="splash-overlay" id="splashOverlay">
+    <!-- splash-overlay-block //-->    <div class="splash-overlay" id="splashOverlay">
         <img src="picture/background.jpg" alt="Fotobox Event" class="splash-image">
         <div class="splash-title">Willkommen zur Fotobox</div>
         <div class="progressbar"><div class="progress" id="progressBar"></div></div>
         <div class="splash-hint">Bitte einen Moment Geduld ...</div>
     </div>
-    <script>
-    // Splash-Overlay mit Progressbar und Passwort-Check
-    const splashDuration = 8000; // ms
-    const progressBar = document.getElementById('progressBar');
-    let start = Date.now();
-    function animateProgress() {
-        const elapsed = Date.now() - start;
-        const percent = Math.min(100, (elapsed / splashDuration) * 100);
-        progressBar.style.width = percent + '%';
-        if (elapsed < splashDuration) {
-            requestAnimationFrame(animateProgress);
-        }
-    }
-    animateProgress();    // Prüft, ob ein Passwort gesetzt ist über den speziellen Endpunkt
-    async function checkPasswordSet() {
-        try {
-            // Verwende den speziellen Endpunkt zur Passwortprüfung
-            const res = await fetch('/api/check_password_set');
-            if (!res.ok) throw new Error();
-            const data = await res.json();
-            return data.password_set;
-        } catch {
-            return false;
-        }
-    }
-    setTimeout(async () => {
-        const isSet = await checkPasswordSet();
-        if (isSet) {
-            window.location.href = 'capture.html';
-        } else {
-            window.location.href = 'install.html';
-        }
-    }, splashDuration);
-    </script>
+    <script src="js/splash.js"></script>
+    <!-- No footer needed for splash screen //-->
 </body>
 </html>

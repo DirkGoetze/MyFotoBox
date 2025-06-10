@@ -1,8 +1,11 @@
-<!-- gallery.html
--------------------------------------------------------------------------------
-# Funktion: Zeigt die Galerie-Ansicht der Fotobox mit allen aufgenommenen Fotos
-# und Navigation. Responsive, modernes Layout, Navigation wie auf den anderen Seiten.
-------------------------------------------------------------------------------- -->
+<!-- 
+-------------------------------------------------------------------------
+    gallery.html
+-------------------------------------------------------------------------
+ Funktion: Zeigt die Galerie-Ansicht der Fotobox mit allen aufgenommenen Fotos
+ und Navigation. Responsive, modernes Layout, Navigation wie auf den anderen Seiten.
+------------------------------------------------------------------------- 
+//-->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -15,26 +18,35 @@
     <link rel="stylesheet" href="css/menu.css">
     <link rel="stylesheet" href="css/gallery.css">
 </head>
-<body>    <header id="mainHeader">        <div class="header-left">            <button id="hamburgerBtn">
-                ☰
-            </button>
+<body>
+    <!-- header-block //-->
+    <header id="mainHeader">
+        <div class="header-left">
+            <button id="hamburgerBtn">☰</button>
         </div>
-        <a id="headerTitleLink" href="capture.html"><span id="headerTitle" class="header-title">Fotobox</span></a>        <div class="header-date-time">
+        <a id="headerTitleLink" href="capture.html">
+            <span id="headerTitle" class="header-title">Fotobox</span>
+        </a>
+        <div class="header-date-time">
             <span id="headerTime"></span>
             <span id="headerDate"></span>
-        </div>    </header>
+        </div>
+    </header>
     <!-- Menü-Overlay außerhalb des Headers -->
     <div id="menuOverlay">
         <!-- Menüpunkte werden per JavaScript hinzugefügt -->
-    </div>    <main>
+    </div>
+    <!-- main-block //-->
+    <main>
         <nav class="breadcrumb">
-            <a href="install.html"><i class="fas fa-home"></i></a> &gt; <span>Galerie</span>
+            <a href="capture.html"><i class="fas fa-home"></i></a> &gt; <span>Galerie</span>
         </nav>
         <div id="galleryView">
             <h1>Galerie</h1>
             <div id="galleryPhotos"></div>
         </div>
     </main>
+    <!-- footer-block //-->
     <footer id="mainFooter">
         <span id="footerText">© 2025 Fotobox</span>
     </footer>

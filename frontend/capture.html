@@ -11,26 +11,27 @@
     <link rel="stylesheet" href="css/gallery.css">
 </head>
 <body>
-    <!-- ----------------------------------------------------------------------------
-         index.html
-     -----------------------------------------------------------------------------
-     Funktion: Hauptseite der Fotobox-Weboberfläche. Zeigt Startoptionen und Navigation.
-     [Optional: Enthält Verlinkungen zu Aufnahme, Galerie und Einstellungen.]
-     ----------------------------------------------------------------------------- -->
-    <!-- header-block
-    -------------------------------------------------------------------------------
-    # Funktion: Header mit Hamburger-Menü für alle Seiten
-    -------------------------------------------------------------------------------
-    -->    <header id="mainHeader">
-        <!-- Test Hamburger Menü -->
-        <div class="header-left">            <button id="hamburgerBtn">
-                ☰
-            </button>
+    <!-- 
+    -------------------------------------------------------------------------
+        capture.html
+    -------------------------------------------------------------------------
+     Funktion: Hauptseite der Fotobox-Weboberfläche. Zeigt Aufnahmevorschau,  
+     ........  Aufnahme Button und die Navigation.
+     ------------------------------------------------------------------------ 
+     //-->
+    <!-- header-block //-->
+    <header id="mainHeader">
+        <div class="header-left">
+            <button id="hamburgerBtn">☰</button>
         </div>
-        <a id="headerTitleLink" href="capture.html"><span id="headerTitle" class="header-title">Fotobox</span></a>        <div class="header-date-time">
+        <a id="headerTitleLink" href="capture.html">
+            <span id="headerTitle" class="header-title">Fotobox</span>
+        </a>
+        <div class="header-date-time">
             <span id="headerTime"></span>
             <span id="headerDate"></span>
-        </div>    </header>
+        </div>
+    </header>
     <!-- Menü-Overlay außerhalb des Headers -->
     <div id="menuOverlay">
         <!-- Menüpunkte werden per JavaScript hinzugefügt -->
@@ -48,11 +49,7 @@
             </button>
         </div>
     </main>
-    <!-- footer-block
-    -------------------------------------------------------------------------------
-    # Funktion: Footer mit Copyright und Event-/Projektnamen für alle Seiten
-    -------------------------------------------------------------------------------
-    -->
+    <!-- footer-block //-->
     <footer id="mainFooter">
         <span id="footerText">© 2025 Fotobox</span>
     </footer>

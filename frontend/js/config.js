@@ -65,10 +65,9 @@ if (document.getElementById('loginForm')) {
         });
         if(res.ok) {
             const data = await res.json();
-            if(data.success) {
-                pwOverlay.style.display = 'none';
-                document.getElementById('configForm').style.display = '';
-                document.getElementById('updateForm').style.display = '';
+            if(data.success) {                pwOverlay.classList.add('hidden');
+                document.getElementById('configForm').classList.add('form-visible');
+                document.getElementById('updateForm').classList.add('form-visible');
                 loadConfigFromServer();
                 loadNginxConfig();
             } else {

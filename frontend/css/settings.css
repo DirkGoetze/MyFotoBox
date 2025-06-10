@@ -1,0 +1,34 @@
+/* ------------------------------------------------------------------------------
+   settings.css
+ ------------------------------------------------------------------------------
+   Funktion: Enthält die CSS-Regeln speziell für die Einstellungsseite (settings.html)
+   der Fotobox-Weboberfläche.
+ ------------------------------------------------------------------------------ */
+
+/* Login Formular */
+#loginForm {
+    margin-bottom: 2em;
+}
+
+/* Konfigurationsformular (standardmäßig ausgeblendet) */
+#configForm {
+    display: none;
+}
+
+/* Zusätzliche Klassen für JavaScript zum Ein-/Ausblenden */
+.form-visible {
+    display: block !important;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Status-Anzeigen */
+.status-error {
+    color: #c00;
+}
+
+.status-success {
+    color: #080;
+}

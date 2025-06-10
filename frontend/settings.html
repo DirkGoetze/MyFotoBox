@@ -1,37 +1,53 @@
+<!-- 
+-------------------------------------------------------------------------
+    settings.html
+-------------------------------------------------------------------------
+ Funktion: Einstellungsseite für die Fotobox-Konfiguration.
+ Passwortgeschützt, erlaubt Anpassung aller System- und Anzeigeeinstellungen.
+------------------------------------------------------------------------- 
+//-->
 <!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
     <title>Fotobox Einstellungen</title>
     <link rel="stylesheet" href="fonts/fontawesome-free-5.15.4-web/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/header.css">
+    <link rel="stylesheet" href="css/style.css">    <link rel="stylesheet" href="css/header.css">
     <link rel="stylesheet" href="css/footer.css">
     <link rel="stylesheet" href="css/menu.css">
     <link rel="stylesheet" href="css/config.css">
+    <link rel="stylesheet" href="css/settings.css">
 </head>
-<body>    <header id="mainHeader">        <div class="header-left">            <button id="hamburgerBtn">
-                ☰
-            </button>
+<body>
+    <!-- header-block //-->
+    <header id="mainHeader">
+        <div class="header-left">
+            <button id="hamburgerBtn">☰</button>
         </div>
-        <a id="headerTitleLink" href="capture.html"><span id="headerTitle" class="header-title">Fotobox</span></a>        <div class="header-date-time">
+        <a id="headerTitleLink" href="capture.html">
+            <span id="headerTitle" class="header-title">Fotobox</span>
+        </a>
+        <div class="header-date-time">
             <span id="headerTime"></span>
             <span id="headerDate"></span>
-        </div>    </header>
+        </div>
+    </header>
     <!-- Menü-Overlay außerhalb des Headers -->
     <div id="menuOverlay">
         <!-- Menüpunkte werden per JavaScript hinzugefügt -->
-    </div>    <main>
+    </div>
+    <!-- main-block //-->
+    <main>
         <nav class="breadcrumb">
-            <a href="install.html"><i class="fas fa-home"></i></a> &gt; <span>Einstellungen</span>
-        </nav>
-        <form id="loginForm" style="margin-bottom:2em;">
+            <a href="capture.html"><i class="fas fa-home"></i></a> &gt; <span>Einstellungen</span>
+        </nav>        <form id="loginForm">
             <label>Passwort für Einstellungen:
                 <input type="password" id="adminPassword" required>
             </label>
             <button type="submit">Login</button>
             <span id="loginStatus"></span>
-        </form>        <form id="configForm" style="display:none;">
+        </form>
+        <form id="configForm">
             <fieldset>
                 <legend>Eventeinstellungen</legend>
                 <table class="settings-table">
@@ -103,192 +119,12 @@
                 <button type="button" id="reset_config" class="reset-btn">Zurücksetzen</button>
             </div>
         </form>
-    </main>
-    <footer id="mainFooter">
+    </main>    <footer id="mainFooter">
         <span id="footerText">© 2025 Fotobox</span>
-    </footer>    <script src="js/main.js"></script>
+    </footer>
+    <!-- JavaScript wurde in externe Datei ausgelagert gemäß Code-Formatierungs-Policy -->
+    <script src="js/main.js"></script>
     <script src="js/config.js"></script>
-    <script>
-    // Funktionalität für das Login-Formular
-    document.getElementById('loginForm').onsubmit = async function(e) {
-        e.preventDefault();
-        const password = document.getElementById('adminPassword').value;
-        const status = document.getElementById('loginStatus');
-        
-        if (password.length < 4) {
-            status.textContent = 'Passwort zu kurz (mind. 4 Zeichen)';
-            status.style.color = '#c00';
-            return;
-        }
-          try {
-            const response = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: password })
-            });
-            
-            if (response.ok) {
-                // Login erfolgreich
-                document.getElementById('loginForm').style.display = 'none';
-                document.getElementById('configForm').style.display = 'block';
-                
-                // Einstellungen laden
-                loadSettings();
-            } else {
-                status.textContent = 'Falsches Passwort';
-                status.style.color = '#c00';
-            }
-        } catch (error) {
-            status.textContent = 'Verbindungsfehler';
-            status.style.color = '#c00';
-            console.error('Login-Fehler:', error);
-        }
-    };
-    
-    // Event-Handler für das Speichern der Einstellungen
-    document.getElementById('configForm').onsubmit = async function(e) {
-        e.preventDefault();
-        
-        // Statusanzeige erstellen, wenn nicht vorhanden
-        let statusDiv = document.getElementById('configStatus');
-        if (!statusDiv) {
-            statusDiv = document.createElement('div');
-            statusDiv.id = 'configStatus';
-            statusDiv.style.margin = '1em 0';
-            statusDiv.style.padding = '0.5em 1em';
-            statusDiv.style.borderRadius = '4px';
-            this.querySelector('.form-actions').after(statusDiv);
-        }
-        
-        try {
-            // Einstellungen sammeln
-            const settings = {
-                event_name: document.getElementById('event_name').value,
-                event_date: document.getElementById('event_date').value,
-                color_mode: document.getElementById('color_mode').value,
-                countdown_duration: parseInt(document.getElementById('countdown_duration').value, 10),
-                camera_id: document.getElementById('camera_id').value,
-                flash_mode: document.getElementById('flash_mode').value
-            };
-            
-            // Optional: Passwort ändern, wenn angegeben
-            const newPassword = document.getElementById('new_password').value;
-            if (newPassword.length > 0) {
-                if (newPassword.length < 4) {
-                    statusDiv.textContent = 'Neues Passwort zu kurz (mind. 4 Zeichen)';
-                    statusDiv.style.backgroundColor = '#ffdddd';
-                    statusDiv.style.color = '#c00';
-                    return;
-                }
-                settings.admin_password = newPassword;
-            }
-            
-            // Einstellungen an API senden
-            const response = await fetch('/api/settings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(settings)
-            });
-            
-            if (response.ok) {
-                statusDiv.textContent = 'Einstellungen erfolgreich gespeichert!';
-                statusDiv.style.backgroundColor = '#ddffdd';
-                statusDiv.style.color = '#080';
-                
-                // Header-Titel aktualisieren
-                setHeaderTitle(settings.event_name);
-            } else {
-                statusDiv.textContent = 'Fehler beim Speichern der Einstellungen';
-                statusDiv.style.backgroundColor = '#ffdddd';
-                statusDiv.style.color = '#c00';
-            }
-        } catch (error) {
-            statusDiv.textContent = 'Verbindungsfehler beim Speichern';
-            statusDiv.style.backgroundColor = '#ffdddd';
-            statusDiv.style.color = '#c00';
-            console.error('Speichern-Fehler:', error);
-        }
-    };
-    
-    // Reset-Button Funktionalität
-    document.getElementById('reset_config').onclick = function() {
-        if (confirm('Einstellungen auf Standardwerte zurücksetzen?')) {
-            loadSettings();
-        }
-    };
-      // Einstellungen aus der Datenbank laden
-    async function loadSettings() {
-        try {
-            const response = await fetch('/api/settings');
-            if (response.ok) {
-                const settings = await response.json();
-                
-                // Event-Name setzen (wenn vorhanden)
-                if (document.getElementById('event_name')) {
-                    document.getElementById('event_name').value = settings.event_name || '';
-                    // Aktualisiere auch den Header-Titel
-                    setHeaderTitle(settings.event_name);
-                }
-                
-                // Event-Datum setzen (wenn vorhanden)
-                if (settings.event_date && document.getElementById('event_date')) {
-                    document.getElementById('event_date').value = settings.event_date;
-                }
-                
-                // Farbmodus setzen
-                if (document.getElementById('color_mode')) {
-                    document.getElementById('color_mode').value = settings.color_mode || 'auto';
-                }
-                
-                // Countdown-Dauer setzen
-                if (document.getElementById('countdown_duration')) {
-                    document.getElementById('countdown_duration').value = settings.countdown_duration || 3;
-                }
-                
-                // Kamera-Einstellungen
-                if (document.getElementById('camera_id')) {
-                    document.getElementById('camera_id').value = settings.camera_id || 'auto';
-                }
-                
-                if (document.getElementById('flash_mode')) {
-                    document.getElementById('flash_mode').value = settings.flash_mode || 'auto';
-                }
-                
-                // Verfügbare Kameras laden und Dropdown aktualisieren
-                loadAvailableCameras();
-            }
-        } catch (error) {
-            console.error('Fehler beim Laden der Einstellungen:', error);
-        }
-    }
-    
-    // Verfügbare Kameras laden und im Dropdown anzeigen
-    async function loadAvailableCameras() {
-        try {
-            const response = await fetch('/api/cameras');
-            if (response.ok) {
-                const cameras = await response.json();
-                const cameraSelect = document.getElementById('camera_id');
-                
-                // Bestehende Optionen außer "auto" entfernen
-                Array.from(cameraSelect.options).forEach(option => {
-                    if (option.value !== 'auto') {
-                        cameraSelect.removeChild(option);
-                    }
-                });
-                
-                // Neue Kamera-Optionen hinzufügen
-                cameras.forEach(camera => {
-                    const option = document.createElement('option');
-                    option.value = camera.id;
-                    option.textContent = camera.name;
-                    cameraSelect.appendChild(option);
-                });
-            }
-        } catch (error) {
-            console.error('Fehler beim Laden der Kameras:', error);
-        }
-    }
-    </script>
+    <script src="js/settings.js"></script>
 </body>
 </html>

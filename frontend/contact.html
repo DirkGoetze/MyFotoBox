@@ -1,3 +1,11 @@
+<!-- 
+-------------------------------------------------------------------------
+    contact.html
+-------------------------------------------------------------------------
+ Funktion: Zeigt Kontaktinformationen und wie Gäste an ihre Fotos kommen.
+ Enthält Kontaktdaten und Informationen zur Fotoabholung.
+------------------------------------------------------------------------- 
+//-->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -9,20 +17,28 @@
     <link rel="stylesheet" href="css/footer.css">
     <link rel="stylesheet" href="css/menu.css">
 </head>
-<body>    <header id="mainHeader">        <div class="header-left">            <button id="hamburgerBtn">
-                ☰
-            </button>
+<body>
+    <!-- header-block //-->
+    <header id="mainHeader">
+        <div class="header-left">
+            <button id="hamburgerBtn">☰</button>
         </div>
-        <a id="headerTitleLink" href="capture.html"><span id="headerTitle" class="header-title">Fotobox</span></a>        <div class="header-date-time">
+        <a id="headerTitleLink" href="capture.html">
+            <span id="headerTitle" class="header-title">Fotobox</span>
+        </a>
+        <div class="header-date-time">
             <span id="headerTime"></span>
             <span id="headerDate"></span>
-        </div>    </header>
+        </div>
+    </header>
     <!-- Menü-Overlay außerhalb des Headers -->
     <div id="menuOverlay">
         <!-- Menüpunkte werden per JavaScript hinzugefügt -->
-    </div>    <main>
+    </div>
+    <!-- main-block //-->
+    <main>
         <nav class="breadcrumb">
-            <a href="install.html"><i class="fas fa-home"></i></a> &gt; <span>Kontakt</span>
+            <a href="capture.html"><i class="fas fa-home"></i></a> &gt; <span>Kontakt</span>
         </nav>
         <h1>Kontakt</h1>
         <p>Hier können Sie Kontakt aufnehmen oder erfahren, wie Sie Ihre Fotos erhalten.</p>
@@ -31,6 +47,7 @@
             <li>Telefon: 01234 / 567890</li>
         </ul>
     </main>
+    <!-- footer-block //-->
     <footer id="mainFooter">
         <span id="footerText">© 2025 Fotobox</span>
     </footer>

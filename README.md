@@ -85,9 +85,6 @@ Die Verwaltung, das Update und die Deinstallation der Fotobox können einfach un
 - [INSTALLATION](documentation/installation.md): Ausführliche Installationsanleitung
 - [UPDATE](documentation/update.md): Update-Anleitung
 - [REMOVE](documentation/remove.md): Deinstallationsanleitung
-- [DOKUMENTATIONSSTANDARD](DOKUMENTATIONSSTANDARD.md): Kommentar- und Review-Standards
-- [BACKUP_STRATEGIE](BACKUP_STRATEGIE.md): Backup-/Restore-Strategie
-- Weitere technische Details im Ordner `documentation/`
 
 ## Beitrag
 

@@ -153,12 +153,11 @@ function setHeaderTitle(title) {
     if (headerTitle) {
         headerTitle.textContent = displayTitle;
     }
-    
-    // Korrekte Verlinkung des Header-Titels entsprechend der Doku
-    // Header-Titel verlinkt auf install.html (Einstellungen) gemäß frontend_routing.md
+      // Korrekte Verlinkung des Header-Titels entsprechend der Doku
+    // Header-Titel verlinkt auf capture.html (Home) gemäß frontend_routing_policy.md
     const headerTitleLink = document.getElementById('headerTitleLink');
     if (headerTitleLink) {
-        headerTitleLink.href = 'install.html';
+        headerTitleLink.href = 'capture.html';
     }
     
     // Zusätzlich den Titel im Browser-Tab aktualisieren
