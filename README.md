@@ -2,7 +2,7 @@
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 ![Lizenz: MIT](https://img.shields.io/badge/license-MIT-blue)
-![Version 0.3](https://img.shields.io/badge/version-0.3-orange)
+![Version 0.3.1](https://img.shields.io/badge/version-0.3.1-orange)
 
 > **Achtung: Diese Version ist eine Vorab-/Testversion (Pre-Release) und nicht für den Produktiveinsatz geeignet!**
 
@@ -106,3 +106,4 @@ Persönlicher Support oder E-Mail-Kontakt ist nicht möglich.
 ## Danksagung
 
 Danke an alle Open-Source-Entwickler, deren Tools und Software dieses Projekt ermöglichen.
+

@@ -16,7 +16,7 @@ Beispiel: 1.2.3
 
 ## Speicherort der Version
 
-Die aktuelle Version ist in der Datei `conf/version.inf` hinterlegt und wird bei jedem Update automatisch aktualisiert.
+Die aktuelle Version ist in der Datei `conf/version.inf` hinterlegt und wird bei jedem Update automatisch aktualisiert. Diese Datei ist die EINZIGE und OFFIZIELLE Quelle für die Versionsinformation im gesamten Projekt. Die `VERSION`-Datei im Hauptverzeichnis dient nur als Verweis auf diese offizielle Quelle und das `sync_version.ps1`-Skript stellt sicher, dass README.md und andere Referenzen aktualisiert werden.
 
 ## Versionspflege und -aktualisierung
 
