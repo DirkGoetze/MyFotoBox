@@ -1,5 +1,5 @@
 // gallery.js
-// Enthält alle Funktionen und Event-Handler, die ausschließlich für die Galerie- und Aufnahmeansicht (index.html, gallery.html) benötigt werden.
+// Enthält alle Funktionen und Event-Handler, die ausschließlich für die Galerie- und Aufnahmeansicht (capture.html, gallery.html) benötigt werden.
 
 if (document.getElementById('showGallery')) {
     let galleryTimeout = null;

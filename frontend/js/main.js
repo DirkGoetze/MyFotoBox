@@ -39,9 +39,8 @@ function initMenu() {
         { text: 'Kontakt', href: 'contact.html' },
         { text: 'Einstellungen', href: 'settings.html' }
     ];
-    
-    // Aktuelle Seite ermitteln
-    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+      // Aktuelle Seite ermitteln
+    const currentPage = window.location.pathname.split('/').pop() || 'capture.html';
     
     // Menü-Container und Button holen
     const menuOverlay = document.getElementById('menuOverlay');
@@ -155,6 +154,13 @@ function setHeaderTitle(title) {
         headerTitle.textContent = displayTitle;
     }
     
+    // Korrekte Verlinkung des Header-Titels entsprechend der Doku
+    // Header-Titel verlinkt auf install.html (Einstellungen) gemäß frontend_routing.md
+    const headerTitleLink = document.getElementById('headerTitleLink');
+    if (headerTitleLink) {
+        headerTitleLink.href = 'install.html';
+    }
+    
     // Zusätzlich den Titel im Browser-Tab aktualisieren
     document.title = displayTitle;
     
@@ -202,13 +208,12 @@ function setColorMode(mode) {
 // Funktion: Führt je nach aktueller Seite spezifische Initialisierungen durch
 // ------------------------------------------------------------------------------
 
-function initPageSpecificFeatures() {
-    // Erfasse den Seitentyp basierend auf URL oder DOM-Elementen
+function initPageSpecificFeatures() {    // Erfasse den Seitentyp basierend auf URL oder DOM-Elementen
     const path = window.location.pathname;
     const isCapturePage = path.includes('capture.html') || document.getElementById('captureView');
     const isGalleryPage = path.includes('gallery.html') || document.getElementById('galleryView');
     const isSettingsPage = path.includes('settings.html') || document.getElementById('configForm');
-    const isSplashPage = path.includes('index.html') || document.getElementById('splashOverlay');
+    const isSplashPage = path.endsWith('/') || path.endsWith('index.html') || document.getElementById('splashOverlay');
     
     // Lade Event-Titel aus API für alle Seiten außer Splash und Install
     if (!isSplashPage && !path.includes('install.html')) {
