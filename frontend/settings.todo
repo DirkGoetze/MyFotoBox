@@ -1,0 +1,26 @@
+# Fotobox Einstellungsseite TODO-Liste
+
+## Fehlende Einstellungen ergänzen
+Diese Einstellungen sind in der Datenbank vorhanden, aber bisher nicht in der Einstellungsseite implementiert:
+
+### Kamera-Einstellungen erweitern
+- [ ] `camera_mode`: Kamera-Modus für die Aufnahme hinzufügen (z.B. Normal, Portrait, Landschaft)
+- [ ] `resolution_width` und `resolution_height`: Auflösung der Fotos als Auswahlfeld hinzufügen (Standardauflösungen anbieten)
+
+### System-Einstellungen ergänzen
+- [ ] `storage_path`: Pfad zum Speichern der Fotos (mit Ordner-Browser oder direkter Eingabe)
+- [ ] `gallery_timeout_ms`: Timeout für die Galerie-Ansicht in Millisekunden
+- [ ] `photo_timer`: Zeitintervall zwischen Aufnahmen (für Serienaufnahmen)
+- [ ] `show_splash`: Option zum Ein-/Ausschalten des Splash-Screens beim Start
+
+## Zukünftige Erweiterungen
+- [ ] Bildbearbeitungsoptionen (Filter, Rahmen, etc.)
+- [ ] Druckeinstellungen für angeschlossene Drucker
+- [ ] Sharing-Optionen (E-Mail, QR-Code-Generierung)
+- [ ] Anpassbare Benutzeroberfläche (Logo, Farben, etc.)
+
+## Technische Aufgaben
+- [ ] JavaScript-Funktionen für die neuen Einstellungen implementieren
+- [ ] API-Endpunkte für neue Einstellungen auf Backend-Seite prüfen
+- [ ] Einstellungen in Kategorien gruppieren, wenn die Anzahl wächst
+- [ ] Formularvalidierung für alle Einstellungen hinzufügen

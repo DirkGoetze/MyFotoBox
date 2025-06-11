@@ -339,3 +339,84 @@ body.dark .secondary-btn {
 body.dark .secondary-btn:hover {
     background-color: #444;
 }
+
+/* ----------------------------------------------------------------------------
+   Benachrichtigungen für Einstellungsänderungen
+ ------------------------------------------------------------------------------ */
+.settings-notification {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    background-color: #fff;
+    border-left: 4px solid #38d39f;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    padding: 12px 20px;
+    border-radius: 4px;
+    z-index: 1000;
+    max-width: 320px;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.settings-notification.error {
+    border-left-color: #ff5252;
+}
+
+.settings-notification.success {
+    border-left-color: #38d39f;
+}
+
+.settings-notification.warning {
+    border-left-color: #ffb142;
+}
+
+.hidden {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-20px);
+}
+
+.close-notification {
+    background: none;
+    border: none;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    cursor: pointer;
+    font-size: 18px;
+    color: #888;
+}
+
+.close-notification:hover {
+    color: #333;
+}
+
+/* Dark Mode für Benachrichtigungen */
+@media (prefers-color-scheme: dark) {
+    .settings-notification {
+        background-color: #2a2a2a;
+        color: #eee;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+    
+    .close-notification {
+        color: #aaa;
+    }
+    
+    .close-notification:hover {
+        color: #fff;
+    }
+}
+
+/* Visuelle Rückmeldung für ein bearbeitetes Feld */
+.input-field.edited input,
+.input-field.edited select {
+    border-color: #38d39f;
+    background-color: rgba(56, 211, 159, 0.05);
+}
+
+.input-field.error input,
+.input-field.error select {
+    border-color: #ff5252;
+    background-color: rgba(255, 82, 82, 0.05);
+}
