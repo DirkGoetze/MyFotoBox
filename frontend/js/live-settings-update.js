@@ -110,7 +110,7 @@ function initLiveSettingsUpdate() {
  * @param {any} value - Der zu speichernde Wert
  * @returns {Promise<boolean>} - True bei Erfolg, False bei Fehler
  * 
- * Verwendet einen PUT-Request an den API-Endpunkt /api/settings für einzelne Einstellungen.
+ * Verwendet einen POST-Request an den API-Endpunkt /api/settings für einzelne Einstellungen.
  * Struktur der gesendeten Daten: { einstellungs_name: einstellungs_wert }
  */
 async function updateSingleSetting(name, value) {
@@ -121,7 +121,7 @@ async function updateSingleSetting(name, value) {
         
         // API-Aufruf um die einzelne Einstellung zu speichern
         const response = await fetch('/api/settings', {
-            method: 'PUT', // PUT für einzelne Einstellungen, POST für komplette Formulare
+            method: 'POST', // Verwende POST, da der Server PUT nicht unterstützt
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(settingObj)
         });
