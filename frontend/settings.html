@@ -126,8 +126,7 @@
                         <div>Steuerung des Kamerablitzes (falls vorhanden). Bei "Automatisch" entscheidet die Kamera selbst je nach Lichtverhältnissen. Bei Veranstaltungen mit empfindlichen Gästen oder Kindern kann es sinnvoll sein, das Blitzlicht auszuschalten.</div>
                     </details>
                 </div>
-            </fieldset>
-              <fieldset>
+            </fieldset>            <fieldset>
                 <legend>Admin-Einstellungen</legend>                <div class="fancy-input">
                     <label for="new_password">Admin-Passwort ändern</label>
                     <input type="password" name="new_password" id="new_password">
@@ -139,6 +138,30 @@
                             <p>Falls Sie das Passwort vergessen, finden Sie Anweisungen zum Zurücksetzen in der Dokumentation.</p>
                         </div>
                     </details>
+                </div>
+            </fieldset>
+            
+            <fieldset id="systemUpdateSection">
+                <legend>System-Updates</legend>
+                <div id="versionInfo" class="version-info">
+                    <div class="version-status">
+                        <span id="currentVersion">Aktuelle Version: <span class="version-number">-</span></span>
+                        <button type="button" id="checkUpdateBtn" class="secondary-btn">Auf Updates prüfen</button>
+                    </div>
+                    <div id="updateStatus" class="update-status hidden"></div>
+                </div>
+                <div id="updateActions" class="update-actions hidden">
+                    <div class="update-available-info">
+                        <span class="update-badge">Update verfügbar</span>
+                        <span id="availableVersion">Neue Version: <span class="version-number">-</span></span>
+                    </div>
+                    <button type="button" id="installUpdateBtn" class="primary-btn">Update installieren</button>
+                </div>
+                <div id="updateProgress" class="update-progress hidden">
+                    <div class="progress-bar">
+                        <div id="updateProgressBar" class="progress-fill"></div>
+                    </div>
+                    <div id="updateProgressText" class="progress-text">Update wird vorbereitet...</div>
                 </div>
             </fieldset>
             

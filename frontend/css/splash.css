@@ -57,3 +57,32 @@ body {
     text-align: center;
     opacity: 0.8;
 }
+
+.splash-status {
+    color: #fff;
+    font-size: 0.95em;
+    margin-top: 1em;
+    text-align: center;
+    opacity: 0.9;
+    height: 1.2em; /* Feste Höhe damit Layout nicht springt */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.status-checking {
+    color: #f0f0f0;
+}
+
+.status-uptodate {
+    color: #38d39f;
+}
+
+.status-updateavailable {
+    color: #ffcc00;
+    font-weight: bold;
+}
+
+.status-error {
+    color: #ff6b6b;
+}
