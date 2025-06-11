@@ -6,6 +6,48 @@
 // ------------------------------------------------------------------------------
 
 // Hauptinitialisierung - wird ausgeführt, wenn das DOM geladen ist
+/**
+ * Anti-Cache-Funktion für die Testphase
+ * Fügt zu allen CSS und JS Dateien einen Timestamp als Query-Parameter hinzu,
+ * um das Caching des Browsers zu umgehen
+ */
+(function() {
+    // Nur im Testmodus ausführen
+    const isTestMode = true;
+    
+    if (isTestMode) {
+        // Funktionalität, um dynamischen Timestamp zu CSS-Links hinzuzufügen
+        function addTimestampToResources() {
+            // Alle Link-Elemente (CSS) mit Timestamp versehen
+            document.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
+                if (!link.href.includes('?v=')) {
+                    link.href = link.href + '?v=' + new Date().getTime();
+                }
+            });
+            
+            // Alle Script-Elemente mit Timestamp versehen
+            document.querySelectorAll('script[src]').forEach(script => {
+                if (!script.src.includes('?v=')) {
+                    script.src = script.src + '?v=' + new Date().getTime();
+                }
+            });
+        }
+        
+        // Ausführen sobald das Skript geladen wird
+        addTimestampToResources();
+        
+        // Zusätzlich ein Hotkey zum manuellen Neuladen ohne Cache (Strg+Shift+R)
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+                e.preventDefault();
+                window.location.reload(true); // True erzwingt Neuladen ohne Cache
+            }
+        });
+        
+        console.log('Anti-Cache-Maßnahmen für Testphase aktiviert');
+    }
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
     // Datum und Uhrzeit initialisieren
     updateDateTime();

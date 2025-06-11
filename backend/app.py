@@ -14,6 +14,25 @@ os.makedirs(DB_DIR, exist_ok=True)
 app = Flask(__name__)
 app.secret_key = os.environ.get('FOTOBOX_SECRET_KEY', 'fotobox_default_secret')
 
+# Cache-Kontrolle für die Testphase
+@app.after_request
+def add_no_cache_headers(response):
+    """
+    Fügt No-Cache-Header zu allen Antworten für die Testphase hinzu
+    """
+    # Prüfe, ob wir uns im Testmodus befinden
+    test_mode = os.environ.get('FOTOBOX_TEST_MODE', 'true').lower() == 'true'
+    
+    if test_mode:
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+        # Debug-Header hinzufügen, um zu zeigen, dass die Cache-Deaktivierung aktiv ist
+        response.headers['X-Fotobox-Test-Mode'] = 'active'
+    
+    return response
+
 # Datenbank initialisieren (bei jedem Start sicherstellen)
 subprocess.run(['python3', os.path.join(os.path.dirname(__file__), 'manage_database.py'), 'init'])
 
