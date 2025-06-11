@@ -401,6 +401,10 @@ body.dark .secondary-btn:hover {
     border-left-color: #ffb142;
 }
 
+.settings-notification.info {
+    border-left-color: #3498db;
+}
+
 .settings-notification span {
     flex: 1;
 }

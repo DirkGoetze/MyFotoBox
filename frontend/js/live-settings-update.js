@@ -73,11 +73,13 @@ function initLiveSettingsUpdate() {
                             
                             // Bei Fehler zurück zum alten Wert
                             setFieldValue(field, originalValue);
-                        }
-                    } else {
+                        }                    } else {
                         // Ungültiger Wert
                         if (parentField) parentField.classList.add('error');
-                        showNotification(validationResult.message, 'error');
+                        
+                        // Bestimme den Typ der Benachrichtigung (Info oder Error)
+                        const notificationType = validationResult.type || 'error';
+                        showNotification(validationResult.message, notificationType);
                         
                         // Bei Validierungsfehler zurück zum alten Wert
                         setFieldValue(field, originalValue);
@@ -151,8 +153,7 @@ async function updateSingleSetting(name, value) {
 function validateField(field, value) {
     const fieldName = field.name;
     const fieldType = field.type;
-    
-    // Validierungsregeln basierend auf dem Feldnamen und Typ
+      // Validierungsregeln basierend auf dem Feldnamen und Typ
     switch (fieldName) {
         case 'event_name':
             if (!value || value.trim() === '') {
@@ -164,9 +165,39 @@ function validateField(field, value) {
             break;
             
         case 'countdown_duration':
-            const numValue = parseInt(value);
-            if (isNaN(numValue) || numValue < 1 || numValue > 10) {
+            const countdownValue = parseInt(value);
+            if (isNaN(countdownValue) || countdownValue < 1 || countdownValue > 10) {
                 return { valid: false, message: 'Countdown muss zwischen 1 und 10 Sekunden liegen' };
+            }
+            break;
+            
+        case 'screensaver_timeout':
+            const screensaverValue = parseInt(value);
+            if (isNaN(screensaverValue)) {
+                return { valid: false, message: 'Bitte geben Sie eine gültige Zahl ein' };
+            }
+            if (screensaverValue < 30 || screensaverValue > 600) {
+                // Hier verwenden wir info statt error, da der Wert außerhalb des erlaubten Bereichs liegt
+                // Die Validierung schlägt fehl, aber wir wollen eine informative Nachricht anzeigen
+                return { 
+                    valid: false, 
+                    message: 'Bildschirmschoner-Timeout muss zwischen 30 und 600 Sekunden liegen', 
+                    type: 'info'
+                };
+            }
+            break;
+            
+        case 'gallery_timeout':
+            const galleryValue = parseInt(value);
+            if (isNaN(galleryValue)) {
+                return { valid: false, message: 'Bitte geben Sie eine gültige Zahl ein' };
+            }
+            if (galleryValue < 30 || galleryValue > 300) {
+                return { 
+                    valid: false, 
+                    message: 'Galerie-Timeout muss zwischen 30 und 300 Sekunden liegen',
+                    type: 'info'
+                };
             }
             break;
     }
@@ -244,10 +275,16 @@ function showNotification(message, type = 'info') {
     setTimeout(() => {
         notification.classList.add('visible');
     }, 10);
-    
-    // Timeout für automatisches Ausblenden setzen
-    // Standard-Dauer für Erfolg: 3000ms, für Fehler: 6000ms (doppelt)
-    const timeoutDuration = (type === 'error') ? 6000 : 3000;
+      // Timeout für automatisches Ausblenden setzen
+    // Standard-Dauer für Erfolg: 3000ms, für Info: 4500ms, für Fehler: 6000ms (doppelt)
+    let timeoutDuration;
+    if (type === 'error') {
+        timeoutDuration = 6000; // Längste Anzeigedauer für Fehler
+    } else if (type === 'info') {
+        timeoutDuration = 4500; // Mittlere Anzeigedauer für Infos
+    } else {
+        timeoutDuration = 3000; // Standarddauer für Erfolg und andere
+    }
     
     const timeout = setTimeout(() => {
         hideNotification(notificationId);
