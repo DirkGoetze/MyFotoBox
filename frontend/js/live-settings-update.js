@@ -19,8 +19,11 @@ let notificationCounter = 0; // Zähler für eindeutige Benachrichtigungs-IDs
  * Wird nach erfolgreichem Login aufgerufen
  */
 function initLiveSettingsUpdate() {
-    // Alle Eingabefelder auswählen (input, select) - aber nicht das Passwortfeld
-    const inputFields = document.querySelectorAll('#configForm input:not([type="password"]), #configForm select');
+    // Alle Nicht-Passwort Eingabefelder auswählen
+    const inputFields = document.querySelectorAll('#configForm input:not([id="new_password"]):not([id="confirm_password"]), #configForm select');
+    
+    // Spezielles Handling für Passwortfelder
+    setupPasswordFieldUpdates();
     
     inputFields.forEach(field => {
         // Speichert den ursprünglichen Wert beim Fokussieren
@@ -35,7 +38,6 @@ function initLiveSettingsUpdate() {
                 parentField.classList.remove('edited', 'error');
             }
         });
-        
         // Prüft auf Änderungen beim Verlassen des Feldes und speichert diese
         field.addEventListener('blur', async function() {
             if (fieldOriginalValues.has(field.id)) {
@@ -129,6 +131,14 @@ async function updateSingleSetting(name, value) {
             if (name === 'event_name') {
                 setHeaderTitle(value);
             }
+            
+            // Nach der Einstellungsänderung auf Updates prüfen, falls die checkForUpdates Funktion existiert
+            if (typeof checkForUpdates === 'function') {
+                setTimeout(() => {
+                    checkForUpdates();
+                }, 500); // Kleine Verzögerung für bessere UX
+            }
+            
             return true;
         } else {
             console.error('API-Fehler beim Speichern:', await response.text());
@@ -375,4 +385,66 @@ function getFieldLabel(field) {
     
     // Fallback: Feldname verwenden
     return field.name;
+}
+
+/**
+ * Setzt den Titel im Header
+ */
+function setHeaderTitle(title) {
+    const headerTitle = document.getElementById('headerTitle');
+    if (headerTitle) {
+        headerTitle.textContent = title || 'Fotobox';
+    }
+}
+
+/**
+ * Richtet die Eventhandler für die Passwortfelder ein
+ */
+function setupPasswordFieldUpdates() {
+    const newPassword = document.getElementById('new_password');
+    const confirmPassword = document.getElementById('confirm_password');
+    const statusElement = document.getElementById('password-match-status');
+    
+    // Nur wenn beide existieren
+    if (!newPassword || !confirmPassword) return;
+    
+    // Event für Passwort-Änderung einrichten
+    confirmPassword.addEventListener('blur', async function() {
+        // Passwörter leer lassen ist erlaubt (keine Änderung)
+        if (newPassword.value === '' && confirmPassword.value === '') {
+            return;
+        }
+        
+        // Beide Passwörter müssen übereinstimmen und lang genug sein
+        if (newPassword.value === confirmPassword.value && newPassword.value.length >= 4) {
+            const parentField = newPassword.closest('.input-field');
+            
+            try {
+                // Passwort über die API aktualisieren
+                const success = await updateSingleSetting('new_password', newPassword.value);
+                
+                if (success) {
+                    if (parentField) parentField.classList.add('edited');
+                    showNotification('Admin-Passwort wurde erfolgreich aktualisiert', 'success');
+                    
+                    // Passwortfelder leeren
+                    newPassword.value = '';
+                    confirmPassword.value = '';
+                    statusElement.textContent = '';
+                    statusElement.className = '';
+                } else {
+                    if (parentField) parentField.classList.add('error');
+                    showNotification('Fehler beim Aktualisieren des Passworts', 'error');
+                }
+            } catch (error) {
+                console.error('Fehler beim Speichern des Passworts:', error);
+                if (parentField) parentField.classList.add('error');
+                showNotification('Verbindungsfehler beim Speichern des Passworts', 'error');
+            }
+        } else if (newPassword.value !== '' || confirmPassword.value !== '') {
+            // Anzeige einer Fehlermeldung, wenn die Passwörter nicht übereinstimmen
+            // oder zu kurz sind, und ein Feld nicht leer ist
+            showNotification('Passwörter stimmen nicht überein oder sind zu kurz (min. 4 Zeichen)', 'error');
+        }
+    });
 }

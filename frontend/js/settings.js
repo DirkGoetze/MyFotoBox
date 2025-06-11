@@ -85,6 +85,12 @@ async function loadSettings() {
             if (settings.event_date && document.getElementById('event_date')) {
                 document.getElementById('event_date').value = settings.event_date;
             }
+            
+            // Nach dem Laden der Einstellungen automatisch nach Updates suchen
+            setTimeout(() => {
+                // Verzögerte Ausführung, um UI-Updates zu ermöglichen
+                checkForUpdates();
+            }, 500);
               // Anzeigemodus setzen
             if (document.getElementById('color_mode')) {
                 document.getElementById('color_mode').value = settings.color_mode || 'system';
@@ -179,12 +185,15 @@ document.getElementById('installUpdateBtn').addEventListener('click', installUpd
 async function checkForUpdates() {
     const updateStatus = document.getElementById('updateStatus');
     const updateActions = document.getElementById('updateActions');
+    const checkUpdateBtn = document.getElementById('checkUpdateBtn');
+    const versionStatusText = document.getElementById('versionStatusText');
     
     // Status auf "prüfe" setzen
-    updateStatus.textContent = 'Prüfe auf Updates...';
-    updateStatus.className = 'update-status status-checking';
-    updateStatus.classList.remove('hidden');
+    versionStatusText.textContent = '/ Suche nach Updates';
+    versionStatusText.className = 'update-checking';
+    updateStatus.classList.add('hidden');
     updateActions.classList.add('hidden');
+    checkUpdateBtn.disabled = true;
     
     try {
         const response = await fetch('/api/update');
@@ -199,23 +208,26 @@ async function checkForUpdates() {
         
         if (data.update_available) {
             // Update verfügbar
-            updateStatus.textContent = `Update auf Version ${remoteVersion} verfügbar`;
-            updateStatus.className = 'update-status status-update-available';
+            versionStatusText.textContent = `/ Online verfügbar ${remoteVersion}`;
+            versionStatusText.className = 'update-available';
             
             // Update-Version anzeigen
             document.querySelector('#availableVersion .version-number').textContent = remoteVersion;
             
-            // Update-Button anzeigen
+            // Update-Button aktivieren und anzeigen
+            checkUpdateBtn.disabled = false;
             updateActions.classList.remove('hidden');
         } else {
             // Kein Update verfügbar
-            updateStatus.textContent = 'Die Fotobox ist auf dem neuesten Stand';
-            updateStatus.className = 'update-status status-up-to-date';
+            versionStatusText.textContent = '/ Auf dem neuesten Stand';
+            versionStatusText.className = 'update-up-to-date';
+            checkUpdateBtn.disabled = true;
         }
     } catch (error) {
         console.error('Update-Prüfungs-Fehler:', error);
-        updateStatus.textContent = 'Fehler bei der Update-Prüfung';
-        updateStatus.className = 'update-status status-error';
+        versionStatusText.textContent = '/ Fehler bei der Update-Prüfung';
+        versionStatusText.className = 'update-error';
+        checkUpdateBtn.disabled = false;
     }
 }
 
@@ -230,12 +242,13 @@ async function installUpdate() {
     const updateProgress = document.getElementById('updateProgress');
     const updateProgressBar = document.getElementById('updateProgressBar');
     const updateProgressText = document.getElementById('updateProgressText');
+    const versionStatusText = document.getElementById('versionStatusText');
     
     updateInProgress = true;
     
     // Update-Status anzeigen
-    updateStatus.textContent = 'Update wird installiert...';
-    updateStatus.className = 'update-status status-installing';
+    versionStatusText.textContent = '/ Aktualisiere System';
+    versionStatusText.className = 'update-installing';
     updateActions.classList.add('hidden');
     updateProgress.classList.remove('hidden');
     
@@ -245,7 +258,7 @@ async function installUpdate() {
         updateProgressText.textContent = 'Update wird vorbereitet...';
         
         // Update starten
-        const response = await fetch('/api/update/install', { 
+        const response = await fetch('/api/update', { 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ from_version: localVersion, to_version: remoteVersion })
@@ -274,18 +287,20 @@ async function installUpdate() {
             updateProgressBar.style.width = '100%';
             updateProgressText.textContent = 'Update abgeschlossen!';
             
-            updateStatus.textContent = 'Update erfolgreich installiert! Die Anwendung wird in Kürze neu geladen...';
-            updateStatus.className = 'update-status status-success';
-            
-            // Seite nach 3 Sekunden neu laden
+            // Nach dem Update erneut auf Updates prüfen
             setTimeout(() => {
-                window.location.reload();
+                updateProgressBar.style.width = '0%';
+                updateProgress.classList.add('hidden');
+                updateInProgress = false;
+                
+                // Prüfen, ob das Update erfolgreich war
+                checkForUpdates();
             }, 3000);
         }, 6000);
     } catch (error) {
         console.error('Update-Installations-Fehler:', error);
-        updateStatus.textContent = 'Fehler bei der Update-Installation';
-        updateStatus.className = 'update-status status-error';
+        versionStatusText.textContent = '/ Fehler bei der Update-Installation';
+        versionStatusText.className = 'update-error';
         updateProgress.classList.add('hidden');
         updateProgressBar.style.width = '0%';
         updateInProgress = false;
@@ -302,6 +317,9 @@ async function installUpdate() {
 document.addEventListener('DOMContentLoaded', function() {
     // Prüfen, ob bereits eingeloggt (für Reload-Fälle)
     checkLoginStatus();
+    
+    // Passwort-Validierung hinzufügen
+    setupPasswordValidation();
 });
 
 /**
@@ -323,6 +341,8 @@ async function checkLoginStatus() {
                     if (typeof initLiveSettingsUpdate === 'function') {
                         initLiveSettingsUpdate();
                     }
+                    // Nach dem Laden der Einstellungen automatisch nach Updates suchen
+                    checkForUpdates();
                 });
             }
         }
@@ -339,4 +359,50 @@ function setHeaderTitle(title) {
     if (headerTitle) {
         headerTitle.textContent = title || 'Fotobox';
     }
+}
+
+/**
+ * Richtet die Passwortvalidierung ein
+ */
+function setupPasswordValidation() {
+    const newPassword = document.getElementById('new_password');
+    const confirmPassword = document.getElementById('confirm_password');
+    const statusElement = document.getElementById('password-match-status');
+    
+    // Funktion zum Überprüfen der Übereinstimmung
+    function checkPasswordMatch() {
+        if (newPassword.value === '' && confirmPassword.value === '') {
+            statusElement.textContent = '';
+            statusElement.className = '';
+            return true;
+        }
+        
+        if (newPassword.value.length < 4 && newPassword.value !== '') {
+            statusElement.textContent = 'Passwort muss mindestens 4 Zeichen lang sein.';
+            statusElement.className = 'password-mismatch';
+            return false;
+        }
+        
+        if (newPassword.value === confirmPassword.value) {
+            if (newPassword.value !== '') {
+                statusElement.textContent = 'Passwörter stimmen überein.';
+                statusElement.className = 'password-match';
+            } else {
+                statusElement.textContent = '';
+                statusElement.className = '';
+            }
+            return true;
+        } else {
+            statusElement.textContent = 'Passwörter stimmen nicht überein.';
+            statusElement.className = 'password-mismatch';
+            return false;
+        }
+    }
+    
+    // Event-Listener für beide Passwortfelder
+    newPassword.addEventListener('input', checkPasswordMatch);
+    confirmPassword.addEventListener('input', checkPasswordMatch);
+    
+    // Passwortfelder beim Laden überprüfen
+    checkPasswordMatch();
 }

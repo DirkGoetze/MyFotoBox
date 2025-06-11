@@ -151,16 +151,26 @@ def api_login():
 def api_settings():
     db = sqlite3.connect(DB_PATH)
     cur = db.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
-    if request.method == 'POST':
+    cur.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")    if request.method == 'POST':
         data = request.get_json(force=True)
-        for key in ['camera_mode', 'resolution_width', 'resolution_height', 'storage_path', 'event_name', 'show_splash', 'photo_timer']:
-            if key in data:
+        # Alle Einstellungen aus dem Frontend verarbeiten
+        allowed_keys = [
+            'camera_mode', 'resolution_width', 'resolution_height', 
+            'storage_path', 'event_name', 'event_date', 'show_splash', 'photo_timer',
+            'color_mode', 'screensaver_timeout', 'gallery_timeout',
+            'camera_id', 'flash_mode', 'countdown_duration'
+        ]
+        
+        for key in data:
+            if key in allowed_keys:
+                # Alle Werte als String speichern
                 cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, str(data[key])))
+        
         # Admin-Passwort setzen/ändern
-        if 'admin_password' in data and data['admin_password'] and len(data['admin_password']) >= 4:
-            hashval = bcrypt.hashpw(data['admin_password'].encode(), bcrypt.gensalt()).decode()
+        if 'new_password' in data and data['new_password'] and len(data['new_password']) >= 4:
+            hashval = bcrypt.hashpw(data['new_password'].encode(), bcrypt.gensalt()).decode()
             cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", ('config_password', hashval))
+        
         db.commit()
         db.close()
         return jsonify({'status': 'ok'})
