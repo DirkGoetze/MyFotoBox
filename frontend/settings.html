@@ -67,32 +67,41 @@
                 </div>
             </div>
         </form>
-          <form id="configForm" onsubmit="return false;">
-            <fieldset>
-                <legend>Anzeige</legend>
-                <div class="fieldset-container">
-                    <div class="input-field">
-                        <label for="color_mode">Farbschema</label>
+          <form id="configForm" onsubmit="return false;">            <fieldset>
+                <legend>Darstellung</legend>
+                <div class="fieldset-container">                    <div class="input-field">
+                        <label for="color_mode">Anzeigemodus</label>
                         <select name="color_mode" id="color_mode">
-                            <option value="auto">Automatisch (nach Tageszeit)</option>
+                            <option value="system">Systemabhängig</option>
                             <option value="light">Hell</option>
                             <option value="dark">Dunkel</option>
                         </select>
                         <details>
-                            <summary>Über das Farbschema</summary>
-                            <div>Design der Benutzeroberfläche. Bei "Automatisch" wechselt die Anzeige je nach Tageszeit zwischen hell und dunkel. Dies ist besonders hilfreich, wenn die Fotobox sowohl tagsüber als auch abends genutzt wird.</div>
+                            <summary>Über den Anzeigemodus</summary>
+                            <div>Design der Benutzeroberfläche. Bei "Systemabhängig" passt sich die Anzeige automatisch an die Geräteeinstellungen an. Dies ist besonders hilfreich, wenn die Fotobox sowohl tagsüber als auch abends genutzt wird.</div>
+                        </details>
+                    </div>
+                      <div class="input-field">
+                        <label for="screensaver_timeout">Bildschirmschoner nach</label>
+                        <div class="input-with-unit">
+                            <input type="number" name="screensaver_timeout" id="screensaver_timeout" min="30" max="600" value="120">
+                            <span class="unit">Sekunden</span>
+                        </div>
+                        <details>
+                            <summary>Bildschirmschoner-Details</summary>
+                            <div>Zeit der Inaktivität, nach der der Bildschirmschoner aktiviert wird. Ein kürzerer Wert schont den Bildschirm, ein längerer Wert ist für Veranstaltungen mit vielen Zuschauern besser geeignet.</div>
                         </details>
                     </div>
                     
                     <div class="input-field">
-                        <label for="countdown_duration">Anzeigedauer Countdown</label>
+                        <label for="gallery_timeout">Galerie verlassen nach</label>
                         <div class="input-with-unit">
-                            <input type="number" name="countdown_duration" id="countdown_duration" min="1" max="10" value="3">
+                            <input type="number" name="gallery_timeout" id="gallery_timeout" min="30" max="300" value="60">
                             <span class="unit">Sekunden</span>
                         </div>
                         <details>
-                            <summary>Countdown-Details</summary>
-                            <div>Zeitdauer bis zur Aufnahme eines Fotos. Ein längerer Countdown gibt den Gästen mehr Zeit, sich vor der Kamera zu positionieren. Bei kleinen Kindern empfiehlt sich ein kürzerer Countdown (1-2 Sekunden).</div>
+                            <summary>Galerie-Timeout-Details</summary>
+                            <div>Zeit der Inaktivität in der Galerie-Ansicht, nach der automatisch zur Startseite zurückgekehrt wird. Dies stellt sicher, dass die Fotobox nach der Betrachtung von Fotos wieder für neue Aufnahmen bereit ist.</div>
                         </details>
                     </div>
                 </div>
@@ -123,29 +132,38 @@
 
             <fieldset>
                 <legend>Kamera-Einstellungen</legend>
-                <div class="fieldset-container">
-                    <div class="input-field">
+                <div class="fieldset-container">                    <div class="input-field">
                         <label for="camera_id">Kamera-Auswahl</label>
                         <select name="camera_id" id="camera_id">
-                            <option value="auto">Automatisch erkennen</option>
+                            <option value="system">Systemstandard verwenden</option>
                             <!-- Wird per JavaScript mit verfügbaren Kameras gefüllt -->
                         </select>
                         <details>
                             <summary>Kamera-Information</summary>
-                            <div>Wählen Sie, welche Kamera zur Aufnahme verwendet wird. Bei "Automatisch erkennen" wird die erste erkannte Kamera verwendet. Falls mehrere Kameras angeschlossen sind und eine bestimmte verwendet werden soll, wählen Sie diese aus der Liste.</div>
+                            <div>Wählen Sie, welche Kamera zur Aufnahme verwendet wird. Bei "Systemstandard verwenden" wird die erste erkannte Kamera verwendet. Falls mehrere Kameras angeschlossen sind und eine bestimmte verwendet werden soll, wählen Sie diese aus der Liste.</div>
                         </details>
-                    </div>
-                    
-                    <div class="input-field">
+                    </div>                    <div class="input-field">
                         <label for="flash_mode">Blitzlicht</label>
                         <select name="flash_mode" id="flash_mode">
-                            <option value="auto">Automatisch</option>
+                            <option value="system">Automatisch</option>
                             <option value="on">Immer an</option>
                             <option value="off">Immer aus</option>
                         </select>
                         <details>
                             <summary>Blitzlicht-Einstellungen</summary>
                             <div>Steuerung des Kamerablitzes (falls vorhanden). Bei "Automatisch" entscheidet die Kamera selbst je nach Lichtverhältnissen. Bei Veranstaltungen mit empfindlichen Gästen oder Kindern kann es sinnvoll sein, das Blitzlicht auszuschalten.</div>
+                        </details>
+                    </div>
+                    
+                    <div class="input-field">
+                        <label for="countdown_duration">Anzeigedauer Countdown</label>
+                        <div class="input-with-unit">
+                            <input type="number" name="countdown_duration" id="countdown_duration" min="1" max="10" value="3">
+                            <span class="unit">Sekunden</span>
+                        </div>
+                        <details>
+                            <summary>Countdown-Details</summary>
+                            <div>Zeitdauer bis zur Aufnahme eines Fotos. Ein längerer Countdown gibt den Gästen mehr Zeit, sich vor der Kamera zu positionieren. Bei kleinen Kindern empfiehlt sich ein kürzerer Countdown (1-2 Sekunden).</div>
                         </details>
                     </div>
                 </div>

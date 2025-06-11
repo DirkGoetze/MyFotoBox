@@ -215,18 +215,27 @@ function setHeaderTitle(title) {
 }
 
 // ------------------------------------------------------------------------------
-// Funktionsblock: Farbschema-Umschaltung
+// Funktionsblock: Anzeigemodus-Umschaltung
 // ------------------------------------------------------------------------------
-// Funktion: Setzt und speichert das Farbschema (Light/Dark/Auto)
+// Funktion: Setzt und speichert den Anzeigemodus (Light/Dark/System)
 // ------------------------------------------------------------------------------
 
 function applyColorMode(mode) {
-    if (mode === 'auto') {
-        const hour = new Date().getHours();
-        if (hour >= 7 && hour < 20) {
-            document.body.classList.remove('dark');
-        } else {
+    if (mode === 'system') {
+        // Nutze die Systemeinstellung über prefers-color-scheme, falls verfügbar
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             document.body.classList.add('dark');
+        } else {
+            document.body.classList.remove('dark');
+        }
+        
+        // Event-Listener für Änderungen der Systemeinstellung
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+                if (getColorMode() === 'system') {
+                    document.body.classList.toggle('dark', e.matches);
+                }
+            });
         }
     } else if (mode === 'dark') {
         document.body.classList.add('dark');
@@ -236,7 +245,7 @@ function applyColorMode(mode) {
 }
 
 function getColorMode() {
-    return localStorage.getItem('color_mode') || 'auto';
+    return localStorage.getItem('color_mode') || 'system';
 }
 
 function setColorMode(mode) {

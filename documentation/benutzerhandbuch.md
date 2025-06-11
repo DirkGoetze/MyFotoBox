@@ -76,15 +76,17 @@ Im Einstellungsbereich (passwortgeschützt) können Sie folgende Parameter anpas
 * Event-Name ändern
 * Event-Datum festlegen
 
-### Anzeige-Einstellungen
+### Darstellungseinstellungen
 
-* Farbschema wählen (Hell/Dunkel/Auto)
-* Countdown-Dauer für Fotos anpassen
+* Anzeigemodus wählen (Systemabhängig/Hell/Dunkel)
+* Bildschirmschoner-Timeout einstellen
+* Automatische Rückkehr aus der Galerie konfigurieren
 
 ### Kamera-Einstellungen
 
-* Kamera auswählen (falls mehrere vorhanden)
-* Blitzlicht-Modus einstellen
+* Kamera auswählen (Systemstandard oder spezifische Kamera)
+* Blitzlicht-Modus einstellen (Automatisch/An/Aus)
+* Countdown-Dauer für Fotos anpassen
 
 ### Admin-Einstellungen
 

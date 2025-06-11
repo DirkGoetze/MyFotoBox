@@ -85,24 +85,32 @@ async function loadSettings() {
             if (settings.event_date && document.getElementById('event_date')) {
                 document.getElementById('event_date').value = settings.event_date;
             }
-            
-            // Farbmodus setzen
+              // Anzeigemodus setzen
             if (document.getElementById('color_mode')) {
-                document.getElementById('color_mode').value = settings.color_mode || 'auto';
+                document.getElementById('color_mode').value = settings.color_mode || 'system';
+            }
+            
+            // Bildschirmschoner-Timeout setzen
+            if (document.getElementById('screensaver_timeout')) {
+                document.getElementById('screensaver_timeout').value = settings.screensaver_timeout || 120;
+            }
+            
+            // Galerie-Timeout setzen
+            if (document.getElementById('gallery_timeout')) {
+                document.getElementById('gallery_timeout').value = settings.gallery_timeout || 60;
             }
             
             // Countdown-Dauer setzen
             if (document.getElementById('countdown_duration')) {
                 document.getElementById('countdown_duration').value = settings.countdown_duration || 3;
             }
-            
-            // Kamera-Einstellungen
+              // Kamera-Einstellungen
             if (document.getElementById('camera_id')) {
-                document.getElementById('camera_id').value = settings.camera_id || 'auto';
+                document.getElementById('camera_id').value = settings.camera_id || 'system';
             }
             
             if (document.getElementById('flash_mode')) {
-                document.getElementById('flash_mode').value = settings.flash_mode || 'auto';
+                document.getElementById('flash_mode').value = settings.flash_mode || 'system';
             }
             
             // Verfügbare Kameras laden und Dropdown aktualisieren
