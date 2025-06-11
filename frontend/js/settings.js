@@ -352,8 +352,30 @@ function initUpdateSection() {
 }
 
 // Nach dem Laden der Seite die Update-Sektion initialisieren
+// und prüfen, ob der Benutzer bereits angemeldet ist
 document.addEventListener('DOMContentLoaded', function() {
     initUpdateSection();
+    
+    // Prüfen, ob der Benutzer bereits angemeldet ist (Session-Check)
+    fetch('/api/session-check')
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('Session-Check fehlgeschlagen');
+        })
+        .then(data => {
+            if (data.authenticated) {
+                // Wenn der Benutzer bereits angemeldet ist, Formular anzeigen und Einstellungen laden
+                document.getElementById('loginForm').classList.add('hidden');
+                document.getElementById('configForm').classList.add('form-visible');
+                loadSettings();
+            }
+        })
+        .catch(error => {
+            console.error('Fehler beim Session-Check:', error);
+            // Bei Fehlern bleibt das Login-Formular sichtbar
+        });
 });
 
 // Originale loadSettings-Funktion speichern

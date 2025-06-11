@@ -319,5 +319,17 @@ def api_check_password_set():
     is_password_set = not check_first_run()
     return jsonify({'password_set': is_password_set})
 
+# -------------------------------------------------------------------------------
+# /api/session-check (GET)
+# -------------------------------------------------------------------------------
+@app.route('/api/session-check', methods=['GET'])
+def api_session_check():
+    """
+    Endpunkt zur Überprüfung des Authentifizierungsstatus
+    """
+    return jsonify({
+        'authenticated': session.get('logged_in', False)
+    })
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
