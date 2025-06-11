@@ -52,12 +52,26 @@
 .input-field div > input,
 .input-with-unit {
     width: 100%;
-    padding: 0.7em;
+    height: 40px; /* Einheitliche Höhe für alle Eingabefelder */
+    padding: 0.5em 0.7em;
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 1em;
     background-color: #fff;
     box-sizing: border-box;
+}
+
+/* Spezielle Anpassungen für Zahleneingabefelder */
+.input-field input[type="number"] {
+    padding-right: 0.3em; /* Weniger Padding auf der rechten Seite für die Spinner-Pfeile */
+}
+
+/* Anpassung der Spinner-Pfeile für eine einheitliche Darstellung */
+.input-field input[type="number"]::-webkit-inner-spin-button,
+.input-field input[type="number"]::-webkit-outer-spin-button {
+    height: 30px;
+    opacity: 1;
+    margin-left: 5px;
 }
 
 /* Feste Label-Positionierung oberhalb der Eingabefelder */
@@ -77,25 +91,25 @@
 }
 
 /* Stil für Details/Summary-Elemente */
-.fancy-input details {
+.input-field details {
     margin-top: 0.3em;
     margin-left: 0.8em;
     font-size: 0.8em;
     color: #666;
 }
 
-.fancy-input details summary {
+.input-field details summary {
     cursor: pointer;
     color: #38d39f;
     font-weight: 500;
     margin-bottom: 0.2em;
 }
 
-.fancy-input details summary:hover {
+.input-field details summary:hover {
     text-decoration: underline;
 }
 
-.fancy-input details div {
+.input-field details div {
     padding: 0.5em;
     background-color: #f8f8f8;
     border-radius: 4px;
@@ -140,14 +154,18 @@ body.dark .input-field select {
     border: none !important; /* Entfernt den Rahmen des Eingabefelds */
     box-shadow: none !important; /* Entfernt den Schatten (falls vorhanden) */
     background: transparent !important;
-    padding: 0.7em;
+    padding: 0.5em;
     width: calc(100% - 4em); /* Platz für die Einheit */
+    height: 100%; /* Passt sich der Höhe des Elternelements an */
 }
 
 .input-with-unit .unit {
     margin-left: 5px;
     white-space: nowrap;
     color: #666;
+    display: flex;
+    align-items: center;
+    height: 100%;
 }
 
 /* Dark-Mode Anpassungen für die Eingabefelder mit Einheiten */
