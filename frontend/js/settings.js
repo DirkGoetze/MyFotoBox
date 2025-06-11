@@ -189,8 +189,62 @@ async function loadAvailableCameras() {
                 option.textContent = camera.name;
                 cameraSelect.appendChild(option);
             });
-        }
-    } catch (error) {
+        }    } catch (error) {
         console.error('Fehler beim Laden der Kameras:', error);
     }
 }
+
+/**
+ * Initialisiert die schwebenden Labels für alle Fancy-Inputs
+ * - Labels werden als Platzhalter behandelt, wenn das Feld leer ist
+ * - Labels schweben nach oben, wenn das Feld fokussiert ist oder Text enthält
+ */
+function initFancyInputs() {
+    const fancyInputs = document.querySelectorAll('.fancy-input');
+    
+    fancyInputs.forEach(container => {
+        const input = container.querySelector('input, select');
+        const label = container.querySelector('label');
+        
+        if (!input || !label) return;
+        
+        // Anfangszustand: Wenn das Input leer ist, zeige Label als Platzhalter
+        if (input.value === '') {
+            label.classList.add('like-placeholder');
+        }
+        
+        // Focus-Event: Label nach oben bewegen
+        input.addEventListener('focus', () => {
+            label.classList.remove('like-placeholder');
+        });
+        
+        // Blur-Event: Label zurücksetzen, wenn Input leer ist
+        input.addEventListener('blur', () => {
+            if (input.value === '') {
+                label.classList.add('like-placeholder');
+            }
+        });
+        
+        // Input-Event: Label korrekt platzieren, wenn Wert sich ändert
+        input.addEventListener('input', () => {
+            if (input.value === '') {
+                if (!document.activeElement === input) {
+                    label.classList.add('like-placeholder');
+                }
+            } else {
+                label.classList.remove('like-placeholder');
+            }
+        });
+    });
+}
+
+// Nach dem Laden der Seite und nach dem Laden der Einstellungen die Fancy-Inputs initialisieren
+document.addEventListener('DOMContentLoaded', initFancyInputs);
+
+// Auch nach dem Laden der Einstellungen die Inputs neu initialisieren
+const originalLoadSettings = loadSettings;
+loadSettings = function() {
+    originalLoadSettings();
+    // Wir warten kurz, damit die Werte in die Felder geladen werden können
+    setTimeout(initFancyInputs, 100);
+};
