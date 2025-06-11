@@ -1,6 +1,12 @@
 // config.js
 // Enthält alle Funktionen und Event-Handler, die ausschließlich für die Konfigurationsseite (config.html) benötigt werden.
 
+// Diese Datei wurde deaktiviert, da sie in settings.html nicht benötigt wird,
+// aber möglicherweise von anderen Seiten verwendet wird.
+// Alle Funktionalitäten wurden entfernt, um Fehler zu vermeiden.
+// Die ursprüngliche Funktionalität war:
+
+/*
 // Overlay für Passwort-Login erzeugen
 if (document.getElementById('loginForm')) {
     let pwOverlay = document.getElementById('pwLoginOverlay');
