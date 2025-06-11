@@ -94,11 +94,18 @@ fieldset {
     border-radius: 6px;
     padding: 1em 1.5em;
     margin-bottom: 1.5em;
+    box-sizing: border-box;
 }
 
 fieldset legend {
     font-weight: bold;
     padding: 0 0.5em;
+}
+
+/* Container für einheitliche Abstände innerhalb der Fieldsets */
+.fieldset-container {
+    padding: 0.5em;
+    box-sizing: border-box;
 }
 
 /* Buttons im Formular */

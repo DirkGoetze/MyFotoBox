@@ -17,7 +17,8 @@
     <meta http-equiv="Expires" content="0">
     <title>Fotobox Einstellungen</title>
     <link rel="stylesheet" href="fonts/fontawesome-free-5.15.4-web/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css">    <link rel="stylesheet" href="css/header.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/header.css">
     <link rel="stylesheet" href="css/footer.css">
     <link rel="stylesheet" href="css/menu.css">
     <link rel="stylesheet" href="css/config.css">
@@ -45,132 +46,160 @@
     <main>
         <nav class="breadcrumb">
             <a href="capture.html" class="home-icon"><i class="fas fa-home"></i></a> &gt; <span>Einstellungen</span>
-        </nav><form id="loginForm">
-            <div class="fancy-input">
-                <label for="adminPassword">Passwort für Einstellungen</label>
-                <input type="password" id="adminPassword" required>
-                <details>
-                    <summary>Passwort-Hinweis</summary>
-                    <div>Geben Sie das Admin-Passwort ein, um Zugang zu den Einstellungen zu erhalten. Das Standardpasswort ist in der Dokumentation zu finden.</div>
-                </details>
+        </nav>
+        
+        <form id="loginForm">
+            <div class="fieldset-container">
+                <div class="input-field">
+                    <label for="adminPassword">Passwort für Einstellungen</label>
+                    <input type="password" id="adminPassword" required>
+                    <details>
+                        <summary>Passwort-Hinweis</summary>
+                        <div>Geben Sie das Admin-Passwort ein, um Zugang zu den Einstellungen zu erhalten. Das Standardpasswort ist in der Dokumentation zu finden.</div>
+                    </details>
+                </div>
+                <div style="margin-top: 1.5em;">
+                    <button type="submit">Login</button>
+                    <span id="loginStatus"></span>
+                </div>
             </div>
-            <button type="submit">Login</button>
-            <span id="loginStatus"></span>
         </form>
-        <form id="configForm">            <fieldset>
-                <legend>Eventeinstellungen</legend>                <div class="fancy-input">
-                    <label for="event_name">Event-Name</label>
-                    <input type="text" name="event_name" id="event_name">
-                    <details>
-                        <summary>Über den Event-Namen</summary>
-                        <div>Name der Veranstaltung, wird auf allen Seiten angezeigt und im Header der Fotobox prominent dargestellt. Beispiele: "Hochzeit Anna & Tom", "Firmenfeier 2025".</div>
-                    </details>
-                </div>
-                
-                <div class="fancy-input">
-                    <label for="event_date">Event-Datum</label>
-                    <input type="date" name="event_date" id="event_date">
-                    <details>
-                        <summary>Über das Event-Datum</summary>
-                        <div>Datum der Veranstaltung für die Anzeige. Dieses Datum erscheint im Fußbereich und wird für die Sortierung von Bildern verwendet.</div>
-                    </details>
-                </div>
-            </fieldset>
-              <fieldset>
-                <legend>Anzeige</legend>                <div class="fancy-input">
-                    <label for="color_mode">Farbschema</label>
-                    <select name="color_mode" id="color_mode">
-                        <option value="auto">Automatisch (nach Tageszeit)</option>
-                        <option value="light">Hell</option>
-                        <option value="dark">Dunkel</option>
-                    </select>
-                    <details>
-                        <summary>Über das Farbschema</summary>
-                        <div>Design der Benutzeroberfläche. Bei "Automatisch" wechselt die Anzeige je nach Tageszeit zwischen hell und dunkel. Dies ist besonders hilfreich, wenn die Fotobox sowohl tagsüber als auch abends genutzt wird.</div>
-                    </details>
-                </div>
-                  <div class="fancy-input">
-                    <label for="countdown_duration">Anzeigedauer Countdown</label>
-                    <div class="input-with-unit" style="position: relative;">
-                        <input type="number" name="countdown_duration" id="countdown_duration" min="1" max="10" value="3">
-                        <span class="unit">Sekunden</span>
+        
+        <form id="configForm">
+            <fieldset>
+                <legend>Eventeinstellungen</legend>
+                <div class="fieldset-container">
+                    <div class="input-field">
+                        <label for="event_name">Event-Name</label>
+                        <input type="text" name="event_name" id="event_name">
+                        <details>
+                            <summary>Über den Event-Namen</summary>
+                            <div>Name der Veranstaltung, wird auf allen Seiten angezeigt und im Header der Fotobox prominent dargestellt. Beispiele: "Hochzeit Anna & Tom", "Firmenfeier 2025".</div>
+                        </details>
                     </div>
-                    <details>
-                        <summary>Countdown-Details</summary>
-                        <div>Zeitdauer bis zur Aufnahme eines Fotos. Ein längerer Countdown gibt den Gästen mehr Zeit, sich vor der Kamera zu positionieren. Bei kleinen Kindern empfiehlt sich ein kürzerer Countdown (1-2 Sekunden).</div>
-                    </details>
+                    
+                    <div class="input-field">
+                        <label for="event_date">Event-Datum</label>
+                        <input type="date" name="event_date" id="event_date">
+                        <details>
+                            <summary>Über das Event-Datum</summary>
+                            <div>Datum der Veranstaltung für die Anzeige. Dieses Datum erscheint im Fußbereich und wird für die Sortierung von Bildern verwendet.</div>
+                        </details>
+                    </div>
                 </div>
             </fieldset>
-              <fieldset>
-                <legend>Kamera-Einstellungen</legend>                <div class="fancy-input">
-                    <label for="camera_id">Kamera-Auswahl</label>
-                    <select name="camera_id" id="camera_id">
-                        <option value="auto">Automatisch erkennen</option>
-                        <!-- Wird per JavaScript mit verfügbaren Kameras gefüllt -->
-                    </select>
-                    <details>
-                        <summary>Kamera-Information</summary>
-                        <div>Wählen Sie, welche Kamera zur Aufnahme verwendet wird. Bei "Automatisch erkennen" wird die erste erkannte Kamera verwendet. Falls mehrere Kameras angeschlossen sind und eine bestimmte verwendet werden soll, wählen Sie diese aus der Liste.</div>
-                    </details>
-                </div>
-                
-                <div class="fancy-input">
-                    <label for="flash_mode">Blitzlicht</label>
-                    <select name="flash_mode" id="flash_mode">
-                        <option value="auto">Automatisch</option>
-                        <option value="on">Immer an</option>
-                        <option value="off">Immer aus</option>
-                    </select>
-                    <details>
-                        <summary>Blitzlicht-Einstellungen</summary>
-                        <div>Steuerung des Kamerablitzes (falls vorhanden). Bei "Automatisch" entscheidet die Kamera selbst je nach Lichtverhältnissen. Bei Veranstaltungen mit empfindlichen Gästen oder Kindern kann es sinnvoll sein, das Blitzlicht auszuschalten.</div>
-                    </details>
-                </div>
-            </fieldset>            <fieldset>
-                <legend>Admin-Einstellungen</legend>                <div class="fancy-input">
-                    <label for="new_password">Admin-Passwort ändern</label>
-                    <input type="password" name="new_password" id="new_password">
-                    <details>
-                        <summary>Wichtige Passwort-Hinweise</summary>
-                        <div>
-                            <p>Mindestens 4 Zeichen. Leer lassen für keine Änderung.</p>
-                            <p>Das Passwort schützt den Zugriff auf alle Systemeinstellungen. Bitte wählen Sie ein sicheres Passwort und notieren Sie es an einem sicheren Ort.</p>
-                            <p>Falls Sie das Passwort vergessen, finden Sie Anweisungen zum Zurücksetzen in der Dokumentation.</p>
+
+            <fieldset>
+                <legend>Anzeige</legend>
+                <div class="fieldset-container">
+                    <div class="input-field">
+                        <label for="color_mode">Farbschema</label>
+                        <select name="color_mode" id="color_mode">
+                            <option value="auto">Automatisch (nach Tageszeit)</option>
+                            <option value="light">Hell</option>
+                            <option value="dark">Dunkel</option>
+                        </select>
+                        <details>
+                            <summary>Über das Farbschema</summary>
+                            <div>Design der Benutzeroberfläche. Bei "Automatisch" wechselt die Anzeige je nach Tageszeit zwischen hell und dunkel. Dies ist besonders hilfreich, wenn die Fotobox sowohl tagsüber als auch abends genutzt wird.</div>
+                        </details>
+                    </div>
+                    
+                    <div class="input-field">
+                        <label for="countdown_duration">Anzeigedauer Countdown</label>
+                        <div class="input-with-unit">
+                            <input type="number" name="countdown_duration" id="countdown_duration" min="1" max="10" value="3">
+                            <span class="unit">Sekunden</span>
                         </div>
-                    </details>
+                        <details>
+                            <summary>Countdown-Details</summary>
+                            <div>Zeitdauer bis zur Aufnahme eines Fotos. Ein längerer Countdown gibt den Gästen mehr Zeit, sich vor der Kamera zu positionieren. Bei kleinen Kindern empfiehlt sich ein kürzerer Countdown (1-2 Sekunden).</div>
+                        </details>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Kamera-Einstellungen</legend>
+                <div class="fieldset-container">
+                    <div class="input-field">
+                        <label for="camera_id">Kamera-Auswahl</label>
+                        <select name="camera_id" id="camera_id">
+                            <option value="auto">Automatisch erkennen</option>
+                            <!-- Wird per JavaScript mit verfügbaren Kameras gefüllt -->
+                        </select>
+                        <details>
+                            <summary>Kamera-Information</summary>
+                            <div>Wählen Sie, welche Kamera zur Aufnahme verwendet wird. Bei "Automatisch erkennen" wird die erste erkannte Kamera verwendet. Falls mehrere Kameras angeschlossen sind und eine bestimmte verwendet werden soll, wählen Sie diese aus der Liste.</div>
+                        </details>
+                    </div>
+                    
+                    <div class="input-field">
+                        <label for="flash_mode">Blitzlicht</label>
+                        <select name="flash_mode" id="flash_mode">
+                            <option value="auto">Automatisch</option>
+                            <option value="on">Immer an</option>
+                            <option value="off">Immer aus</option>
+                        </select>
+                        <details>
+                            <summary>Blitzlicht-Einstellungen</summary>
+                            <div>Steuerung des Kamerablitzes (falls vorhanden). Bei "Automatisch" entscheidet die Kamera selbst je nach Lichtverhältnissen. Bei Veranstaltungen mit empfindlichen Gästen oder Kindern kann es sinnvoll sein, das Blitzlicht auszuschalten.</div>
+                        </details>
+                    </div>
+                </div>
+            </fieldset>
+            
+            <fieldset>
+                <legend>Admin-Einstellungen</legend>
+                <div class="fieldset-container">
+                    <div class="input-field">
+                        <label for="new_password">Admin-Passwort ändern</label>
+                        <input type="password" name="new_password" id="new_password">
+                        <details>
+                            <summary>Wichtige Passwort-Hinweise</summary>
+                            <div>
+                                <p>Mindestens 4 Zeichen. Leer lassen für keine Änderung.</p>
+                                <p>Das Passwort schützt den Zugriff auf alle Systemeinstellungen. Bitte wählen Sie ein sicheres Passwort und notieren Sie es an einem sicheren Ort.</p>
+                                <p>Falls Sie das Passwort vergessen, finden Sie Anweisungen zum Zurücksetzen in der Dokumentation.</p>
+                            </div>
+                        </details>
+                    </div>
                 </div>
             </fieldset>
             
             <fieldset id="systemUpdateSection">
                 <legend>System-Updates</legend>
-                <div id="versionInfo" class="version-info">
-                    <div class="version-status">
-                        <span id="currentVersion">Aktuelle Version: <span class="version-number">-</span></span>
-                        <button type="button" id="checkUpdateBtn" class="secondary-btn">Auf Updates prüfen</button>
+                <div class="fieldset-container">
+                    <div id="versionInfo" class="version-info">
+                        <div class="version-status">
+                            <span id="currentVersion">Aktuelle Version: <span class="version-number">-</span></span>
+                            <button type="button" id="checkUpdateBtn" class="secondary-btn">Auf Updates prüfen</button>
+                        </div>
+                        <div id="updateStatus" class="update-status hidden"></div>
                     </div>
-                    <div id="updateStatus" class="update-status hidden"></div>
-                </div>
-                <div id="updateActions" class="update-actions hidden">
-                    <div class="update-available-info">
-                        <span class="update-badge">Update verfügbar</span>
-                        <span id="availableVersion">Neue Version: <span class="version-number">-</span></span>
+                    <div id="updateActions" class="update-actions hidden">
+                        <div class="update-available-info">
+                            <span class="update-badge">Update verfügbar</span>
+                            <span id="availableVersion">Neue Version: <span class="version-number">-</span></span>
+                        </div>
+                        <button type="button" id="installUpdateBtn" class="primary-btn">Update installieren</button>
                     </div>
-                    <button type="button" id="installUpdateBtn" class="primary-btn">Update installieren</button>
-                </div>
-                <div id="updateProgress" class="update-progress hidden">
-                    <div class="progress-bar">
-                        <div id="updateProgressBar" class="progress-fill"></div>
+                    <div id="updateProgress" class="update-progress hidden">
+                        <div class="progress-bar">
+                            <div id="updateProgressBar" class="progress-fill"></div>
+                        </div>
+                        <div id="updateProgressText" class="progress-text">Update wird vorbereitet...</div>
                     </div>
-                    <div id="updateProgressText" class="progress-text">Update wird vorbereitet...</div>
                 </div>
             </fieldset>
             
-            <div class="form-actions">
-                <button type="submit" class="save-btn">Einstellungen speichern</button>
+            <div class="form-actions">                <button type="submit" class="save-btn">Einstellungen speichern</button>
                 <button type="button" id="reset_config" class="reset-btn">Zurücksetzen</button>
             </div>
         </form>
-    </main>    <footer id="mainFooter">
+    </main>
+    
+    <footer id="mainFooter">
         <span id="footerText">© 2025 Fotobox</span>
     </footer>
     <!-- JavaScript wurde in externe Datei ausgelagert gemäß Code-Formatierungs-Policy -->

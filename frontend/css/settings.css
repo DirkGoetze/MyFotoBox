@@ -33,46 +33,43 @@
     color: #080;
 }
 
-/* Fancy Input mit schwebenden Labels */
-.fancy-input {
+/* Einheitliche Breite für das gesamte Formular */
+#configForm {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* Eingabefelder mit festen Labels */
+.input-field {
     position: relative;
     margin-bottom: 1.5em;
     width: 100%;
+    box-sizing: border-box;
 }
 
-.fancy-input input,
-.fancy-input select,
-.fancy-input div > input {
+.input-field input,
+.input-field select,
+.input-field div > input,
+.input-with-unit {
     width: 100%;
     padding: 0.7em;
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 1em;
     background-color: #fff;
+    box-sizing: border-box;
 }
 
-/* Gemeinsame Label-Positionierung für alle Eingabefelder */
-.fancy-input label {
-    position: absolute;
-    background: #fff;
-    padding: 0 .5em;
-    font-size: .8em;
-    top: -.6em;
-    left: .8em;
-    transition: all .3s ease;
-    color: #38d39f;
-    z-index: 1;
+/* Feste Label-Positionierung oberhalb der Eingabefelder */
+.input-field label {
+    display: block;
+    font-size: 0.9em;
+    margin-bottom: 3px;
+    margin-left: 10px;
+    color: #444;
 }
 
-.fancy-input label.like-placeholder {
-    color: #666;
-    font-size: 1em;
-    top: .7em;  /* Standard-Position für normale Eingabefelder */
-    left: .8em;
-    z-index: 2;  /* Erhöht, um sicherzustellen, dass das Label über allen Elementen erscheint */
-}
-
-.fancy-input .hint {
+.input-field .hint {
     font-size: 0.8em;
     color: #666;
     margin-top: 0.3em;
@@ -106,29 +103,24 @@
 }
 
 /* Anpassungen für dark mode */
-body.dark .fancy-input details summary {
+body.dark .input-field details summary {
     color: #4e9cff;
 }
 
-body.dark .fancy-input details div {
+body.dark .input-field details div {
     background-color: #2a2a2a;
 }
 
-/* Anpassungen für dark mode */
-body.dark .fancy-input label {
-    background: #23272e;
-    color: #4e9cff;
+/* Anpassungen für dark mode mit festen Labels */
+body.dark .input-field label {
+    color: #bbb;
 }
 
-body.dark .fancy-input input,
-body.dark .fancy-input select {
+body.dark .input-field input,
+body.dark .input-field select {
     background-color: #2c3e50;
     border-color: #384c60;
     color: #eee;
-}
-
-body.dark .fancy-input label.like-placeholder {
-    color: #999;
 }
 
 /* Spezieller Stil für Eingabefelder mit Einheiten */
@@ -140,6 +132,7 @@ body.dark .fancy-input label.like-placeholder {
     border-radius: 4px;
     background-color: #fff;
     padding-right: 0.5em; /* Platz für die Einheit */
+    box-sizing: border-box;
 }
 
 .input-with-unit input {
@@ -147,6 +140,8 @@ body.dark .fancy-input label.like-placeholder {
     border: none !important; /* Entfernt den Rahmen des Eingabefelds */
     box-shadow: none !important; /* Entfernt den Schatten (falls vorhanden) */
     background: transparent !important;
+    padding: 0.7em;
+    width: calc(100% - 4em); /* Platz für die Einheit */
 }
 
 .input-with-unit .unit {

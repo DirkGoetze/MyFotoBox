@@ -195,51 +195,9 @@ async function loadAvailableCameras() {
 }
 
 /**
- * Initialisiert die schwebenden Labels für alle Fancy-Inputs
- * - Labels werden als Platzhalter behandelt, wenn das Feld leer ist
- * - Labels schweben nach oben, wenn das Feld fokussiert ist oder Text enthält
+ * Die initFancyInputs Funktion wurde entfernt, da Labels jetzt permanent
+ * oberhalb der Eingabefelder angezeigt werden.
  */
-function initFancyInputs() {
-    const fancyInputs = document.querySelectorAll('.fancy-input');
-    
-    fancyInputs.forEach(container => {
-        // Sucht nach einem direkten Input/Select-Element oder einem in einem untergeordneten div
-        const input = container.querySelector('input, select') || 
-                      container.querySelector('.input-with-unit input') || 
-                      container.querySelector('div > input, div > select');
-        const label = container.querySelector('label');
-        
-        if (!input || !label) return;
-        
-        // Anfangszustand: Wenn das Input leer ist, zeige Label als Platzhalter
-        if (input.value === '') {
-            label.classList.add('like-placeholder');
-        }
-        
-        // Focus-Event: Label nach oben bewegen
-        input.addEventListener('focus', () => {
-            label.classList.remove('like-placeholder');
-        });
-        
-        // Blur-Event: Label zurücksetzen, wenn Input leer ist
-        input.addEventListener('blur', () => {
-            if (input.value === '') {
-                label.classList.add('like-placeholder');
-            }
-        });
-        
-        // Input-Event: Label korrekt platzieren, wenn Wert sich ändert
-        input.addEventListener('input', () => {
-            if (input.value === '') {
-                if (document.activeElement !== input) {
-                    label.classList.add('like-placeholder');
-                }
-            } else {
-                label.classList.remove('like-placeholder');
-            }
-        });
-    });
-}
 
 /**
  * Update-Funktionen für System-Updates
@@ -393,16 +351,14 @@ function initUpdateSection() {
     }, 1000);
 }
 
-// Nach dem Laden der Seite und nach dem Laden der Einstellungen die Fancy-Inputs initialisieren
+// Nach dem Laden der Seite die Update-Sektion initialisieren
 document.addEventListener('DOMContentLoaded', function() {
-    initFancyInputs();
     initUpdateSection();
 });
 
-// Auch nach dem Laden der Einstellungen die Inputs neu initialisieren
+// Originale loadSettings-Funktion speichern
 const originalLoadSettings = loadSettings;
 loadSettings = function() {
     originalLoadSettings();
-    // Wir warten kurz, damit die Werte in die Felder geladen werden können
-    setTimeout(initFancyInputs, 100);
+    // Die Eingabefeld-Initialisierung ist nicht mehr notwendig
 };
