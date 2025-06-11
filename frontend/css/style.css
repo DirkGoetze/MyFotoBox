@@ -13,7 +13,7 @@ body {
 }
 
 main {
-    padding: 80px 2em 2em 2em; /* Platz für den festen Header + seitliches Padding */
+    padding: 110px 2em 2em 2em; /* Platz für Header (50px) + Breadcrumb (~30px) + Abstand */
 }
 #photos img { max-width: 200px; margin: 0.5em; }
 #menu { margin-bottom: 1em; }
@@ -546,16 +546,20 @@ body.dark #headerMenu a:hover {
 
 /* Brotkrumen-Navigation (Breadcrumb) */
 .breadcrumb {
-    margin: 0 0 1.5em 0; /* Kein oberer Margin mehr, da main bereits Padding hat */
-    padding: 0.6em 1em;
+    margin: 0;
+    padding: 0.6em 20px; /* Gleicher seitlicher Abstand wie Header */
     font-size: 1.05em;
     color: #555;
     background: #f4f7fa;
-    border-radius: 6px;
     display: flex;
     align-items: center;
     gap: 0.5em;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1); /* Leichter Schatten für Tiefeneffekt */
+    position: fixed; /* Fixierte Position */
+    top: 50px; /* Direkt unter dem Header (Header-Höhe) */
+    left: 0;
+    right: 0;
+    z-index: 999; /* Unter dem Header, aber über dem Inhalt */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Schatten für Tiefeneffekt */
 }
 .breadcrumb a {
     color: #38d39f;
@@ -568,10 +572,24 @@ body.dark #headerMenu a:hover {
 body.dark .breadcrumb {
     background: #23272e;
     color: #ccc;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3); /* Stärkerer Schatten im Dark Mode */
 }
 body.dark .breadcrumb a {
     color: #4e9cff;
 }
+
+/* Media Query für Breadcrumb auf kleinen Bildschirmen */
+@media screen and (max-width: 768px) {
+    .breadcrumb {
+        padding: 0.5em 10px;
+        font-size: 0.95em;
+    }
+    
+    main {
+        padding-top: 100px; /* Angepasstes Padding für kleinere Bildschirme */
+    }
+}
+
 #captureView {
     display: flex;
     flex-direction: column;
