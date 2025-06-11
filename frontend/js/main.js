@@ -79,7 +79,8 @@ function initMenu() {
         { text: 'Home', href: 'capture.html' }, // Geändert: "Home" statt "Startseite"
         { text: 'Galerie', href: 'gallery.html' },
         { text: 'Kontakt', href: 'contact.html' },
-        { text: 'Einstellungen', href: 'settings.html' }
+        { text: 'Einstellungen', href: 'settings.html' },
+        { text: 'Test-Tools', href: 'tests/index.html' } // Neu: Link zu den Test-Tools
     ];
       // Aktuelle Seite ermitteln
     const currentPage = window.location.pathname.split('/').pop() || 'capture.html';

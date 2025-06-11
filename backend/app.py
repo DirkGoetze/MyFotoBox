@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify, session, redirect, url_for, render_te
 import os
 import subprocess
 import bcrypt
+import re
 
 # -------------------------------------------------------------------------------
 # DB_PATH und Datenverzeichnis sicherstellen
@@ -171,6 +172,74 @@ def api_settings():
         result['show_splash'] = '1'
     if 'photo_timer' not in result:
         result['photo_timer'] = '5'
+    db.close()
+    return jsonify(result)
+
+# -------------------------------------------------------------------------------
+# /api/settings-details (GET)
+# -------------------------------------------------------------------------------
+@app.route('/api/settings-details', methods=['GET'])
+def api_settings_details():
+    """
+    Erweiterte API zum Abrufen aller Einstellungen mit Typerkennung und Metadaten.
+    """
+    db = sqlite3.connect(DB_PATH)
+    cur = db.cursor()
+    
+    # Sicherstellen, dass die Tabelle existiert
+    cur.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
+    
+    # Alle Einstellungen abrufen
+    cur.execute("SELECT key, value FROM settings")
+    entries = cur.fetchall()
+    
+    # Tabellen-Schema abrufen
+    cur.execute("PRAGMA table_info(settings)")
+    schema = cur.fetchall()
+    
+    # Feldtypen bestimmen
+    result = {
+        'entries': {k: v for k, v in entries},
+        'schema': [dict(zip(['cid', 'name', 'type', 'notnull', 'default_value', 'pk'], col)) for col in schema],
+        'meta': {}
+    }
+    
+    # Standardwerte für fehlende Einträge
+    default_values = {
+        'show_splash': '1',
+        'photo_timer': '5',
+        'color_mode': 'auto',
+        'countdown_duration': '3',
+        'camera_id': 'auto',
+        'flash_mode': 'auto'
+    }
+    
+    # Fehlende Standardwerte hinzufügen
+    for key, value in default_values.items():
+        if key not in result['entries']:
+            result['entries'][key] = value
+    
+    # Metadaten für die Felder
+    field_types = {}
+    for key, value in result['entries'].items():
+        # Passwort-Hash-Erkennung
+        if key == 'config_password' or (isinstance(value, str) and value.startswith('$2')):
+            field_types[key] = 'password-hash'
+        # Datum-Erkennung
+        elif key == 'event_date' or (isinstance(value, str) and re.match(r'^\d{4}-\d{2}-\d{2}$', value)):
+            field_types[key] = 'date'
+        # Boolean-Erkennung
+        elif value in ['0', '1', 'true', 'false', True, False]:
+            field_types[key] = 'boolean'
+        # Nummer-Erkennung
+        elif isinstance(value, str) and value.isdigit():
+            field_types[key] = 'number'
+        # Sonst String
+        else:
+            field_types[key] = 'string'
+    
+    result['meta']['field_types'] = field_types
+    
     db.close()
     return jsonify(result)
 
