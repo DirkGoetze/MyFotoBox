@@ -9,9 +9,11 @@
 #hamburgerBtn {
     background-color: transparent;
     color: white;
-    padding: 10px;
+    padding: 10px; /* Padding links wird später durch margin geändert */
+    padding-left: 0; /* Entferne das linke Padding */
+    margin-left: 10px; /* Fester Abstand vom linken Rand */
     font-size: 24px;
-    border: none; /* Entferne den roten Rand */
+    border: none; 
     cursor: pointer;
     display: flex;
     align-items: center;

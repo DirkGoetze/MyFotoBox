@@ -547,7 +547,7 @@ body.dark #headerMenu a:hover {
 /* Brotkrumen-Navigation (Breadcrumb) */
 .breadcrumb {
     margin: 0;
-    padding: 0.6em 20px; /* Gleicher seitlicher Abstand wie Header */
+    padding: 0.6em 0; /* Kein horizontales Padding hier, wir steuern die Ausrichtung durch die Innenelemente */
     font-size: 1.05em;
     color: #555;
     background: #f4f7fa;
@@ -566,9 +566,26 @@ body.dark #headerMenu a:hover {
     text-decoration: none;
     font-weight: bold;
 }
+.breadcrumb a:first-child {
+    margin-left: 10px; /* Gleicher Abstand wie das Hamburger-Menü */
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 .breadcrumb a:hover {
     text-decoration: underline;
 }
+
+/* Spezifische Stile für das Home-Icon im Breadcrumb */
+.home-icon {
+    font-size: 1.2em; /* Passt die Größe an die des Hamburger-Menüs an */
+    width: 24px; /* Gleiche Breite wie das Hamburger-Symbol */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 body.dark .breadcrumb {
     background: #23272e;
     color: #ccc;
@@ -581,8 +598,12 @@ body.dark .breadcrumb a {
 /* Media Query für Breadcrumb auf kleinen Bildschirmen */
 @media screen and (max-width: 768px) {
     .breadcrumb {
-        padding: 0.5em 10px;
+        padding: 0.5em 0;
         font-size: 0.95em;
+    }
+    
+    .breadcrumb a:first-child {
+        margin-left: 5px; /* Kleinerer Abstand auf mobilen Geräten */
     }
     
     main {
