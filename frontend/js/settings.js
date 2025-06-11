@@ -372,7 +372,7 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 async function checkLoginStatus() {
     try {
-        const response = await fetch('/api/auth/status');
+        const response = await fetch('/api/session-check');
         if (response.ok) {
             const data = await response.json();
             
