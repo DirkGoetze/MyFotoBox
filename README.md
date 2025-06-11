@@ -106,4 +106,3 @@ Persönlicher Support oder E-Mail-Kontakt ist nicht möglich.
 ## Danksagung
 
 Danke an alle Open-Source-Entwickler, deren Tools und Software dieses Projekt ermöglichen.
-

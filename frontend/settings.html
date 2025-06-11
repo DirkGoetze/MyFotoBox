@@ -10,6 +10,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fotobox Einstellungen</title>
     <link rel="stylesheet" href="fonts/fontawesome-free-5.15.4-web/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">    <link rel="stylesheet" href="css/header.css">
@@ -50,45 +51,47 @@
         <form id="configForm">
             <fieldset>
                 <legend>Eventeinstellungen</legend>
-                <table class="settings-table">
-                    <tr>
+                <table class="settings-table">                <tr>
                         <td class="label">Event-Name</td>
-                        <td><input type="text" name="event_name" id="event_name" placeholder="Name des Events"></td>
+                        <td><input type="text" name="event_name" id="event_name" placeholder="Name des Events">
+                        <div class="hint">Name der Veranstaltung, wird auf allen Seiten angezeigt</div></td>
                     </tr>
                     <tr>
                         <td class="label">Event-Datum</td>
-                        <td><input type="date" name="event_date" id="event_date"></td>
+                        <td><input type="date" name="event_date" id="event_date">
+                        <div class="hint">Datum der Veranstaltung für die Anzeige</div></td>
                     </tr>
                 </table>
             </fieldset>
             
             <fieldset>
                 <legend>Anzeige</legend>
-                <table class="settings-table">
-                    <tr>
+                <table class="settings-table">                <tr>
                         <td class="label">Farbschema</td>
                         <td><select name="color_mode" id="color_mode">
                             <option value="auto">Automatisch (nach Tageszeit)</option>
                             <option value="light">Hell</option>
                             <option value="dark">Dunkel</option>
-                        </select></td>
+                        </select>
+                        <div class="hint">Design der Benutzeroberfläche</div></td>
                     </tr>
                     <tr>
                         <td class="label">Anzeigedauer Countdown</td>
-                        <td><input type="number" name="countdown_duration" id="countdown_duration" min="1" max="10" value="3"> Sekunden</td>
+                        <td><input type="number" name="countdown_duration" id="countdown_duration" min="1" max="10" value="3"> Sekunden
+                        <div class="hint">Zeitdauer bis zur Aufnahme eines Fotos</div></td>
                     </tr>
                 </table>
             </fieldset>
             
             <fieldset>
                 <legend>Kamera-Einstellungen</legend>
-                <table class="settings-table">
-                    <tr>
+                <table class="settings-table">                <tr>
                         <td class="label">Kamera-Auswahl</td>
                         <td><select name="camera_id" id="camera_id">
                             <option value="auto">Automatisch erkennen</option>
                             <!-- Wird per JavaScript mit verfügbaren Kameras gefüllt -->
-                        </select></td>
+                        </select>
+                        <div class="hint">Welche Kamera zur Aufnahme verwendet wird</div></td>
                     </tr>
                     <tr>
                         <td class="label">Blitzlicht</td>
@@ -98,6 +101,7 @@
                                 <option value="on">Immer an</option>
                                 <option value="off">Immer aus</option>
                             </select>
+                            <div class="hint">Steuerung des Kamerablitzes (falls vorhanden)</div>
                         </td>
                     </tr>
                 </table>

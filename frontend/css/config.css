@@ -136,19 +136,54 @@ fieldset legend {
 }
 
 /* Responsive Design */
-@media (max-width: 700px) {
-    .settings-table td.label, .settings-table td.desc {
+/* Portrait-Ausrichtung (Hochkant) */
+@media (max-width: 700px) and (orientation: portrait) {
+    .settings-table td.label {
         display: block;
         width: 100%;
         padding: 0.2em 0;
+        margin-bottom: 0.3em;
     }
     .settings-table tr {
         display: block;
-        margin-bottom: 1em;
+        margin-bottom: 1.2em;
     }
     .settings-table td {
         display: block;
         width: 100%;
+    }
+    .settings-table .hint {
+        display: block;
+        width: 100%;
+        margin-top: 0.5em;
+        padding-left: 0;
+    }
+}
+
+/* Landscape-Ausrichtung (Querformat) */
+@media (max-width: 700px) and (orientation: landscape) {
+    .settings-table tr {
+        display: grid;
+        grid-template-columns: 30% 70%;
+        margin-bottom: 0.8em;
+    }
+    .settings-table td.label {
+        grid-column: 1;
+        grid-row: 1;
+        padding-right: 0.5em;
+    }
+    .settings-table td:not(.label) {
+        grid-column: 2;
+        grid-row: 1;
+    }
+    .settings-table .hint {
+        display: block;
+        grid-column: 1 / 3; /* Erstreckt sich über beide Spalten */
+        grid-row: 2;
+        margin-top: 0.3em;
+        padding-left: 0;
+        width: 100%;
+        font-size: 0.85em;
     }
 }
 form fieldset {
@@ -184,5 +219,14 @@ form fieldset {
         min-width: unset;
         padding: 0.7em 0.5em;
         font-size: 1em;
+    }
+    
+    /* Feinere Anpassungen für sehr kleine Geräte */
+    fieldset {
+        padding: 0.8em;
+    }
+    
+    .settings-table .hint {
+        font-size: 0.8em;
     }
 }
