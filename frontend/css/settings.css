@@ -343,19 +343,50 @@ body.dark .secondary-btn:hover {
 /* ----------------------------------------------------------------------------
    Benachrichtigungen für Einstellungsänderungen
  ------------------------------------------------------------------------------ */
-.settings-notification {
+.notifications-container {
     position: fixed;
     top: 70px;
     right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 320px;
+}
+
+.settings-notification {
     background-color: #fff;
     border-left: 4px solid #38d39f;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     padding: 12px 20px;
     border-radius: 4px;
-    z-index: 1000;
-    max-width: 320px;
-    transition: all 0.3s ease;
+    width: 100%;
     font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: all 0.3s ease;
+}
+
+.settings-notification.visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.settings-notification.hiding {
+    opacity: 0;
+    transform: translateY(-20px);
+}
+
+.settings-notification .close-notification {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    margin-left: 10px;
+    color: #666;
 }
 
 .settings-notification.error {
@@ -368,6 +399,10 @@ body.dark .secondary-btn:hover {
 
 .settings-notification.warning {
     border-left-color: #ffb142;
+}
+
+.settings-notification span {
+    flex: 1;
 }
 
 .hidden {

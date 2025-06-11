@@ -24,3 +24,26 @@ Diese Einstellungen sind in der Datenbank vorhanden, aber bisher nicht in der Ei
 - [ ] API-Endpunkte für neue Einstellungen auf Backend-Seite prüfen
 - [ ] Einstellungen in Kategorien gruppieren, wenn die Anzahl wächst
 - [ ] Formularvalidierung für alle Einstellungen hinzufügen
+
+## Benachrichtigungssystem (Notifications) Verbesserungen
+Die folgenden Verbesserungen wurden teilweise implementiert oder sind für die Zukunft geplant:
+
+### Implementiert
+- [x] Stapel-System für mehrere Benachrichtigungen untereinander
+- [x] Unterschiedliche Anzeigedauern (Standard für Erfolg, doppelte Dauer für Fehler)
+- [x] Verbesserte Animation (Einblenden von rechts, Ausblenden mit Fade-Out)
+
+### Zukünftige Verbesserungen
+- [ ] Konfigurierbare Anzeigedauer für verschiedene Benachrichtigungstypen
+- [ ] Maximale Anzahl gleichzeitiger Benachrichtigungen definieren (z.B. maximal 5)
+- [ ] "Alle schließen"-Button wenn mehrere Benachrichtigungen angezeigt werden
+- [ ] Weitere Benachrichtigungstypen (info, warning) konsequent nutzen
+- [ ] Benachrichtigungsposition konfigurierbar machen (oben rechts, unten rechts, etc.)
+- [ ] Globale Benachrichtigungsfunktion für alle Seiten der Anwendung
+- [ ] Desktop-Benachrichtigungen für wichtige Systemmeldungen (mit Browser-API)
+
+### Code-Refactoring
+- [ ] `showNotification`-Funktion in allen Dateien durch die neue Version ersetzen
+- [ ] Einheitliche Benachrichtigungskomponente für alle Bereiche der Anwendung
+- [ ] Auslagern der Benachrichtigungsfunktionen in separate Datei (`notifications.js`)
+- [ ] Event-System für Benachrichtigungen (um auf Benachrichtigungen reagieren zu können)

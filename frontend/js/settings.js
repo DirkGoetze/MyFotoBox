@@ -56,85 +56,14 @@ document.getElementById('loginForm').onsubmit = async function(e) {
 // Einstellungen-Formular-Handling
 // =================================================================================
 
-/**
- * Event-Handler für das Speichern der Einstellungen
- */
-document.getElementById('configForm').onsubmit = async function(e) {
-    e.preventDefault();
-    
-    // Statusanzeige erstellen, wenn nicht vorhanden
-    let statusDiv = document.getElementById('configStatus');
-    if (!statusDiv) {
-        statusDiv = document.createElement('div');
-        statusDiv.id = 'configStatus';
-        statusDiv.style.margin = '1em 0';
-        statusDiv.style.padding = '0.5em 1em';
-        statusDiv.style.borderRadius = '4px';
-        this.querySelector('.form-actions').after(statusDiv);
-    }
-    
-    try {
-        // Einstellungen sammeln
-        const settings = {
-            event_name: document.getElementById('event_name').value,
-            event_date: document.getElementById('event_date').value,
-            color_mode: document.getElementById('color_mode').value,
-            countdown_duration: parseInt(document.getElementById('countdown_duration').value, 10),
-            camera_id: document.getElementById('camera_id').value,
-            flash_mode: document.getElementById('flash_mode').value
-        };
-        
-        // Optional: Passwort ändern, wenn angegeben
-        const newPassword = document.getElementById('new_password').value;
-        if (newPassword.length > 0) {
-            if (newPassword.length < 4) {
-                statusDiv.textContent = 'Neues Passwort zu kurz (mind. 4 Zeichen)';
-                statusDiv.style.backgroundColor = '#ffdddd';
-                statusDiv.style.color = '#c00';
-                return;
-            }
-            settings.admin_password = newPassword;
-        }
-        
-        // Einstellungen an API senden
-        const response = await fetch('/api/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(settings)
-        });
-        
-        if (response.ok) {
-            statusDiv.textContent = 'Einstellungen erfolgreich gespeichert!';
-            statusDiv.style.backgroundColor = '#ddffdd';
-            statusDiv.style.color = '#080';
-            
-            // Header-Titel aktualisieren
-            setHeaderTitle(settings.event_name);
-        } else {
-            statusDiv.textContent = 'Fehler beim Speichern der Einstellungen';
-            statusDiv.style.backgroundColor = '#ffdddd';
-            statusDiv.style.color = '#c00';
-        }
-    } catch (error) {
-        statusDiv.textContent = 'Verbindungsfehler beim Speichern';
-        statusDiv.style.backgroundColor = '#ffdddd';
-        statusDiv.style.color = '#c00';
-        console.error('Speichern-Fehler:', error);
-    }
-};
+// Der Form-Submit-Handler wurde entfernt, da die Einstellungen jetzt automatisch gespeichert werden
+// Siehe live-settings-update.js für die Implementierung der automatischen Speicherung
 
 // =================================================================================
-// Daten laden und Reset-Funktionen
+// Daten laden
 // =================================================================================
 
-/**
- * Reset-Button Funktionalität
- */
-document.getElementById('reset_config').onclick = function() {
-    if (confirm('Einstellungen auf Standardwerte zurücksetzen?')) {
-        loadSettings();
-    }
-};
+// Der Reset-Button wurde entfernt, da Änderungen nun automatisch gespeichert werden
 
 /**
  * Einstellungen aus der Datenbank laden

@@ -7,7 +7,8 @@
 
 // Globale Variablen für die sofortige Einstellungsübernahme
 const fieldOriginalValues = new Map(); // Speichert die ursprünglichen Werte der Felder
-let notificationTimeout = null; // Timeout für das automatische Ausblenden der Benachrichtigung
+let notificationTimeouts = new Map(); // Map für Timeouts zum automatischen Ausblenden von Benachrichtigungen
+let notificationCounter = 0; // Zähler für eindeutige Benachrichtigungs-IDs
 
 // =================================================================================
 // Event-Handler und Initialisierung
@@ -18,11 +19,6 @@ let notificationTimeout = null; // Timeout für das automatische Ausblenden der 
  * Wird nach erfolgreichem Login aufgerufen
  */
 function initLiveSettingsUpdate() {
-    // Event-Handler für den "Schließen"-Button der Benachrichtigung
-    document.getElementById('closeNotification').addEventListener('click', function() {
-        hideNotification();
-    });
-    
     // Alle Eingabefelder auswählen (input, select) - aber nicht das Passwortfeld
     const inputFields = document.querySelectorAll('#configForm input:not([type="password"]), #configForm select');
     
@@ -214,38 +210,83 @@ function isValidDate(dateString) {
  * @param {string} type - Der Typ der Nachricht (success, error, warning)
  */
 function showNotification(message, type = 'info') {
-    const notification = document.getElementById('settingsNotification');
-    const textElement = document.getElementById('notificationText');
-    
-    // Vorherigen Timeout abbrechen, falls vorhanden
-    if (notificationTimeout) {
-        clearTimeout(notificationTimeout);
-        notificationTimeout = null;
+    // Container für gestapelte Benachrichtigungen erstellen oder finden
+    let notificationsContainer = document.getElementById('notificationsContainer');
+    if (!notificationsContainer) {
+        notificationsContainer = document.createElement('div');
+        notificationsContainer.id = 'notificationsContainer';
+        notificationsContainer.className = 'notifications-container';
+        document.body.appendChild(notificationsContainer);
     }
     
-    // Nachricht und Typ setzen
-    textElement.textContent = message;
+    // Eindeutige ID für diese Benachrichtigung generieren
+    const notificationId = 'notification-' + (++notificationCounter);
+    
+    // Neue Benachrichtigung erstellen
+    const notification = document.createElement('div');
+    notification.id = notificationId;
     notification.className = `settings-notification ${type}`;
+    notification.innerHTML = `
+        <span>${message}</span>
+        <button class="close-notification">×</button>
+    `;
     
-    // Timeout für automatisches Ausblenden (außer bei Fehlern)
-    if (type !== 'error') {
-        notificationTimeout = setTimeout(() => {
-            hideNotification();
-        }, 3000);
-    }
+    // Schließen-Button-Event-Handler
+    const closeBtn = notification.querySelector('.close-notification');
+    closeBtn.addEventListener('click', () => {
+        hideNotification(notificationId);
+    });
+    
+    // Benachrichtigung zum Container hinzufügen
+    notificationsContainer.appendChild(notification);
+    
+    // Verzögerung hinzufügen, damit Animation funktioniert
+    setTimeout(() => {
+        notification.classList.add('visible');
+    }, 10);
+    
+    // Timeout für automatisches Ausblenden setzen
+    // Standard-Dauer für Erfolg: 3000ms, für Fehler: 6000ms (doppelt)
+    const timeoutDuration = (type === 'error') ? 6000 : 3000;
+    
+    const timeout = setTimeout(() => {
+        hideNotification(notificationId);
+    }, timeoutDuration);
+    
+    // Timeout speichern
+    notificationTimeouts.set(notificationId, timeout);
+    
+    return notificationId;
 }
 
 /**
- * Blendet die Benachrichtigung aus
+ * Blendet eine Benachrichtigung aus
+ * @param {string} notificationId - Die ID der auszublendenden Benachrichtigung
  */
-function hideNotification() {
-    const notification = document.getElementById('settingsNotification');
-    notification.classList.add('hidden');
+function hideNotification(notificationId) {
+    const notification = document.getElementById(notificationId);
+    if (!notification) return;
     
-    if (notificationTimeout) {
-        clearTimeout(notificationTimeout);
-        notificationTimeout = null;
+    // Timeout löschen
+    if (notificationTimeouts.has(notificationId)) {
+        clearTimeout(notificationTimeouts.get(notificationId));
+        notificationTimeouts.delete(notificationId);
     }
+    
+    // Animation für das Ausblenden
+    notification.classList.remove('visible');
+    notification.classList.add('hiding');
+    
+    // Nach der Animation aus dem DOM entfernen
+    setTimeout(() => {
+        notification.remove();
+        
+        // Container entfernen, wenn keine Benachrichtigungen mehr vorhanden sind
+        const container = document.getElementById('notificationsContainer');
+        if (container && container.children.length === 0) {
+            container.remove();
+        }
+    }, 300);
 }
 
 // =================================================================================
