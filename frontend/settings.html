@@ -69,29 +69,6 @@
         
         <form id="configForm">
             <fieldset>
-                <legend>Eventeinstellungen</legend>
-                <div class="fieldset-container">
-                    <div class="input-field">
-                        <label for="event_name">Event-Name</label>
-                        <input type="text" name="event_name" id="event_name">
-                        <details>
-                            <summary>Über den Event-Namen</summary>
-                            <div>Name der Veranstaltung, wird auf allen Seiten angezeigt und im Header der Fotobox prominent dargestellt. Beispiele: "Hochzeit Anna & Tom", "Firmenfeier 2025".</div>
-                        </details>
-                    </div>
-                    
-                    <div class="input-field">
-                        <label for="event_date">Event-Datum</label>
-                        <input type="date" name="event_date" id="event_date">
-                        <details>
-                            <summary>Über das Event-Datum</summary>
-                            <div>Datum der Veranstaltung für die Anzeige. Dieses Datum erscheint im Fußbereich und wird für die Sortierung von Bildern verwendet.</div>
-                        </details>
-                    </div>
-                </div>
-            </fieldset>
-
-            <fieldset>
                 <legend>Anzeige</legend>
                 <div class="fieldset-container">
                     <div class="input-field">
@@ -116,6 +93,29 @@
                         <details>
                             <summary>Countdown-Details</summary>
                             <div>Zeitdauer bis zur Aufnahme eines Fotos. Ein längerer Countdown gibt den Gästen mehr Zeit, sich vor der Kamera zu positionieren. Bei kleinen Kindern empfiehlt sich ein kürzerer Countdown (1-2 Sekunden).</div>
+                        </details>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>Eventeinstellungen</legend>
+                <div class="fieldset-container">
+                    <div class="input-field">
+                        <label for="event_name">Event-Name</label>
+                        <input type="text" name="event_name" id="event_name">
+                        <details>
+                            <summary>Über den Event-Namen</summary>
+                            <div>Name der Veranstaltung, wird auf allen Seiten angezeigt und im Header der Fotobox prominent dargestellt. Beispiele: "Hochzeit Anna & Tom", "Firmenfeier 2025".</div>
+                        </details>
+                    </div>
+                    
+                    <div class="input-field">
+                        <label for="event_date">Event-Datum</label>
+                        <input type="date" name="event_date" id="event_date">
+                        <details>
+                            <summary>Über das Event-Datum</summary>
+                            <div>Datum der Veranstaltung für die Anzeige. Dieses Datum erscheint im Fußbereich und wird für die Sortierung von Bildern verwendet.</div>
                         </details>
                     </div>
                 </div>
@@ -151,24 +151,6 @@
                 </div>
             </fieldset>
             
-            <fieldset>
-                <legend>Admin-Einstellungen</legend>
-                <div class="fieldset-container">
-                    <div class="input-field">
-                        <label for="new_password">Admin-Passwort ändern</label>
-                        <input type="password" name="new_password" id="new_password">
-                        <details>
-                            <summary>Wichtige Passwort-Hinweise</summary>
-                            <div>
-                                <p>Mindestens 4 Zeichen. Leer lassen für keine Änderung.</p>
-                                <p>Das Passwort schützt den Zugriff auf alle Systemeinstellungen. Bitte wählen Sie ein sicheres Passwort und notieren Sie es an einem sicheren Ort.</p>
-                                <p>Falls Sie das Passwort vergessen, finden Sie Anweisungen zum Zurücksetzen in der Dokumentation.</p>
-                            </div>
-                        </details>
-                    </div>
-                </div>
-            </fieldset>
-            
             <fieldset id="systemUpdateSection">
                 <legend>System-Updates</legend>
                 <div class="fieldset-container">
@@ -191,6 +173,24 @@
                             <div id="updateProgressBar" class="progress-fill"></div>
                         </div>
                         <div id="updateProgressText" class="progress-text">Update wird vorbereitet...</div>
+                    </div>
+                </div>
+            </fieldset>
+            
+            <fieldset>
+                <legend>Admin-Einstellungen</legend>
+                <div class="fieldset-container">
+                    <div class="input-field">
+                        <label for="new_password">Admin-Passwort ändern</label>
+                        <input type="password" name="new_password" id="new_password">
+                        <details>
+                            <summary>Wichtige Passwort-Hinweise</summary>
+                            <div>
+                                <p>Mindestens 4 Zeichen. Leer lassen für keine Änderung.</p>
+                                <p>Das Passwort schützt den Zugriff auf alle Systemeinstellungen. Bitte wählen Sie ein sicheres Passwort und notieren Sie es an einem sicheren Ort.</p>
+                                <p>Falls Sie das Passwort vergessen, finden Sie Anweisungen zum Zurücksetzen in der Dokumentation.</p>
+                            </div>
+                        </details>
                     </div>
                 </div>
             </fieldset>
