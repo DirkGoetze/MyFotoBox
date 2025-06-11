@@ -69,7 +69,7 @@ In der Galerie-Ansicht werden alle Fotos chronologisch angezeigt (neueste zuerst
 
 ## Einstellungen anpassen
 
-Im Einstellungsbereich (passwortgeschützt) können Sie folgende Parameter anpassen:
+Im Einstellungsbereich (passwortgeschützt) können Sie folgende Parameter anpassen. Alle Änderungen werden automatisch gespeichert und es erscheint eine Benachrichtigung über den Status (Erfolg oder Fehler). Erfolgsbenachrichtigungen verschwinden nach kurzer Zeit automatisch, während Fehlermeldungen länger angezeigt werden:
 
 ### Event-Einstellungen
 
@@ -106,9 +106,10 @@ Auf der Kontaktseite können Sie Informationen hinterlegen, wie Ihre Gäste die 
    * Überprüfen Sie die Berechtigungen des Foto-Verzeichnisses
    * Stellen Sie sicher, dass ausreichend Speicherplatz vorhanden ist
 
-3. **Einstellungen können nicht gespeichert werden**
+3. **Einstellungen werden nicht sofort übernommen**
    * Prüfen Sie, ob die Datenbank beschreibbar ist
    * Stellen Sie sicher, dass Sie das richtige Admin-Passwort verwenden
+   * Beachten Sie die Benachrichtigungen, die den Status der Einstellungsänderungen anzeigen
 
 ### Support
 
