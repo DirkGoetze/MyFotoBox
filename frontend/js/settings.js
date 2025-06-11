@@ -203,7 +203,10 @@ function initFancyInputs() {
     const fancyInputs = document.querySelectorAll('.fancy-input');
     
     fancyInputs.forEach(container => {
-        const input = container.querySelector('input, select');
+        // Sucht nach einem direkten Input/Select-Element oder einem in einem untergeordneten div
+        const input = container.querySelector('input, select') || 
+                      container.querySelector('.input-with-unit input') || 
+                      container.querySelector('div > input, div > select');
         const label = container.querySelector('label');
         
         if (!input || !label) return;
@@ -228,7 +231,7 @@ function initFancyInputs() {
         // Input-Event: Label korrekt platzieren, wenn Wert sich ändert
         input.addEventListener('input', () => {
             if (input.value === '') {
-                if (!document.activeElement === input) {
+                if (document.activeElement !== input) {
                     label.classList.add('like-placeholder');
                 }
             } else {

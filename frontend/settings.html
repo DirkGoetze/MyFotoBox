@@ -85,12 +85,11 @@
                         <div>Design der Benutzeroberfläche. Bei "Automatisch" wechselt die Anzeige je nach Tageszeit zwischen hell und dunkel. Dies ist besonders hilfreich, wenn die Fotobox sowohl tagsüber als auch abends genutzt wird.</div>
                     </details>
                 </div>
-                
-                <div class="fancy-input">
+                  <div class="fancy-input">
                     <label for="countdown_duration">Anzeigedauer Countdown</label>
-                    <div style="display: flex; align-items: center;">
-                        <input type="number" name="countdown_duration" id="countdown_duration" min="1" max="10" value="3" style="flex: 1;">
-                        <span style="margin-left: 10px;">Sekunden</span>
+                    <div class="input-with-unit" style="position: relative;">
+                        <input type="number" name="countdown_duration" id="countdown_duration" min="1" max="10" value="3">
+                        <span class="unit">Sekunden</span>
                     </div>
                     <details>
                         <summary>Countdown-Details</summary>

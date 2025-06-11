@@ -41,7 +41,8 @@
 }
 
 .fancy-input input,
-.fancy-input select {
+.fancy-input select,
+.fancy-input div > input {
     width: 100%;
     padding: 0.7em;
     border: 1px solid #ccc;
@@ -50,6 +51,7 @@
     background-color: #fff;
 }
 
+/* Gemeinsame Label-Positionierung für alle Eingabefelder */
 .fancy-input label {
     position: absolute;
     background: #fff;
@@ -65,8 +67,9 @@
 .fancy-input label.like-placeholder {
     color: #666;
     font-size: 1em;
-    top: .7em;
+    top: .7em;  /* Standard-Position für normale Eingabefelder */
     left: .8em;
+    z-index: 2;  /* Erhöht, um sicherzustellen, dass das Label über allen Elementen erscheint */
 }
 
 .fancy-input .hint {
@@ -125,5 +128,39 @@ body.dark .fancy-input select {
 }
 
 body.dark .fancy-input label.like-placeholder {
+    color: #999;
+}
+
+/* Spezieller Stil für Eingabefelder mit Einheiten */
+.input-with-unit {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #fff;
+    padding-right: 0.5em; /* Platz für die Einheit */
+}
+
+.input-with-unit input {
+    flex: 1;
+    border: none !important; /* Entfernt den Rahmen des Eingabefelds */
+    box-shadow: none !important; /* Entfernt den Schatten (falls vorhanden) */
+    background: transparent !important;
+}
+
+.input-with-unit .unit {
+    margin-left: 5px;
+    white-space: nowrap;
+    color: #666;
+}
+
+/* Dark-Mode Anpassungen für die Eingabefelder mit Einheiten */
+body.dark .input-with-unit {
+    background-color: #2c3e50;
+    border-color: #384c60;
+}
+
+body.dark .input-with-unit .unit {
     color: #999;
 }
