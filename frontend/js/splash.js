@@ -5,6 +5,11 @@
 // Versionsprüfung und automatischer Weiterleitung
 // ------------------------------------------------------------------------------
 
+// Abhängigkeiten aus Systemmodulen
+import { checkForUpdates } from './manage_update.js';
+import { log, error } from './manage_logging.js';
+import { isPasswordSet } from './manage_auth.js';
+
 // Splash-Overlay mit Progressbar und Passwort-Check
 const splashDuration = 8000; // ms
 const progressBar = document.getElementById('progressBar');
@@ -45,14 +50,13 @@ function animateProgress() {
 /**
  * Verwaltet die verschiedenen Phasen des Splash-Screens basierend auf dem Fortschritt
  */
-function handlePhases(percent) {
-    // Phase: Prüfe Version (bei 30%)
+function handlePhases(percent) {    // Phase: Prüfe Version (bei 30%)
     if (percent >= PHASES.CHECK_VERSION.percent && currentPhase !== PHASES.CHECK_VERSION) {
         currentPhase = PHASES.CHECK_VERSION;
         statusMessage.textContent = PHASES.CHECK_VERSION.message;
         statusMessage.className = 'splash-status status-checking';
         // API-Aufruf zum Prüfen der Version
-        checkForUpdates();
+        checkForUpdateStatus();
     }
     
     // Phase: Konfiguration prüfen (bei 70%)
@@ -74,31 +78,29 @@ function handlePhases(percent) {
 }
 
 /**
- * Prüft, ob Updates verfügbar sind
+ * Prüft, ob Updates verfügbar sind 
  */
-async function checkForUpdates() {
+async function checkForUpdateStatus() {
     try {
-        const response = await fetch('/api/update');
-        if (!response.ok) throw new Error('Fehler bei der Update-Prüfung');
-        
-        const data = await response.json();
+        const updateInfo = await checkForUpdates();
         currentPhase = PHASES.VERSION_RESULT;
         
-        if (data.update_available) {
+        if (updateInfo) {
             // Update verfügbar
             updateAvailable = true;
-            updateVersion = data.remote_version;
-            statusMessage.textContent = `Update auf Version ${data.remote_version} verfügbar`;
+            updateVersion = updateInfo.version;
+            statusMessage.textContent = `Update auf Version ${updateInfo.version} verfügbar`;
             statusMessage.className = 'splash-status status-updateavailable';
-            console.log(`Update verfügbar: ${data.local_version} → ${data.remote_version}`);
+            log(`Update verfügbar: ${updateInfo.version}`);
             
             // Optional: Anzeige länger erhalten, damit Benutzer die Nachricht lesen kann
             // Dies beeinflusst nicht die Gesamtdauer des Splash-Screens
         } else {
             // System ist aktuell
-            statusMessage.textContent = `System ist aktuell (v${data.local_version})`;
+            const versionInfo = await import('./manage_update.js').then(module => module.getVersionInfo());
+            statusMessage.textContent = `System ist aktuell (v${versionInfo.current})`;
             statusMessage.className = 'splash-status status-uptodate';
-            console.log(`System ist aktuell: ${data.local_version}`);
+            log(`System ist aktuell: ${versionInfo.current}`);
         }
     } catch (error) {
         console.error('Fehler bei der Update-Prüfung:', error);
@@ -108,19 +110,11 @@ async function checkForUpdates() {
 }
 
 /**
- * Prüft, ob ein Passwort gesetzt ist über den speziellen Endpunkt
+ * Prüft, ob ein Passwort gesetzt ist über den Authentifizierungsmodul
  * @returns {Promise<boolean>} True wenn ein Passwort gesetzt ist
  */
 async function checkPasswordSet() {
-    try {
-        // Verwende den speziellen Endpunkt zur Passwortprüfung
-        const res = await fetch('/api/check_password_set');
-        if (!res.ok) throw new Error();
-        const data = await res.json();
-        return data.password_set;
-    } catch {
-        return false;
-    }
+    return isPasswordSet();
 }
 
 // Starte die Animation

@@ -6,15 +6,15 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 
 | Modul | Frontend-Status | Backend-Status |
 |-------|----------------|----------------|
-| manage_update | 🔴 Nicht begonnen | 🟡 Teilweise implementiert |
+| manage_update | 🟢 Vollständig implementiert | 🟡 Teilweise implementiert |
 | manage_auth | 🔴 Nicht begonnen | 🔴 Nicht begonnen |
 | manage_settings | 🔴 Nicht begonnen | 🔴 Nicht begonnen |
 | manage_database | 🔴 Nicht begonnen | 🟡 Teilweise implementiert |
 | manage_files/filesystem | 🔴 Nicht begonnen | 🔴 Nicht begonnen |
-| manage_logging | 🔴 Nicht begonnen | 🔴 Nicht begonnen |
-| manage_api | 🔴 Nicht begonnen | 🔴 Nicht begonnen |
+| manage_logging | 🟢 Vollständig implementiert | 🔴 Nicht begonnen |
+| manage_api | 🟢 Vollständig implementiert | 🔴 Nicht begonnen |
 | manage_camera | 🔴 Nicht begonnen | 🔴 Nicht begonnen |
-| ui_components | 🔴 Nicht begonnen | - |
+| ui_components | 🟢 Vollständig implementiert | - |
 | utils | 🔴 Nicht begonnen | 🔴 Nicht begonnen |
 
 ## Seitenspezifische Module
@@ -23,7 +23,8 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 |-------|--------|------------|
 | index.js | 🔴 Nicht begonnen | Funktionen müssen zu manage_* Modulen verschoben werden |
 | gallery.js | 🔴 Nicht begonnen | API-Aufrufe zu manage_filesystem verschieben |
-| settings.js | 🔴 Nicht begonnen | Datenverarbeitung zu manage_settings verschieben |
+| settings.js | 🟡 Teilweise implementiert | Update-Funktionalität migriert; Datenverarbeitung muss noch zu manage_settings verschoben werden |
+| splash.js | 🟡 Teilweise implementiert | Update-Funktionalität migriert |
 | install.js | 🔴 Nicht begonnen | Auth-Logik zu manage_auth verschieben |
 | capture.js | 🔴 Nicht begonnen | Kamerasteuerung zu manage_camera verschieben |
 
@@ -36,17 +37,17 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 ## Migrationsfortschritt
 
 ### Phase 1: Module erstellen
-- [ ] Grundlegende Struktur für neue Module anlegen
-- [ ] API-Signaturen definieren
+- [x] Grundlegende Struktur für neue Module anlegen
+- [x] API-Signaturen definieren
 
 ### Phase 2: Kernfunktionen migrieren
 - [ ] manage_auth.js implementieren
-- [ ] manage_update.js implementieren
+- [x] manage_update.js implementieren
 - [ ] manage_settings.js implementieren
 
 ### Phase 3: Bestehende Dateien anpassen
-- [ ] Funktionsaufrufe umleiten
-- [ ] Doppelte Funktionalität entfernen
+- [x] Funktionsaufrufe für Updates umleiten
+- [x] Doppelte Update-Funktionalität entfernen
 - [ ] Tests für neue Struktur schreiben
 
 ### Phase 4: UI-Komponenten extrahieren
@@ -86,5 +87,6 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 | Datum | Update | Verantwortlich |
 |-------|--------|----------------|
 | TBD | Erstellung des Dokuments | - |
+| 12.06.2025 | Update-Funktionalität implementiert | Entwicklungsteam |
 
 Dieses Dokument wird regelmäßig aktualisiert, um den aktuellen Stand der Migration zu reflektieren.

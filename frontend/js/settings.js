@@ -6,6 +6,12 @@
 // Login-System, Formular-Validierung und API-Kommunikation zur Konfiguration
 // ------------------------------------------------------------------------------
 
+// Importiere Systemmodule
+import { throttledCheckForUpdates, installUpdate, getUpdateStatus, getVersionInfo } from './manage_update.js';
+import { log, error } from './manage_logging.js';
+import { showNotification, showDialog } from './ui_components.js';
+import { login, validatePassword, changePassword } from './manage_auth.js';
+
 // =================================================================================
 // Login-Funktionalität
 // =================================================================================
@@ -24,13 +30,9 @@ document.getElementById('loginForm').onsubmit = async function(e) {
     }
     
     try {
-        const response = await fetch('/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: password })
-        });
+        const isSuccess = await login(password);
         
-        if (response.ok) {            // Login erfolgreich
+        if (isSuccess) {
             document.getElementById('loginForm').classList.add('hidden');
             document.getElementById('configForm').classList.add('form-visible');
             
@@ -80,14 +82,13 @@ async function loadSettings() {
                 // Aktualisiere auch den Header-Titel
                 setHeaderTitle(settings.event_name);
             }
-            
-            // Event-Datum setzen (wenn vorhanden)
+              // Event-Datum setzen (wenn vorhanden)
             if (settings.event_date && document.getElementById('event_date')) {
                 document.getElementById('event_date').value = settings.event_date;
             }                // Nach dem Laden der Einstellungen automatisch nach Updates suchen
                     setTimeout(() => {
                         // Verzögerte Ausführung, um UI-Updates zu ermöglichen
-                        throttledCheckForUpdates();
+                        handleUpdateCheck();
                     }, 500);
               // Anzeigemodus setzen
             if (document.getElementById('color_mode')) {
@@ -168,59 +169,30 @@ async function loadAvailableCameras() {
  * Globale Variablen für Update-Funktionalität
  */
 let updateInProgress = false;
-let remoteVersion = null;
-let localVersion = null;
-let updateCheckDebounceTimer = null;
-let lastUpdateCheck = 0;
-const UPDATE_CHECK_THROTTLE_MS = 60000; // Mindestens 1 Minute zwischen den Updateprüfungen
 
 // Button zum Prüfen auf Updates - mit Nullprüfung
 const checkUpdateBtn = document.getElementById('checkUpdateBtn');
 if (checkUpdateBtn) {
-    checkUpdateBtn.addEventListener('click', throttledCheckForUpdates);
+    checkUpdateBtn.addEventListener('click', handleUpdateCheck);
 }
 
 // Button zum Installieren des Updates - mit Nullprüfung
 const installUpdateBtn = document.getElementById('installUpdateBtn');
 if (installUpdateBtn) {
-    installUpdateBtn.addEventListener('click', installUpdate);
+    installUpdateBtn.addEventListener('click', handleUpdateInstall);
 }
 
 /**
- * Führt die Update-Prüfung mit Ratenbegrenzung durch
+ * Handler für den Update-Check-Button
  */
-function throttledCheckForUpdates() {
-    const now = Date.now();
-    
-    // Prüfe, ob seit der letzten Prüfung genug Zeit vergangen ist
-    if (now - lastUpdateCheck < UPDATE_CHECK_THROTTLE_MS) {
-        console.log('Update-Prüfung übersprungen (Ratenbegrenzung)');
-        return;
-    }
-    
-    // Debounce (bei mehreren schnell aufeinanderfolgenden Aufrufen nur den letzten ausführen)
-    if (updateCheckDebounceTimer) {
-        clearTimeout(updateCheckDebounceTimer);
-    }
-    
-    updateCheckDebounceTimer = setTimeout(() => {
-        checkForUpdates();
-        updateCheckDebounceTimer = null;
-        lastUpdateCheck = Date.now();
-    }, 500);
-}
-
-/**
- * Prüft, ob Updates verfügbar sind
- */
-async function checkForUpdates() {
+async function handleUpdateCheck() {
+    // UI-Elemente
     const updateStatus = document.getElementById('updateStatus');
     const updateActions = document.getElementById('updateActions');
-    const checkUpdateBtn = document.getElementById('checkUpdateBtn');
     const versionStatusText = document.getElementById('versionStatusText');
     
     if (!updateStatus || !updateActions || !checkUpdateBtn || !versionStatusText) {
-        console.error('Erforderliche DOM-Elemente für Update-Prüfung nicht gefunden');
+        error('Erforderliche DOM-Elemente für Update-Prüfung nicht gefunden');
         return;
     }
     
@@ -232,23 +204,20 @@ async function checkForUpdates() {
     checkUpdateBtn.disabled = true;
     
     try {
-        const response = await fetch('/api/update');
-        if (!response.ok) throw new Error('Fehler bei der Update-Prüfung');
-        
-        const data = await response.json();
-        localVersion = data.local_version;
-        remoteVersion = data.remote_version;
+        // Nutze das manage_update Modul für die Updateprüfung
+        const updateInfo = await throttledCheckForUpdates();
+        const versionInfo = getVersionInfo();
         
         // Aktuelle Version anzeigen
-        document.querySelector('#currentVersion .version-number').textContent = localVersion;
+        document.querySelector('#currentVersion .version-number').textContent = versionInfo.current;
         
-        if (data.update_available) {
+        if (updateInfo) {
             // Update verfügbar
-            versionStatusText.textContent = `/ Online verfügbar ${remoteVersion}`;
+            versionStatusText.textContent = `/ Online verfügbar ${updateInfo.version}`;
             versionStatusText.className = 'update-available';
             
             // Update-Version anzeigen
-            document.querySelector('#availableVersion .version-number').textContent = remoteVersion;
+            document.querySelector('#availableVersion .version-number').textContent = updateInfo.version;
             
             // Update-Button aktivieren und anzeigen
             checkUpdateBtn.disabled = false;
@@ -259,8 +228,8 @@ async function checkForUpdates() {
             versionStatusText.className = 'update-up-to-date';
             checkUpdateBtn.disabled = true;
         }
-    } catch (error) {
-        console.error('Update-Prüfungs-Fehler:', error);
+    } catch (err) {
+        error('Update-Prüfungs-Fehler:', err);
         versionStatusText.textContent = '/ Fehler bei der Update-Prüfung';
         versionStatusText.className = 'update-error';
         checkUpdateBtn.disabled = false;
@@ -268,9 +237,9 @@ async function checkForUpdates() {
 }
 
 /**
- * Installiert das verfügbare Update
+ * Handler für das Installieren von Updates
  */
-async function installUpdate() {
+async function handleUpdateInstall() {
     if (updateInProgress) return;
     
     const updateStatus = document.getElementById('updateStatus');
@@ -293,46 +262,44 @@ async function installUpdate() {
         updateProgressBar.style.width = '0%';
         updateProgressText.textContent = 'Update wird vorbereitet...';
         
-        // Update starten
-        const response = await fetch('/api/update', { 
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ from_version: localVersion, to_version: remoteVersion })
-        });
+        // Update starten mit dem manage_update Modul
+        await installUpdate();
         
-        if (!response.ok) throw new Error('Installation fehlgeschlagen');
-        
-        // Fortschrittsbalken auf 30%
-        updateProgressBar.style.width = '30%';
-        updateProgressText.textContent = 'Dateien werden heruntergeladen...';
-        
-        // In der Praxis würde hier ein Polling für den Fortschritt erfolgen
-        // Für diese Demo simulieren wir den Fortschritt
-        setTimeout(() => {
-            updateProgressBar.style.width = '60%';
-            updateProgressText.textContent = 'Anwendung wird aktualisiert...';
-        }, 2000);
-        
-        setTimeout(() => {
-            updateProgressBar.style.width = '90%';
-            updateProgressText.textContent = 'Fast fertig...';
-        }, 4000);
-        
-        setTimeout(() => {
-            // Update abgeschlossen
-            updateProgressBar.style.width = '100%';
-            updateProgressText.textContent = 'Update abgeschlossen!';                // Nach dem Update erneut auf Updates prüfen
-                setTimeout(() => {
-                    updateProgressBar.style.width = '0%';
-                    updateProgress.classList.add('hidden');
-                    updateInProgress = false;
+        // Fortschrittsanzeige aktualisieren mit regelmäßigen Abfragen
+        const statusUpdateInterval = setInterval(async () => {
+            try {
+                const status = await getUpdateStatus();
+                
+                // Fortschrittsbalken aktualisieren
+                updateProgressBar.style.width = `${status.progress}%`;
+                updateProgressText.textContent = status.message;
+                
+                // Wenn fertig oder Fehler aufgetreten, Interval beenden
+                if (status.status === 'idle' || status.status === 'error' || status.progress >= 100) {
+                    clearInterval(statusUpdateInterval);
                     
-                    // Prüfen, ob das Update erfolgreich war
-                    throttledCheckForUpdates();
-                }, 3000);
-        }, 6000);
-    } catch (error) {
-        console.error('Update-Installations-Fehler:', error);
+                    if (status.status === 'error') {
+                        versionStatusText.textContent = '/ Fehler bei der Update-Installation';
+                        versionStatusText.className = 'update-error';
+                        updateProgressText.textContent = status.message;
+                    } else if (status.progress >= 100) {
+                        updateProgressText.textContent = 'Update abgeschlossen!';
+                        // Nach 3 Sekunden ausblenden
+                        setTimeout(() => {
+                            updateProgress.classList.add('hidden');
+                            // Erneut auf Updates prüfen
+                            handleUpdateCheck();
+                        }, 3000);
+                    }
+                    
+                    updateInProgress = false;
+                }
+            } catch (err) {
+                error('Fehler beim Abrufen des Update-Status', err);
+            }
+        }, 1000);
+    } catch (err) {
+        error('Update-Installations-Fehler:', err);
         versionStatusText.textContent = '/ Fehler bei der Update-Installation';
         versionStatusText.className = 'update-error';
         updateProgress.classList.add('hidden');
@@ -369,13 +336,12 @@ async function checkLoginStatus() {
                 // Bereits eingeloggt, Konfigurationsformular anzeigen
                 document.getElementById('loginForm').classList.add('hidden');
                 document.getElementById('configForm').classList.add('form-visible');
-                
-                // Einstellungen laden
+                  // Einstellungen laden
                 loadSettings().then(() => {
                     if (typeof initLiveSettingsUpdate === 'function') {
                         initLiveSettingsUpdate();
                     }                // Nach dem Laden der Einstellungen automatisch nach Updates suchen
-                    throttledCheckForUpdates();
+                    handleUpdateCheck();
                 });
             }
         }

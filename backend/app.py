@@ -5,6 +5,11 @@ import subprocess
 import bcrypt
 import re
 
+# Importiere das Authentifizierungsmodul
+import manage_auth
+# Importiere das Logging-Modul
+import manage_logging
+
 # -------------------------------------------------------------------------------
 # DB_PATH und Datenverzeichnis sicherstellen
 # -------------------------------------------------------------------------------
@@ -38,57 +43,13 @@ def add_no_cache_headers(response):
 subprocess.run(['python3', os.path.join(os.path.dirname(__file__), 'manage_database.py'), 'init'])
 
 # -------------------------------------------------------------------------------
-# check_password (bcrypt)
-# -------------------------------------------------------------------------------
-def check_password(pw):
-    con = sqlite3.connect(DB_PATH)
-    cur = con.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
-    cur.execute("SELECT value FROM settings WHERE key='config_password'")
-    row = cur.fetchone()
-    con.close()
-    if not row:
-        return False
-    hashval = row[0]
-    try:
-        return bcrypt.checkpw(pw.encode(), hashval.encode())
-    except Exception:
-        return False
-
-# -------------------------------------------------------------------------------
-# login_required
-# -------------------------------------------------------------------------------
-# Funktion: Decorator für passwortgeschützte Routen
-# -------------------------------------------------------------------------------
-def login_required(f):
-    from functools import wraps
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if not session.get('logged_in'):
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated
-
-# -------------------------------------------------------------------------------
 # check_first_run
 # -------------------------------------------------------------------------------
 # Funktion: Prüft, ob die Fotobox das erste Mal aufgerufen wird (keine Konfiguration vorhanden)
 # Rückgabe: True = erste Inbetriebnahme, False = Konfiguration vorhanden
 # -------------------------------------------------------------------------------
 def check_first_run():
-    con = sqlite3.connect(DB_PATH)
-    cur = con.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
-    cur.execute("SELECT COUNT(*) FROM settings WHERE key='config_password'")
-    count = cur.fetchone()[0]
-    # Standardwert für photo_timer bei Erstinstallation setzen
-    cur.execute("SELECT COUNT(*) FROM settings WHERE key='photo_timer'")
-    timer_count = cur.fetchone()[0]
-    if timer_count == 0:
-        cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", ("photo_timer", "5"))
-        con.commit()
-    con.close()
-    return count == 0
+    return not manage_auth.is_password_set()
 
 # -------------------------------------------------------------------------------
 # / (Root-Route)
@@ -96,7 +57,9 @@ def check_first_run():
 @app.route('/')
 def root():
     if check_first_run():
+        manage_logging.log("Erste Inbetriebnahme erkannt - Weiterleitung zur Setup-Seite")
         return redirect('/setup.html')
+    manage_logging.debug("Startseite wird angezeigt")
     return send_from_directory('../frontend', 'index.html')
 
 # -------------------------------------------------------------------------------
@@ -106,10 +69,11 @@ def root():
 def login():
     if request.method == 'POST':
         pw = request.form.get('password', '')
-        if check_password(pw):
-            session['logged_in'] = True
+        if manage_auth.login(pw):
+            manage_logging.log(f"Erfolgreicher Web-Login von IP {request.remote_addr}")
             return redirect(url_for('config'))
         else:
+            manage_logging.warn(f"Fehlgeschlagener Web-Login-Versuch von IP {request.remote_addr}")
             return render_template_string('<h3>Falsches Passwort!</h3><a href="/login">Zurück</a>')
     return render_template_string('<form method="post">\n        <h3>Fotobox Konfiguration Login</h3>\n        Passwort: <input type="password" name="password" autofocus>\n        <input type="submit" value="Login">\n    </form>')
 
@@ -118,17 +82,20 @@ def login():
 # -------------------------------------------------------------------------------
 @app.route('/logout')
 def logout():
-    session.clear()
+    manage_logging.log("Benutzer-Logout durchgeführt")
+    manage_auth.logout()
     return redirect(url_for('login'))
 
 # -------------------------------------------------------------------------------
 # /config (GET)
 # -------------------------------------------------------------------------------
 @app.route('/config')
-@login_required
+@manage_auth.login_required
 def config():
     if check_first_run():
+        manage_logging.log("Zugriff auf /config während Ersteinrichtung - Weiterleitung zur Setup-Seite")
         return redirect('/setup.html')
+    manage_logging.debug("Konfigurationsseite wird angezeigt")
     return render_template_string('<h2>Fotobox Konfiguration</h2>\n    <a href="/logout">Logout</a>')
 
 # -------------------------------------------------------------------------------
@@ -138,10 +105,11 @@ def config():
 def api_login():
     data = request.get_json(force=True)
     pw = data.get('password', '')
-    if check_password(pw):
-        session['logged_in'] = True
+    if manage_auth.login(pw):
+        manage_logging.log(f"Erfolgreicher Login von IP {request.remote_addr}")
         return jsonify({'success': True})
     else:
+        manage_logging.warn(f"Fehlgeschlagener Login-Versuch von IP {request.remote_addr}")
         return jsonify({'success': False}), 401
 
 # -------------------------------------------------------------------------------
@@ -151,7 +119,9 @@ def api_login():
 def api_settings():
     db = sqlite3.connect(DB_PATH)
     cur = db.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")    if request.method == 'POST':
+    cur.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
+    
+    if request.method == 'POST':
         data = request.get_json(force=True)
         # Alle Einstellungen aus dem Frontend verarbeiten
         allowed_keys = [
@@ -161,26 +131,34 @@ def api_settings():
             'camera_id', 'flash_mode', 'countdown_duration'
         ]
         
+        # Log der Einstellungsänderung
+        manage_logging.log(f"Einstellungen werden aktualisiert. Geänderte Schlüssel: {', '.join([k for k in data if k in allowed_keys])}")
+        
         for key in data:
             if key in allowed_keys:
                 # Alle Werte als String speichern
                 cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, str(data[key])))
-        
+                
         # Admin-Passwort setzen/ändern - Unterstütze sowohl new_password (settings.html) als auch admin_password (install.html)
         password_key = None
         if 'new_password' in data and data['new_password'] and len(data['new_password']) >= 4:
             password_key = 'new_password'
+            manage_logging.log("Administratorpasswort wird geändert")
         elif 'admin_password' in data and data['admin_password'] and len(data['admin_password']) >= 4:
             password_key = 'admin_password'
+            manage_logging.log("Neues Administratorpasswort wird gesetzt")
             
         if password_key:
-            hashval = bcrypt.hashpw(data[password_key].encode(), bcrypt.gensalt()).decode()
-            cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", ('config_password', hashval))
+            # Nutze manage_auth zum Setzen des Passworts
+            manage_auth.set_password(data[password_key])
         
         db.commit()
         db.close()
+        manage_logging.log("Einstellungen erfolgreich gespeichert")
         return jsonify({'status': 'ok'})
+        
     # GET
+    manage_logging.log("Aktuelle Einstellungen werden abgerufen")
     cur.execute("SELECT key, value FROM settings")
     result = {k: v for k, v in cur.fetchall()}
     # show_splash als bool zurückgeben (Default: '1')
@@ -192,216 +170,14 @@ def api_settings():
     return jsonify(result)
 
 # -------------------------------------------------------------------------------
-# /api/settings-details (GET)
-# -------------------------------------------------------------------------------
-@app.route('/api/settings-details', methods=['GET'])
-def api_settings_details():
-    """
-    Erweiterte API zum Abrufen aller Einstellungen mit Typerkennung und Metadaten.
-    """
-    db = sqlite3.connect(DB_PATH)
-    cur = db.cursor()
-    
-    # Sicherstellen, dass die Tabelle existiert
-    cur.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
-    
-    # Alle Einstellungen abrufen
-    cur.execute("SELECT key, value FROM settings")
-    entries = cur.fetchall()
-    
-    # Tabellen-Schema abrufen
-    cur.execute("PRAGMA table_info(settings)")
-    schema = cur.fetchall()
-    
-    # Feldtypen bestimmen
-    result = {
-        'entries': {k: v for k, v in entries},
-        'schema': [dict(zip(['cid', 'name', 'type', 'notnull', 'default_value', 'pk'], col)) for col in schema],
-        'meta': {}
-    }
-    
-    # Standardwerte für fehlende Einträge
-    default_values = {
-        'show_splash': '1',
-        'photo_timer': '5',
-        'color_mode': 'auto',
-        'countdown_duration': '3',
-        'camera_id': 'auto',
-        'flash_mode': 'auto'
-    }
-    
-    # Fehlende Standardwerte hinzufügen
-    for key, value in default_values.items():
-        if key not in result['entries']:
-            result['entries'][key] = value
-    
-    # Metadaten für die Felder
-    field_types = {}
-    for key, value in result['entries'].items():
-        # Passwort-Hash-Erkennung
-        if key == 'config_password' or (isinstance(value, str) and value.startswith('$2')):
-            field_types[key] = 'password-hash'
-        # Datum-Erkennung
-        elif key == 'event_date' or (isinstance(value, str) and re.match(r'^\d{4}-\d{2}-\d{2}$', value)):
-            field_types[key] = 'date'
-        # Boolean-Erkennung
-        elif value in ['0', '1', 'true', 'false', True, False]:
-            field_types[key] = 'boolean'
-        # Nummer-Erkennung
-        elif isinstance(value, str) and value.isdigit():
-            field_types[key] = 'number'
-        # Sonst String
-        else:
-            field_types[key] = 'string'
-    
-    result['meta']['field_types'] = field_types
-    
-    db.close()
-    return jsonify(result)
-
-# -------------------------------------------------------------------------------
-# /api/backup (POST)
-# -------------------------------------------------------------------------------
-@app.route('/api/backup', methods=['POST'])
-def api_backup():
-    import subprocess, sys
-    proc = subprocess.Popen([sys.executable, 'manage_update.py', '--backup-only'], cwd=os.path.dirname(__file__), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = proc.communicate(timeout=120)
-    if proc.returncode == 0:
-        return out.decode() or 'Backup abgeschlossen.'
-    else:
-        return (err.decode() or 'Fehler beim Backup!'), 500
-
-# -------------------------------------------------------------------------------
-# /api/update (GET, POST)
-# -------------------------------------------------------------------------------
-@app.route('/api/update', methods=['GET', 'POST'])
-def api_update():
-    import sys
-    import urllib.request
-    local_version = None
-    remote_version = None
-    try:
-        with open(os.path.join(os.path.dirname(__file__), '../conf/version.inf'), 'r') as f:
-            local_version = f.read().strip()
-    except Exception:
-        pass
-    try:
-        url = 'https://raw.githubusercontent.com/DirkGoetze/MyFotoBox/main/conf/version.inf'
-        with urllib.request.urlopen(url, timeout=5) as response:
-            remote_version = response.read().decode('utf-8').strip()
-    except Exception:
-        pass
-    if request.method == 'GET':
-        if local_version and remote_version:
-            update_available = (local_version != remote_version)
-            return jsonify({'update_available': update_available, 'local_version': local_version, 'remote_version': remote_version})
-        return jsonify({'update_available': False, 'error': 'Versionsvergleich nicht möglich', 'local_version': local_version, 'remote_version': remote_version}), 500
-    # POST: Führe Update nur aus, wenn Update verfügbar
-    proc = subprocess.Popen([sys.executable, 'manage_update.py'], cwd=os.path.dirname(__file__), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = proc.communicate(timeout=120)
-    if proc.returncode == 0:
-        return out.decode() or 'Update abgeschlossen.'
-    else:
-        return (err.decode() or 'Fehler beim Update!'), 500
-
-# -------------------------------------------------------------------------------
-# /update (POST)
-# -------------------------------------------------------------------------------
-@app.route('/update', methods=['POST'])
-def update_backend():
-    import subprocess, sys
-    proc = subprocess.Popen([sys.executable, 'manage_update.py'], cwd=os.path.dirname(__file__), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = proc.communicate(timeout=120)
-    if proc.returncode == 0:
-        return out.decode() or 'Update/Backup abgeschlossen.'
-    else:
-        return (err.decode() or 'Fehler beim Update/Backup!'), 500
-
-# -------------------------------------------------------------------------------
-# /api/take_photo (POST)
-# -------------------------------------------------------------------------------
-@app.route('/api/take_photo', methods=['POST'])
-def take_photo():
-    import time
-    data = request.get_json(silent=True) or {}
-    delay = int(data.get('delay', 0))
-    if delay > 0:
-        time.sleep(delay)
-    # Hier eigentliche Fotoaufnahme-Logik (Platzhalter)
-    # ... Foto aufnehmen und speichern ...
-    # Dummy-Implementierung:
-    # time.sleep(1) # Simuliert Fotoaufnahme
-    return jsonify({'status': 'ok'})
-
-# -------------------------------------------------------------------------------
-# /api/nginx_status (GET)
-# -------------------------------------------------------------------------------
-@app.route('/api/nginx_status', methods=['GET'])
-def api_nginx_status():
-    """
-    Gibt die aktuelle NGINX-Konfiguration als JSON zurück (liefert die Ausgabe von manage_nginx.sh get_nginx_status json).
-    """
-    import subprocess
-    script_path = os.path.join(os.path.dirname(__file__), 'scripts', 'manage_nginx.sh')
-    try:
-        result = subprocess.run(['bash', script_path, 'get_nginx_status', 'json'], capture_output=True, text=True, timeout=10)
-        if result.returncode == 0 and result.stdout.strip().startswith('{'):
-            return result.stdout, 200, {'Content-Type': 'application/json'}
-        else:
-            return jsonify({'error': 'Fehler beim Auslesen der NGINX-Konfiguration', 'details': result.stderr}), 500
-    except Exception as e:
-        return jsonify({'error': 'Exception beim Auslesen der NGINX-Konfiguration', 'details': str(e)}), 500
-
-# -------------------------------------------------------------------------------
-# /api/gallery (GET)
-# -------------------------------------------------------------------------------
-# Funktion: Gibt eine Liste der Fotos im gallery-Ordner zurück
-# -------------------------------------------------------------------------------
-@app.route('/api/gallery', methods=['GET'])
-def api_gallery():
-    gallery_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'photos', 'gallery'))
-    os.makedirs(gallery_dir, exist_ok=True)
-    
-    # Dateien auflisten und nach Datum sortieren (neuste zuerst)
-    files = []
-    for f in os.listdir(gallery_dir):
-        if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
-            files.append(f)
-    
-    # Sortiere nach Dateiänderungsdatum (neuste zuerst)
-    files.sort(key=lambda x: os.path.getmtime(os.path.join(gallery_dir, x)), reverse=True)
-    
-    return jsonify({'photos': files})
-
-# -------------------------------------------------------------------------------
-# /api/photos (GET)
-# -------------------------------------------------------------------------------
-# Funktion: Gibt eine Liste der Originalfotos zurück
-# -------------------------------------------------------------------------------
-@app.route('/api/photos', methods=['GET'])
-def api_photos():
-    photos_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'photos', 'originals'))
-    os.makedirs(photos_dir, exist_ok=True)
-    
-    files = []
-    for f in os.listdir(photos_dir):
-        if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
-            files.append(f)
-    
-    # Sortiere nach Dateiänderungsdatum (neuste zuerst)
-    files.sort(key=lambda x: os.path.getmtime(os.path.join(photos_dir, x)), reverse=True)
-    
-    return jsonify({'photos': files})
-
-# -------------------------------------------------------------------------------
 # /api/check_password_set (GET)
 # -------------------------------------------------------------------------------
 # Funktion: Prüft, ob ein Admin-Passwort gesetzt ist (für Erstinstallation)
 # -------------------------------------------------------------------------------
 @app.route('/api/check_password_set', methods=['GET'])
 def api_check_password_set():
-    is_password_set = not check_first_run()
+    is_password_set = manage_auth.is_password_set()
+    manage_logging.debug(f"Passwort-Status-Check: Passwort ist {'gesetzt' if is_password_set else 'nicht gesetzt'}")
     return jsonify({'password_set': is_password_set})
 
 # -------------------------------------------------------------------------------
@@ -412,9 +188,166 @@ def api_session_check():
     """
     Endpunkt zur Überprüfung des Authentifizierungsstatus
     """
+    status = manage_auth.get_login_status()
+    if status.get('authenticated', False):
+        manage_logging.debug(f"Session-Check: Benutzer ist authentifiziert")
+    else:
+        manage_logging.debug(f"Session-Check: Keine aktive Authentifizierung")
+    return jsonify(status)
+
+# -------------------------------------------------------------------------------
+# /api/logs (GET)
+# -------------------------------------------------------------------------------
+@app.route('/api/logs', methods=['POST'])
+@manage_auth.login_required
+def api_get_logs():
+    """
+    Ruft Logs basierend auf den angegebenen Filtern ab
+    """
+    data = request.get_json(force=True)
+    level = data.get('level')
+    limit = data.get('limit', 100)
+    offset = data.get('offset', 0)
+    start_date = data.get('startDate')
+    end_date = data.get('endDate')
+    source = data.get('source')
+    
+    logs = manage_logging.get_logs(
+        level=level,
+        limit=limit,
+        offset=offset,
+        start_date=start_date,
+        end_date=end_date,
+        source=source
+    )
+    
+    return jsonify({'logs': logs})
+
+# -------------------------------------------------------------------------------
+# /api/logs/clear (POST)
+# -------------------------------------------------------------------------------
+@app.route('/api/logs/clear', methods=['POST'])
+@manage_auth.login_required
+def api_clear_logs():
+    """
+    Löscht Logs basierend auf den angegebenen Filtern
+    """
+    data = request.get_json(force=True)
+    older_than = data.get('older_than')
+    
+    deleted_count = manage_logging.clear_logs(older_than=older_than)
+    
     return jsonify({
-        'authenticated': session.get('logged_in', False)
+        'success': True,
+        'deleted_count': deleted_count
     })
 
+# -------------------------------------------------------------------------------
+# /api/log (POST) - Einzelner Log vom Client
+# -------------------------------------------------------------------------------
+@app.route('/api/log', methods=['POST'])
+def api_log():
+    """
+    Speichert einen einzelnen Log-Eintrag vom Client
+    """
+    data = request.get_json(force=True)
+    level = data.get('level', 'INFO')
+    message = data.get('message', '')
+    context = data.get('context')
+    source = data.get('source', 'frontend')
+    user_id = session.get('user_id')
+    
+    # Validierung des Log-Levels
+    valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR']
+    if level not in valid_levels:
+        level = 'INFO'
+    
+    # Log entsprechend dem Level speichern
+    if level == 'DEBUG':
+        manage_logging.debug(message, context=context, source=source, user_id=user_id)
+    elif level == 'WARNING':
+        manage_logging.warn(message, context=context, source=source, user_id=user_id)
+    elif level == 'ERROR':
+        manage_logging.error(message, context=context, source=source, user_id=user_id)
+    else:  # INFO
+        manage_logging.log(message, context=context, source=source, user_id=user_id)
+    
+    return jsonify({'success': True})
+
+# -------------------------------------------------------------------------------
+# /api/logs/batch (POST) - Batch-Logging vom Client
+# -------------------------------------------------------------------------------
+@app.route('/api/logs/batch', methods=['POST'])
+def api_log_batch():
+    """
+    Speichert mehrere Log-Einträge vom Client
+    """
+    data = request.get_json(force=True)
+    logs = data.get('logs', [])
+    user_id = session.get('user_id')
+    
+    for log_entry in logs:
+        level = log_entry.get('level', 'INFO')
+        message = log_entry.get('message', '')
+        context = log_entry.get('context')
+        source = log_entry.get('source', 'frontend')
+        
+        # Validierung des Log-Levels
+        valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR']
+        if level not in valid_levels:
+            level = 'INFO'
+        
+        # Log entsprechend dem Level speichern
+        if level == 'DEBUG':
+            manage_logging.debug(message, context=context, source=source, user_id=user_id)
+        elif level == 'WARNING':
+            manage_logging.warn(message, context=context, source=source, user_id=user_id)
+        elif level == 'ERROR':
+            manage_logging.error(message, context=context, source=source, user_id=user_id)
+        else:  # INFO
+            manage_logging.log(message, context=context, source=source, user_id=user_id)
+    
+    return jsonify({'success': True})
+
+# -------------------------------------------------------------------------------
+# Error-Handler mit Logging
+# -------------------------------------------------------------------------------
+@app.errorhandler(404)
+def page_not_found(e):
+    """404-Handler mit Logging"""
+    path = request.path
+    ip = request.remote_addr
+    manage_logging.warn(f"404 Nicht gefunden: {path}", context={'ip': ip}, source="error_handler")
+    return jsonify({'error': 'not_found', 'message': 'Die angeforderte Resource wurde nicht gefunden'}), 404
+
+@app.errorhandler(500)
+def server_error(e):
+    """500-Handler mit Logging"""
+    path = request.path
+    ip = request.remote_addr
+    manage_logging.error(f"500 Server-Fehler: {path}", exception=e, context={'ip': ip}, source="error_handler")
+    return jsonify({'error': 'server_error', 'message': 'Ein interner Serverfehler ist aufgetreten'}), 500
+
+@app.errorhandler(403)
+def forbidden(e):
+    """403-Handler mit Logging"""
+    path = request.path
+    ip = request.remote_addr
+    manage_logging.warn(f"403 Verboten: {path}", context={'ip': ip}, source="error_handler")
+    return jsonify({'error': 'forbidden', 'message': 'Zugriff verweigert'}), 403
+
+@app.errorhandler(401)
+def unauthorized(e):
+    """401-Handler mit Logging"""
+    path = request.path
+    ip = request.remote_addr
+    manage_logging.warn(f"401 Nicht autorisiert: {path}", context={'ip': ip}, source="error_handler")
+    return jsonify({'error': 'unauthorized', 'message': 'Authentifizierung erforderlich'}), 401
+
+# -------------------------------------------------------------------------------
+# Flask-Anwendung starten, wenn Skript direkt aufgerufen wird
+# -------------------------------------------------------------------------------
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    # Initialisiere die Anwendung
+    manage_logging.log("Fotobox Backend wurde gestartet", source="app_startup")
+    app.run(debug=True, host='0.0.0.0')

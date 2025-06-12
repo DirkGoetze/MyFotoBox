@@ -5,6 +5,8 @@
 // Passwort-Setup und API-Kommunikation zur Konfigurationsspeicherung
 // ------------------------------------------------------------------------------
 
+import { setPassword } from './manage_auth.js';
+
 /**
  * Event-Handler für das Absenden des Setup-Formulars
  */
@@ -27,16 +29,23 @@ document.getElementById('setupForm').onsubmit = async function(e) {
     // Event-Name hinzufügen, wenn angegeben
     if (eventName && eventName.trim()) {
         settings.event_name = eventName.trim();
-    }
-    
+    }    
     // Einstellungen speichern
     try {
-        const res = await fetch('/api/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(settings)
-        });
-          if(res.ok) {
+        // Setze das Passwort mit dem Auth-Modul
+        const success = await setPassword(pw);
+        
+        // Wenn das Passwort gesetzt wurde, speichere zusätzliche Einstellungen
+        if (success) {
+            // Wenn ein Event-Name vorhanden ist, speichere ihn separat
+            if (settings.event_name) {
+                await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({event_name: settings.event_name})
+                });
+            }
+            
             status.textContent = 'Passwort gespeichert! Weiterleitung ...';
             status.className = 'success status-visible';
             setTimeout(() => { 
@@ -46,7 +55,7 @@ document.getElementById('setupForm').onsubmit = async function(e) {
             status.textContent = 'Fehler beim Speichern!';
             status.className = 'error';
             status.style.display = 'block';
-        }    } catch (error) {
+        }} catch (error) {
         status.textContent = 'Verbindungsfehler!';
         status.className = 'error status-visible';
         console.error('Setup-Fehler:', error);

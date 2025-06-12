@@ -5,6 +5,8 @@
 // eines Felds, anstatt auf das Absenden des gesamten Formulars zu warten.
 // ----------------------------------------------------------------------------------
 
+import { changePassword } from './manage_auth.js';
+
 // Globale Variablen für die sofortige Einstellungsübernahme
 const fieldOriginalValues = new Map(); // Speichert die ursprünglichen Werte der Felder
 let notificationTimeouts = new Map(); // Map für Timeouts zum automatischen Ausblenden von Benachrichtigungen
@@ -415,10 +417,9 @@ function setupPasswordFieldUpdates() {
         // Beide Passwörter müssen übereinstimmen und lang genug sein
         if (newPassword.value === confirmPassword.value && newPassword.value.length >= 4) {
             const parentField = newPassword.closest('.input-field');
-            
-            try {
-                // Passwort über die API aktualisieren
-                const success = await updateSingleSetting('new_password', newPassword.value);
+              try {
+                // Passwort über das Authentifizierungsmodul aktualisieren
+                const success = await changePassword(newPassword.value);
                 
                 if (success) {
                     if (parentField) parentField.classList.add('edited');
