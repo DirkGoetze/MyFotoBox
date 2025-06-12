@@ -166,9 +166,15 @@ def api_settings():
                 # Alle Werte als String speichern
                 cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, str(data[key])))
         
-        # Admin-Passwort setzen/ändern
+        # Admin-Passwort setzen/ändern - Unterstütze sowohl new_password (settings.html) als auch admin_password (install.html)
+        password_key = None
         if 'new_password' in data and data['new_password'] and len(data['new_password']) >= 4:
-            hashval = bcrypt.hashpw(data['new_password'].encode(), bcrypt.gensalt()).decode()
+            password_key = 'new_password'
+        elif 'admin_password' in data and data['admin_password'] and len(data['admin_password']) >= 4:
+            password_key = 'admin_password'
+            
+        if password_key:
+            hashval = bcrypt.hashpw(data[password_key].encode(), bcrypt.gensalt()).decode()
             cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", ('config_password', hashval))
         
         db.commit()

@@ -84,13 +84,11 @@ async function loadSettings() {
             // Event-Datum setzen (wenn vorhanden)
             if (settings.event_date && document.getElementById('event_date')) {
                 document.getElementById('event_date').value = settings.event_date;
-            }
-            
-            // Nach dem Laden der Einstellungen automatisch nach Updates suchen
-            setTimeout(() => {
-                // Verzögerte Ausführung, um UI-Updates zu ermöglichen
-                checkForUpdates();
-            }, 500);
+            }                // Nach dem Laden der Einstellungen automatisch nach Updates suchen
+                    setTimeout(() => {
+                        // Verzögerte Ausführung, um UI-Updates zu ermöglichen
+                        throttledCheckForUpdates();
+                    }, 500);
               // Anzeigemodus setzen
             if (document.getElementById('color_mode')) {
                 document.getElementById('color_mode').value = settings.color_mode || 'system';
@@ -172,12 +170,45 @@ async function loadAvailableCameras() {
 let updateInProgress = false;
 let remoteVersion = null;
 let localVersion = null;
+let updateCheckDebounceTimer = null;
+let lastUpdateCheck = 0;
+const UPDATE_CHECK_THROTTLE_MS = 60000; // Mindestens 1 Minute zwischen den Updateprüfungen
 
-// Button zum Prüfen auf Updates
-document.getElementById('checkUpdateBtn').addEventListener('click', checkForUpdates);
+// Button zum Prüfen auf Updates - mit Nullprüfung
+const checkUpdateBtn = document.getElementById('checkUpdateBtn');
+if (checkUpdateBtn) {
+    checkUpdateBtn.addEventListener('click', throttledCheckForUpdates);
+}
 
-// Button zum Installieren des Updates
-document.getElementById('installUpdateBtn').addEventListener('click', installUpdate);
+// Button zum Installieren des Updates - mit Nullprüfung
+const installUpdateBtn = document.getElementById('installUpdateBtn');
+if (installUpdateBtn) {
+    installUpdateBtn.addEventListener('click', installUpdate);
+}
+
+/**
+ * Führt die Update-Prüfung mit Ratenbegrenzung durch
+ */
+function throttledCheckForUpdates() {
+    const now = Date.now();
+    
+    // Prüfe, ob seit der letzten Prüfung genug Zeit vergangen ist
+    if (now - lastUpdateCheck < UPDATE_CHECK_THROTTLE_MS) {
+        console.log('Update-Prüfung übersprungen (Ratenbegrenzung)');
+        return;
+    }
+    
+    // Debounce (bei mehreren schnell aufeinanderfolgenden Aufrufen nur den letzten ausführen)
+    if (updateCheckDebounceTimer) {
+        clearTimeout(updateCheckDebounceTimer);
+    }
+    
+    updateCheckDebounceTimer = setTimeout(() => {
+        checkForUpdates();
+        updateCheckDebounceTimer = null;
+        lastUpdateCheck = Date.now();
+    }, 500);
+}
 
 /**
  * Prüft, ob Updates verfügbar sind
@@ -187,6 +218,11 @@ async function checkForUpdates() {
     const updateActions = document.getElementById('updateActions');
     const checkUpdateBtn = document.getElementById('checkUpdateBtn');
     const versionStatusText = document.getElementById('versionStatusText');
+    
+    if (!updateStatus || !updateActions || !checkUpdateBtn || !versionStatusText) {
+        console.error('Erforderliche DOM-Elemente für Update-Prüfung nicht gefunden');
+        return;
+    }
     
     // Status auf "prüfe" setzen
     versionStatusText.textContent = '/ Suche nach Updates';
@@ -285,17 +321,15 @@ async function installUpdate() {
         setTimeout(() => {
             // Update abgeschlossen
             updateProgressBar.style.width = '100%';
-            updateProgressText.textContent = 'Update abgeschlossen!';
-            
-            // Nach dem Update erneut auf Updates prüfen
-            setTimeout(() => {
-                updateProgressBar.style.width = '0%';
-                updateProgress.classList.add('hidden');
-                updateInProgress = false;
-                
-                // Prüfen, ob das Update erfolgreich war
-                checkForUpdates();
-            }, 3000);
+            updateProgressText.textContent = 'Update abgeschlossen!';                // Nach dem Update erneut auf Updates prüfen
+                setTimeout(() => {
+                    updateProgressBar.style.width = '0%';
+                    updateProgress.classList.add('hidden');
+                    updateInProgress = false;
+                    
+                    // Prüfen, ob das Update erfolgreich war
+                    throttledCheckForUpdates();
+                }, 3000);
         }, 6000);
     } catch (error) {
         console.error('Update-Installations-Fehler:', error);
@@ -340,9 +374,8 @@ async function checkLoginStatus() {
                 loadSettings().then(() => {
                     if (typeof initLiveSettingsUpdate === 'function') {
                         initLiveSettingsUpdate();
-                    }
-                    // Nach dem Laden der Einstellungen automatisch nach Updates suchen
-                    checkForUpdates();
+                    }                // Nach dem Laden der Einstellungen automatisch nach Updates suchen
+                    throttledCheckForUpdates();
                 });
             }
         }

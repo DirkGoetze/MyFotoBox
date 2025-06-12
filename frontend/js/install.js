@@ -19,10 +19,9 @@ document.getElementById('setupForm').onsubmit = async function(e) {
         status.className = 'error status-visible';
         return;
     }
-    
-    // Daten für API vorbereiten
+      // Daten für API vorbereiten
     const settings = { 
-        admin_password: pw 
+        new_password: pw 
     };
     
     // Event-Name hinzufügen, wenn angegeben

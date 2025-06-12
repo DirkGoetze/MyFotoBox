@@ -131,12 +131,9 @@ async function updateSingleSetting(name, value) {
             if (name === 'event_name') {
                 setHeaderTitle(value);
             }
-            
-            // Nach der Einstellungsänderung auf Updates prüfen, falls die checkForUpdates Funktion existiert
-            if (typeof checkForUpdates === 'function') {
-                setTimeout(() => {
-                    checkForUpdates();
-                }, 500); // Kleine Verzögerung für bessere UX
+              // Nach der Einstellungsänderung auf Updates prüfen, falls die throttledCheckForUpdates Funktion existiert
+            if (typeof throttledCheckForUpdates === 'function') {
+                throttledCheckForUpdates();
             }
             
             return true;
