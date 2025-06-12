@@ -32,6 +32,19 @@ import { log, error } from './manage_logging.js';
  * @property {string} message - Statusmeldung
  */
 
+/**
+ * @typedef {Object} DependenciesStatus
+ * @property {boolean} all_ok - Gibt an, ob alle Abhängigkeiten in Ordnung sind
+ * @property {Object} system - Status der Systemabhängigkeiten
+ * @property {string[]} system.missing - Fehlende Systempakete
+ * @property {string[]} system.outdated - Veraltete Systempakete
+ * @property {boolean} system.ok - Gibt an, ob alle Systemabhängigkeiten in Ordnung sind
+ * @property {Object} python - Status der Python-Abhängigkeiten
+ * @property {string[]} python.missing - Fehlende Python-Pakete
+ * @property {string[]} python.outdated - Veraltete Python-Pakete
+ * @property {boolean} python.ok - Gibt an, ob alle Python-Abhängigkeiten in Ordnung sind
+ */
+
 // Rate Limiting für Update-Checks
 const UPDATE_CHECK_THROTTLE_MS = 60000; // Mindestens 1 Minute zwischen den Updateprüfungen
 let lastUpdateCheck = 0;
@@ -50,6 +63,8 @@ let _versionInfo = {
     remoteVersion: null
 };
 
+// Neue Variable für den Abhängigkeitsstatus
+let _dependenciesStatus = null;
 let _updateInfo = null;
 let _updateCheckDebounceTimer = null;
 
@@ -289,6 +304,104 @@ export async function scheduleUpdate(scheduledTime) {
 }
 
 /**
+ * Prüft die System- und Python-Abhängigkeiten
+ * @returns {Promise<DependenciesStatus>} Status der Abhängigkeiten
+ */
+export async function checkDependencies() {
+    try {
+        const response = await apiGet('/api/update/dependencies');
+        
+        if (response && response.success) {
+            _dependenciesStatus = response.dependencies;
+            
+            // Logge die Ergebnisse
+            if (!_dependenciesStatus.all_ok) {
+                log('Probleme mit Abhängigkeiten gefunden:');
+                
+                if (_dependenciesStatus.system.missing.length > 0) {
+                    log(`Fehlende Systempakete: ${_dependenciesStatus.system.missing.join(', ')}`);
+                }
+                
+                if (_dependenciesStatus.system.outdated.length > 0) {
+                    log(`Veraltete Systempakete: ${_dependenciesStatus.system.outdated.join(', ')}`);
+                }
+                
+                if (_dependenciesStatus.python.missing.length > 0) {
+                    log(`Fehlende Python-Pakete: ${_dependenciesStatus.python.missing.join(', ')}`);
+                }
+                
+                if (_dependenciesStatus.python.outdated.length > 0) {
+                    log(`Veraltete Python-Pakete: ${_dependenciesStatus.python.outdated.join(', ')}`);
+                }
+            } else {
+                log('Alle Abhängigkeiten sind in Ordnung');
+            }
+            
+            return _dependenciesStatus;
+        } else {
+            throw new Error(response.error || 'Fehler bei der Abhängigkeitsprüfung');
+        }
+    } catch (err) {
+        error('Fehler bei der Abhängigkeitsprüfung', err);
+        throw err;
+    }
+}
+
+/**
+ * Gibt den Status der Abhängigkeiten zurück
+ * @returns {DependenciesStatus} Status der Abhängigkeiten oder null, wenn noch nicht geprüft
+ */
+export function getDependenciesStatus() {
+    return _dependenciesStatus;
+}
+
+/**
+ * Installiert fehlende Abhängigkeiten 
+ * @returns {Promise<boolean>} true, wenn die Installation erfolgreich war
+ */
+export async function installDependencies() {
+    try {
+        _updateStatus = {
+            status: 'installing',
+            progress: 0,
+            message: 'Installiere fehlende Abhängigkeiten...'
+        };
+        
+        // API-Aufruf zum Installieren der Abhängigkeiten
+        const response = await apiPost('/api/update', {
+            fix_dependencies: true
+        });
+        
+        if (response && response.success) {
+            _updateStatus = {
+                status: 'idle',
+                progress: 100,
+                message: 'Abhängigkeiten wurden installiert'
+            };
+            
+            log('Abhängigkeiten wurden installiert');
+            return true;
+        } else {
+            _updateStatus = {
+                status: 'error',
+                progress: 0,
+                message: 'Fehler bei der Installation der Abhängigkeiten: ' + (response.error || 'Unbekannter Fehler')
+            };
+            
+            throw new Error(response.error || 'Fehler bei der Installation der Abhängigkeiten');
+        }
+    } catch (err) {
+        error('Fehler bei der Installation der Abhängigkeiten', err);
+        _updateStatus = {
+            status: 'error',
+            progress: 0,
+            message: 'Fehler bei der Installation der Abhängigkeiten: ' + err.message
+        };
+        throw err;
+    }
+}
+
+/**
  * Initialisiert das Update-Modul
  * @returns {Promise<void>}
  */
@@ -304,6 +417,14 @@ export async function init() {
                 _versionInfo.updateAvailable = true;
                 _versionInfo.remoteVersion = response.remote_version;
             }
+        }
+        
+        // Auch die Abhängigkeiten prüfen (aber Fehler abfangen, damit die Initialisierung nicht scheitert)
+        try {
+            await checkDependencies();
+        } catch (depErr) {
+            error('Fehler bei der Prüfung der Abhängigkeiten', depErr);
+            // Fehler nicht weiterleiten, damit die Initialisierung nicht scheitert
         }
         
         log('Update-Modul initialisiert mit Version ' + _versionInfo.current);

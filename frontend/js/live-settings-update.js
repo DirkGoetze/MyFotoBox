@@ -6,6 +6,7 @@
 // ----------------------------------------------------------------------------------
 
 import { changePassword } from './manage_auth.js';
+import { updateSingleSetting, validateSettings } from './manage_settings.js';
 
 // Globale Variablen für die sofortige Einstellungsübernahme
 const fieldOriginalValues = new Map(); // Speichert die ursprünglichen Werte der Felder
@@ -49,14 +50,13 @@ function initLiveSettingsUpdate() {
                 // Nur weitermachen, wenn sich der Wert geändert hat
                 if (originalValue !== currentValue) {
                     const parentField = field.closest('.input-field');
-                    
-                    // Validierung durchführen
+                      // Validierung durchführen
                     const validationResult = validateField(field, currentValue);
                     
                     if (validationResult.valid) {
                         // Wert in die DB schreiben
                         try {
-                            const success = await updateSingleSetting(field.name, currentValue);
+                            const success = await updateSettingValue(field.name, currentValue);
                             
                             if (success) {
                                 if (parentField) parentField.classList.add('edited');
@@ -107,40 +107,32 @@ function initLiveSettingsUpdate() {
 // =================================================================================
 
 /**
- * Speichert eine einzelne Einstellung in der Datenbank
+ * Speichert eine einzelne Einstellung
  * @param {string} name - Der Name der Einstellung
  * @param {any} value - Der zu speichernde Wert
  * @returns {Promise<boolean>} - True bei Erfolg, False bei Fehler
  * 
- * Verwendet einen POST-Request an den API-Endpunkt /api/settings für einzelne Einstellungen.
- * Struktur der gesendeten Daten: { einstellungs_name: einstellungs_wert }
+ * Verwendet die updateSingleSetting-Funktion aus dem manage_settings-Modul
  */
-async function updateSingleSetting(name, value) {
+async function updateSettingValue(name, value) {
     try {
-        // Erstelle ein Objekt mit nur der einen Einstellung
-        const settingObj = {};
-        settingObj[name] = value;
+        // Verwende das manage_settings-Modul um die Einstellung zu speichern
+        const success = await updateSingleSetting(name, value);
         
-        // API-Aufruf um die einzelne Einstellung zu speichern
-        const response = await fetch('/api/settings', {
-            method: 'POST', // Verwende POST, da der Server PUT nicht unterstützt
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(settingObj)
-        });
-        
-        if (response.ok) {
+        if (success) {
             // Header aktualisieren, wenn der Event-Name geändert wurde
             if (name === 'event_name') {
                 setHeaderTitle(value);
             }
-              // Nach der Einstellungsänderung auf Updates prüfen, falls die throttledCheckForUpdates Funktion existiert
+            
+            // Nach der Einstellungsänderung auf Updates prüfen, falls die throttledCheckForUpdates Funktion existiert
             if (typeof throttledCheckForUpdates === 'function') {
                 throttledCheckForUpdates();
             }
             
             return true;
         } else {
-            console.error('API-Fehler beim Speichern:', await response.text());
+            console.error('Fehler beim Speichern der Einstellung');
             return false;
         }
     } catch (error) {
@@ -162,53 +154,27 @@ async function updateSingleSetting(name, value) {
 function validateField(field, value) {
     const fieldName = field.name;
     const fieldType = field.type;
-      // Validierungsregeln basierend auf dem Feldnamen und Typ
-    switch (fieldName) {
-        case 'event_name':
-            if (!value || value.trim() === '') {
-                return { valid: false, message: 'Event-Name darf nicht leer sein' };
-            }
-            if (value.length > 50) {
-                return { valid: false, message: 'Event-Name darf maximal 50 Zeichen lang sein' };
-            }
-            break;
+    
+    // Benutze das validateSettings vom manage_settings Modul für bekannte Einstellungen
+    const settingObj = {};
+    settingObj[fieldName] = value;
+    
+    // Nur für die Einstellungen, die spezifische Validierung benötigen
+    if (['event_name', 'countdown_duration', 'screensaver_timeout', 'gallery_timeout'].includes(fieldName)) {
+        const validationResult = validateSettings(settingObj, [fieldName]);
+        
+        if (!validationResult.valid) {
+            // Eine Fehlermeldung für die spezifische Einstellung extrahieren
+            const errorMessage = validationResult.errors[fieldName];
             
-        case 'countdown_duration':
-            const countdownValue = parseInt(value);
-            if (isNaN(countdownValue) || countdownValue < 1 || countdownValue > 10) {
-                return { valid: false, message: 'Countdown muss zwischen 1 und 10 Sekunden liegen' };
+            // Type-Information basierend auf der Art des Fehlers hinzufügen
+            let type = 'error';
+            if (errorMessage && (errorMessage.includes('muss mindestens') || errorMessage.includes('darf höchstens'))) {
+                type = 'info';
             }
-            break;
             
-        case 'screensaver_timeout':
-            const screensaverValue = parseInt(value);
-            if (isNaN(screensaverValue)) {
-                return { valid: false, message: 'Bitte geben Sie eine gültige Zahl ein' };
-            }
-            if (screensaverValue < 30 || screensaverValue > 600) {
-                // Hier verwenden wir info statt error, da der Wert außerhalb des erlaubten Bereichs liegt
-                // Die Validierung schlägt fehl, aber wir wollen eine informative Nachricht anzeigen
-                return { 
-                    valid: false, 
-                    message: 'Bildschirmschoner-Timeout muss zwischen 30 und 600 Sekunden liegen', 
-                    type: 'info'
-                };
-            }
-            break;
-            
-        case 'gallery_timeout':
-            const galleryValue = parseInt(value);
-            if (isNaN(galleryValue)) {
-                return { valid: false, message: 'Bitte geben Sie eine gültige Zahl ein' };
-            }
-            if (galleryValue < 30 || galleryValue > 300) {
-                return { 
-                    valid: false, 
-                    message: 'Galerie-Timeout muss zwischen 30 und 300 Sekunden liegen',
-                    type: 'info'
-                };
-            }
-            break;
+            return { valid: false, message: errorMessage, type };
+        }
     }
     
     // Standard-Validierungen basierend auf dem Input-Typ
@@ -226,7 +192,7 @@ function validateField(field, value) {
             break;
     }
     
-    // Wenn keine spezifische Validierung greift, ist der Wert gültig
+    // Wenn alle Validierungen bestanden wurden, ist der Wert gültig
     return { valid: true, message: '' };
 }
 

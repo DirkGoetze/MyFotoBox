@@ -27,7 +27,7 @@ Führen Sie das Installationsskript als root im geklonten Projektverzeichnis aus
 sudo ./install_fotobox.sh --install
 ```
 
-Das Skript prüft, ob alle notwendigen Unterverzeichnisse und Dateien vorhanden sind. Fehlen wichtige Komponenten (z.B. `backend/`, `backend/scripts/`, `backend/requirements.txt`), bricht das Skript mit einer Fehlermeldung ab.
+Das Skript prüft, ob alle notwendigen Unterverzeichnisse und Dateien vorhanden sind. Fehlen wichtige Komponenten (z.B. `backend/`, `backend/scripts/`, `conf/requirements_python.inf`), bricht das Skript mit einer Fehlermeldung ab.
 
 ## Was passiert bei der Installation?
 

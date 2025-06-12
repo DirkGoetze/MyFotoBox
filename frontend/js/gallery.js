@@ -4,6 +4,10 @@
 // Funktion: Steuert die Galerieansicht der Fotobox
 // ------------------------------------------------------------------------------
 
+// Importiere Systemmodule
+import { getImageList, deleteImage } from './manage_filesystem.js';
+import { log, error } from './manage_logging.js';
+
 // =================================================================================
 // Galerie-Funktionalität
 // =================================================================================
@@ -106,10 +110,8 @@ async function loadGalleryPhotos() {
     if (!galleryDiv) return;
     
     try {
-        const res = await fetch('/api/gallery');
-        if (!res.ok) throw new Error('Fehler beim Laden der Galerie');
-        
-        const data = await res.json();
+        // Verwende das neue Filesystem-Modul statt direkter API-Aufrufe
+        const data = await getImageList('gallery');
         galleryDiv.innerHTML = '';
         
         if (!data.photos || data.photos.length === 0) {

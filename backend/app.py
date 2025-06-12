@@ -10,6 +10,9 @@ import json
 import manage_auth
 import manage_logging
 import manage_database
+import manage_files
+import filesystem_api
+import update_api
 
 # -------------------------------------------------------------------------------
 # DB_PATH und Datenverzeichnis sicherstellen
@@ -520,6 +523,14 @@ def get_db_stats():
 
 # -------------------------------------------------------------------------------
 # Flask-Anwendung starten, wenn Skript direkt aufgerufen wird
+# -------------------------------------------------------------------------------
+# Register API Blueprints
+# -------------------------------------------------------------------------------
+# Registriere das Filesystem-API-Blueprint
+filesystem_api.init_app(app)
+# Registriere das Update-API-Blueprint
+update_api.init_app(app)
+
 # -------------------------------------------------------------------------------
 if __name__ == '__main__':
     # Initialisiere die Anwendung

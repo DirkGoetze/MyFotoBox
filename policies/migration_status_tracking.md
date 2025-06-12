@@ -4,25 +4,25 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 
 ## Übersicht
 
-| Modul | Frontend-Status | Backend-Status |
-|-------|----------------|----------------|
-| manage_update | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
-| manage_auth | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
-| manage_settings | 🔴 Nicht begonnen | 🔴 Nicht begonnen |
-| manage_database | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
-| manage_files/filesystem | 🔴 Nicht begonnen | 🔴 Nicht begonnen |
-| manage_logging | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
-| manage_api | 🟢 Vollständig implementiert | 🔴 Nicht begonnen |
-| manage_camera | 🔴 Nicht begonnen | 🔴 Nicht begonnen |
-| ui_components | 🟢 Vollständig implementiert | - |
-| utils | 🔴 Nicht begonnen | 🔴 Nicht begonnen |
+| Modul                   | Frontend-Status               | Backend-Status               |
+|-------------------------|-------------------------------|------------------------------|
+| manage_update           | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
+| manage_auth             | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
+| manage_settings         | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
+| manage_database         | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
+| manage_files/filesystem | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
+| manage_logging          | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
+| manage_api              | 🟢 Vollständig implementiert | 🔴 Nicht begonnen            |
+| manage_camera           | 🔴 Nicht begonnen            | 🔴 Nicht begonnen            |
+| ui_components           | 🟢 Vollständig implementiert | -                            |
+| utils                   | 🔴 Nicht begonnen            | 🔴 Nicht begonnen            |
 
 ## Seitenspezifische Module
 
 | Modul | Status | Kommentare |
 |-------|--------|------------|
 | index.js | 🔴 Nicht begonnen | Funktionen müssen zu manage_* Modulen verschoben werden |
-| gallery.js | 🔴 Nicht begonnen | API-Aufrufe zu manage_filesystem verschieben |
+| gallery.js | 🟢 Vollständig implementiert | API-Aufrufe zu manage_filesystem verschoben |
 | settings.js | 🟢 Vollständig implementiert | Update-Funktionalität und Auth-Logik migriert |
 | splash.js | 🟢 Vollständig implementiert | Update-Funktionalität und Auth-Logik migriert |
 | install.js | 🟢 Vollständig implementiert | Auth-Logik zu manage_auth verschoben |
@@ -46,7 +46,7 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 - [x] manage_auth.js implementieren
 - [x] manage_update.js implementieren
 - [x] manage_database.js implementieren
-- [ ] manage_settings.js implementieren
+- [x] manage_settings.js implementieren
 
 ### Phase 3: Bestehende Dateien anpassen
 
@@ -54,6 +54,7 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 - [x] Funktionsaufrufe für Auth umleiten
 - [x] Doppelte Update-Funktionalität entfernen
 - [x] Doppelte Auth-Funktionalität entfernen
+- [x] Einstellungsfunktionalität zu manage_settings verschieben
 - [ ] Tests für neue Struktur schreiben
 
 ### Phase 4: UI-Komponenten extrahieren
@@ -70,8 +71,8 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 
 ## Nächste Schritte
 
-1. Implementierung von manage_settings.js und manage_settings.py
-2. Migration der Dateisystem-Operationen zu manage_filesystem.js/py
+1. ✅ Implementierung von manage_settings.js und manage_settings.py - **Abgeschlossen**
+2. ✅ Migration der Dateisystem-Operationen zu manage_filesystem.js/py - **Abgeschlossen**
 3. Implementierung des utils.js-Moduls für gemeinsame Hilfsfunktionen
 4. Integration der manage_database.js-Funktionalität in Frontend-Komponenten
 5. Schreiben von Tests für die neue Modulstruktur
@@ -98,7 +99,9 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 |-------|--------|----------------|
 | TBD | Erstellung des Dokuments | - |
 | 12.06.2025 | Statusaktualisierung - manage_auth, manage_logging vollständig migriert | Projektteam |
+| 15.06.2025 | Statusaktualisierung - manage_filesystem (frontend & backend) vollständig migriert | Projektteam |
 | 12.06.2025 | Update-Funktionalität implementiert | Entwicklungsteam |
 | 12.06.2025 | Datenbankverwaltung vollständig implementiert (manage_database.js und manage_database.py) | Projektteam |
+| 12.06.2025 | Einstellungsverwaltung vollständig implementiert (manage_settings.js und manage_settings.py) | Projektteam |
 
 Dieses Dokument wird regelmäßig aktualisiert, um den aktuellen Stand der Migration zu reflektieren.

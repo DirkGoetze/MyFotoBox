@@ -421,8 +421,8 @@ set_structure() {
         return 1
     fi
     # Prüfe, ob das Backend-Verzeichnis und wichtige Dateien existieren
-    if [ ! -d "$INSTALL_DIR/backend" ] || [ ! -d "$INSTALL_DIR/backend/scripts" ] || [ ! -f "$INSTALL_DIR/backend/requirements.txt" ]; then
-        print_error "Fehler: Die Projektstruktur ist unvollständig. Bitte stellen Sie sicher, dass das Repository vollständig geklont wurde (inkl. backend/, backend/scripts/, backend/requirements.txt)."
+    if [ ! -d "$INSTALL_DIR/backend" ] || [ ! -d "$INSTALL_DIR/backend/scripts" ] || [ ! -f "$INSTALL_DIR/conf/requirements_python.inf" ]; then
+        print_error "Fehler: Die Projektstruktur ist unvollständig. Bitte stellen Sie sicher, dass das Repository vollständig geklont wurde (inkl. backend/, backend/scripts/, conf/requirements_python.inf)."
         return 10
     fi
     debug_print "set_structure: Starte mit BACKUP_DIR=$BACKUP_DIR"
@@ -822,7 +822,7 @@ dlg_backend_integration() {
         exit 1
     fi
     print_step "Installiere Python-Abhängigkeiten ... (inkl. bcrypt für sichere Passwörter)"
-    ("$INSTALL_DIR/backend/venv/bin/pip" install -r "$INSTALL_DIR/backend/requirements.txt") &> "$LOG_DIR/pip_requirements.log" &
+    ("$INSTALL_DIR/backend/venv/bin/pip" install -r "$INSTALL_DIR/conf/requirements_python.inf") &> "$LOG_DIR/pip_requirements.log" &
     show_spinner $!
     if [ $? -ne 0 ]; then
         print_error "Konnte Python-Abhängigkeiten nicht installieren! Log-Auszug:"

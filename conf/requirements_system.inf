@@ -1,0 +1,21 @@
+# System-Abhängigkeiten für Fotobox2
+# Format: paket>=version
+
+# Grundlegende Pakete
+nginx>=1.18.0
+python3>=3.8
+python3-pip>=20.0
+sqlite3>=3.31
+
+# Bildverarbeitung
+libopencv-dev>=4.2.0
+python3-opencv>=4.2.0
+imagemagick>=6.9.10
+
+# Kamerazugriff
+v4l-utils>=1.16.0
+libv4l-dev>=1.16.0
+
+# Weitere Abhängigkeiten
+libgphoto2-dev>=2.5.0
+libturbojpeg0-dev>=2.0.0

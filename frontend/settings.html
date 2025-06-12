@@ -167,8 +167,7 @@
                         </details>
                     </div>
                 </div>
-            </fieldset>
-              <fieldset id="systemUpdateSection">
+            </fieldset>                <fieldset id="systemUpdateSection">
                 <legend>System-Updates</legend>
                 <div class="fieldset-container">
                     <div id="versionInfo" class="version-info">
@@ -180,6 +179,23 @@
                             <button type="button" id="checkUpdateBtn" class="secondary-btn" disabled>Auf Updates prüfen</button>
                         </div>
                         <div id="updateStatus" class="update-status hidden"></div>
+                    </div>
+                    <div id="dependenciesStatus" class="dependencies-status hidden">
+                        <div class="dependencies-header">
+                            <span class="dependencies-title">Abhängigkeiten</span>
+                            <span id="dependenciesStatusBadge" class="status-badge">Prüfe...</span>
+                        </div>
+                        <div id="dependenciesList" class="dependencies-list hidden">
+                            <div id="systemDependencies" class="dependency-group">
+                                <h4>System-Pakete</h4>
+                                <ul id="systemDependenciesList"></ul>
+                            </div>
+                            <div id="pythonDependencies" class="dependency-group">
+                                <h4>Python-Module</h4>
+                                <ul id="pythonDependenciesList"></ul>
+                            </div>
+                        </div>
+                        <button type="button" id="fixDependenciesBtn" class="secondary-btn hidden">Abhängigkeiten installieren</button>
                     </div>
                     <div id="updateActions" class="update-actions hidden">
                         <div class="update-available-info">
@@ -224,11 +240,10 @@
     <footer id="mainFooter">
         <span id="footerText">© 2025 Fotobox</span>
     </footer>
-    
-    <!-- JavaScript wurde in externe Datei ausgelagert gemäß Code-Formatierungs-Policy -->
+      <!-- JavaScript wurde in externe Datei ausgelagert gemäß Code-Formatierungs-Policy -->
     <script src="js/main.js"></script>
-    <script src="js/live-settings-update.js"></script>
-    <script src="js/settings.js"></script>
+    <script type="module" src="js/live-settings-update.js"></script>
+    <script type="module" src="js/settings.js"></script>
 
 </body>
 </html>

@@ -1,0 +1,14 @@
+# Python-Abhängigkeiten für Fotobox2
+# Format: paket>=version
+
+# Web-Framework und Routing
+Flask>=2.0.0
+
+# Sicherheit und Authentifizierung
+bcrypt>=3.2.0
+
+# Bildverarbeitung
+Pillow>=9.0.0
+
+# Systemüberwachung
+psutil>=5.9.0

@@ -7,10 +7,12 @@
 // ------------------------------------------------------------------------------
 
 // Importiere Systemmodule
-import { throttledCheckForUpdates, installUpdate, getUpdateStatus, getVersionInfo } from './manage_update.js';
+import { throttledCheckForUpdates, installUpdate, getUpdateStatus, getVersionInfo, 
+       checkDependencies, getDependenciesStatus, installDependencies } from './manage_update.js';
 import { log, error } from './manage_logging.js';
 import { showNotification, showDialog } from './ui_components.js';
 import { login, validatePassword, changePassword } from './manage_auth.js';
+import { loadSettings, loadSingleSetting, updateSettings, updateSingleSetting, validateSettings, resetToDefaults } from './manage_settings.js';
 
 // =================================================================================
 // Login-Funktionalität
@@ -33,11 +35,10 @@ document.getElementById('loginForm').onsubmit = async function(e) {
         const isSuccess = await login(password);
         
         if (isSuccess) {
-            document.getElementById('loginForm').classList.add('hidden');
-            document.getElementById('configForm').classList.add('form-visible');
+            document.getElementById('loginForm').classList.add('hidden');            document.getElementById('configForm').classList.add('form-visible');
             
             // Einstellungen laden
-            loadSettings().then(() => {
+            loadSettingsAndUpdateUI().then(() => {
                 // Nach Laden der Einstellungen die Live-Updates aktivieren
                 if (typeof initLiveSettingsUpdate === 'function') {
                     initLiveSettingsUpdate();
@@ -68,61 +69,69 @@ document.getElementById('loginForm').onsubmit = async function(e) {
 // Der Reset-Button wurde entfernt, da Änderungen nun automatisch gespeichert werden
 
 /**
- * Einstellungen aus der Datenbank laden
+ * Einstellungen laden und UI aktualisieren
  */
-async function loadSettings() {
+async function loadSettingsAndUpdateUI() {
     try {
-        const response = await fetch('/api/settings');
-        if (response.ok) {
-            const settings = await response.json();
-            
-            // Event-Name setzen (wenn vorhanden)
-            if (document.getElementById('event_name')) {
-                document.getElementById('event_name').value = settings.event_name || '';
-                // Aktualisiere auch den Header-Titel
-                setHeaderTitle(settings.event_name);
-            }
-              // Event-Datum setzen (wenn vorhanden)
-            if (settings.event_date && document.getElementById('event_date')) {
-                document.getElementById('event_date').value = settings.event_date;
-            }                // Nach dem Laden der Einstellungen automatisch nach Updates suchen
-                    setTimeout(() => {
-                        // Verzögerte Ausführung, um UI-Updates zu ermöglichen
-                        handleUpdateCheck();
-                    }, 500);
-              // Anzeigemodus setzen
-            if (document.getElementById('color_mode')) {
-                document.getElementById('color_mode').value = settings.color_mode || 'system';
-            }
-            
-            // Bildschirmschoner-Timeout setzen
-            if (document.getElementById('screensaver_timeout')) {
-                document.getElementById('screensaver_timeout').value = settings.screensaver_timeout || 120;
-            }
-            
-            // Galerie-Timeout setzen
-            if (document.getElementById('gallery_timeout')) {
-                document.getElementById('gallery_timeout').value = settings.gallery_timeout || 60;
-            }
-            
-            // Countdown-Dauer setzen
-            if (document.getElementById('countdown_duration')) {
-                document.getElementById('countdown_duration').value = settings.countdown_duration || 3;
-            }
-              // Kamera-Einstellungen
-            if (document.getElementById('camera_id')) {
-                document.getElementById('camera_id').value = settings.camera_id || 'system';
-            }
-            
-            if (document.getElementById('flash_mode')) {
-                document.getElementById('flash_mode').value = settings.flash_mode || 'system';
-            }
-            
-            // Verfügbare Kameras laden und Dropdown aktualisieren
-            loadAvailableCameras();
+        // Verwende das neue Einstellungs-Modul
+        const settings = await loadSettings();
+        
+        // Event-Name setzen (wenn vorhanden)
+        if (document.getElementById('event_name')) {
+            document.getElementById('event_name').value = settings.event_name || '';
+            // Aktualisiere auch den Header-Titel
+            setHeaderTitle(settings.event_name);
         }
-    } catch (error) {
-        console.error('Fehler beim Laden der Einstellungen:', error);
+        
+        // Event-Datum setzen (wenn vorhanden)
+        if (settings.event_date && document.getElementById('event_date')) {
+            document.getElementById('event_date').value = settings.event_date;
+        }
+          // Nach dem Laden der Einstellungen automatisch nach Updates suchen
+        // und auch die Abhängigkeiten prüfen
+        setTimeout(() => {
+            // Verzögerte Ausführung, um UI-Updates zu ermöglichen
+            handleUpdateCheck();
+            // Auch die Abhängigkeiten prüfen
+            checkDependenciesAndUpdateUI().catch(err => {
+                error('Fehler bei der automatischen Abhängigkeitsprüfung', err);
+            });
+        }, 500);
+        
+        // Anzeigemodus setzen
+        if (document.getElementById('color_mode')) {
+            document.getElementById('color_mode').value = settings.color_mode || 'system';
+        }
+        
+        // Bildschirmschoner-Timeout setzen
+        if (document.getElementById('screensaver_timeout')) {
+            document.getElementById('screensaver_timeout').value = settings.screensaver_timeout || 120;
+        }
+        
+        // Galerie-Timeout setzen
+        if (document.getElementById('gallery_timeout')) {
+            document.getElementById('gallery_timeout').value = settings.gallery_timeout || 60;
+        }
+        
+        // Countdown-Dauer setzen
+        if (document.getElementById('countdown_duration')) {
+            document.getElementById('countdown_duration').value = settings.countdown_duration || 3;
+        }
+        
+        // Kamera-Einstellungen
+        if (document.getElementById('camera_id')) {
+            document.getElementById('camera_id').value = settings.camera_id || 'auto';
+        }
+        
+        if (document.getElementById('flash_mode')) {
+            document.getElementById('flash_mode').value = settings.flash_mode || 'auto';
+        }
+        
+        // Verfügbare Kameras laden und Dropdown aktualisieren
+        loadAvailableCameras();
+    } catch (err) {
+        error('Fehler beim Laden der Einstellungen:', err);
+        showNotification('Fehler beim Laden der Einstellungen', 'error');
     }
 }
 
@@ -160,6 +169,178 @@ async function loadAvailableCameras() {
  * Die initFancyInputs Funktion wurde entfernt, da Labels jetzt permanent
  * oberhalb der Eingabefelder angezeigt werden.
  */
+
+// =================================================================================
+// Abhängigkeiten-Verwaltung
+// =================================================================================
+
+// Button zum Installieren der fehlenden Abhängigkeiten
+const fixDependenciesBtn = document.getElementById('fixDependenciesBtn');
+if (fixDependenciesBtn) {
+    fixDependenciesBtn.addEventListener('click', handleFixDependencies);
+}
+
+/**
+ * Prüft die Abhängigkeiten und aktualisiert die UI
+ * Wird automatisch bei der Initialisierung und nach Updates aufgerufen
+ */
+async function checkDependenciesAndUpdateUI() {
+    const dependenciesStatus = document.getElementById('dependenciesStatus');
+    const dependenciesList = document.getElementById('dependenciesList');
+    const dependenciesStatusBadge = document.getElementById('dependenciesStatusBadge');
+    const systemDependenciesList = document.getElementById('systemDependenciesList');
+    const pythonDependenciesList = document.getElementById('pythonDependenciesList');
+    const fixDependenciesBtn = document.getElementById('fixDependenciesBtn');
+    
+    // Wenn eines der Elemente fehlt, früh zurückkehren
+    if (!dependenciesStatus || !dependenciesList || !dependenciesStatusBadge || 
+        !systemDependenciesList || !pythonDependenciesList || !fixDependenciesBtn) {
+        error('Erforderliche DOM-Elemente für Abhängigkeiten-Prüfung nicht gefunden');
+        return;
+    }
+    
+    try {
+        // Abhängigkeiten-Status anzeigen
+        dependenciesStatus.classList.remove('hidden');
+        dependenciesStatusBadge.textContent = 'Prüfe...';
+        dependenciesStatusBadge.className = 'status-badge';
+        
+        // Abhängigkeiten prüfen
+        const deps = await checkDependencies();
+        
+        // Status-Badge aktualisieren
+        if (deps.all_ok) {
+            dependenciesStatusBadge.textContent = 'OK';
+            dependenciesStatusBadge.className = 'status-badge status-ok';
+            dependenciesList.classList.add('hidden');
+            fixDependenciesBtn.classList.add('hidden');
+            return; // Früh zurückkehren, wenn alles ok ist
+        } else {
+            // Es gibt Probleme mit den Abhängigkeiten
+            const problemCount = (deps.system.missing.length + deps.system.outdated.length +
+                                 deps.python.missing.length + deps.python.outdated.length);
+            
+            dependenciesStatusBadge.textContent = `${problemCount} Problem${problemCount > 1 ? 'e' : ''}`;
+            dependenciesStatusBadge.className = 'status-badge status-warning';
+            
+            // Listen leeren
+            systemDependenciesList.innerHTML = '';
+            pythonDependenciesList.innerHTML = '';
+            
+            // System-Abhängigkeiten anzeigen
+            if (deps.system.missing.length > 0 || deps.system.outdated.length > 0) {
+                for (const pkg of deps.system.missing) {
+                    const li = document.createElement('li');
+                    li.className = 'dependency-item dependency-missing';
+                    li.textContent = `${pkg} (fehlt)`;
+                    systemDependenciesList.appendChild(li);
+                }
+                
+                for (const pkg of deps.system.outdated) {
+                    const li = document.createElement('li');
+                    li.className = 'dependency-item dependency-outdated';
+                    li.textContent = `${pkg} (veraltet)`;
+                    systemDependenciesList.appendChild(li);
+                }
+            } else {
+                const li = document.createElement('li');
+                li.textContent = 'Alle System-Pakete sind installiert';
+                systemDependenciesList.appendChild(li);
+            }
+            
+            // Python-Abhängigkeiten anzeigen
+            if (deps.python.missing.length > 0 || deps.python.outdated.length > 0) {
+                for (const pkg of deps.python.missing) {
+                    const li = document.createElement('li');
+                    li.className = 'dependency-item dependency-missing';
+                    li.textContent = `${pkg} (fehlt)`;
+                    pythonDependenciesList.appendChild(li);
+                }
+                
+                for (const pkg of deps.python.outdated) {
+                    const li = document.createElement('li');
+                    li.className = 'dependency-item dependency-outdated';
+                    li.textContent = `${pkg} (veraltet)`;
+                    pythonDependenciesList.appendChild(li);
+                }
+            } else {
+                const li = document.createElement('li');
+                li.textContent = 'Alle Python-Module sind installiert';
+                pythonDependenciesList.appendChild(li);
+            }
+            
+            // Abhängigkeitsliste und Button anzeigen
+            dependenciesList.classList.remove('hidden');
+            fixDependenciesBtn.classList.remove('hidden');
+        }
+    } catch (err) {
+        error('Fehler bei der Abhängigkeiten-Prüfung', err);
+        dependenciesStatusBadge.textContent = 'Fehler';
+        dependenciesStatusBadge.className = 'status-badge status-error';
+        
+        // Fehlermeldung anzeigen
+        systemDependenciesList.innerHTML = '';
+        pythonDependenciesList.innerHTML = '';
+        
+        const li = document.createElement('li');
+        li.className = 'dependency-item dependency-missing';
+        li.textContent = `Fehler bei der Abhängigkeitsprüfung: ${err.message || 'Unbekannter Fehler'}`;
+        systemDependenciesList.appendChild(li);
+        
+        // Listen anzeigen, Button verstecken
+        dependenciesList.classList.remove('hidden');
+        fixDependenciesBtn.classList.add('hidden');
+    }
+}
+
+/**
+ * Handler für den Button zum Installieren fehlender Abhängigkeiten
+ */
+async function handleFixDependencies() {
+    const dependenciesStatusBadge = document.getElementById('dependenciesStatusBadge');
+    const fixDependenciesBtn = document.getElementById('fixDependenciesBtn');
+    
+    if (!dependenciesStatusBadge || !fixDependenciesBtn) {
+        error('Erforderliche DOM-Elemente für Abhängigkeiten-Installation nicht gefunden');
+        return;
+    }
+    
+    try {
+        // Button deaktivieren und Status aktualisieren
+        fixDependenciesBtn.disabled = true;
+        dependenciesStatusBadge.textContent = 'Installiere...';
+        dependenciesStatusBadge.className = 'status-badge';
+        
+        // Bestätigungsdialog anzeigen
+        if (!await showDialog('Abhängigkeiten installieren', 
+                              'Dies kann einige Minuten dauern und erfordert möglicherweise Root-Rechte. Fortfahren?', 
+                              'Installieren', 'Abbrechen')) {
+            fixDependenciesBtn.disabled = false;
+            return;
+        }
+        
+        // Abhängigkeiten installieren
+        await installDependencies();
+        
+        // Erfolgsmeldung
+        showNotification('Abhängigkeiten wurden installiert', 'success');
+        
+        // Nach kurzer Verzögerung erneut prüfen
+        setTimeout(() => {
+            checkDependenciesAndUpdateUI();
+            fixDependenciesBtn.disabled = false;
+        }, 2000);
+    } catch (err) {
+        error('Fehler bei der Installation der Abhängigkeiten', err);
+        
+        dependenciesStatusBadge.textContent = 'Fehler';
+        dependenciesStatusBadge.className = 'status-badge status-error';
+        
+        showNotification(`Fehler: ${err.message || 'Unbekannter Fehler'}`, 'error');
+        
+        fixDependenciesBtn.disabled = false;
+    }
+}
 
 // =================================================================================
 // System-Update-Funktionen
@@ -210,6 +391,11 @@ async function handleUpdateCheck() {
         
         // Aktuelle Version anzeigen
         document.querySelector('#currentVersion .version-number').textContent = versionInfo.current;
+        
+        // Abhängigkeiten prüfen
+        checkDependenciesAndUpdateUI().catch(err => {
+            error('Fehler bei der automatischen Abhängigkeitsprüfung', err);
+        });
         
         if (updateInfo) {
             // Update verfügbar
@@ -334,10 +520,9 @@ async function checkLoginStatus() {
             
             if (data.authenticated) {
                 // Bereits eingeloggt, Konfigurationsformular anzeigen
-                document.getElementById('loginForm').classList.add('hidden');
-                document.getElementById('configForm').classList.add('form-visible');
+                document.getElementById('loginForm').classList.add('hidden');                document.getElementById('configForm').classList.add('form-visible');
                   // Einstellungen laden
-                loadSettings().then(() => {
+                loadSettingsAndUpdateUI().then(() => {
                     if (typeof initLiveSettingsUpdate === 'function') {
                         initLiveSettingsUpdate();
                     }                // Nach dem Laden der Einstellungen automatisch nach Updates suchen

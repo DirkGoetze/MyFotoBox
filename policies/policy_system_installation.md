@@ -124,14 +124,14 @@ apt-get update && apt-get install -y \
 
 ### Python-Abhängigkeiten
 
-Alle Python-Abhängigkeiten müssen in der Datei `backend/requirements.txt` definiert und in einer virtuellen Umgebung installiert werden.
+Alle Python-Abhängigkeiten müssen in der Datei `conf/requirements_python.inf` definiert und in einer virtuellen Umgebung installiert werden.
 
 ```bash
 # Virtual Environment erstellen
 python3 -m venv /opt/fotobox/venv
 
 # Abhängigkeiten installieren
-/opt/fotobox/venv/bin/pip install -r backend/requirements.txt
+/opt/fotobox/venv/bin/pip install -r conf/requirements_python.inf
 ```
 
 ### Systemdienst-Konfiguration
