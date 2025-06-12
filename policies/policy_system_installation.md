@@ -110,29 +110,31 @@ Der Installationsprozess ist in folgenden Schritten zu implementieren:
 - **RAM:** Mindestens 1 GB freier Arbeitsspeicher
 - **Benutzerrechte:** Root-Rechte für die Installation erforderlich
 
-### Zu installierende Systemkomponenten
+### Systemkomponenten
 
-```bash
-apt-get update && apt-get install -y \
-  git \
-  lsof \
-  nginx \
-  python3-venv \
-  python3-pip \
-  sqlite3
-```
+Alle zu installierenden Systemkomponenten müssen in der Datei `conf/requirements_system.inf` definiert sein. Die grundlegenden Komponenten umfassen:
+
+- git
+- nginx
+- python3-venv
+- python3-pip
+- sqlite3
+
+Die Installation erfolgt automatisch basierend auf den Definitionen in der Requirements-Datei.
 
 ### Python-Abhängigkeiten
 
-Alle Python-Abhängigkeiten müssen in der Datei `conf/requirements_python.inf` definiert und in einer virtuellen Umgebung installiert werden.
+Alle Python-Abhängigkeiten müssen in der Datei `conf/requirements_python.inf` definiert und in einer virtuellen Umgebung installiert werden. Entwickler dürfen keine direkten `pip install`-Befehle ausführen, sondern müssen stattdessen die Requirements-Datei aktualisieren.
 
 ```bash
 # Virtual Environment erstellen
 python3 -m venv /opt/fotobox/venv
 
-# Abhängigkeiten installieren
+# Abhängigkeiten aus der zentralen Requirements-Datei installieren
 /opt/fotobox/venv/bin/pip install -r conf/requirements_python.inf
 ```
+
+Neue Abhängigkeiten sollten mit einer Mindestversion und einem beschreibenden Kommentar in die Datei aufgenommen werden.
 
 ### Systemdienst-Konfiguration
 

@@ -564,4 +564,24 @@ if __name__ == "__main__":
         backup_configs()
         print('Backup abgeschlossen.')
         sys.exit(0)
+    elif '--install-system-deps' in sys.argv:
+        # Nur Systemabhängigkeiten installieren, ohne andere Updates
+        if os.name != 'nt' and os.geteuid() == 0:  # Nur auf Linux/Unix mit Root-Rechten
+            try:
+                sys_success, sys_msg = install_system_requirements()
+                if sys_success:
+                    print(f"Systemabhängigkeiten: {sys_msg}")
+                    log(f"Systemabhängigkeiten: {sys_msg}")
+                else:
+                    print(f"Warnung: Probleme mit Systemabhängigkeiten: {sys_msg}")
+                    log(f"Warnung: Probleme mit Systemabhängigkeiten: {sys_msg}", "WARNING")
+                sys.exit(0)
+            except Exception as e:
+                print(f"Fehler bei Systemabhängigkeiten: {str(e)}")
+                log(f"Fehler bei Systemabhängigkeiten: {str(e)}", "ERROR")
+                sys.exit(1)
+        else:
+            print("Fehler: Die Installation von Systemabhängigkeiten erfordert Root-Rechte unter Linux/Unix.")
+            log("Fehler: Die Installation von Systemabhängigkeiten erfordert Root-Rechte", "ERROR")
+            sys.exit(1)
     main()

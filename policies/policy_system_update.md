@@ -65,6 +65,18 @@ Pillow>=9.0.0
 psutil>=5.9.0
 ```
 
+## Verwaltung von Abhängigkeiten
+
+- **Zentrale Definition**: Alle Software- und Paketabhängigkeiten müssen zentral in den entsprechenden Dateien im `conf`-Verzeichnis definiert werden.
+  - Systemabhängigkeiten in `conf/requirements_system.inf`
+  - Python-Abhängigkeiten in `conf/requirements_python.inf`
+
+- **Keine direkte Installation**: Neue Abhängigkeiten dürfen nicht direkt mit Befehlen wie `pip install` oder `apt install` installiert werden. Stattdessen muss die entsprechende Requirements-Datei aktualisiert werden.
+
+- **Versionsspezifikation**: Bei Hinzufügen neuer Abhängigkeiten sollte immer eine Mindestversion angegeben werden, um Kompatibilität sicherzustellen, z.B. `package>=1.2.3`.
+
+- **Dokumentation**: Jede neue Abhängigkeit sollte mit einem kurzen Kommentar in der Requirements-Datei versehen werden, der den Zweck erklärt.
+
 ## Zuständigkeiten im Code
 
 ### Backend

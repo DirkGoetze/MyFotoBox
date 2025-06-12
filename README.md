@@ -23,6 +23,17 @@ Die Fotobox ist ein flexibles, webbasiertes System für Events, Partys und Feier
 - [Lizenz](#lizenz)
 - [Kontakt](#kontakt)
 
+## Hinweis für Entwickler
+
+### Abhängigkeitenverwaltung
+
+Alle Abhängigkeiten werden zentral in den folgenden Dateien verwaltet:
+
+- `conf/requirements_python.inf`: Python-Paketabhängigkeiten
+- `conf/requirements_system.inf`: Systempaketabhängigkeiten
+
+Gemäß unserer Projekt-Policy dürfen neue Abhängigkeiten nicht direkt installiert werden (z.B. mit `pip install` oder `apt install`), sondern müssen in den entsprechenden Requirements-Dateien definiert werden. Details finden Sie in den [Policies](./policies).
+
 ## Features
 
 - Fotos direkt über die Fotobox aufnehmen

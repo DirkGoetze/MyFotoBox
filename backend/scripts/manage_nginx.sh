@@ -205,8 +205,8 @@ chk_nginx_installation() {
             log_or_json "$mode" "error" "$chk_nginx_installation_txt_0003" 1
             return 1
         fi
-        # Installation von nginx durchführen
-        apt-get update -qq && apt-get install -y -qq nginx
+        # Installation von nginx durchführen mit manage_update.py, das die Abhängigkeiten aus conf/requirements_system.inf verwendet
+        python3 "$SCRIPT_DIR/../manage_update.py" --install-system-deps
         # Nach der Installation erneut prüfen, ob nginx jetzt verfügbar ist
         if ! command -v nginx >/dev/null 2>&1; then
             log_or_json "$mode" "error" "$chk_nginx_installation_txt_0004" 2

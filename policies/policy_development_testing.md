@@ -32,7 +32,21 @@ Diese Policy definiert verbindliche Regeln für Tests und Entwicklungsprozesse i
 - Jedes Modul benötigt wenigstens grundlegende Tests der öffentlichen API
 - Als Benennungskonvention gilt: `test_[modulname].js` bzw. `test_[modulname].py`
 
-### 4. Dokumentation von Testfällen
+### 4. Umgang mit Abhängigkeiten
+
+- **Zentrale Definition**: Alle Abhängigkeiten (System und Python) müssen in den zentralen Dateien im `conf`-Verzeichnis definiert werden:
+  - `conf/requirements_system.inf` für Systemabhängigkeiten
+  - `conf/requirements_python.inf` für Python-Abhängigkeiten
+
+- **Keine Ad-hoc-Installationen**: Entwickler dürfen keine Abhängigkeiten direkt installieren (`pip install`, `apt install` etc.). Stattdessen müssen alle Abhängigkeiten zuerst in den entsprechenden Requirements-Dateien definiert werden.
+
+- **Versionierung**: Bei neuen Abhängigkeiten muss eine Mindestversion angegeben werden (z.B. `package>=1.2.3`).
+
+- **Dokumentation**: Jede hinzugefügte Abhängigkeit sollte mit einem Kommentar versehen werden, der ihren Zweck erklärt.
+
+- **Test der Abhängigkeitsinstallation**: Entwickler sollten den Installationsprozess mit den aktualisierten Requirements-Dateien in einer Testumgebung überprüfen, bevor sie Pull Requests einreichen.
+
+### 5. Dokumentation von Testfällen
 
 - Kritische Funktionen müssen mit **expliziten Testfällen** dokumentiert werden
 - Für komplexe Module sind **Testpläne** zu erstellen, die die wichtigsten Testszenarien umfassen
