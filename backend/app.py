@@ -11,6 +11,7 @@ import manage_auth
 import manage_logging
 import manage_database
 import manage_files
+import manage_api
 import filesystem_api
 import update_api
 
@@ -121,57 +122,67 @@ def api_login():
 # -------------------------------------------------------------------------------
 @app.route('/api/settings', methods=['GET', 'POST'])
 def api_settings():
-    db = sqlite3.connect(DB_PATH)
-    cur = db.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
-    
-    if request.method == 'POST':
-        data = request.get_json(force=True)
-        # Alle Einstellungen aus dem Frontend verarbeiten
-        allowed_keys = [
-            'camera_mode', 'resolution_width', 'resolution_height', 
-            'storage_path', 'event_name', 'event_date', 'show_splash', 'photo_timer',
-            'color_mode', 'screensaver_timeout', 'gallery_timeout',
-            'camera_id', 'flash_mode', 'countdown_duration'
-        ]
+    try:
+        db = sqlite3.connect(DB_PATH)
+        cur = db.cursor()
+        cur.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
         
-        # Log der Einstellungsänderung
-        manage_logging.log(f"Einstellungen werden aktualisiert. Geänderte Schlüssel: {', '.join([k for k in data if k in allowed_keys])}")
+        # API-Anfrage protokollieren
+        manage_api.log_api_request('/api/settings', request.method, 
+                                  request_data=request.get_json(force=True) if request.method == 'POST' else None, 
+                                  user_id=session.get('user_id'))
         
-        for key in data:
-            if key in allowed_keys:
-                # Alle Werte als String speichern
-                cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, str(data[key])))
-                
-        # Admin-Passwort setzen/ändern - Unterstütze sowohl new_password (settings.html) als auch admin_password (install.html)
-        password_key = None
-        if 'new_password' in data and data['new_password'] and len(data['new_password']) >= 4:
-            password_key = 'new_password'
-            manage_logging.log("Administratorpasswort wird geändert")
-        elif 'admin_password' in data and data['admin_password'] and len(data['admin_password']) >= 4:
-            password_key = 'admin_password'
-            manage_logging.log("Neues Administratorpasswort wird gesetzt")
+        if request.method == 'POST':
+            data = request.get_json(force=True)
+            # Alle Einstellungen aus dem Frontend verarbeiten
+            allowed_keys = [
+                'camera_mode', 'resolution_width', 'resolution_height', 
+                'storage_path', 'event_name', 'event_date', 'show_splash', 'photo_timer',
+                'color_mode', 'screensaver_timeout', 'gallery_timeout',
+                'camera_id', 'flash_mode', 'countdown_duration'
+            ]
             
-        if password_key:
-            # Nutze manage_auth zum Setzen des Passworts
-            manage_auth.set_password(data[password_key])
-        
-        db.commit()
+            # Log der Einstellungsänderung
+            manage_logging.log(f"Einstellungen werden aktualisiert. Geänderte Schlüssel: {', '.join([k for k in data if k in allowed_keys])}")
+            
+            for key in data:
+                if key in allowed_keys:
+                    # Alle Werte als String speichern
+                    cur.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, str(data[key])))
+                    
+            # Admin-Passwort setzen/ändern - Unterstütze sowohl new_password (settings.html) als auch admin_password (install.html)
+            password_key = None
+            if 'new_password' in data and data['new_password'] and len(data['new_password']) >= 4:
+                password_key = 'new_password'
+                manage_logging.log("Administratorpasswort wird geändert")
+            elif 'admin_password' in data and data['admin_password'] and len(data['admin_password']) >= 4:
+                password_key = 'admin_password'
+                manage_logging.log("Neues Administratorpasswort wird gesetzt")
+                
+            if password_key:
+                # Nutze manage_auth zum Setzen des Passworts
+                manage_auth.set_password(data[password_key])
+            
+            db.commit()
+            db.close()
+            manage_logging.log("Einstellungen erfolgreich gespeichert")
+            return manage_api.ApiResponse.success(message="Einstellungen erfolgreich gespeichert")
+            
+        # GET
+        manage_logging.log("Aktuelle Einstellungen werden abgerufen")
+        cur.execute("SELECT key, value FROM settings")
+        result = {k: v for k, v in cur.fetchall()}
+        # show_splash als bool zurückgeben (Default: '1')
+        if 'show_splash' not in result:
+            result['show_splash'] = '1'
+        if 'photo_timer' not in result:
+            result['photo_timer'] = '5'
         db.close()
-        manage_logging.log("Einstellungen erfolgreich gespeichert")
-        return jsonify({'status': 'ok'})
         
-    # GET
-    manage_logging.log("Aktuelle Einstellungen werden abgerufen")
-    cur.execute("SELECT key, value FROM settings")
-    result = {k: v for k, v in cur.fetchall()}
-    # show_splash als bool zurückgeben (Default: '1')
-    if 'show_splash' not in result:
-        result['show_splash'] = '1'
-    if 'photo_timer' not in result:
-        result['photo_timer'] = '5'
-    db.close()
-    return jsonify(result)
+        # Formatierte Antwort zurückgeben
+        return manage_api.ApiResponse.success(data=result)
+    except Exception as e:
+        return manage_api.handle_api_exception(e, endpoint='/api/settings')
 
 # -------------------------------------------------------------------------------
 # /api/check_password_set (GET)

@@ -12,19 +12,18 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 | manage_database         | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
 | manage_files/filesystem | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
 | manage_logging          | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
-| manage_api              | 🟢 Vollständig implementiert | 🔴 Nicht begonnen            |
+| manage_api              | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
 | manage_camera           | 🔴 Nicht begonnen            | 🔴 Nicht begonnen            |
 | ui_components           | 🟢 Vollständig implementiert | -                            |
-| utils                   | 🔴 Nicht begonnen            | 🔴 Nicht begonnen            |
+| utils                   | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
 
 ## Seitenspezifische Module
 
 | Modul | Status | Kommentare |
 |-------|--------|------------|
-| index.js | 🔴 Nicht begonnen | Funktionen müssen zu manage_* Modulen verschoben werden |
+| index.js | 🟢 Vollständig implementiert | Aus splash.js umbenannt, Update-Funktionalität und Auth-Logik migriert |
 | gallery.js | 🟢 Vollständig implementiert | API-Aufrufe zu manage_filesystem verschoben |
 | settings.js | 🟢 Vollständig implementiert | Update-Funktionalität und Auth-Logik migriert |
-| splash.js | 🟢 Vollständig implementiert | Update-Funktionalität und Auth-Logik migriert |
 | install.js | 🟢 Vollständig implementiert | Auth-Logik zu manage_auth verschoben |
 | capture.js | 🔴 Nicht begonnen | Kamerasteuerung zu manage_camera verschieben |
 
@@ -74,7 +73,7 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 
 1. ✅ Implementierung von manage_settings.js und manage_settings.py - **Abgeschlossen**
 2. ✅ Migration der Dateisystem-Operationen zu manage_filesystem.js/py - **Abgeschlossen**
-3. Implementierung des utils.js-Moduls für gemeinsame Hilfsfunktionen
+3. ✅ Implementierung von utils.js und utils.py für gemeinsame Hilfsfunktionen - **Abgeschlossen**
 4. Integration der manage_database.js-Funktionalität in Frontend-Komponenten
 5. Schreiben von Tests für die neue Modulstruktur
 
@@ -100,9 +99,12 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 |-------|--------|----------------|
 | TBD | Erstellung des Dokuments | - |
 | 12.06.2025 | Statusaktualisierung - manage_auth, manage_logging vollständig migriert | Projektteam |
-| 15.06.2025 | Statusaktualisierung - manage_filesystem (frontend & backend) vollständig migriert | Projektteam |
 | 12.06.2025 | Update-Funktionalität implementiert | Entwicklungsteam |
 | 12.06.2025 | Datenbankverwaltung vollständig implementiert (manage_database.js und manage_database.py) | Projektteam |
 | 12.06.2025 | Einstellungsverwaltung vollständig implementiert (manage_settings.js und manage_settings.py) | Projektteam |
+| 12.06.2025 | Dateisystem-Operationen vollständig migriert (manage_filesystem.js und manage_files.py) | Projektteam |
+| 12.06.2025 | Hilfsfunktionen implementiert (utils.js und utils.py) | Entwicklungsteam |
+| 12.06.2025 | Splash-Screen-Logik nach index.js verschoben und splash.js entfernt | Projektteam |
+| 12.06.2025 | Backend API-Abstraktionsschicht (manage_api.py) implementiert | Entwicklungsteam |
 
 Dieses Dokument wird regelmäßig aktualisiert, um den aktuellen Stand der Migration zu reflektieren.
