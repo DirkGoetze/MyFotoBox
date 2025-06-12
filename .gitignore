@@ -11,6 +11,7 @@ backup/
 data/
 frontend/tests/
 reviews/
+tests/
 # Dateien die von Git ignoriert werden sollen
 # Diese Dateien werden nicht versioniert
 fotobox2.code-workspace
