@@ -18,7 +18,7 @@ sudo bash fotobox.sh --update
 
 Alternativ können Sie das Update über die Weboberfläche durchführen:
 
-1. Öffnen Sie die Einstellungsseite (`settings.html`) 
+1. Öffnen Sie die Einstellungsseite (`settings.html`)
 2. Melden Sie sich als Administrator an
 3. Klicken Sie im Bereich "System-Updates" auf "Auf Updates prüfen"
 4. Wenn ein Update verfügbar ist, klicken Sie auf "Update installieren"
@@ -44,7 +44,8 @@ Das Update-System prüft und aktualisiert automatisch folgende Abhängigkeiten:
 Die Datei `conf/requirements_system.inf` im Projektverzeichnis der Fotobox definiert alle erforderlichen Betriebssystem-Pakete mit ihren Mindestversionen. Diese werden bei jedem Update überprüft und bei Bedarf aktualisiert.
 
 Beispiel für den Inhalt der `conf/requirements_system.inf`:
-```
+
+```plaintext
 # System-Abhängigkeiten für Fotobox2
 # Format: paket>=version
 

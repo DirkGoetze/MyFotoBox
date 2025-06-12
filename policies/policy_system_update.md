@@ -37,12 +37,13 @@ Ein Update wird in folgenden Schritten durchgeführt:
 
 Die Datei `conf/requirements_system.inf` im Projektverzeichnis enthält alle erforderlichen OS-Pakete im folgenden Format:
 
-```
+```plaintext
 paketname>=mindestversion
 ```
 
 Beispiel:
-```
+
+```plaintext
 # System-Abhängigkeiten für Fotobox2
 # Format: paket>=version
 
@@ -56,7 +57,7 @@ python3-pip>=20.0
 
 Die Python-Abhängigkeitsdatei `conf/requirements_python.inf` enthält alle erforderlichen Python-Pakete:
 
-```
+```plaintext
 # Python-Abhängigkeiten für Fotobox2
 # Format: paket>=version
 

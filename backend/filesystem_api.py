@@ -9,6 +9,7 @@ indem es die Funktionen aus dem manage_files-Modul aufruft.
 from flask import request, jsonify, current_app, Blueprint, send_from_directory
 import os
 import logging
+import time
 from werkzeug.utils import secure_filename
 
 # Import der Dateisystem-Funktionen

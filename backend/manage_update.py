@@ -108,7 +108,7 @@ def check_system_requirements():
     """Überprüft (ohne Installation) fehlende Systempakete basierend auf system_requirements.txt"""
     missing_packages = []
     outdated_packages = []
-      if not os.path.exists(SYSTEM_REQUIREMENTS_PATH):
+    if not os.path.exists(SYSTEM_REQUIREMENTS_PATH):
         log(f"requirements_system.inf nicht gefunden: {SYSTEM_REQUIREMENTS_PATH}", "WARNING")
         return [], []
 
@@ -142,7 +142,7 @@ def check_python_requirements():
     
     missing_packages = []
     outdated_packages = []
-      if not os.path.exists(PYTHON_REQUIREMENTS_PATH):
+    if not os.path.exists(PYTHON_REQUIREMENTS_PATH):
         log(f"requirements_python.inf nicht gefunden: {PYTHON_REQUIREMENTS_PATH}", "WARNING")
         return [], []
         
@@ -384,8 +384,7 @@ def update_backend():
             log("venv wurde angelegt, aber pip nicht gefunden. Update abgebrochen.")
             sys.exit(1)
         print("venv wurde automatisch angelegt.")
-        log("venv wurde automatisch angelegt.")
-    # -------------------------------------------------------------------------------
+        log("venv wurde automatisch angelegt.")    # -------------------------------------------------------------------------------
     # pip_pruefen_und_installieren
     # -------------------------------------------------------------------------------
     # Funktion: Prüft, ob pip im venv vorhanden ist, installiert ggf. pip neu
@@ -399,7 +398,9 @@ def update_backend():
         except Exception as e:
             print(f"Fehler bei der Installation von pip im venv: {e}\nBitte manuell mit 'python3 -m ensurepip' im venv nachinstallieren.")
             log(f"Fehler bei der Installation von pip im venv: {e}")
-            sys.exit(1)        if not os.path.isfile(venv_pip):
+            sys.exit(1)
+        
+        if not os.path.isfile(venv_pip):
             print("pip konnte nicht installiert werden. Abbruch.")
             log("pip konnte nicht installiert werden. Update abgebrochen.")
             sys.exit(1)

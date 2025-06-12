@@ -6,7 +6,7 @@ Diese Policy definiert den verbindlichen Ablauf und die technischen Anforderunge
 
 Der Installationsprozess ist in folgenden Schritten zu implementieren:
 
-```
+```ascii
 +-------------------------------------------------------------------------------+
 | Start: Aufruf install_fotobox.sh                                              |
 +-------------------------------------------------------------------------------+

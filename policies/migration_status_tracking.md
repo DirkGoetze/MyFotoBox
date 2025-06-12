@@ -29,6 +29,7 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 | capture.js | 🔴 Nicht begonnen | Kamerasteuerung zu manage_camera verschieben |
 
 ## Statuslegende
+
 - 🔴 **Nicht begonnen**: Die Arbeit an diesem Modul hat noch nicht begonnen.
 - 🟡 **Teilweise implementiert**: Das Modul wurde teilweise implementiert, aber es fehlen noch Funktionen.
 - 🟢 **Vollständig implementiert**: Die Implementierung des Moduls ist abgeschlossen.
