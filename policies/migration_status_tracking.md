@@ -9,7 +9,7 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 | manage_update | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
 | manage_auth | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
 | manage_settings | 🔴 Nicht begonnen | 🔴 Nicht begonnen |
-| manage_database | 🔴 Nicht begonnen | 🟡 Teilweise implementiert |
+| manage_database | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
 | manage_files/filesystem | 🔴 Nicht begonnen | 🔴 Nicht begonnen |
 | manage_logging | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
 | manage_api | 🟢 Vollständig implementiert | 🔴 Nicht begonnen |
@@ -45,6 +45,7 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 
 - [x] manage_auth.js implementieren
 - [x] manage_update.js implementieren
+- [x] manage_database.js implementieren
 - [ ] manage_settings.js implementieren
 
 ### Phase 3: Bestehende Dateien anpassen
@@ -72,7 +73,8 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 1. Implementierung von manage_settings.js und manage_settings.py
 2. Migration der Dateisystem-Operationen zu manage_filesystem.js/py
 3. Implementierung des utils.js-Moduls für gemeinsame Hilfsfunktionen
-4. Schreiben von Tests für die neue Modulstruktur
+4. Integration der manage_database.js-Funktionalität in Frontend-Komponenten
+5. Schreiben von Tests für die neue Modulstruktur
 
 ## Offene Fragen
 
@@ -97,5 +99,6 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 | TBD | Erstellung des Dokuments | - |
 | 12.06.2025 | Statusaktualisierung - manage_auth, manage_logging vollständig migriert | Projektteam |
 | 12.06.2025 | Update-Funktionalität implementiert | Entwicklungsteam |
+| 12.06.2025 | Datenbankverwaltung vollständig implementiert (manage_database.js und manage_database.py) | Projektteam |
 
 Dieses Dokument wird regelmäßig aktualisiert, um den aktuellen Stand der Migration zu reflektieren.

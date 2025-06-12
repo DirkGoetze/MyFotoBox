@@ -30,20 +30,25 @@ const API_BASE_URL = window.location.hostname === 'localhost'
     : '/api';
 ```
 
-### 2. Test-Alternativen
+### 2. Entwicklung ohne Live-Datenbankzugriff
 
-Für lokale Tests ohne Datenbankzugriff sollten Mock-Daten verwendet werden:
+**WICHTIG: Während der Entwicklung ist KEIN Zugriff auf eine Live-Datenbank möglich.** 
+Alle Entwicklung muss unter der Annahme erfolgen, dass keine laufende Instanz oder Remote-Datenbank verfügbar ist.
+
+Für die Entwicklung ohne Datenbankzugriff MÜSSEN Mock-Daten verwendet werden:
 
 - Erstelle JSON-Beispieldateien für typische API-Antworten
-- Implementiere eine Testumgebungsvariable, die zwischen echter API und Mock-Daten wechselt
+- Implementiere eine Testumgebungsvariable, die standardmäßig auf Mock-Daten konfiguriert ist
 
 ```javascript
-const USE_MOCK_DATA = true; // Für Entwicklung ohne DB-Zugriff
+// Für die Entwicklung IMMER true, keine Verbindung zu echter Datenbank!
+const USE_MOCK_DATA = true; 
 
 function fetchData() {
     if (USE_MOCK_DATA) {
         return Promise.resolve(MOCK_DATA);
     } else {
+        // Diese Alternative ist NUR für die Produktivumgebung relevant!
         return fetch('/api/data').then(response => response.json());
     }
 }
