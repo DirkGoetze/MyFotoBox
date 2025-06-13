@@ -1,0 +1,45 @@
+{
+    "name": "Razer Kiyo",
+    "description": "Optimierte Einstellungen für Razer Kiyo Webcam mit integrierter Beleuchtung",
+    "type": "webcam",
+    "interface": "opencv",
+    "detection": {
+        "method": "vendor_product",
+        "vendor": "Razer",
+        "product": "Kiyo"
+    },
+    "settings": {
+        "resolution": {
+            "width": 1920,
+            "height": 1080
+        },
+        "fps": 30,
+        "focus": "auto",
+        "exposure": "auto",
+        "white_balance": "auto",
+        "brightness": 135,
+        "contrast": 120,
+        "saturation": 125,
+        "compression": 90
+    },
+    "preview": {
+        "resolution": {
+            "width": 960,
+            "height": 540
+        },
+        "fps": 30,
+        "compression": 80
+    },
+    "defaults": {
+        "create_thumbnail": true,
+        "save_directory": "photos/webcam",
+        "file_format": "jpg"
+    },
+    "advanced": {
+        "camera_controls": {
+            "autofocus": true,
+            "ring_light": true,
+            "ring_light_brightness": 75
+        }
+    }
+}

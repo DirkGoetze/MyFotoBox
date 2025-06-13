@@ -1,0 +1,43 @@
+{
+    "name": "Intel RealSense",
+    "description": "Optimierte Einstellungen für Intel RealSense Tiefensensor-Kameras (D435, D455)",
+    "type": "depth_sensor",
+    "interface": "librealsense",
+    "detection": {
+        "method": "vendor_product",
+        "vendor": "Intel",
+        "product": "RealSense*"
+    },
+    "settings": {
+        "resolution": {
+            "width": 1280,
+            "height": 720
+        },
+        "fps": 30,
+        "depth_mode": false,
+        "exposure": "auto",
+        "white_balance": "auto",
+        "compression": 90
+    },
+    "preview": {
+        "resolution": {
+            "width": 640,
+            "height": 360
+        },
+        "fps": 30,
+        "compression": 80,
+        "show_depth": false
+    },
+    "defaults": {
+        "create_thumbnail": true,
+        "save_directory": "photos/realsense",
+        "file_format": "jpg"
+    },
+    "advanced": {
+        "camera_controls": {
+            "laser_power": 100,
+            "emitter_enabled": true,
+            "depth_units": 0.001
+        }
+    }
+}

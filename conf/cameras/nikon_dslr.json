@@ -1,0 +1,44 @@
+{
+    "name": "Nikon DSLR",
+    "description": "Optimierte Einstellungen für Nikon DSLR Kameras mit gPhoto2",
+    "type": "dslr",
+    "interface": "gphoto2",
+    "detection": {
+        "method": "brand_model",
+        "brand": "Nikon",
+        "model": "D*"
+    },
+    "settings": {
+        "resolution": {
+            "width": 6000,
+            "height": 4000
+        },
+        "aperture": "auto",
+        "iso": "auto",
+        "shutter_speed": "1/125",
+        "focus": "auto",
+        "white_balance": "auto",
+        "compression": 95
+    },
+    "preview": {
+        "enabled": true,
+        "resolution": {
+            "width": 1280,
+            "height": 720
+        },
+        "update_interval": 500
+    },
+    "defaults": {
+        "create_thumbnail": true,
+        "save_directory": "photos/dslr",
+        "file_format": "jpg"
+    },
+    "advanced": {
+        "camera_config": {
+            "viewfinder": 1,
+            "autofocus": 1,
+            "capture_format": "jpeg",
+            "flash_mode": "auto"
+        }
+    }
+}

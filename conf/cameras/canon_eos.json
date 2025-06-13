@@ -1,0 +1,35 @@
+{
+    "name": "Canon EOS DSLR",
+    "description": "Einstellungen für Canon EOS DSLR Kameras mit gPhoto2",
+    "type": "dslr",
+    "interface": "gphoto2",
+    "detection": {
+        "method": "brand_model",
+        "brand": "Canon",
+        "model": "EOS*"
+    },
+    "settings": {
+        "resolution": "max",
+        "aperture": "auto",
+        "iso": "auto",
+        "shutter_speed": "auto",
+        "focus": "auto",
+        "compression": "high"
+    },
+    "preview": {
+        "enabled": true,
+        "update_interval": 500
+    },
+    "defaults": {
+        "create_thumbnail": true,
+        "save_directory": "photos/dslr",
+        "file_format": "jpg"
+    },
+    "advanced": {
+        "camera_config": {
+            "viewfinder": 1,
+            "autofocus": 1,
+            "capture_format": "jpeg"
+        }
+    }
+}

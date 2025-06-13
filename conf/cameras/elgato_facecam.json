@@ -1,0 +1,45 @@
+{
+    "name": "Elgato Facecam",
+    "description": "Optimierte Einstellungen für Elgato Facecam Streaming Webcam",
+    "type": "webcam",
+    "interface": "opencv",
+    "detection": {
+        "method": "vendor_product",
+        "vendor": "Elgato",
+        "product": "Facecam"
+    },
+    "settings": {
+        "resolution": {
+            "width": 1920,
+            "height": 1080
+        },
+        "fps": 60,
+        "focus": "fixed",
+        "exposure": "auto",
+        "white_balance": "auto",
+        "brightness": 128,
+        "contrast": 128,
+        "saturation": 128,
+        "compression": 90
+    },
+    "preview": {
+        "resolution": {
+            "width": 960,
+            "height": 540
+        },
+        "fps": 30,
+        "compression": 80
+    },
+    "defaults": {
+        "create_thumbnail": true,
+        "save_directory": "photos/webcam",
+        "file_format": "jpg"
+    },
+    "advanced": {
+        "camera_controls": {
+            "iso": "auto",
+            "shutter_speed": "auto",
+            "flash": false
+        }
+    }
+}

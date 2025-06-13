@@ -1,0 +1,46 @@
+{
+    "name": "Logitech BRIO",
+    "description": "Optimierte Einstellungen für Logitech BRIO 4K Ultra HD Webcam",
+    "type": "webcam",
+    "interface": "opencv",
+    "detection": {
+        "method": "vendor_product",
+        "vendor": "Logitech",
+        "product": "BRIO"
+    },
+    "settings": {
+        "resolution": {
+            "width": 3840,
+            "height": 2160
+        },
+        "fps": 30,
+        "focus": "auto",
+        "exposure": "auto",
+        "white_balance": "auto",
+        "brightness": 128,
+        "contrast": 128,
+        "saturation": 128,
+        "sharpness": 128,
+        "compression": 95
+    },
+    "preview": {
+        "resolution": {
+            "width": 1280,
+            "height": 720
+        },
+        "fps": 30,
+        "compression": 80
+    },
+    "defaults": {
+        "create_thumbnail": true,
+        "save_directory": "photos/webcam",
+        "file_format": "jpg"
+    },
+    "advanced": {
+        "camera_controls": {
+            "autofocus": true,
+            "face_detect": true,
+            "background_replacement": false
+        }
+    }
+}

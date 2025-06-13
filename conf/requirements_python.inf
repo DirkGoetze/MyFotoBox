@@ -9,6 +9,12 @@ bcrypt>=3.2.0
 
 # Bildverarbeitung
 Pillow>=9.0.0
+opencv-python>=4.5.0  # Für Kamerasteuerung und Bildverarbeitung
+
+# Kamera-Steuerung
+gphoto2>=2.3.0  # Für DSLR-Kamerasteuerung (optional)
+pyrealsense2>=2.50.0  # Für Intel RealSense Tiefensensor-Kameras (optional)
+numpy>=1.20.0  # Für Bildverarbeitung und RealSense-Unterstützung
 
 # Systemüberwachung
 psutil>=5.9.0

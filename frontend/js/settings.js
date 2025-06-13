@@ -14,6 +14,9 @@ import { showNotification, showDialog } from './ui_components.js';
 import { login, validatePassword, changePassword } from './manage_auth.js';
 import { loadSettings, loadSingleSetting, updateSettings, updateSingleSetting, validateSettings, resetToDefaults } from './manage_settings.js';
 
+// Import der Kamera-Module
+import * as camera from './manage_camera.js';
+
 // =================================================================================
 // Login-Funktionalität
 // =================================================================================
@@ -87,7 +90,25 @@ async function loadSettingsAndUpdateUI() {
         if (settings.event_date && document.getElementById('event_date')) {
             document.getElementById('event_date').value = settings.event_date;
         }
-          // Nach dem Laden der Einstellungen automatisch nach Updates suchen
+          // Kameraliste laden und UI aktualisieren
+        await loadCameraList();
+        
+        // Kamera-Konfiguration setzen
+        if (document.getElementById('camera_config_id') && settings.camera_config_id) {
+            document.getElementById('camera_config_id').value = settings.camera_config_id;
+            
+            // Wenn eine Konfiguration gesetzt ist, auch im localStorage speichern
+            if (settings.camera_config_id !== 'system') {
+                localStorage.setItem('camera_config_id', settings.camera_config_id);
+            }
+        }
+        
+        // Alte Kamera-Einstellung (für Abwärtskompatibilität)
+        if (document.getElementById('camera_id') && settings.camera_id) {
+            document.getElementById('camera_id').value = settings.camera_id;
+        }
+          
+        // Nach dem Laden der Einstellungen automatisch nach Updates suchen
         // und auch die Abhängigkeiten prüfen
         setTimeout(() => {
             // Verzögerte Ausführung, um UI-Updates zu ermöglichen
@@ -140,35 +161,540 @@ async function loadSettingsAndUpdateUI() {
  */
 async function loadAvailableCameras() {
     try {
-        const response = await fetch('/api/cameras');
-        if (response.ok) {
-            const cameras = await response.json();
-            const cameraSelect = document.getElementById('camera_id');
-            
-            // Bestehende Optionen außer "auto" entfernen
-            Array.from(cameraSelect.options).forEach(option => {
-                if (option.value !== 'auto') {
-                    cameraSelect.removeChild(option);
-                }
-            });
-            
-            // Neue Kamera-Optionen hinzufügen
-            cameras.forEach(camera => {
+        const cameraSelect = document.getElementById('camera_id');
+        if (!cameraSelect) return;
+        
+        // Bestehende Option für "Systemstandard verwenden" speichern
+        const defaultOption = cameraSelect.querySelector('option[value="system"]');
+        
+        // Dropdown leeren, aber Default-Option behalten
+        cameraSelect.innerHTML = '';
+        if (defaultOption) {
+            cameraSelect.appendChild(defaultOption);
+        }
+        
+        // Kameras vom Backend abrufen
+        const response = await fetch('/api/camera/list');
+        const data = await response.json();
+        
+        if (data.success && data.data && data.data.length > 0) {
+            // Alle gefundenen Kameras als Optionen hinzufügen
+            data.data.forEach(camera => {
                 const option = document.createElement('option');
                 option.value = camera.id;
-                option.textContent = camera.name;
+                option.textContent = `${camera.name} (${camera.type})`;
                 cameraSelect.appendChild(option);
             });
+            
+            log(`${data.data.length} Kameras gefunden und in die Auswahlliste geladen.`);
+        } else {
+            log('Keine Kameras gefunden oder Fehler beim Laden der Kameraliste.');
         }
     } catch (error) {
-        console.error('Fehler beim Laden der Kameras:', error);
+        error('Fehler beim Laden der Kameras:', error);
     }
 }
 
 /**
- * Die initFancyInputs Funktion wurde entfernt, da Labels jetzt permanent
- * oberhalb der Eingabefelder angezeigt werden.
+ * Lädt die Liste der verfügbaren Kamera-Konfigurationen und aktualisiert das Dropdown
  */
+async function loadCameraList() {
+    try {
+        const configSelect = document.getElementById('camera_config_id');
+        if (!configSelect) {
+            error('Kamera-Konfigurations-Dropdown nicht gefunden');
+            return;
+        }
+        
+        // Bestehende Option für "Standardkonfiguration verwenden" speichern
+        const defaultOption = configSelect.querySelector('option[value="system"]');
+        
+        // Dropdown leeren, aber Default-Option behalten
+        configSelect.innerHTML = '';
+        if (defaultOption) {
+            configSelect.appendChild(defaultOption);
+        }
+        
+        // Kamera-Konfigurationen vom Backend abrufen
+        const response = await fetch('/api/camera/configs');
+        const data = await response.json();
+        
+        if (data.success && data.data && data.data.length > 0) {
+            // Alle verfügbaren Konfigurationen als Optionen hinzufügen
+            data.data.forEach(config => {
+                const option = document.createElement('option');
+                option.value = config.id;
+                option.textContent = config.name;
+                if (config.description) {
+                    option.title = config.description;
+                }
+                configSelect.appendChild(option);
+            });
+            
+            // Aktive Konfiguration setzen
+            const activeConfigResponse = await fetch('/api/camera/config');
+            const activeConfigData = await activeConfigResponse.json();
+            
+            if (activeConfigData.success && activeConfigData.data && activeConfigData.data.id) {
+                configSelect.value = activeConfigData.data.id;
+            } else {
+                configSelect.value = 'system';
+            }
+            
+            // Event-Handler für Änderung der Konfiguration hinzufügen
+            configSelect.addEventListener('change', handleCameraConfigChange);
+            
+            // Lade dynamische Einstellungen für die aktuelle Konfiguration
+            await loadDynamicCameraSettings();
+            
+            // Vorschau initialisieren
+            initCameraPreview();
+            
+            log(`${data.data.length} Kamera-Konfigurationen geladen`);
+        } else {
+            log('Keine Kamera-Konfigurationen gefunden oder Fehler beim Laden');
+        }
+    } catch (error) {
+        error('Fehler beim Laden der Kamera-Konfigurationen:', error);
+    }
+}
+
+/**
+ * Event-Handler für die Änderung der Kamera-Konfiguration
+ */
+async function handleCameraConfigChange(event) {
+    const configId = event.target.value;
+    
+    try {
+        // Speichere die Konfiguration im localStorage für andere Seiten
+        localStorage.setItem('camera_config_id', configId);
+        
+        // Nutze die Kamera-Modul-Funktion, um die Konfiguration zu ändern
+        const success = await camera.setActiveConfig(configId);
+        
+        if (success) {
+            // Lade die dynamischen Einstellungen neu
+            await loadDynamicCameraSettings();
+            
+            // Aktualisiere die Vorschau
+            updateCameraPreview();
+            
+            // Speichere die Einstellung in der Datenbank
+            await updateSingleSetting('camera_config_id', configId);
+            
+            showNotification('Kamera-Konfiguration aktualisiert', 'success');
+        } else {
+            showNotification('Fehler bei der Aktualisierung der Kamera-Konfiguration', 'error');
+        }
+    } catch (err) {
+        error('Fehler bei der Änderung der Kamera-Konfiguration:', err);
+        showNotification('Fehler bei der Änderung der Kamera-Konfiguration', 'error');
+    }
+}
+
+/**
+ * Lädt die dynamischen Kamera-Einstellungen basierend auf der aktiven Konfiguration
+ */
+async function loadDynamicCameraSettings() {
+    const dynamicSettings = document.getElementById('dynamicCameraSettings');
+    if (!dynamicSettings) return;
+    
+    // Container leeren
+    dynamicSettings.innerHTML = '';
+    
+    try {
+        // Aktive Konfiguration über das Kamera-Modul abrufen
+        const activeConfig = await camera.getActiveConfig();
+        
+        if (!data.success || !data.data || !data.data.config) {        return; // Keine Konfiguration oder Fehler
+        }
+        
+        if (!activeConfig || !activeConfig.config) {
+            error('Keine aktive Kamera-Konfiguration gefunden');
+            return;
+        }
+        
+        const config = activeConfig.config;
+        const settings = config.settings || {};
+        
+        // Titel hinzufügen
+        const title = document.createElement('h4');
+        title.textContent = 'Kamera-Spezifische Einstellungen';
+        title.className = 'dynamic-settings-title';
+        dynamicSettings.appendChild(title);
+        
+        // Auflösung-Einstellung
+        if (settings.resolution) {
+            const { width, height } = settings.resolution;
+            addResolutionSetting(dynamicSettings, width, height);
+        }
+        
+        // FPS-Einstellung
+        if (settings.fps !== undefined) {
+            addSliderSetting(dynamicSettings, 'fps', 'Bilder pro Sekunde', settings.fps, 5, 60);
+        }
+        
+        // Kompression/Qualität
+        if (settings.compression !== undefined) {
+            addSliderSetting(dynamicSettings, 'compression', 'Bildqualität', settings.compression, 10, 100);
+        }
+        
+        // Helligkeit (falls kamera.js diese Einstellung unterstützt)
+        addSliderSetting(dynamicSettings, 'brightness', 'Helligkeit', 50, 0, 100);
+        
+        // Kontrast (falls kamera.js diese Einstellung unterstützt)
+        addSliderSetting(dynamicSettings, 'contrast', 'Kontrast', 50, 0, 100);
+        
+        // DSLR-spezifische Einstellungen, falls es sich um eine DSLR handelt
+        if (config.type === 'dslr') {
+            // ISO-Einstellung
+            if (settings.iso) {
+                addDSLRISOSetting(dynamicSettings, settings.iso);
+            }
+            
+            // Blenden-Einstellung
+            if (settings.aperture) {
+                addDSLRApertureSetting(dynamicSettings, settings.aperture);
+            }
+            
+            // Verschlusszeit-Einstellung
+            if (settings.shutter_speed) {
+                addDSLRShutterSpeedSetting(dynamicSettings, settings.shutter_speed);
+            }
+        }
+    } catch (err) {
+        error('Fehler beim Laden der dynamischen Kamera-Einstellungen:', err);
+    }
+}
+
+/**
+ * Fügt eine Auflösungs-Einstellung zum Container hinzu
+ */
+function addResolutionSetting(container, width, height) {
+    const div = document.createElement('div');
+    div.className = 'input-field';
+    
+    const label = document.createElement('label');
+    label.textContent = 'Auflösung';
+    
+    const select = document.createElement('select');
+    select.id = 'resolution_setting';
+    select.name = 'resolution_setting';
+    
+    // Gängige Auflösungen
+    const resolutions = [
+        { w: 640, h: 480, name: '640x480 (VGA)' },
+        { w: 800, h: 600, name: '800x600 (SVGA)' },
+        { w: 1280, h: 720, name: '1280x720 (HD 720p)' },
+        { w: 1920, h: 1080, name: '1920x1080 (Full HD 1080p)' },
+        { w: 2560, h: 1440, name: '2560x1440 (QHD)' },
+        { w: 3840, h: 2160, name: '3840x2160 (4K UHD)' }
+    ];
+    
+    resolutions.forEach(res => {
+        const option = document.createElement('option');
+        option.value = `${res.w}x${res.h}`;
+        option.textContent = res.name;
+        if (res.w === width && res.h === height) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
+    
+    // Event-Listener für Änderungen
+    select.addEventListener('change', async function() {
+        const [w, h] = this.value.split('x').map(Number);
+        await updateCameraSetting('resolution', { width: w, height: h });
+    });
+    
+    div.appendChild(label);
+    div.appendChild(select);
+    container.appendChild(div);
+}
+
+/**
+ * Fügt einen Schieberegler für eine Kamera-Einstellung hinzu
+ */
+function addSliderSetting(container, settingName, displayName, value, min, max) {
+    const div = document.createElement('div');
+    div.className = 'slider-container';
+    
+    const label = document.createElement('label');
+    label.textContent = displayName;
+    
+    const sliderContainer = document.createElement('div');
+    sliderContainer.className = 'slider-with-value';
+    
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.id = `${settingName}_slider`;
+    slider.name = `${settingName}_slider`;
+    slider.min = min;
+    slider.max = max;
+    slider.value = value;
+    
+    const valueDisplay = document.createElement('span');
+    valueDisplay.className = 'slider-value';
+    valueDisplay.textContent = value;
+    
+    // Event-Listener für Änderungen
+    slider.addEventListener('input', function() {
+        valueDisplay.textContent = this.value;
+    });
+    
+    slider.addEventListener('change', async function() {
+        await updateCameraSetting(settingName, Number(this.value));
+    });
+    
+    sliderContainer.appendChild(slider);
+    sliderContainer.appendChild(valueDisplay);
+    
+    div.appendChild(label);
+    div.appendChild(sliderContainer);
+    container.appendChild(div);
+}
+
+/**
+ * Fügt eine ISO-Einstellung für DSLR-Kameras hinzu
+ */
+function addDSLRISOSetting(container, currentValue) {
+    const div = document.createElement('div');
+    div.className = 'input-field';
+    
+    const label = document.createElement('label');
+    label.textContent = 'ISO';
+    
+    const select = document.createElement('select');
+    select.id = 'iso_setting';
+    select.name = 'iso_setting';
+    
+    // Gängige ISO-Werte
+    const isoValues = ['auto', '100', '200', '400', '800', '1600', '3200'];
+    
+    isoValues.forEach(iso => {
+        const option = document.createElement('option');
+        option.value = iso;
+        option.textContent = iso === 'auto' ? 'Automatisch' : iso;
+        if (iso === currentValue.toString()) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
+    
+    // Event-Listener für Änderungen
+    select.addEventListener('change', async function() {
+        await updateCameraSetting('iso', this.value);
+    });
+    
+    div.appendChild(label);
+    div.appendChild(select);
+    container.appendChild(div);
+}
+
+/**
+ * Fügt eine Blenden-Einstellung für DSLR-Kameras hinzu
+ */
+function addDSLRApertureSetting(container, currentValue) {
+    const div = document.createElement('div');
+    div.className = 'input-field';
+    
+    const label = document.createElement('label');
+    label.textContent = 'Blende';
+    
+    const select = document.createElement('select');
+    select.id = 'aperture_setting';
+    select.name = 'aperture_setting';
+    
+    // Gängige Blendenwerte
+    const apertureValues = ['auto', 'f/1.8', 'f/2.0', 'f/2.8', 'f/4.0', 'f/5.6', 'f/8.0', 'f/11', 'f/16', 'f/22'];
+    
+    apertureValues.forEach(aperture => {
+        const option = document.createElement('option');
+        option.value = aperture;
+        option.textContent = aperture === 'auto' ? 'Automatisch' : aperture;
+        if (aperture === currentValue.toString()) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
+    
+    // Event-Listener für Änderungen
+    select.addEventListener('change', async function() {
+        await updateCameraSetting('aperture', this.value);
+    });
+    
+    div.appendChild(label);
+    div.appendChild(select);
+    container.appendChild(div);
+}
+
+/**
+ * Fügt eine Verschlusszeit-Einstellung für DSLR-Kameras hinzu
+ */
+function addDSLRShutterSpeedSetting(container, currentValue) {
+    const div = document.createElement('div');
+    div.className = 'input-field';
+    
+    const label = document.createElement('label');
+    label.textContent = 'Verschlusszeit';
+    
+    const select = document.createElement('select');
+    select.id = 'shutter_speed_setting';
+    select.name = 'shutter_speed_setting';
+    
+    // Gängige Verschlusszeiten
+    const shutterValues = [
+        'auto', '1/4000', '1/2000', '1/1000', '1/500', '1/250', '1/125', 
+        '1/60', '1/30', '1/15', '1/8', '1/4', '1/2', '1'
+    ];
+    
+    shutterValues.forEach(shutter => {
+        const option = document.createElement('option');
+        option.value = shutter;
+        option.textContent = shutter === 'auto' ? 'Automatisch' : shutter + 's';
+        if (shutter === currentValue.toString()) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
+    
+    // Event-Listener für Änderungen
+    select.addEventListener('change', async function() {
+        await updateCameraSetting('shutter_speed', this.value);
+    });
+    
+    div.appendChild(label);
+    div.appendChild(select);
+    container.appendChild(div);
+}
+
+/**
+ * Aktualisiert eine Kamera-Einstellung über die API
+ */
+async function updateCameraSetting(settingName, value) {
+    try {
+        const settings = {};
+        settings[settingName] = value;
+        
+        const response = await fetch('/api/camera/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(settings)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Vorschau aktualisieren
+            updateCameraPreview();
+            return true;
+        } else {
+            showNotification(`Fehler beim Aktualisieren der ${settingName}-Einstellung`, 'error');
+            return false;
+        }
+    } catch (err) {
+        error(`Fehler beim Aktualisieren der ${settingName}-Einstellung:`, err);
+        return false;
+    }
+}
+
+/**
+ * Initialisiert die Kamera-Vorschau
+ */
+function initCameraPreview() {
+    const previewContainer = document.getElementById('cameraPreviewSettings');
+    if (!previewContainer) return;
+    
+    // Vorschau initial aktualisieren
+    updateCameraPreview();
+    
+    // Event-Handler für Aktualisieren-Button
+    const refreshBtn = document.getElementById('refreshPreviewBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', updateCameraPreview);
+    }
+    
+    // Event-Handler für Test-Bild-Button
+    const testCaptureBtn = document.getElementById('testCaptureBtn');
+    if (testCaptureBtn) {
+        testCaptureBtn.addEventListener('click', captureTestImage);
+    }
+}
+
+/**
+ * Aktualisiert die Kamera-Vorschau
+ */
+function updateCameraPreview() {
+    const previewContainer = document.getElementById('cameraPreviewSettings');
+    if (!previewContainer) return;
+    
+    // Vorschau-Container leeren
+    previewContainer.innerHTML = 'Lade Vorschau...';
+    
+    // Neues Vorschaubild erstellen
+    const img = document.createElement('img');
+    
+    // Zufallsparameter hinzufügen, um Cache zu umgehen
+    const timestamp = new Date().getTime();
+    img.src = `/api/camera/preview?t=${timestamp}`;
+    
+    img.onerror = function() {
+        previewContainer.innerHTML = 'Keine Vorschau verfügbar. Ist die Kamera verbunden?';
+    };
+    
+    img.onload = function() {
+        previewContainer.innerHTML = '';
+        previewContainer.appendChild(img);
+    };
+}
+
+/**
+ * Nimmt ein Testbild auf und zeigt es an
+ */
+async function captureTestImage() {
+    try {
+        showNotification('Testbild wird aufgenommen...', 'info');
+        
+        const response = await fetch('/api/camera/capture', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ test_image: true })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.data && data.data.filepath) {
+            // Zeige das Bild im Vorschau-Container an
+            const previewContainer = document.getElementById('cameraPreviewSettings');
+            if (previewContainer) {
+                // Container leeren
+                previewContainer.innerHTML = '';
+                
+                // Neues Bild erstellen
+                const img = document.createElement('img');
+                img.src = data.data.filepath;
+                img.className = 'test-capture-image';
+                previewContainer.appendChild(img);
+                
+                // Nach 3 Sekunden zurück zur Live-Vorschau
+                setTimeout(() => {
+                    updateCameraPreview();
+                }, 3000);
+            }
+            
+            showNotification('Testbild erfolgreich aufgenommen', 'success');
+        } else {
+            showNotification('Fehler bei der Aufnahme des Testbilds', 'error');
+        }
+    } catch (err) {
+        error('Fehler beim Aufnehmen des Testbilds:', err);
+        showNotification('Fehler beim Aufnehmen des Testbilds', 'error');
+    }
+}
 
 // =================================================================================
 // Abhängigkeiten-Verwaltung

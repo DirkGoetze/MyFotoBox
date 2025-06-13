@@ -651,3 +651,184 @@ body.dark .secondary-btn:hover {
 #fixDependenciesBtn {
     margin-top: 10px;
 }
+
+/* Kamera-Vorschau */
+.camera-preview-container {
+    margin-bottom: 2em;
+    width: 100%;
+}
+
+.camera-preview-frame {
+    width: 100%;
+    height: 225px;
+    background-color: #222;
+    border-radius: 8px;
+    margin: 8px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+    overflow: hidden;
+    position: relative;
+}
+
+.camera-preview-frame img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.preview-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.small-btn {
+    padding: 6px 12px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.small-btn:hover {
+    background-color: #2980b9;
+}
+
+.small-btn i {
+    font-size: 1em;
+}
+
+/* Dynamische Kamera-Einstellungen */
+.dynamic-settings {
+    margin: 1em 0;
+    padding: 0.5em;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.dynamic-settings-title {
+    font-size: 1.1em;
+    margin-bottom: 1em;
+    padding-bottom: 0.3em;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Slider mit Wert */
+.slider-container {
+    margin-bottom: 1.2em;
+}
+
+.slider-container label {
+    display: block;
+    margin-bottom: 0.3em;
+    font-size: 0.9em;
+    color: #444;
+}
+
+.slider-with-value {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.slider-with-value input[type="range"] {
+    flex: 1;
+    height: 5px;
+    background: #ddd;
+    outline: none;
+    transition: background 0.2s;
+    border-radius: 5px;
+}
+
+.slider-with-value input[type="range"]::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #3498db;
+    cursor: pointer;
+    -webkit-appearance: none;
+    margin-top: -5px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: background 0.2s;
+}
+
+.slider-with-value input[type="range"]::-webkit-slider-thumb:hover {
+    background: #2980b9;
+}
+
+.slider-value {
+    min-width: 30px;
+    text-align: center;
+    font-size: 0.9em;
+    color: #555;
+    padding: 3px 5px;
+    background: #f0f0f0;
+    border-radius: 3px;
+}
+
+/* Kamera-Vorschau Verbesserungen */
+.camera-preview-container {
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+.camera-preview-frame {
+    transition: all 0.3s ease;
+}
+
+.camera-preview-frame img {
+    transition: transform 0.3s ease;
+}
+
+.camera-preview-frame:hover img {
+    transform: scale(1.02);
+}
+
+/* Test-Bild Verbesserungen */
+.test-capture-image {
+    border: 3px solid #4caf50;
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+}
+
+/* Dark mode Anpassungen */
+@media (prefers-color-scheme: dark) {
+    .dynamic-settings {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+    
+    .dynamic-settings-title {
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .slider-with-value input[type="range"] {
+        background: #444;
+    }
+    
+    .slider-value {
+        background: #333;
+        color: #ccc;
+    }
+    
+    .slider-container label {
+        color: #ccc;
+    }
+    
+    .camera-preview-frame {
+        background-color: #111;
+        border: 1px solid #333;
+    }
+}
+
+/* ----------------------------------------------------------------------------
+   settings.css - Ende
+ ------------------------------------------------------------------------------ */

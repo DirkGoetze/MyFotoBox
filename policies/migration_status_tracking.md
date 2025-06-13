@@ -13,7 +13,7 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 | manage_files/filesystem | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
 | manage_logging          | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
 | manage_api              | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
-| manage_camera           | 🔴 Nicht begonnen            | 🔴 Nicht begonnen            |
+| manage_camera           | 🟡 Teilweise implementiert   | 🟡 Teilweise implementiert   |
 | ui_components           | 🟢 Vollständig implementiert | -                            |
 | utils                   | 🟢 Vollständig implementiert | 🟢 Vollständig implementiert |
 
@@ -25,7 +25,7 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 | gallery.js | 🟢 Vollständig implementiert | API-Aufrufe zu manage_filesystem verschoben |
 | settings.js | 🟢 Vollständig implementiert | Update-Funktionalität und Auth-Logik migriert |
 | install.js | 🟢 Vollständig implementiert | Auth-Logik zu manage_auth verschoben |
-| capture.js | 🔴 Nicht begonnen | Kamerasteuerung zu manage_camera verschieben |
+| capture.js | 🟢 Vollständig implementiert | Kamerasteuerung zu manage_camera verschoben |
 
 ## Statuslegende
 
@@ -99,6 +99,7 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 |-------|--------|----------------|
 | TBD | Erstellung des Dokuments | - |
 | 12.06.2025 | Statusaktualisierung - manage_auth, manage_logging vollständig migriert | Projektteam |
+| 13.06.2025 | manage_camera und capture.js implementiert | Projektteam |
 | 12.06.2025 | Update-Funktionalität implementiert | Entwicklungsteam |
 | 12.06.2025 | Datenbankverwaltung vollständig implementiert (manage_database.js und manage_database.py) | Projektteam |
 | 12.06.2025 | Einstellungsverwaltung vollständig implementiert (manage_settings.js und manage_settings.py) | Projektteam |

@@ -128,21 +128,44 @@
                         </details>
                     </div>
                 </div>
-            </fieldset>
-
-            <fieldset>
+            </fieldset>            <fieldset>
                 <legend>Kamera-Einstellungen</legend>
-                <div class="fieldset-container">                    <div class="input-field">
-                        <label for="camera_id">Kamera-Auswahl</label>
-                        <select name="camera_id" id="camera_id">
-                            <option value="system">Systemstandard verwenden</option>
-                            <!-- Wird per JavaScript mit verfügbaren Kameras gefüllt -->
+                <div class="fieldset-container">
+                    <div class="input-field">
+                        <label for="camera_config_id">Kamera-Konfiguration</label>
+                        <select name="camera_config_id" id="camera_config_id">
+                            <option value="system">Standardkonfiguration verwenden</option>
+                            <!-- Wird per JavaScript mit verfügbaren Kamera-Konfigurationen gefüllt -->
                         </select>
                         <details>
-                            <summary>Kamera-Information</summary>
-                            <div>Wählen Sie, welche Kamera zur Aufnahme verwendet wird. Bei "Systemstandard verwenden" wird die erste erkannte Kamera verwendet. Falls mehrere Kameras angeschlossen sind und eine bestimmte verwendet werden soll, wählen Sie diese aus der Liste.</div>
+                            <summary>Konfigurationshinweise</summary>
+                            <div>Wählen Sie eine vordefinierte Kamera-Konfiguration aus. Die Konfigurationen enthalten optimierte Einstellungen für verschiedene Kameratypen und Einsatzzwecke.</div>
                         </details>
-                    </div>                    <div class="input-field">
+                    </div>
+                    
+                    <!-- Kamera-Vorschau -->
+                    <div class="camera-preview-container">
+                        <label>Kamera-Vorschau</label>
+                        <div id="cameraPreviewSettings" class="camera-preview-frame">
+                            Keine Vorschau verfügbar
+                        </div>
+                        <div class="preview-actions">
+                            <button type="button" id="refreshPreviewBtn" class="small-btn">
+                                <i class="fas fa-sync"></i> Aktualisieren
+                            </button>
+                            <button type="button" id="testCaptureBtn" class="small-btn">
+                                <i class="fas fa-camera"></i> Testbild
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Dynamische Kamera-Einstellungen -->
+                    <div id="dynamicCameraSettings" class="dynamic-settings">
+                        <!-- Diese Einstellungen werden dynamisch je nach Kamera-Konfiguration generiert -->
+                    </div>
+                
+                    <!-- Standard-Kameraeinstellungen -->
+                    <div class="input-field">
                         <label for="flash_mode">Blitzlicht</label>
                         <select name="flash_mode" id="flash_mode">
                             <option value="system">Automatisch</option>
@@ -166,8 +189,17 @@
                             <div>Zeitdauer bis zur Aufnahme eines Fotos. Ein längerer Countdown gibt den Gästen mehr Zeit, sich vor der Kamera zu positionieren. Bei kleinen Kindern empfiehlt sich ein kürzerer Countdown (1-2 Sekunden).</div>
                         </details>
                     </div>
+                    
+                    <!-- Ursprüngliches Kamera-Auswahl-Dropdown (versteckt aber erhalten für Kompatibilität) -->
+                    <div class="input-field" style="display:none;">
+                        <label for="camera_id">Kamera-Auswahl</label>
+                        <select name="camera_id" id="camera_id">
+                            <option value="system">Systemstandard verwenden</option>
+                            <!-- Wird per JavaScript mit verfügbaren Kameras gefüllt -->
+                        </select>
+                    </div>
                 </div>
-            </fieldset>                <fieldset id="systemUpdateSection">
+            </fieldset><fieldset id="systemUpdateSection">
                 <legend>System-Updates</legend>
                 <div class="fieldset-container">
                     <div id="versionInfo" class="version-info">

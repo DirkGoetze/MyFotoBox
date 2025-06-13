@@ -12,8 +12,10 @@ import manage_logging
 import manage_database
 import manage_files
 import manage_api
+import manage_camera  # Neu importiert für Kamerafunktionalität
 import filesystem_api
 import update_api
+import camera_api  # Importiere die neue Kamera-API
 
 # -------------------------------------------------------------------------------
 # DB_PATH und Datenverzeichnis sicherstellen
@@ -24,6 +26,11 @@ os.makedirs(DB_DIR, exist_ok=True)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FOTOBOX_SECRET_KEY', 'fotobox_default_secret')
+
+# Registriere Blueprints für API-Module
+app.register_blueprint(camera_api.camera_api)
+app.register_blueprint(filesystem_api.filesystem_api)
+app.register_blueprint(update_api.update_api)
 
 # Cache-Kontrolle für die Testphase
 @app.after_request
@@ -541,6 +548,8 @@ def get_db_stats():
 filesystem_api.init_app(app)
 # Registriere das Update-API-Blueprint
 update_api.init_app(app)
+# Registriere das Kamera-API-Blueprint
+camera_api.init_app(app)
 
 # -------------------------------------------------------------------------------
 if __name__ == '__main__':

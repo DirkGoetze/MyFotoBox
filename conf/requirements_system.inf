@@ -19,3 +19,5 @@ libv4l-dev>=1.16.0
 # Weitere Abhängigkeiten
 libgphoto2-dev>=2.5.0
 libturbojpeg0-dev>=2.0.0
+librealsense2-dev>=2.50.0  # Für Intel RealSense Tiefensensor-Kameras (optional)
+librealsense2-utils>=2.50.0  # RealSense-Dienstprogramme (optional)
