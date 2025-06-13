@@ -116,11 +116,9 @@ sudo ./install.sh --unattended
 
 ### Verhalten im Unattended-Modus
 
-- **Alle Rückfragen werden automatisch mit Standardwerten beantwortet.**
-  - Portwahl: Standardport 80 wird verwendet (sofern frei).
+- **Alle Rückfragen werden automatisch mit Standardwerten beantwortet.**  - Portwahl: Standardport 80 wird verwendet (sofern frei).
   - NGINX-Integration: Default-Integration wird automatisch gewählt.
   - Paket-Upgrade: Upgrades werden abgelehnt (Standard: "n").
-  - NGINX-Installation: Wird automatisch bestätigt (Standard: "j").
   - Bei Konflikten (z.B. Port belegt): Abbruch mit Log-Eintrag.
 - **Keine Interaktion erforderlich:** Das Skript läuft ohne Benutzereingaben durch.
 - **Dialog- und Statusausgaben:**

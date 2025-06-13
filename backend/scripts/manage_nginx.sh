@@ -189,30 +189,17 @@ chk_nginx_installation() {
     # -----------------------------------------------------------------------
     # chk_nginx_installation
     # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob NGINX installiert ist, installiert ggf. nach (mit Rückfrage)
+    # Funktion: Prüft, ob NGINX installiert ist (wird jetzt im Hauptinstallationsskript mit den 
+    #          anderen Systempaketen installiert)
     # Parameter: $1 = Modus (text|json)
-    #            $2 = Installationsentscheidung (J/n), optional (Default: J)
-    # Rückgabe:  0 = OK, 1 = Installation abgebrochen, 2 = Installationsfehler
-    # Seiteneffekte: Installiert ggf. nginx über apt-get
+    # Rückgabe:  0 = OK, 2 = NGINX nicht gefunden
+    # Seiteneffekte: Keine Installation mehr, nur noch Prüfung
     local mode="$1"
-    local install_decision="${2:-J}"
+    
     # Prüfen, ob nginx installiert ist
     if ! command -v nginx >/dev/null 2>&1; then  # Falls nicht installiert
-        log_or_json "$mode" "prompt" "$chk_nginx_installation_txt_0002" 10
-        # Kein read mehr, Entscheidung kommt als Parameter
-        # Prüfen, ob der Nutzer die Installation abgelehnt hat
-        if [[ "$install_decision" =~ ^([nN])$ ]]; then
-            log_or_json "$mode" "error" "$chk_nginx_installation_txt_0003" 1
-            return 1
-        fi
-        # Installation von nginx durchführen mit manage_update.py, das die Abhängigkeiten aus conf/requirements_system.inf verwendet
-        python3 "$SCRIPT_DIR/../manage_update.py" --install-system-deps
-        # Nach der Installation erneut prüfen, ob nginx jetzt verfügbar ist
-        if ! command -v nginx >/dev/null 2>&1; then
-            log_or_json "$mode" "error" "$chk_nginx_installation_txt_0004" 2
-            return 2
-        fi
-        log_or_json "$mode" "success" "$chk_nginx_installation_txt_0005" 0
+        log_or_json "$mode" "error" "$chk_nginx_installation_txt_0004" 2
+        return 2
     else
         log "$chk_nginx_installation_txt_0006"
     fi
