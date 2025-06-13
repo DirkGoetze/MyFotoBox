@@ -1248,11 +1248,10 @@ def detect_cameras() -> List[Dict]:
                         'product': model,  # Verwende Modell auch als Produkt-Bezeichnung
                         'type': 'webcam'
                     }
-                    
-                    # Versuche, eine passende Konfiguration zu finden
+                      # Versuche, eine passende Konfiguration zu finden
                     config_id = detect_camera_model(camera_info)
                     camera_config = None
-                    camera_name = f"Webcam {camera_id}"
+                    camera_name = f"Webcam {i}"
                     
                     # Wenn eine passende Konfiguration gefunden wurde
                     if config_id:

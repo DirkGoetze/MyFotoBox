@@ -33,6 +33,7 @@ Diese Policy definiert Regeln für den Umgang mit Backup-Dateien, temporären Da
 ### Bei Änderungen an bestehenden Dateien
 
 1. **Backup erstellen**: Vor umfangreichen Änderungen an einer bestehenden Datei:
+
    ```bash
    cp path/to/file.js backup/path/to/file.js.bak-$(date +%Y%m%d)
    ```
@@ -42,11 +43,13 @@ Diese Policy definiert Regeln für den Umgang mit Backup-Dateien, temporären Da
 ### Bei Erstellung neuer Versionen
 
 1. **Temporäre Version**: Während der Entwicklung einer neuen Version einer Datei, diese als `.new` speichern.
+
    ```bash
    cp path/to/new_version.js path/to/file.js.new
    ```
 
 2. **Nach abgeschlossener Entwicklung**: Die erfolgreiche `.new`-Version übernimmt den Namen der Original-Datei, die Original-Datei wird als `.bak` in den `backup`-Ordner verschoben.
+
    ```bash
    mv path/to/original.js backup/path/to/original.js.bak-$(date +%Y%m%d)
    mv path/to/file.js.new path/to/original.js

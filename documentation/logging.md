@@ -85,6 +85,7 @@ Die Log-Dateien werden im Verzeichnis `/opt/fotobox/log` oder alternativ in `/va
 ### Log-Rotation
 
 Die Log-Dateien werden täglich rotiert und komprimiert:
+
 - Aktuelle Logs: `YYYY-MM-DD_fotobox.log`
 - Ältere Logs: `YYYY-MM-DD_fotobox.log.1`, `YYYY-MM-DD_fotobox.log.2.gz`, usw.
 
@@ -93,6 +94,7 @@ Es werden maximal 5 rotierte Log-Dateien aufbewahrt.
 ### Datenbank-Logs
 
 Alle Logs werden auch in einer SQLite-Datenbank gespeichert:
+
 - Pfad: `/opt/fotobox/data/fotobox_logs.db`
 - Tabelle: `logs`
 
@@ -101,6 +103,7 @@ Alle Logs werden auch in einer SQLite-Datenbank gespeichert:
 Für IT-Personal stehen mehrere Möglichkeiten zur Analyse der Logs zur Verfügung:
 
 1. **Direkte Dateianalyse**:
+
    ```bash
    # Aktuelle Logs ansehen
    tail -f /opt/fotobox/log/$(date +%Y-%m-%d)_fotobox.log
@@ -110,6 +113,7 @@ Für IT-Personal stehen mehrere Möglichkeiten zur Analyse der Logs zur Verfügu
    ```
 
 2. **Datenbank-Abfrage**:
+
    ```bash
    # SQLite-Konsole öffnen
    sqlite3 /opt/fotobox/data/fotobox_logs.db

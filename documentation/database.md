@@ -10,6 +10,7 @@ Das Datenbank-Management-System von Fotobox2 besteht aus zwei Hauptkomponenten:
 2. **Frontend**: `manage_database.js` - JavaScript-Schnittstelle zur Kommunikation mit dem Backend
 
 Das System verwendet eine SQLite-Datenbank und bietet Funktionen für:
+
 - Initialisierung und Migration der Datenbank
 - CRUD-Operationen (Create, Read, Update, Delete)
 - Einstellungsverwaltung
@@ -77,7 +78,7 @@ Das Frontend-Modul bietet eine asynchrone Schnittstelle zum Backend:
 - `update(table, data, condition, params = null)`: Aktualisiert Datensätze
 - `remove(table, condition, params = null)`: Entfernt Datensätze
 
-### Einstellungsverwaltung
+### Frontend-Einstellungsverwaltung
 
 - `getSetting(key, defaultValue = null)`: Holt eine Einstellung mit Fallback-Wert
 - `setSetting(key, value)`: Speichert eine Einstellung
