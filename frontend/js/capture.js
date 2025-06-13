@@ -13,6 +13,7 @@
 import * as camera from './manage_camera.js';
 import * as logging from './manage_logging.js';
 import * as utils from './utils.js';
+import { getSetting } from './manage_database.js';
 
 // DOM-Elemente
 let cameraPreviewElement;

@@ -42,23 +42,23 @@ Diese Dateien enthalten ausschließlich Code für DOM-Manipulation, Event-Handli
 
 Für gemeinsame Funktionalitäten, die auf mehreren Seiten verwendet werden, gibt es gemeinsam genutzte Module:
 
-| Funktion                     | Gemeinsames Modul      |
-|------------------------------|------------------------|
-| UI-Komponenten               | `ui_components.js`     |
-| Hilfsfunktionen              | `utils.js`             |
-| Konstanten                   | `constants.js`         |
-| Mehrsprachigkeit             | `i18n.js`              |
-| Themes/Darstellung           | `theming.js`           |
+| Funktion                     | Gemeinsames Modul      | Status                      |
+|------------------------------|------------------------|----------------------------|
+| UI-Komponenten               | `ui_components.js`     | 🟢 Vollständig implementiert |
+| Hilfsfunktionen              | `utils.js`             | 🟢 Vollständig implementiert |
+| Konstanten                   | `constants.js`         | 🟢 Vollständig implementiert |
+| Mehrsprachigkeit             | `i18n.js`              | 🟢 Vollständig implementiert |
+| Themes/Darstellung           | `theming.js`           | 🟢 Vollständig implementiert |
 
 ## Migration-Strategie
 
 Die Migration des bestehenden Codes wird schrittweise erfolgen:
 
-1. **Identifikation**: Bestehenden Code analysieren und kategorisieren
-2. **Refactoring-Plan**: Detaillierten Plan für jedes Modul erstellen
-3. **Migration**: Schrittweise Überführung, beginnend mit den am wenigsten abhängigen Modulen
-4. **Tests**: Prüfung der migrierten Funktionalität
-5. **Dokumentation**: Aktualisieren der Dokumentation für jeden abgeschlossenen Migrationsschritt
+1. **Identifikation**: ✅ Bestehenden Code analysieren und kategorisieren
+2. **Refactoring-Plan**: ✅ Detaillierten Plan für jedes Modul erstellen
+3. **Migration**: ✅ Schrittweise Überführung, beginnend mit den am wenigsten abhängigen Modulen
+4. **Tests**: ✅ Prüfung der migrierten Funktionalität
+5. **Dokumentation**: ⏳ Aktualisieren der Dokumentation für jeden abgeschlossenen Migrationsschritt
 
 ## Vorteile
 

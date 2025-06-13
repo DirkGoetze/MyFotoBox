@@ -55,7 +55,7 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 - [x] Doppelte Update-Funktionalität entfernen
 - [x] Doppelte Auth-Funktionalität entfernen
 - [x] Einstellungsfunktionalität zu manage_settings verschieben
-- [ ] Tests für neue Struktur schreiben
+- [x] Tests für neue Struktur schreiben
 
 ### Phase 4: UI-Komponenten extrahieren
 
@@ -66,6 +66,7 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 
 - [x] Code-Dokumentation für implementierte Module aktualisieren
 - [x] Logging-Dokumentation erstellen
+- [x] Test-Dokumentation erstellen
 - [ ] Entwicklerhandbuch erweitern
 - [ ] Abschlussprüfung und Konsistenzcheck
 
@@ -74,8 +75,9 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 1. ✅ Implementierung von manage_settings.js und manage_settings.py - **Abgeschlossen**
 2. ✅ Migration der Dateisystem-Operationen zu manage_filesystem.js/py - **Abgeschlossen**
 3. ✅ Implementierung von utils.js und utils.py für gemeinsame Hilfsfunktionen - **Abgeschlossen**
-4. Integration der manage_database.js-Funktionalität in Frontend-Komponenten
-5. Schreiben von Tests für die neue Modulstruktur
+4. ✅ Implementierung von constants.js, i18n.js und theming.js - **Abgeschlossen**
+5. ✅ Schreiben von Tests für die neue Modulstruktur - **Abgeschlossen**
+6. Integration der manage_database.js-Funktionalität in Frontend-Komponenten
 
 ## Offene Fragen
 
@@ -101,6 +103,11 @@ Dieses Dokument dient zur Verfolgung des Fortschritts bei der Umstrukturierung d
 | 12.06.2025 | Statusaktualisierung - manage_auth, manage_logging vollständig migriert | Projektteam |
 | 13.06.2025 | manage_camera und capture.js implementiert | Projektteam |
 | 13.06.2025 | Integration der Capture-Seite mit dem Kameramodul vervollständigt | Entwicklungsteam |
+| 13.06.2025 | Abhängigkeiten in requirements_python.inf und requirements_system.inf aktualisiert | Entwicklungsteam |
+| 13.06.2025 | Implementierung der gemeinsamen Frontend-Module constants.js, i18n.js und theming.js | Entwicklungsteam |
+| 13.06.2025 | Tests für manage_auth.py implementiert | Entwicklungsteam |
+| 13.06.2025 | Tests für constants.js, i18n.js und theming.js implementiert | Entwicklungsteam |
+| 13.06.2025 | Test-Dokumentation erstellt | Entwicklungsteam |
 | 12.06.2025 | Update-Funktionalität implementiert | Entwicklungsteam |
 | 12.06.2025 | Datenbankverwaltung vollständig implementiert (manage_database.js und manage_database.py) | Projektteam |
 | 12.06.2025 | Einstellungsverwaltung vollständig implementiert (manage_settings.js und manage_settings.py) | Projektteam |

@@ -173,15 +173,14 @@ export async function updateSingleSetting(key, value) {
             return false;
         }
         
-        // Wir könnten hier theoretisch setSetting aus manage_database.js verwenden,
-        // aber für die Konsistenz verwenden wir den gleichen API-Endpunkt wie für updateSettings
-        const response = await apiPost('/api/settings', settingObj);
+        // Verwenden setSetting aus manage_database.js für die direkte Datenbankinteraktion
+        const response = await setSetting(key, value);
         
-        if (response && response.status === 'ok') {
+        if (response && response.success) {
             log(`Einstellung ${key} erfolgreich aktualisiert`);
             return true;
         } else {
-            error(`Fehler beim Aktualisieren der Einstellung ${key}`, response);
+            error(`Fehler beim Aktualisieren der Einstellung ${key}`, response.error || 'Unbekannter Fehler');
             return false;
         }
     } catch (err) {

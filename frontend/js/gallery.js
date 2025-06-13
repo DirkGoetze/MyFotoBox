@@ -7,6 +7,7 @@
 // Importiere Systemmodule
 import { getImageList, deleteImage } from './manage_filesystem.js';
 import { log, error } from './manage_logging.js';
+import { getSetting } from './manage_database.js';
 
 // =================================================================================
 // Galerie-Funktionalität
@@ -52,28 +53,24 @@ function initGalleryView() {
  */
 async function loadGallerySettings() {
     try {
-        const response = await fetch('/api/settings');
-        if (!response.ok) throw new Error('Fehler beim Laden der Einstellungen');
-        
-        const settings = await response.json();
-        
-        // Eventname setzen
-        if (settings.event_name && document.getElementById('headerTitle')) {
-            document.getElementById('headerTitle').textContent = settings.event_name;
+        // Event-Name direkt aus der Datenbank laden
+        const eventName = await getSetting('event_name', 'Fotobox Event');
+        if (eventName && document.getElementById('headerTitle')) {
+            document.getElementById('headerTitle').textContent = eventName;
         }
         
-        // Gallery-Timeout setzen (wenn vorhanden, sonst Standard)
-        if (settings.gallery_timeout) {
+        // Gallery-Timeout direkt aus der Datenbank laden
+        const galleryTimeout = await getSetting('gallery_timeout', 60);
+        if (galleryTimeout) {
             // Wert in Sekunden aus Einstellungen mal 1000 für Millisekunden
-            galleryTimeoutMs = parseInt(settings.gallery_timeout) * 1000 || 60000;
-            console.log(`Gallery-Timeout gesetzt auf ${settings.gallery_timeout} Sekunden (${galleryTimeoutMs}ms)`);
+            galleryTimeoutMs = parseInt(galleryTimeout) * 1000 || 60000;
+            log(`Gallery-Timeout gesetzt auf ${galleryTimeout} Sekunden (${galleryTimeoutMs}ms)`);
         }
         
         // Initialer Timeout starten
         resetGalleryTimeout();
-        
-    } catch (error) {
-        console.error('Fehler beim Laden der Galerieeinstellungen:', error);
+    } catch (err) {
+        error('Fehler beim Laden der Galerieeinstellungen:', err.message);
     }
 }
 

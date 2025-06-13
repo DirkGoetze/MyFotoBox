@@ -5,6 +5,7 @@
 nginx>=1.18.0
 python3>=3.8
 python3-pip>=20.0
+python3-venv>=3.8   # Für virtuelle Python-Umgebungen
 sqlite3>=3.31
 
 # Bildverarbeitung
@@ -21,3 +22,7 @@ libgphoto2-dev>=2.5.0
 libturbojpeg0-dev>=2.0.0
 librealsense2-dev>=2.50.0  # Für Intel RealSense Tiefensensor-Kameras (optional)
 librealsense2-utils>=2.50.0  # RealSense-Dienstprogramme (optional)
+
+# Entwicklungstools
+build-essential>=12.8  # Für Kompilierung von Python-Modulen
+git>=2.25.0            # Für Versionskontrolle und Updates

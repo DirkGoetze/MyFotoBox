@@ -3,6 +3,8 @@
 
 # Web-Framework und Routing
 Flask>=2.0.0
+Flask-CORS>=3.0.10  # Für Cross-Origin Resource Sharing
+requests>=2.26.0    # Für HTTP-Anfragen von Python aus
 
 # Sicherheit und Authentifizierung
 bcrypt>=3.2.0

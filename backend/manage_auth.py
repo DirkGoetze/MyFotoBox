@@ -8,7 +8,8 @@
 import os
 import sqlite3
 import bcrypt
-from flask import session
+from flask import session, request, redirect, jsonify
+from functools import wraps
 
 # Pfad zur Datenbank
 DB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
@@ -121,6 +122,8 @@ def login(password):
     """
     if validate_password(password):
         session['logged_in'] = True
+        session['role'] = 'admin'  # In der einfachen Implementierung gibt es nur Admin-Nutzer
+        session['user_id'] = 'admin'
         return True
     return False
 
@@ -133,11 +136,13 @@ def logout():
     """
     if 'logged_in' in session:
         session.pop('logged_in')
+        session.pop('role', None)
+        session.pop('user_id', None)
     return True
 
 def login_required(f):
     """
-    Decorator für passwortgeschützte Routen
+    Decorator für passwortgeschützte Routen, die HTML-Seiten zurückgeben
     
     Args:
         f: Die zu schützende Funktion
@@ -145,12 +150,97 @@ def login_required(f):
     Returns:
         function: Die dekorierte Funktion
     """
-    from functools import wraps
-    from flask import redirect, url_for
-    
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get('logged_in'):
-            return redirect(url_for('login'))
+            return redirect('/login')
         return f(*args, **kwargs)
     return decorated
+
+def require_auth(f):
+    """
+    Decorator für passwortgeschützte API-Routen, die JSON zurückgeben
+    
+    Args:
+        f: Die zu schützende Funktion
+        
+    Returns:
+        function: Die dekorierte Funktion
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('logged_in'):
+            return jsonify({'success': False, 'error': 'Authentifizierung erforderlich'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+def is_admin():
+    """
+    Prüft, ob der aktuelle Benutzer Admin-Rechte hat
+    
+    Returns:
+        bool: True wenn der Benutzer Admin ist, sonst False
+    """
+    return session.get('role') == 'admin'
+
+def hash_password(password):
+    """
+    Erstellt einen Hash für das gegebene Passwort
+    
+    Args:
+        password (str): Das zu hashende Passwort
+        
+    Returns:
+        str: Der Hash des Passworts
+    """
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+def verify_password(password, hashed):
+    """
+    Überprüft, ob das gegebene Passwort zum Hash passt
+    
+    Args:
+        password (str): Das zu überprüfende Passwort
+        hashed (str): Der gespeicherte Hash
+        
+    Returns:
+        bool: True wenn das Passwort zum Hash passt, sonst False
+    """
+    try:
+        return bcrypt.checkpw(password.encode(), hashed.encode())
+    except Exception:
+        return False
+
+def check_credentials(username, password):
+    """
+    Überprüft Benutzername und Passwort gegen die Datenbank
+    
+    Args:
+        username (str): Der zu überprüfende Benutzername
+        password (str): Das zu überprüfende Passwort
+        
+    Returns:
+        dict: Ergebnis der Überprüfung mit Status und ggf. Benutzerrolle
+    """
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Prüfen, ob Benutzer existiert
+        cursor.execute("SELECT password, role FROM users WHERE username = ?", (username,))
+        result = cursor.fetchone()
+        conn.close()
+        
+        if not result:
+            return {"success": False, "error": "Benutzer nicht gefunden"}
+        
+        stored_password, role = result
+        
+        # Passwort überprüfen
+        if verify_password(password, stored_password):
+            return {"success": True, "role": role, "user_id": username}
+        else:
+            return {"success": False, "error": "Falsches Passwort"}
+            
+    except Exception as e:
+        return {"success": False, "error": str(e)}
