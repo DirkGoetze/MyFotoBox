@@ -68,13 +68,13 @@ Gemäß unserer Projekt-Policy dürfen neue Abhängigkeiten nicht direkt install
 
    ```sh
    cd /opt/fotobox
-   sudo chmod +x install_fotobox.sh
+   sudo chmod +x install.sh
    ```
 
 3. Installationsskript als root/Admin ausführen:
 
    ```sh
-   sudo ./install_fotobox.sh
+   sudo ./install.sh
    ```
 
 4. Weitere Hinweise siehe [INSTALLATION](documentation/installation.md)

@@ -7,6 +7,26 @@ Diese Anleitung beschreibt Schritt für Schritt, wie Sie die Fotobox-Software au
 - Ein Ubuntu- oder Debian-basiertes System (z.B. Raspberry Pi OS, Ubuntu Server)
 - Root-Rechte (Sie müssen das Skript als Administrator ausführen)
 - Internetverbindung
+- Git (zur Versionskontrolle)
+
+### Überprüfen, ob Git installiert ist
+
+Bevor Sie beginnen, können Sie prüfen, ob Git bereits auf Ihrem System installiert ist:
+
+```bash
+git --version
+```
+
+Wenn Sie eine Ausgabe wie `git version 2.xx.x` sehen, ist Git bereits installiert und Sie können fortfahren. Andernfalls sehen Sie eine Fehlermeldung wie `command not found`.
+
+### Git installieren (falls nicht vorhanden)
+
+Wenn Git noch nicht installiert ist, können Sie es mit folgendem Befehl installieren:
+
+```bash
+sudo apt update
+sudo apt install -y git
+```
 
 ## Vorbereitung
 
@@ -17,14 +37,27 @@ git clone https://github.com/DirkGoetze/fotobox2.git
 cd fotobox2
 ```
 
-**Hinweis:** Das Installationsskript enthält keine Klon-Logik mehr. Sie müssen das Repository vorab selbst klonen und das Skript im Projektverzeichnis ausführen.
+### Alternative: Download als ZIP-Datei
+
+Falls Sie Probleme mit Git haben, können Sie das Repository auch als ZIP-Datei herunterladen:
+
+```bash
+# ZIP-Datei von GitHub herunterladen
+wget https://github.com/DirkGoetze/fotobox2/archive/refs/heads/main.zip
+# Entpacken
+unzip main.zip
+# In das entpackte Verzeichnis wechseln
+cd fotobox2-main
+```
+
+**Hinweis:** Das Installationsskript enthält keine Klon-Logik mehr. Sie müssen das Repository vorab selbst klonen (oder herunterladen) und das Skript im Projektverzeichnis ausführen.
 
 ## Installation starten
 
 Führen Sie das Installationsskript als root im geklonten Projektverzeichnis aus:
 
 ```bash
-sudo ./install_fotobox.sh --install
+sudo ./install.sh --install
 ```
 
 Das Skript prüft, ob alle notwendigen Unterverzeichnisse und Dateien vorhanden sind. Fehlen wichtige Komponenten (z.B. `backend/`, `backend/scripts/`, `conf/requirements_python.inf`), bricht das Skript mit einer Fehlermeldung ab.
@@ -48,7 +81,7 @@ Das Skript übernimmt folgende Aufgaben (jeder Schritt wird im Terminal erklärt
 ## Beispiel für den Aufruf
 
 ```bash
-sudo ./install_fotobox.sh --install
+sudo ./install.sh --install
 ```
 
 ## Hinweise
@@ -78,7 +111,7 @@ Die Fotobox-Installation unterstützt einen vollautomatischen, interaktiven und 
 Der Modus wird durch das Flag `--unattended` (oder Synonyme wie `-u`, `--headless`, `headless`, `-q`) beim Aufruf des Installationsskripts aktiviert:
 
 ```bash
-sudo ./install_fotobox.sh --unattended
+sudo ./install.sh --unattended
 ```
 
 ### Verhalten im Unattended-Modus
@@ -104,7 +137,7 @@ sudo ./install_fotobox.sh --unattended
 ### Beispiel für eine Headless-Installation
 
 ```bash
-sudo ./install_fotobox.sh --unattended
+sudo ./install.sh --unattended
 ```
 
 Nach Abschluss der Installation erscheint z.B.:
