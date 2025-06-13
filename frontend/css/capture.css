@@ -286,33 +286,42 @@
     font-size: 18px;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-    .camera-preview {
-        height: 300px;
+/* Konfigurationsauswahl Styling */
+.config-selection {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.config-selection h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 15px;
+    color: #333;
+}
+
+#advancedCameraSettings h4 {
+    margin-top: 12px;
+    margin-bottom: 10px;
+    font-size: 15px;
+    color: #444;
+}
+
+/* Smartphone-Optimierung */
+@media (max-width: 480px) {
+    .settings-content {
+        width: 220px;
+        max-height: 80vh;
+        overflow-y: auto;
     }
     
-    #eventName {
-        font-size: 20px;
+    .camera-settings-panel {
+        top: 5px;
+        right: 5px;
     }
     
-    .take-photo-btn {
-        padding: 12px 24px;
-        font-size: 16px;
-    }
-    
-    .countdown {
-        font-size: 6rem;
-        width: 150px;
-        height: 150px;
-    }
-    
-    .result-image {
-        max-height: 50vh;
-    }
-    
-    .action-btn {
-        padding: 10px 20px;
-        font-size: 14px;
+    .settings-toggle-btn {
+        width: 36px;
+        height: 36px;
     }
 }

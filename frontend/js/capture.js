@@ -316,12 +316,14 @@ async function initializeCamera() {
                 // Vorschau starten
                 camera.startLivePreview('cameraPreview');
                 logging.log('Kamera verbunden und Vorschau gestartet', 'capture');
-                
-                // Button aktivieren
+                  // Button aktivieren
                 takePhotoButton.disabled = false;
                 
                 // Erweiterte Kameraeinstellungen laden
                 await loadAdvancedCameraSettings();
+                
+                // Verfügbare Kamera-Konfigurationen laden
+                await loadCameraConfigurations();
                 
                 // Gespeicherten Effekt anwenden (falls vorhanden)
                 const storedEffect = localStorage.getItem('photoEffect');
