@@ -5,6 +5,7 @@
  */
 
 import { EVENTS } from './constants.js';
+import { getSetting, setSetting } from './manage_database.js';
 
 /**
  * Speichert die aktuell geladenen Übersetzungen
@@ -33,13 +34,18 @@ let _fallbackLanguage = 'en';
  * @param {string} defaultLanguage - Standardsprache, die verwendet wird, wenn keine gespeichert ist
  * @param {string} [fallbackLanguage='en'] - Fallback-Sprache für fehlende Übersetzungen
  */
-export function init(translations, defaultLanguage, fallbackLanguage = 'en') {
+export async function init(translations, defaultLanguage, fallbackLanguage = 'en') {
     _translations = translations || {};
     _fallbackLanguage = fallbackLanguage;
     
-    // Versuche, die gespeicherte Sprache zu laden
-    const storedLanguage = localStorage.getItem('language');
-    _currentLanguage = storedLanguage || defaultLanguage;
+    // Versuche, die gespeicherte Sprache aus der Datenbank zu laden
+    try {
+        const storedLanguage = await getSetting('language', null);
+        _currentLanguage = storedLanguage || defaultLanguage;
+    } catch (error) {
+        console.error('Fehler beim Laden der Spracheinstellung:', error);
+        _currentLanguage = defaultLanguage;
+    }
     
     // HTML-Element mit Sprache kennzeichnen
     document.documentElement.lang = _currentLanguage;
@@ -51,15 +57,19 @@ export function init(translations, defaultLanguage, fallbackLanguage = 'en') {
 /**
  * Ändert die aktuelle Sprache und speichert die Präferenz
  * @param {string} language - Der Sprachcode (z.B. 'de', 'en')
- * @returns {boolean} True, wenn die Sprache erfolgreich geändert wurde
+ * @returns {Promise<boolean>} Promise, das zu true aufgelöst wird, wenn die Sprache erfolgreich geändert wurde
  */
-export function setLanguage(language) {
+export async function setLanguage(language) {
     if (language === _currentLanguage) return true;
     
     _currentLanguage = language;
     
-    // Speichere die Sprachpräferenz im localStorage
-    localStorage.setItem('language', language);
+    // Speichere die Sprachpräferenz in der Datenbank
+    try {
+        await setSetting('language', language);
+    } catch (error) {
+        console.error('Fehler beim Speichern der Spracheinstellung:', error);
+    }
     
     // HTML-Element mit Sprache kennzeichnen
     document.documentElement.lang = language;

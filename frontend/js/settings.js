@@ -16,6 +16,7 @@ import { loadSettings, loadSingleSetting, updateSettings, updateSingleSetting, v
 
 // Import der Kamera-Module
 import * as camera from './manage_camera.js';
+import { getSetting, setSetting } from './manage_database.js';
 
 // =================================================================================
 // Login-Funktionalität
@@ -92,14 +93,15 @@ async function loadSettingsAndUpdateUI() {
         }
           // Kameraliste laden und UI aktualisieren
         await loadCameraList();
-        
-        // Kamera-Konfiguration setzen
+          // Kamera-Konfiguration setzen
         if (document.getElementById('camera_config_id') && settings.camera_config_id) {
             document.getElementById('camera_config_id').value = settings.camera_config_id;
             
-            // Wenn eine Konfiguration gesetzt ist, auch im localStorage speichern
+            // Wenn eine Konfiguration gesetzt ist, auch in der Datenbank speichern
             if (settings.camera_config_id !== 'system') {
-                localStorage.setItem('camera_config_id', settings.camera_config_id);
+                setSetting('camera_config_id', settings.camera_config_id).catch(err => {
+                    error('Fehler beim Speichern der Kamera-Konfiguration', err);
+                });
             }
         }
         
@@ -264,10 +266,9 @@ async function loadCameraList() {
  */
 async function handleCameraConfigChange(event) {
     const configId = event.target.value;
-    
-    try {
-        // Speichere die Konfiguration im localStorage für andere Seiten
-        localStorage.setItem('camera_config_id', configId);
+      try {
+        // Speichere die Konfiguration in der Datenbank für andere Seiten
+        await setSetting('camera_config_id', configId);
         
         // Nutze die Kamera-Modul-Funktion, um die Konfiguration zu ändern
         const success = await camera.setActiveConfig(configId);

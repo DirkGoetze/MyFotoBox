@@ -13,7 +13,7 @@
 import * as camera from './manage_camera.js';
 import * as logging from './manage_logging.js';
 import * as utils from './utils.js';
-import { getSetting } from './manage_database.js';
+import { getSetting, setSetting } from './manage_database.js';
 
 // DOM-Elemente
 let cameraPreviewElement;
@@ -180,41 +180,50 @@ function registerEventListeners() {
             settingsToggleBtn.classList.toggle('active', !isVisible);
         });
     }
-    
-    // Countdown-Einstellung
+      // Countdown-Einstellung
     const countdownSetting = document.getElementById('countdownSetting');
     if (countdownSetting) {
         // Gespeicherte Einstellung laden
-        const storedDuration = localStorage.getItem('countdownDuration');
-        if (storedDuration) {
-            countdownSetting.value = storedDuration;
-        }
+        getSetting('countdownDuration', '3').then(storedDuration => {
+            if (storedDuration) {
+                countdownSetting.value = storedDuration;
+                countdownDuration = parseInt(storedDuration);
+            }
+        }).catch(error => {
+            logging.error('Fehler beim Laden der Countdown-Einstellung', error);
+        });
         
         // Änderungen speichern
         countdownSetting.addEventListener('change', () => {
             countdownDuration = parseInt(countdownSetting.value);
-            localStorage.setItem('countdownDuration', countdownDuration.toString());
+            setSetting('countdownDuration', countdownDuration.toString()).catch(error => {
+                logging.error('Fehler beim Speichern der Countdown-Einstellung', error);
+            });
         });
     }
-    
-    // Effekt-Einstellung
+      // Effekt-Einstellung
     const effectSetting = document.getElementById('effectSetting');
     if (effectSetting) {
         // Gespeicherte Einstellung laden
-        const storedEffect = localStorage.getItem('photoEffect');
-        if (storedEffect) {
-            effectSetting.value = storedEffect;
-        }
+        getSetting('photoEffect', 'none').then(storedEffect => {
+            if (storedEffect) {
+                effectSetting.value = storedEffect;
+                applyPhotoEffect(storedEffect);
+            }
+        }).catch(error => {
+            logging.error('Fehler beim Laden der Effekt-Einstellung', error);
+            // Bei Fehler Standardeinstellung anwenden
+            applyPhotoEffect(effectSetting.value);
+        });
         
         // Änderungen speichern
         effectSetting.addEventListener('change', () => {
             const selectedEffect = effectSetting.value;
-            localStorage.setItem('photoEffect', selectedEffect);
+            setSetting('photoEffect', selectedEffect).catch(error => {
+                logging.error('Fehler beim Speichern der Effekt-Einstellung', error);
+            });
             applyPhotoEffect(selectedEffect);
         });
-        
-        // Initial anwenden
-        applyPhotoEffect(effectSetting.value);
     }
     
     // Neues Foto Button
@@ -270,9 +279,8 @@ async function initializeCamera() {
         statusElement.className = 'camera-status';
         statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Kamera wird initialisiert...';
         cameraPreviewElement.appendChild(statusElement);
-        
-        // Überprüfe, ob eine Kamera-Konfiguration in den Einstellungen gespeichert ist
-        let configId = localStorage.getItem('camera_config_id');
+          // Überprüfe, ob eine Kamera-Konfiguration in den Einstellungen gespeichert ist
+        let configId = await getSetting('camera_config_id', 'system');
         
         if (configId && configId !== 'system') {
             // Versuche, die gespeicherte Konfiguration zu laden
@@ -325,9 +333,8 @@ async function initializeCamera() {
                 
                 // Verfügbare Kamera-Konfigurationen laden
                 await loadCameraConfigurations();
-                
-                // Gespeicherten Effekt anwenden (falls vorhanden)
-                const storedEffect = localStorage.getItem('photoEffect');
+                  // Gespeicherten Effekt anwenden (falls vorhanden)
+                const storedEffect = await getSetting('photoEffect', null);
                 if (storedEffect) {
                     applyPhotoEffect(storedEffect);
                 }
@@ -385,12 +392,12 @@ function showCameraError(message) {
 /**
  * Behandelt den Klick auf den "Foto aufnehmen"-Button
  */
-function handleTakePhoto() {
+async function handleTakePhoto() {
     if (isCountdownRunning) return;
     
     // Countdown-Dauer aus Einstellungen laden oder Standardwert verwenden
-    const storedDuration = localStorage.getItem('countdownDuration');
-    countdownDuration = storedDuration ? parseInt(storedDuration) : 3;
+    const storedDuration = await getSetting('countdownDuration', '3');
+    countdownDuration = parseInt(storedDuration);
     
     if (countdownDuration > 0) {
         // Mit Countdown fotografieren
@@ -486,13 +493,14 @@ async function takePicture() {
 }
 
 /**
- * Speichert das Foto in der lokalen Fotohistorie
+ * Speichert das Foto in der Fotohistorie in der Datenbank
  * @param {Object} photoData - Daten des aufgenommenen Fotos
  */
-function saveToPhotoHistory(photoData) {
+async function saveToPhotoHistory(photoData) {
     try {
         // Hole bestehende Historie oder erstelle neue
-        let photoHistory = JSON.parse(localStorage.getItem('photoHistory') || '[]');
+        const storedHistory = await getSetting('photoHistory', '[]');
+        let photoHistory = JSON.parse(storedHistory);
         
         // Füge neues Foto hinzu (maximal 10 Einträge)
         photoHistory.unshift({
@@ -506,8 +514,8 @@ function saveToPhotoHistory(photoData) {
             photoHistory = photoHistory.slice(0, 10);
         }
         
-        // Speichere Historie
-        localStorage.setItem('photoHistory', JSON.stringify(photoHistory));
+        // Speichere Historie in der Datenbank
+        await setSetting('photoHistory', JSON.stringify(photoHistory));
     } catch (error) {
         logging.error(`Fehler beim Speichern der Fotohistorie: ${error.message}`, 'capture');
     }
@@ -556,11 +564,11 @@ function showCaptureView() {
 }
 
 /**
- * Lädt den Ereignisnamen aus den lokalen Einstellungen und zeigt ihn an
+ * Lädt den Ereignisnamen aus der Datenbank und zeigt ihn an
  */
-function loadEventName() {
+async function loadEventName() {
     try {
-        const eventName = localStorage.getItem('eventName') || '';
+        const eventName = await getSetting('eventName', '');
         
         if (eventNameElement && eventName) {
             eventNameElement.textContent = eventName;
@@ -716,15 +724,14 @@ async function loadCameraConfigurations() {
             option.textContent = config.name;
             configSelect.appendChild(option);
         });
-        
-        // Aktuelle Auswahl setzen
-        const currentConfigId = localStorage.getItem('camera_config_id') || 'system';
+          // Aktuelle Auswahl setzen
+        const currentConfigId = await getSetting('camera_config_id', 'system');
         configSelect.value = currentConfigId;
         
         // Event-Listener für Änderungen hinzufügen
         configSelect.addEventListener('change', async () => {
             const selectedConfigId = configSelect.value;
-            localStorage.setItem('camera_config_id', selectedConfigId);
+            await setSetting('camera_config_id', selectedConfigId);
             
             // Statusmeldung anzeigen
             const statusElement = document.createElement('div');

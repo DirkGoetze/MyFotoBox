@@ -1,12 +1,11 @@
 """
-API-Endpunkte für System-Updates und Abhängigkeitsprüfung in Fotobox2
+api_update.py - API-Endpunkte für Update-Operationen in Fotobox2
 
-Dieses Modul stellt die Flask-API-Endpunkte für System-Updates und 
-Abhängigkeitsprüfung bereit. Es fügt die Routen zur Flask-App hinzu und verarbeitet
-die API-Anfragen, indem es die Funktionen aus dem manage_update-Modul aufruft.
+Dieses Modul stellt die Flask-API-Endpunkte für Update-Operationen bereit und
+dient als Schnittstelle zwischen dem Frontend und dem manage_update-Modul.
 """
 
-from flask import request, jsonify, current_app, Blueprint
+from flask import Blueprint, request, jsonify, current_app
 import os
 import logging
 import sys
@@ -21,9 +20,13 @@ import manage_auth
 logger = logging.getLogger(__name__)
 
 # Blueprint für Update-API-Endpunkte erstellen
-update_api = Blueprint('update_api', __name__)
+api_update = Blueprint('api_update', __name__)
 
-@update_api.route('/api/update', methods=['GET'])
+def init_app(app):
+    """Initialisiert die Update-API mit der Flask-Anwendung"""
+    app.register_blueprint(api_update)
+
+@api_update.route('/api/update', methods=['GET'])
 def api_check_updates():
     """API-Endpunkt zum Prüfen auf Updates"""
     try:
@@ -48,7 +51,7 @@ def api_check_updates():
             'local_version': manage_update.get_local_version() or "unbekannt"
         }), 500
 
-@update_api.route('/api/update/dependencies', methods=['GET'])
+@api_update.route('/api/update/dependencies', methods=['GET'])
 def api_check_dependencies():
     """API-Endpunkt zum Prüfen der System- und Python-Abhängigkeiten"""
     # Prüfe, ob der Benutzer eingeloggt ist (Administratorzugriff erforderlich)
@@ -68,7 +71,7 @@ def api_check_dependencies():
         logger.error(f"API-Fehler beim Prüfen der Abhängigkeiten: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@update_api.route('/api/update', methods=['POST'])
+@api_update.route('/api/update', methods=['POST'])
 def api_install_update():
     """API-Endpunkt zum Installieren eines Updates"""
     # Prüfe, ob der Benutzer eingeloggt ist (Administratorzugriff erforderlich)
@@ -102,7 +105,7 @@ def api_install_update():
         logger.error(f"API-Fehler beim Installieren des Updates: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@update_api.route('/api/update/status', methods=['GET'])
+@api_update.route('/api/update/status', methods=['GET'])
 def api_update_status():
     """API-Endpunkt zum Abrufen des aktuellen Update-Status"""
     # In einer realen Implementierung würde man hier den Status des Update-Prozesses abrufen
@@ -114,11 +117,3 @@ def api_update_status():
         'message': 'Kein Update aktiv',
         'timestamp': manage_update.datetime.now().isoformat()
     })
-
-def init_app(app):
-    """Initialisiert das Update-API-Modul mit der Flask-App
-    
-    Args:
-        app: Die Flask-App-Instanz
-    """
-    app.register_blueprint(update_api)

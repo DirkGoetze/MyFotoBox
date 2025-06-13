@@ -53,8 +53,13 @@
     </main>
     <!-- footer-block //-->
     <footer id="mainFooter">
-        <span id="footerText">© 2025 Fotobox</span>
-    </footer>    <script src="js/main.js"></script>
+        <span id="footerText">© 2025 Fotobox</span>    </footer>
+    <script type="module">
+        import { initBaseUI } from './js/manage_ui.js';
+        document.addEventListener('DOMContentLoaded', function() {
+            initBaseUI();
+        });
+    </script>
     <script type="module" src="js/gallery.js"></script>
 </body>
 </html>

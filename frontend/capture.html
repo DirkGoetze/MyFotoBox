@@ -56,9 +56,12 @@
     </main>    <!-- footer-block //-->
     <footer id="mainFooter">
         <span id="footerText">© 2025 Fotobox</span>
-    </footer>
-    <script src="js/main.js" type="module"></script>
-    <script src="js/manage_camera.js" type="module"></script>
+    </footer>    <script type="module">
+        import { initBaseUI } from './js/manage_ui.js';
+        document.addEventListener('DOMContentLoaded', function() {
+            initBaseUI();
+        });
+    </script>
     <script src="js/capture.js" type="module"></script>
 </body>
 </html>

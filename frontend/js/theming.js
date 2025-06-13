@@ -5,6 +5,7 @@
  */
 
 import { EVENTS } from './constants.js';
+import { getSetting, setSetting } from './manage_database.js';
 
 /**
  * Speichert die verfügbaren Themes
@@ -32,28 +33,29 @@ let _defaultTheme = '';
  * @param {Object} themes - Objekt mit Theme-Definitionen
  * @param {string} defaultTheme - Standard-Theme, das verwendet wird, wenn kein Theme gespeichert ist
  */
-export function init(themes, defaultTheme) {
+export async function init(themes, defaultTheme) {
     _themes = themes || {};
     _defaultTheme = defaultTheme;
     
     // Versuche, das gespeicherte Theme zu laden
-    const storedTheme = localStorage.getItem('theme');
+    const storedTheme = await getSetting('theme', null);
     const themeToApply = storedTheme && _themes[storedTheme] ? storedTheme : defaultTheme;
     
     // Theme anwenden
-    setTheme(themeToApply);
+    await setTheme(themeToApply);
     
     console.log(`Theming initialisiert mit Theme: ${_currentTheme}`);
     
     // Event-Listener für Medien-Anfragen (automatischer Dark/Light Mode)
     const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     
-    darkModeMediaQuery.addEventListener('change', (e) => {
+    darkModeMediaQuery.addEventListener('change', async (e) => {
         // Nur automatisch umschalten, wenn kein Theme gespeichert wurde
-        if (!localStorage.getItem('theme')) {
+        const savedTheme = await getSetting('theme', null);
+        if (!savedTheme) {
             const newTheme = e.matches ? 'dark' : 'light';
             if (_themes[newTheme]) {
-                setTheme(newTheme);
+                await setTheme(newTheme);
             }
         }
     });
@@ -62,9 +64,9 @@ export function init(themes, defaultTheme) {
 /**
  * Setzt das aktuelle Theme und wendet die entsprechenden CSS-Variablen an
  * @param {string} themeName - Der Name des anzuwendenden Themes
- * @returns {boolean} True, wenn das Theme erfolgreich gesetzt wurde
+ * @returns {Promise<boolean>} Promise, das zu true aufgelöst wird, wenn das Theme erfolgreich gesetzt wurde
  */
-export function setTheme(themeName) {
+export async function setTheme(themeName) {
     // Prüfe, ob das Theme existiert
     if (!_themes[themeName]) {
         console.warn(`Theme nicht gefunden: ${themeName}`);
@@ -88,8 +90,12 @@ export function setTheme(themeName) {
     // Theme als aktuell markieren
     _currentTheme = themeName;
     
-    // Theme im localStorage speichern
-    localStorage.setItem('theme', themeName);
+    // Theme in der Datenbank speichern
+    try {
+        await setSetting('theme', themeName);
+    } catch (error) {
+        console.error('Fehler beim Speichern des Themes in der Datenbank:', error);
+    }
     
     // Informiere andere Komponenten über die Theme-Änderung
     document.dispatchEvent(new CustomEvent(EVENTS.THEME_CHANGED, { 

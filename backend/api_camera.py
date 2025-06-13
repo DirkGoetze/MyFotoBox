@@ -1,5 +1,5 @@
 """
-camera_api.py - Kamera-API-Endpunkte für Fotobox2
+api_camera.py - Kamera-API-Endpunkte für Fotobox2
 
 Dieses Modul stellt die Flask-Endpunkte für die Kamerasteuerung bereit.
 Es dient als Schnittstelle zwischen dem Frontend und dem manage_camera-Modul.
@@ -23,25 +23,30 @@ import os
 
 # Importiere die Kameramodule
 import manage_camera
-import manage_camera_config  # Neu importiert für Kamera-Konfigurationen
+import manage_camera_config
 import manage_logging
 import manage_api
+import manage_auth
 
 # Erstellen des Blueprints für die Kamera-API
-camera_api = Blueprint('camera_api', __name__)
+api_camera = Blueprint('api_camera', __name__)
 api_formatter = manage_api.APIResponseFormatter()
 
-@camera_api.route('/api/camera/list', methods=['GET'])
+def init_app(app):
+    """Initialisiert die Kamera-API mit der Flask-Anwendung"""
+    app.register_blueprint(api_camera)
+
+@api_camera.route('/api/camera/list', methods=['GET'])
 def list_cameras():
     """Gibt eine Liste aller verfügbaren Kameras zurück"""
     try:
         cameras = manage_camera.get_camera_list()
         return api_formatter.success_response(data=cameras)
     except Exception as e:
-        manage_logging.error(f"Fehler beim Abrufen der Kameraliste: {str(e)}", exception=e, source="camera_api")
+        manage_logging.error(f"Fehler beim Abrufen der Kameraliste: {str(e)}", exception=e, source="api_camera")
         return api_formatter.error_response("Fehler beim Abrufen der Kameraliste", str(e))
 
-@camera_api.route('/api/camera/connect', methods=['POST'])
+@api_camera.route('/api/camera/connect', methods=['POST'])
 def connect_camera():
     """Verbindet zu einer Kamera"""
     try:
@@ -58,10 +63,10 @@ def connect_camera():
             return api_formatter.error_response("Verbindung konnte nicht hergestellt werden", result.get('error', 'Unbekannter Fehler'))
             
     except Exception as e:
-        manage_logging.error(f"Fehler beim Verbinden mit der Kamera: {str(e)}", exception=e, source="camera_api")
+        manage_logging.error(f"Fehler beim Verbinden mit der Kamera: {str(e)}", exception=e, source="api_camera")
         return api_formatter.error_response("Fehler beim Verbinden mit der Kamera", str(e))
 
-@camera_api.route('/api/camera/disconnect', methods=['POST'])
+@api_camera.route('/api/camera/disconnect', methods=['POST'])
 def disconnect_camera():
     """Trennt die Verbindung zu einer Kamera"""
     try:
@@ -76,10 +81,10 @@ def disconnect_camera():
             return api_formatter.error_response("Trennen der Kamera fehlgeschlagen", result.get('error', 'Unbekannter Fehler'))
             
     except Exception as e:
-        manage_logging.error(f"Fehler beim Trennen der Kamera: {str(e)}", exception=e, source="camera_api")
+        manage_logging.error(f"Fehler beim Trennen der Kamera: {str(e)}", exception=e, source="api_camera")
         return api_formatter.error_response("Fehler beim Trennen der Kamera", str(e))
 
-@camera_api.route('/api/camera/capture', methods=['POST'])
+@api_camera.route('/api/camera/capture', methods=['POST'])
 def capture_image():
     """Nimmt ein Bild mit der aktiven Kamera auf"""
     try:
@@ -104,10 +109,10 @@ def capture_image():
             )
             
     except Exception as e:
-        manage_logging.error(f"Fehler bei der Bildaufnahme: {str(e)}", exception=e, source="camera_api")
+        manage_logging.error(f"Fehler bei der Bildaufnahme: {str(e)}", exception=e, source="api_camera")
         return api_formatter.error_response("Fehler bei der Bildaufnahme", str(e))
 
-@camera_api.route('/api/camera/settings', methods=['GET', 'POST'])
+@api_camera.route('/api/camera/settings', methods=['GET', 'POST'])
 def camera_settings():
     """Ruft Kameraeinstellungen ab oder aktualisiert sie"""
     try:
@@ -139,10 +144,10 @@ def camera_settings():
                 )
                 
     except Exception as e:
-        manage_logging.error(f"Fehler bei Kameraeinstellungen: {str(e)}", exception=e, source="camera_api")
+        manage_logging.error(f"Fehler bei Kameraeinstellungen: {str(e)}", exception=e, source="api_camera")
         return api_formatter.error_response("Fehler bei Kameraeinstellungen", str(e))
 
-@camera_api.route('/api/camera/preview', methods=['GET'])
+@api_camera.route('/api/camera/preview', methods=['GET'])
 def get_preview_frame():
     """Gibt ein einzelnes Vorschaubild zurück"""
     try:
@@ -158,10 +163,10 @@ def get_preview_frame():
             )
             
     except Exception as e:
-        manage_logging.error(f"Fehler beim Abrufen des Vorschaubildes: {str(e)}", exception=e, source="camera_api")
+        manage_logging.error(f"Fehler beim Abrufen des Vorschaubildes: {str(e)}", exception=e, source="api_camera")
         return api_formatter.error_response("Fehler beim Abrufen des Vorschaubildes", str(e))
 
-@camera_api.route('/api/camera/preview/stream', methods=['GET'])
+@api_camera.route('/api/camera/preview/stream', methods=['GET'])
 def get_preview_stream():
     """Gibt einen Stream von Vorschaubildern zurück (MJPEG)"""
     
@@ -180,11 +185,10 @@ def get_preview_stream():
                 # MJPEG-Format erfordert einen Header für jedes Bild
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-                       
                 # Kurze Pause für Framerate-Begrenzung
                 time.sleep(0.033)  # Ca. 30 FPS
         except Exception as e:
-            manage_logging.error(f"Fehler im Vorschau-Stream: {str(e)}", exception=e, source="camera_api")
+            manage_logging.error(f"Fehler im Vorschau-Stream: {str(e)}", exception=e, source="api_camera")
             yield b'--frame\r\nContent-Type: text/plain\r\n\r\nFehler im Stream\r\n'
     
     # Stream als Antwort senden
@@ -193,7 +197,7 @@ def get_preview_stream():
         mimetype='multipart/x-mixed-replace; boundary=frame'
     )
 
-@camera_api.route('/api/camera/status', methods=['GET'])
+@api_camera.route('/api/camera/status', methods=['GET'])
 def get_camera_status():
     """Gibt den Status der aktiven Kamera zurück"""
     try:
@@ -215,20 +219,20 @@ def get_camera_status():
             )
             
     except Exception as e:
-        manage_logging.error(f"Fehler beim Abrufen des Kamerastatus: {str(e)}", exception=e, source="camera_api")
+        manage_logging.error(f"Fehler beim Abrufen des Kamerastatus: {str(e)}", exception=e, source="api_camera")
         return api_formatter.error_response("Fehler beim Abrufen des Kamerastatus", str(e))
 
-@camera_api.route('/api/camera/configs', methods=['GET'])
+@api_camera.route('/api/camera/configs', methods=['GET'])
 def get_camera_configs():
     """Gibt eine Liste aller verfügbaren Kamera-Konfigurationen zurück"""
     try:
         configs = manage_camera_config.get_camera_configs()
         return api_formatter.success_response(data=configs)
     except Exception as e:
-        manage_logging.error(f"Fehler beim Abrufen der Kamera-Konfigurationen: {str(e)}", exception=e, source="camera_api")
+        manage_logging.error(f"Fehler beim Abrufen der Kamera-Konfigurationen: {str(e)}", exception=e, source="api_camera")
         return api_formatter.error_response("Fehler beim Abrufen der Kamera-Konfigurationen", str(e))
 
-@camera_api.route('/api/camera/config', methods=['GET', 'POST'])
+@api_camera.route('/api/camera/config', methods=['GET', 'POST'])
 def manage_active_config():
     """Verwaltet die aktive Kamera-Konfiguration"""
     try:
@@ -264,10 +268,10 @@ def manage_active_config():
                                                f"Konfiguration mit ID {config_id} existiert nicht")
                 
     except Exception as e:
-        manage_logging.error(f"Fehler bei Kamera-Konfiguration: {str(e)}", exception=e, source="camera_api")
+        manage_logging.error(f"Fehler bei Kamera-Konfiguration: {str(e)}", exception=e, source="api_camera")
         return api_formatter.error_response("Fehler bei Kamera-Konfiguration", str(e))
 
-@camera_api.route('/api/camera/config/<config_id>', methods=['GET'])
+@api_camera.route('/api/camera/config/<config_id>', methods=['GET'])
 def get_camera_config(config_id):
     """Gibt eine bestimmte Kamera-Konfiguration zurück"""
     try:
@@ -279,10 +283,10 @@ def get_camera_config(config_id):
             return api_formatter.error_response(f"Konfiguration mit ID {config_id} nicht gefunden")
                 
     except Exception as e:
-        manage_logging.error(f"Fehler beim Abrufen der Kamera-Konfiguration: {str(e)}", exception=e, source="camera_api")
+        manage_logging.error(f"Fehler beim Abrufen der Kamera-Konfiguration: {str(e)}", exception=e, source="api_camera")
         return api_formatter.error_response("Fehler beim Abrufen der Kamera-Konfiguration", str(e))
 
-@camera_api.route('/api/camera/config/create', methods=['POST'])
+@api_camera.route('/api/camera/config/create', methods=['POST'])
 def create_camera_config():
     """Erstellt eine neue Kamera-Konfiguration"""
     try:
@@ -301,10 +305,10 @@ def create_camera_config():
             return api_formatter.error_response("Konfiguration konnte nicht erstellt werden")
                 
     except Exception as e:
-        manage_logging.error(f"Fehler beim Erstellen der Kamera-Konfiguration: {str(e)}", exception=e, source="camera_api")
+        manage_logging.error(f"Fehler beim Erstellen der Kamera-Konfiguration: {str(e)}", exception=e, source="api_camera")
         return api_formatter.error_response("Fehler beim Erstellen der Kamera-Konfiguration", str(e))
 
-@camera_api.route('/api/camera/config/<config_id>', methods=['PUT'])
+@api_camera.route('/api/camera/config/<config_id>', methods=['PUT'])
 def update_camera_config(config_id):
     """Aktualisiert eine bestehende Kamera-Konfiguration"""
     try:
@@ -325,10 +329,10 @@ def update_camera_config(config_id):
                 
     except Exception as e:
         manage_logging.error(f"Fehler beim Aktualisieren der Kamera-Konfiguration: {str(e)}", 
-                           exception=e, source="camera_api")
+                           exception=e, source="api_camera")
         return api_formatter.error_response("Fehler beim Aktualisieren der Kamera-Konfiguration", str(e))
 
-@camera_api.route('/api/camera/config/<config_id>', methods=['DELETE'])
+@api_camera.route('/api/camera/config/<config_id>', methods=['DELETE'])
 def delete_camera_config(config_id):
     """Löscht eine Kamera-Konfiguration"""
     try:
@@ -341,7 +345,5 @@ def delete_camera_config(config_id):
                 
     except Exception as e:
         manage_logging.error(f"Fehler beim Löschen der Kamera-Konfiguration: {str(e)}", 
-                           exception=e, source="camera_api")
+                           exception=e, source="api_camera")
         return api_formatter.error_response("Fehler beim Löschen der Kamera-Konfiguration", str(e))
-
-# Weitere Endpunkte je nach Bedarf...

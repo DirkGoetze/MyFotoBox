@@ -10,7 +10,7 @@ Die folgende Tabelle zeigt, welche Funktionen aus den aktuellen JavaScript-Datei
 |---------------|----------|------------|
 | `splash.js` | `checkForUpdates()` | `manage_update.js` |
 | `splash.js` | `checkPasswordSet()` | `manage_auth.js` |
-| `splash.js` | Animationslogik | `splash.js` (bleibt) |
+| `splash.js` | Animationslogik | `ui_components.js` |
 | `install.js` | Passwort-Speicherung | `manage_auth.js` |
 | `install.js` | UI-Ereignishandling | `install.js` (bleibt) |
 | `settings.js` | `loadSettings()` | `manage_settings.js` |
@@ -24,8 +24,8 @@ Die folgende Tabelle zeigt, welche Funktionen aus den aktuellen JavaScript-Datei
 | `live-settings-update.js` | `setupPasswordFieldUpdates()` | `manage_auth.js` |
 | `gallery.js` | API-Aufrufe für Bilddaten | `manage_filesystem.js` |
 | `gallery.js` | Galerie-UI und Navigation | `gallery.js` (bleibt) |
-| `main.js` | Datum/Zeit-Anzeige | `main.js` (bleibt) |
-| `main.js` | Menü-Handling | `ui_components.js` |
+| `main.js` | Datum/Zeit-Anzeige | `manage_ui.js` |
+| `main.js` | Menü-Handling | `manage_ui.js` |
 
 ## Neue Module und ihre Verantwortlichkeiten
 
@@ -72,8 +72,16 @@ Zugriff auf Dateisystemoperationen:
 Gemeinsame UI-Komponenten:
 - Benachrichtigungen
 - Dialoge
-- Menüs
 - Fortschrittsanzeigen
+
+### manage_ui.js
+
+Seitenübergreifende UI-Steuerung:
+- Menü-Handling
+- Datum/Zeit-Anzeige
+- Header/Footer-Dynamik
+- Farbschema-Verwaltung
+- Seitenspezifische Initialisierung
 
 ## Umsetzungsplan
 
@@ -93,7 +101,8 @@ Gemeinsame UI-Komponenten:
 
 4. **Phase 4: UI-Komponenten extrahieren**
    - Gemeinsam genutzte UI-Komponenten identifizieren
-   - In `ui_components.js` verschieben
+   - Dialogkomponenten in `ui_components.js` verschieben
+   - Seitenübergreifende UI-Steuerung in `manage_ui.js` implementieren
 
 5. **Phase 5: Dokumentation und Abschluss**
    - Code-Dokumentation aktualisieren

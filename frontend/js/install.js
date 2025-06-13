@@ -6,6 +6,7 @@
 // ------------------------------------------------------------------------------
 
 import { setPassword } from './manage_auth.js';
+import { setSetting } from './manage_database.js';
 
 /**
  * Event-Handler für das Absenden des Setup-Formulars
@@ -37,13 +38,9 @@ document.getElementById('setupForm').onsubmit = async function(e) {
         
         // Wenn das Passwort gesetzt wurde, speichere zusätzliche Einstellungen
         if (success) {
-            // Wenn ein Event-Name vorhanden ist, speichere ihn separat
+            // Wenn ein Event-Name vorhanden ist, speichere ihn direkt in der Datenbank
             if (settings.event_name) {
-                await fetch('/api/settings', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({event_name: settings.event_name})
-                });
+                await setSetting('eventName', settings.event_name);
             }
             
             status.textContent = 'Passwort gespeichert! Weiterleitung ...';

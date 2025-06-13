@@ -272,9 +272,12 @@
     <footer id="mainFooter">
         <span id="footerText">© 2025 Fotobox</span>
     </footer>
-      <!-- JavaScript wurde in externe Datei ausgelagert gemäß Code-Formatierungs-Policy -->
-    <script src="js/main.js"></script>
-    <script type="module" src="js/live-settings-update.js"></script>
+      <!-- JavaScript wurde in externe Datei ausgelagert gemäß Code-Formatierungs-Policy -->    <script type="module">
+        import { initBaseUI } from './js/manage_ui.js';
+        document.addEventListener('DOMContentLoaded', function() {
+            initBaseUI();
+        });
+    </script>
     <script type="module" src="js/settings.js"></script>
 
 </body>

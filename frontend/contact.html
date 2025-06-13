@@ -56,6 +56,11 @@
     <footer id="mainFooter">
         <span id="footerText">© 2025 Fotobox</span>
     </footer>
-    <script src="js/main.js"></script>
+    <script type="module">
+        import { initBaseUI } from './js/manage_ui.js';
+        document.addEventListener('DOMContentLoaded', function() {
+            initBaseUI();
+        });
+    </script>
 </body>
 </html>
