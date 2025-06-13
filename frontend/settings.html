@@ -267,6 +267,56 @@
                 </div>
             </fieldset>
         </form>
+        
+        <!-- Systemeinstellungen //-->
+            <div class="settings-section" id="systemSettings">
+                <h2>Systemeinstellungen</h2>
+                
+                <!-- ... weitere Systemeinstellungen ... -->
+                
+                <!-- Neue Sektion für Datenbankeinstellungen -->
+                <div class="settings-subsection" id="databaseSettings">
+                    <h3>Datenbank</h3>
+                    
+                    <div class="form-info-box">
+                        <p>Hier finden Sie Informationen und Wartungsoptionen für die Datenbank der Fotobox.</p>
+                    </div>
+                    
+                    <div class="settings-card">
+                        <h4>Datenbankstatistiken</h4>
+                        <div id="databaseStats" class="database-stats">
+                            <p><i class="fas fa-spinner fa-spin"></i> Datenbankstatistiken werden geladen...</p>
+                        </div>
+                        <div class="settings-actions">
+                            <button id="refreshDatabaseStats" class="btn"><i class="fas fa-sync"></i> Aktualisieren</button>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-card">
+                        <h4>Datenbankwartung</h4>
+                        <div class="settings-actions">
+                            <button id="checkDatabaseIntegrity" class="btn"><i class="fas fa-check-circle"></i> Integrität prüfen</button>
+                            <button id="optimizeDatabase" class="btn"><i class="fas fa-hammer"></i> Datenbank optimieren</button>
+                            <button id="backupDatabase" class="btn"><i class="fas fa-save"></i> Datenbank sichern</button>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-card">
+                        <h4>Bildmetadaten</h4>
+                        <div class="form-info-box">
+                            <p>Hier können Sie die gespeicherten Metadaten zu Bildern verwalten.</p>
+                        </div>
+                        <div id="metadataStats" class="metadata-stats">
+                            <p>Lade Statistiken...</p>
+                        </div>
+                        <div class="settings-actions">
+                            <button id="syncMetadata" class="btn"><i class="fas fa-sync"></i> Mit Dateisystem abgleichen</button>
+                            <button id="cleanupMetadata" class="btn"><i class="fas fa-broom"></i> Verwaiste Einträge bereinigen</button>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
     </main>
     
     <footer id="mainFooter">

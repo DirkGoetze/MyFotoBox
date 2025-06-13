@@ -16,7 +16,7 @@ import { loadSettings, loadSingleSetting, updateSettings, updateSingleSetting, v
 
 // Import der Kamera-Module
 import * as camera from './manage_camera.js';
-import { getSetting, setSetting } from './manage_database.js';
+import { getSetting, setSetting, query, getStats, checkIntegrity } from './manage_database.js';
 
 // =================================================================================
 // Login-Funktionalität
@@ -99,62 +99,16 @@ async function loadSettingsAndUpdateUI() {
             
             // Wenn eine Konfiguration gesetzt ist, auch in der Datenbank speichern
             if (settings.camera_config_id !== 'system') {
-                setSetting('camera_config_id', settings.camera_config_id).catch(err => {
-                    error('Fehler beim Speichern der Kamera-Konfiguration', err);
-                });
+                setSetting('camera_config_id', settings.camera_config_id);
             }
         }
         
-        // Alte Kamera-Einstellung (für Abwärtskompatibilität)
-        if (document.getElementById('camera_id') && settings.camera_id) {
-            document.getElementById('camera_id').value = settings.camera_id;
-        }
+        // Datenbank-Management initialisieren
+        initDatabaseSettings();
           
-        // Nach dem Laden der Einstellungen automatisch nach Updates suchen
-        // und auch die Abhängigkeiten prüfen
-        setTimeout(() => {
-            // Verzögerte Ausführung, um UI-Updates zu ermöglichen
-            handleUpdateCheck();
-            // Auch die Abhängigkeiten prüfen
-            checkDependenciesAndUpdateUI().catch(err => {
-                error('Fehler bei der automatischen Abhängigkeitsprüfung', err);
-            });
-        }, 500);
-        
-        // Anzeigemodus setzen
-        if (document.getElementById('color_mode')) {
-            document.getElementById('color_mode').value = settings.color_mode || 'system';
-        }
-        
-        // Bildschirmschoner-Timeout setzen
-        if (document.getElementById('screensaver_timeout')) {
-            document.getElementById('screensaver_timeout').value = settings.screensaver_timeout || 120;
-        }
-        
-        // Galerie-Timeout setzen
-        if (document.getElementById('gallery_timeout')) {
-            document.getElementById('gallery_timeout').value = settings.gallery_timeout || 60;
-        }
-        
-        // Countdown-Dauer setzen
-        if (document.getElementById('countdown_duration')) {
-            document.getElementById('countdown_duration').value = settings.countdown_duration || 3;
-        }
-        
-        // Kamera-Einstellungen
-        if (document.getElementById('camera_id')) {
-            document.getElementById('camera_id').value = settings.camera_id || 'auto';
-        }
-        
-        if (document.getElementById('flash_mode')) {
-            document.getElementById('flash_mode').value = settings.flash_mode || 'auto';
-        }
-        
-        // Verfügbare Kameras laden und Dropdown aktualisieren
-        loadAvailableCameras();
-    } catch (err) {
-        error('Fehler beim Laden der Einstellungen:', err);
-        showNotification('Fehler beim Laden der Einstellungen', 'error');
+    } catch (error) {
+        console.error('Fehler beim Laden der Einstellungen:', error);
+        showNotification('Fehler beim Laden der Einstellungen: ' + error.message, 'error');
     }
 }
 
@@ -1116,4 +1070,418 @@ function setupPasswordValidation() {
     
     // Passwortfelder beim Laden überprüfen
     checkPasswordMatch();
+}
+
+// =================================================================================
+// Datenbank-Management-Funktionalität
+// =================================================================================
+
+/**
+ * Initialisiert die Datenbank-Management-Funktionalität
+ */
+function initDatabaseSettings() {
+    log('Initialisiere Datenbank-Management-Funktionalität', 'settings');
+    
+    // Event-Listener für Buttons registrieren
+    document.getElementById('refreshDatabaseStats')?.addEventListener('click', loadDatabaseStats);
+    document.getElementById('checkDatabaseIntegrity')?.addEventListener('click', checkDatabaseIntegrity);
+    document.getElementById('optimizeDatabase')?.addEventListener('click', backupDatabase);
+    document.getElementById('syncMetadata')?.addEventListener('click', syncMetadataWithFilesystem);
+    document.getElementById('cleanupMetadata')?.addEventListener('click', cleanupOrphanedMetadata);
+    
+    // Initial Datenbank-Statistiken laden
+    loadDatabaseStats();
+    loadMetadataStats();
+}
+
+/**
+ * Lädt die Datenbankstatistiken und zeigt sie an
+ */
+async function loadDatabaseStats() {
+    log('Lade Datenbankstatistiken', 'settings');
+    
+    const statsElement = document.getElementById('databaseStats');
+    if (!statsElement) return;
+    
+    try {
+        statsElement.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Datenbankstatistiken werden geladen...</p>';
+        
+        // Statistiken vom Backend abrufen
+        const stats = await getStats();
+        
+        if (stats && stats.success) {
+            // Formatierte Anzeige der Statistiken
+            let html = '<div class="stats-grid">';
+            
+            const data = stats.data;
+            html += `<div class="stat-item">
+                        <div class="stat-label">Datenbankgröße:</div>
+                        <div class="stat-value">${formatFileSize(data.size || 0)}</div>
+                    </div>`;
+            
+            html += `<div class="stat-item">
+                        <div class="stat-label">Tabellen:</div>
+                        <div class="stat-value">${data.tables?.length || 0}</div>
+                    </div>`;
+                    
+            html += `<div class="stat-item">
+                        <div class="stat-label">Datensätze:</div>
+                        <div class="stat-value">${data.recordCount || 0}</div>
+                    </div>`;
+                    
+            html += `<div class="stat-item">
+                        <div class="stat-label">Version:</div>
+                        <div class="stat-value">${data.version || 'Unbekannt'}</div>
+                    </div>`;
+            
+            // Bei detaillierten Tabelleninformationen
+            if (data.tables && data.tables.length > 0) {
+                html += '</div><h5>Tabellendetails:</h5><div class="table-stats">';
+                html += '<table><thead><tr><th>Tabelle</th><th>Einträge</th><th>Größe</th></tr></thead><tbody>';
+                
+                data.tables.forEach(table => {
+                    html += `<tr>
+                              <td>${table.name}</td>
+                              <td>${table.records || 0}</td>
+                              <td>${formatFileSize(table.size || 0)}</td>
+                             </tr>`;
+                });
+                
+                html += '</tbody></table>';
+            }
+            
+            html += '</div>';
+            statsElement.innerHTML = html;
+        } else {
+            statsElement.innerHTML = '<p class="error-text">Fehler beim Laden der Statistiken: ' + 
+                                    (stats?.error || 'Unbekannter Fehler') + '</p>';
+        }
+    } catch (err) {
+        error(`Fehler beim Laden der Datenbankstatistiken: ${err.message}`, 'settings');
+        statsElement.innerHTML = '<p class="error-text">Fehler beim Laden der Statistiken: ' + err.message + '</p>';
+    }
+}
+
+/**
+ * Lädt Metadatenstatistiken zu Bildern
+ */
+async function loadMetadataStats() {
+    log('Lade Metadatenstatistiken', 'settings');
+    
+    const statsElement = document.getElementById('metadataStats');
+    if (!statsElement) return;
+    
+    try {
+        statsElement.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Lade Metadatenstatistiken...</p>';
+        
+        // Anzahl der Bildmetadaten abfragen
+        const metadataCount = await query('SELECT COUNT(*) as count FROM image_metadata');
+        
+        if (metadataCount && metadataCount.success && metadataCount.data && metadataCount.data.length > 0) {
+            const count = metadataCount.data[0].count || 0;
+            
+            // Anzahl nach Tags gruppieren abfragen
+            const tagQuery = await query(`
+                SELECT 
+                    json_extract(tags, '$.event') as event, 
+                    COUNT(*) as count 
+                FROM image_metadata 
+                GROUP BY event
+                ORDER BY count DESC
+            `);
+            
+            let html = `<p>Insgesamt <strong>${count}</strong> Bilder mit Metadaten</p>`;
+            
+            if (tagQuery && tagQuery.success && tagQuery.data && tagQuery.data.length > 0) {
+                html += '<div class="metadata-summary">';
+                html += '<h5>Bilder nach Event:</h5>';
+                html += '<ul class="tag-list">';
+                
+                tagQuery.data.forEach(item => {
+                    // Fallback-Eventname, falls null
+                    const eventName = item.event || 'Unbekannt';
+                    html += `<li><span class="tag-name">${eventName}:</span> <span class="tag-count">${item.count}</span></li>`;
+                });
+                
+                html += '</ul></div>';
+            }
+            
+            statsElement.innerHTML = html;
+        } else {
+            statsElement.innerHTML = '<p>Keine Bildmetadaten gefunden.</p>';
+        }
+    } catch (err) {
+        error(`Fehler beim Laden der Metadatenstatistiken: ${err.message}`, 'settings');
+        statsElement.innerHTML = '<p class="error-text">Fehler beim Laden der Metadatenstatistiken: ' + err.message + '</p>';
+    }
+}
+
+/**
+ * Prüft die Datenbankintegrität
+ */
+async function checkDatabaseIntegrity() {
+    log('Prüfe Datenbankintegrität', 'settings');
+    
+    try {
+        // Dialog anzeigen während der Prüfung
+        showDialog({
+            title: 'Datenbankintegrität wird geprüft',
+            message: '<p><i class="fas fa-spinner fa-spin"></i> Bitte warten...</p>',
+            showButtons: false
+        });
+        
+        const result = await checkIntegrity();
+        
+        // Dialog mit dem Ergebnis aktualisieren
+        if (result && result.success) {
+            showDialog({
+                title: 'Datenbankintegrität',
+                message: '<p><i class="fas fa-check-circle success-text"></i> Die Datenbankintegrität ist in Ordnung.</p>',
+                buttons: [{ label: 'OK', type: 'primary' }]
+            });
+        } else {
+            showDialog({
+                title: 'Fehler bei Integritätsprüfung',
+                message: '<p><i class="fas fa-exclamation-triangle warning-text"></i> Bei der Integritätsprüfung sind Probleme aufgetreten:</p>' +
+                         '<pre>' + (result?.error || 'Unbekannter Fehler') + '</pre>',
+                buttons: [{ label: 'OK', type: 'primary' }]
+            });
+        }
+    } catch (err) {
+        error(`Fehler bei Datenbankintegritätsprüfung: ${err.message}`, 'settings');
+        showDialog({
+            title: 'Fehler bei Integritätsprüfung',
+            message: '<p>Bei der Datenbankintegritätsprüfung ist ein Fehler aufgetreten:</p>' +
+                     '<pre>' + err.message + '</pre>',
+            buttons: [{ label: 'OK', type: 'primary' }]
+        });
+    }
+}
+
+/**
+ * Optimiert die Datenbank
+ */
+async function optimizeDatabase() {
+    log('Optimiere Datenbank', 'settings');
+    
+    try {
+        // Bestätigung einholen
+        const confirm = await new Promise(resolve => {
+            showDialog({
+                title: 'Datenbank optimieren',
+                message: '<p>Möchten Sie die Datenbank optimieren? Dies kann einige Augenblicke dauern.</p>',
+                buttons: [
+                    { label: 'Abbrechen', type: 'secondary', action: () => resolve(false) },
+                    { label: 'Optimieren', type: 'primary', action: () => resolve(true) }
+                ]
+            });
+        });
+        
+        if (!confirm) return;
+        
+        // Dialog während der Optimierung anzeigen
+        showDialog({
+            title: 'Datenbank wird optimiert',
+            message: '<p><i class="fas fa-spinner fa-spin"></i> Bitte warten...</p>',
+            showButtons: false
+        });
+        
+        // Datenbank optimieren
+        const result = await query('VACUUM');
+        
+        if (result && result.success) {
+            showNotification('Datenbank wurde erfolgreich optimiert', 'success');
+            // Statistiken aktualisieren
+            loadDatabaseStats();
+        } else {
+            showDialog({
+                title: 'Fehler bei Datenbank-Optimierung',
+                message: '<p>Bei der Optimierung ist ein Fehler aufgetreten:</p>' +
+                         '<pre>' + (result?.error || 'Unbekannter Fehler') + '</pre>',
+                buttons: [{ label: 'OK', type: 'primary' }]
+            });
+        }
+    } catch (err) {
+        error(`Fehler bei Datenbankoptimierung: ${err.message}`, 'settings');
+        showDialog({
+            title: 'Fehler bei Datenbank-Optimierung',
+            message: '<p>Bei der Optimierung ist ein Fehler aufgetreten:</p>' +
+                     '<pre>' + err.message + '</pre>',
+            buttons: [{ label: 'OK', type: 'primary' }]
+        });
+    }
+}
+
+/**
+ * Führt eine Datenbanksicherung durch
+ */
+async function backupDatabase() {
+    log('Sichere Datenbank', 'settings');
+    
+    try {
+        // Dialog anzeigen während der Sicherung
+        showDialog({
+            title: 'Datenbank wird gesichert',
+            message: '<p><i class="fas fa-spinner fa-spin"></i> Bitte warten...</p>',
+            showButtons: false
+        });
+        
+        // API-Call zum Backend für Datenbanksicherung
+        const response = await fetch('/api/database/backup', {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result && result.success) {
+            showDialog({
+                title: 'Datenbanksicherung erfolgreich',
+                message: `<p>Die Datenbank wurde erfolgreich gesichert.</p>
+                         <p>Sicherungsdatei: <strong>${result.data.filename}</strong></p>
+                         <p>Pfad: <code>${result.data.path}</code></p>`,
+                buttons: [{ label: 'OK', type: 'primary' }]
+            });
+        } else {
+            showDialog({
+                title: 'Fehler bei Datenbanksicherung',
+                message: '<p>Bei der Sicherung ist ein Fehler aufgetreten:</p>' +
+                         '<pre>' + (result?.error || 'Unbekannter Fehler') + '</pre>',
+                buttons: [{ label: 'OK', type: 'primary' }]
+            });
+        }
+    } catch (err) {
+        error(`Fehler bei Datenbanksicherung: ${err.message}`, 'settings');
+        showDialog({
+            title: 'Fehler bei Datenbanksicherung',
+            message: '<p>Bei der Sicherung ist ein Fehler aufgetreten:</p>' +
+                     '<pre>' + err.message + '</pre>',
+            buttons: [{ label: 'OK', type: 'primary' }]
+        });
+    }
+}
+
+/**
+ * Synchronisiert Bildmetadaten mit dem Dateisystem
+ */
+async function syncMetadataWithFilesystem() {
+    log('Synchronisiere Metadaten mit Dateisystem', 'settings');
+    
+    try {
+        // Dialog anzeigen während der Synchronisation
+        showDialog({
+            title: 'Metadaten werden synchronisiert',
+            message: '<p><i class="fas fa-spinner fa-spin"></i> Die Bildmetadaten werden mit dem Dateisystem abgeglichen...</p>',
+            showButtons: false
+        });
+        
+        // API-Call zum Backend für die Synchronisation
+        const response = await fetch('/api/database/sync-metadata', {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result && result.success) {
+            showDialog({
+                title: 'Metadaten-Synchronisation erfolgreich',
+                message: `<p>Die Bildmetadaten wurden erfolgreich synchronisiert.</p>
+                          <p><strong>Ergebnis:</strong></p>
+                          <ul>
+                            <li>Neue Metadaten erstellt: ${result.data.created || 0}</li>
+                            <li>Bestehende Metadaten aktualisiert: ${result.data.updated || 0}</li>
+                          </ul>`,
+                buttons: [{ label: 'OK', type: 'primary', action: () => loadMetadataStats() }]
+            });
+        } else {
+            showDialog({
+                title: 'Fehler bei Metadaten-Synchronisation',
+                message: '<p>Bei der Synchronisation ist ein Fehler aufgetreten:</p>' +
+                         '<pre>' + (result?.error || 'Unbekannter Fehler') + '</pre>',
+                buttons: [{ label: 'OK', type: 'primary' }]
+            });
+        }
+    } catch (err) {
+        error(`Fehler bei Metadaten-Synchronisation: ${err.message}`, 'settings');
+        showDialog({
+            title: 'Fehler bei Metadaten-Synchronisation',
+            message: '<p>Bei der Synchronisation ist ein Fehler aufgetreten:</p>' +
+                     '<pre>' + err.message + '</pre>',
+            buttons: [{ label: 'OK', type: 'primary' }]
+        });
+    }
+}
+
+/**
+ * Bereinigt verwaiste Metadateneinträge (ohne zugehörige Datei)
+ */
+async function cleanupOrphanedMetadata() {
+    log('Bereinige verwaiste Metadaten', 'settings');
+    
+    try {
+        // Bestätigung einholen
+        const confirm = await new Promise(resolve => {
+            showDialog({
+                title: 'Verwaiste Metadaten bereinigen',
+                message: '<p>Möchten Sie Metadateneinträge löschen, für die keine Bilddateien mehr existieren?</p>',
+                buttons: [
+                    { label: 'Abbrechen', type: 'secondary', action: () => resolve(false) },
+                    { label: 'Bereinigen', type: 'primary', action: () => resolve(true) }
+                ]
+            });
+        });
+        
+        if (!confirm) return;
+        
+        // Dialog während der Bereinigung anzeigen
+        showDialog({
+            title: 'Verwaiste Metadaten werden bereinigt',
+            message: '<p><i class="fas fa-spinner fa-spin"></i> Bitte warten...</p>',
+            showButtons: false
+        });
+        
+        // API-Call zum Backend für die Bereinigung
+        const response = await fetch('/api/database/cleanup-metadata', {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result && result.success) {
+            showDialog({
+                title: 'Bereinigung abgeschlossen',
+                message: `<p>Die Bereinigung wurde abgeschlossen.</p>
+                          <p>Es wurden <strong>${result.data.removed || 0}</strong> verwaiste Metadateneinträge entfernt.</p>`,
+                buttons: [{ label: 'OK', type: 'primary', action: () => loadMetadataStats() }]
+            });
+        } else {
+            showDialog({
+                title: 'Fehler bei der Bereinigung',
+                message: '<p>Bei der Bereinigung ist ein Fehler aufgetreten:</p>' +
+                         '<pre>' + (result?.error || 'Unbekannter Fehler') + '</pre>',
+                buttons: [{ label: 'OK', type: 'primary' }]
+            });
+        }
+    } catch (err) {
+        error(`Fehler bei der Bereinigung verwaister Metadaten: ${err.message}`, 'settings');
+        showDialog({
+            title: 'Fehler bei der Bereinigung',
+            message: '<p>Bei der Bereinigung ist ein Fehler aufgetreten:</p>' +
+                     '<pre>' + err.message + '</pre>',
+            buttons: [{ label: 'OK', type: 'primary' }]
+        });
+    }
+}
+
+/**
+ * Formatiert Dateigröße in lesbares Format
+ * @param {number} bytes - Größe in Bytes
+ * @returns {string} - Formatierte Größe
+ */
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 B';
+    
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    
+    return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i];
 }

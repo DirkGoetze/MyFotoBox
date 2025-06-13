@@ -13,7 +13,7 @@
 import * as camera from './manage_camera.js';
 import * as logging from './manage_logging.js';
 import * as utils from './utils.js';
-import { getSetting, setSetting } from './manage_database.js';
+import { getSetting, setSetting, query, insert, update, remove } from './manage_database.js';
 
 // DOM-Elemente
 let cameraPreviewElement;
@@ -498,15 +498,17 @@ async function takePicture() {
  */
 async function saveToPhotoHistory(photoData) {
     try {
-        // Hole bestehende Historie oder erstelle neue
+        // 1. Hole bestehende Historie für die Einstellungs-UI
         const storedHistory = await getSetting('photoHistory', '[]');
         let photoHistory = JSON.parse(storedHistory);
         
         // Füge neues Foto hinzu (maximal 10 Einträge)
+        const timestamp = new Date().toISOString();
+        
         photoHistory.unshift({
             filepath: photoData.filepath,
             thumbnail: photoData.thumbnail || photoData.filepath,
-            timestamp: new Date().toISOString()
+            timestamp: timestamp
         });
         
         // Begrenze auf 10 Einträge
@@ -514,8 +516,49 @@ async function saveToPhotoHistory(photoData) {
             photoHistory = photoHistory.slice(0, 10);
         }
         
-        // Speichere Historie in der Datenbank
+        // Speichere Historie in der Datenbank-Einstellung
         await setSetting('photoHistory', JSON.stringify(photoHistory));
+        
+        // 2. Speichere detaillierte Bildmetadaten in der image_metadata Tabelle
+        const filename = photoData.filepath.split('/').pop();
+        
+        // Hole Event-Name aus UI, falls vorhanden
+        const eventName = eventNameElement ? eventNameElement.value || 'Standardevent' : 'Standardevent';
+        
+        // Erstelle Basis-Metadaten
+        const metadata = {
+            filename: filename,
+            timestamp: timestamp,
+            tags: JSON.stringify({
+                event: eventName,
+                type: 'capture'
+            })
+        };
+        
+        // Prüfe, ob bereits Metadaten für dieses Bild existieren
+        const existingQuery = await query(
+            'SELECT id FROM image_metadata WHERE filename = ?',
+            [filename]
+        );
+        
+        if (existingQuery.success && existingQuery.data && existingQuery.data.length > 0) {
+            // Update existierende Metadaten
+            await update(
+                'image_metadata',
+                { timestamp: timestamp, tags: metadata.tags },
+                'filename = ?',
+                [filename]
+            );
+            logging.log(`Bildmetadaten aktualisiert für ${filename}`, 'capture');
+        } else {
+            // Neue Metadaten einfügen
+            const insertResult = await insert('image_metadata', metadata);
+            if (insertResult.success) {
+                logging.log(`Bildmetadaten gespeichert für ${filename}`, 'capture');
+            } else {
+                logging.error(`Fehler beim Speichern der Bildmetadaten: ${insertResult.error}`, 'capture');
+            }
+        }
     } catch (error) {
         logging.error(`Fehler beim Speichern der Fotohistorie: ${error.message}`, 'capture');
     }

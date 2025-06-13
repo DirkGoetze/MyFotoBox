@@ -190,6 +190,162 @@ def get_db_stats():
         manage_logging.error(f"Fehler beim Abrufen der Datenbankstatistiken: {str(e)}", exception=e)
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@api_database.route('/api/database/backup', methods=['POST'])
+@manage_auth.require_auth
+def backup_database():
+    """API-Endpunkt zum Erstellen einer Datenbanksicherung"""
+    try:
+        # Datenbankdatei sichern
+        import time
+        import shutil
+        
+        # Backup-Verzeichnis erstellen, falls es nicht existiert
+        backup_dir = os.path.join(os.path.dirname(manage_database.DB_PATH), 'backups')
+        os.makedirs(backup_dir, exist_ok=True)
+        
+        # Eindeutigen Dateinamen erstellen
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        db_filename = os.path.basename(manage_database.DB_PATH)
+        backup_filename = f"{os.path.splitext(db_filename)[0]}_{timestamp}.db"
+        backup_path = os.path.join(backup_dir, backup_filename)
+        
+        # Datenbank-Verbindung sicherstellen und schließen
+        conn = manage_database.connect_db()
+        conn.close()
+        
+        # Datei kopieren
+        shutil.copy2(manage_database.DB_PATH, backup_path)
+        
+        manage_logging.info(f"Datenbanksicherung erstellt: {backup_path}")
+        return jsonify({
+            'success': True,
+            'data': {
+                'filename': backup_filename,
+                'path': backup_path,
+                'size': os.path.getsize(backup_path)
+            }
+        })
+    except Exception as e:
+        manage_logging.error(f"Fehler bei der Datenbanksicherung: {str(e)}", exception=e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@api_database.route('/api/database/sync-metadata', methods=['POST'])
+@manage_auth.require_auth
+def sync_metadata_with_filesystem():
+    """API-Endpunkt zum Synchronisieren von Bildmetadaten mit dem Dateisystem"""
+    try:
+        import glob
+        from manage_photo import PHOTO_DIR
+        
+        manage_logging.info("Starte Metadaten-Synchronisation mit dem Dateisystem")
+        
+        # Zähle erstellt und aktualisierte Metadaten
+        created_count = 0
+        updated_count = 0
+        
+        # Verbindung zur Datenbank herstellen
+        conn = manage_database.connect_db()
+        cursor = conn.cursor()
+        
+        # Alle JPG-Dateien im Fotoverzeichnis finden
+        photos = glob.glob(os.path.join(PHOTO_DIR, "**/*.jpg"), recursive=True)
+        
+        for photo_path in photos:
+            # Relativen Pfad extrahieren (relativ zum PHOTO_DIR)
+            rel_path = os.path.relpath(photo_path, PHOTO_DIR)
+            
+            # Prüfen, ob Metadaten bereits existieren
+            cursor.execute("SELECT id FROM image_metadata WHERE filename = ?", (rel_path,))
+            result = cursor.fetchone()
+            
+            # Dateiinformationen abrufen
+            file_stat = os.stat(photo_path)
+            timestamp = file_stat.st_mtime
+            
+            if result:
+                # Metadaten aktualisieren
+                cursor.execute(
+                    "UPDATE image_metadata SET timestamp = ? WHERE id = ?",
+                    (timestamp, result['id'])
+                )
+                updated_count += 1
+            else:
+                # Neue Metadaten erstellen
+                # Standard-Tags mit Eventnamen extrahieren (falls verfügbar)
+                event_name = manage_database.get_setting('event_name', 'Unbekannt')
+                tags = {
+                    'event': event_name,
+                    'favorite': False
+                }
+                
+                import json
+                cursor.execute(
+                    "INSERT INTO image_metadata (filename, timestamp, tags) VALUES (?, ?, ?)",
+                    (rel_path, timestamp, json.dumps(tags))
+                )
+                created_count += 1
+        
+        # Änderungen speichern
+        conn.commit()
+        conn.close()
+        
+        manage_logging.info(f"Metadaten-Synchronisation abgeschlossen. Erstellt: {created_count}, Aktualisiert: {updated_count}")
+        return jsonify({
+            'success': True,
+            'data': {
+                'created': created_count,
+                'updated': updated_count
+            }
+        })
+    except Exception as e:
+        manage_logging.error(f"Fehler bei der Metadaten-Synchronisation: {str(e)}", exception=e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@api_database.route('/api/database/cleanup-metadata', methods=['POST'])
+@manage_auth.require_auth
+def cleanup_orphaned_metadata():
+    """API-Endpunkt zum Bereinigen verwaister Metadateneinträge"""
+    try:
+        import glob
+        from manage_photo import PHOTO_DIR
+        
+        manage_logging.info("Starte Bereinigung verwaister Metadateneinträge")
+        
+        # Verbindung zur Datenbank herstellen
+        conn = manage_database.connect_db()
+        cursor = conn.cursor()
+        
+        # Alle Metadateneinträge laden
+        cursor.execute("SELECT id, filename FROM image_metadata")
+        metadata_entries = cursor.fetchall()
+        
+        # Verwaiste Einträge identifizieren und löschen
+        removed_count = 0
+        
+        for entry in metadata_entries:
+            # Überprüfen, ob die Datei existiert
+            file_path = os.path.join(PHOTO_DIR, entry['filename'])
+            if not os.path.exists(file_path):
+                # Wenn die Datei nicht existiert, Metadaten löschen
+                cursor.execute("DELETE FROM image_metadata WHERE id = ?", (entry['id'],))
+                removed_count += 1
+                manage_logging.debug(f"Verwaisten Metadateneintrag entfernt: {entry['filename']}")
+        
+        # Änderungen speichern
+        conn.commit()
+        conn.close()
+        
+        manage_logging.info(f"Bereinigung verwaister Metadateneinträge abgeschlossen. Entfernt: {removed_count}")
+        return jsonify({
+            'success': True,
+            'data': {
+                'removed': removed_count
+            }
+        })
+    except Exception as e:
+        manage_logging.error(f"Fehler bei der Bereinigung verwaister Metadaten: {str(e)}", exception=e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 def init_app(app):
     """Initialisiert die Datenbank-API mit der Flask-Anwendung"""
     app.register_blueprint(api_database)
