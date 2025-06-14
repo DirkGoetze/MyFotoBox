@@ -30,7 +30,7 @@ Das Skript übernimmt folgende Aufgaben (jeder Schritt wird im Terminal erklärt
 
 - Backups der Konfiguration und Daten bleiben im Backup-Ordner erhalten, sofern nicht explizit gelöscht.
 - Prüfen Sie nach der Deinstallation, ob alle gewünschten Komponenten entfernt wurden.
-- Alle wichtigen Schritte und Fehler werden in der Logdatei `/var/log/fotobox_install.log` protokolliert.
+- Alle wichtigen Schritte und Fehler werden in der Logdatei `/var/log/install.log` protokolliert.
 
 ## Fehlerbehebung
 

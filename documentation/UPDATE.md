@@ -78,7 +78,7 @@ sudo bash fotobox.sh --update
 
 - Das Backup des alten Stands finden Sie im Projektordner unter `backup-update-<Datum>`. Sie können daraus bei Bedarf Dateien wiederherstellen.
 - Nach dem Update können Sie die Fotobox wie gewohnt im Browser aufrufen.
-- Alle wichtigen Schritte und Fehler werden in der Logdatei `/var/log/fotobox_install.log` protokolliert.
+- Alle wichtigen Schritte und Fehler werden in der Logdatei `/var/log/install.log` protokolliert.
 
 ## Fehlerbehebung
 

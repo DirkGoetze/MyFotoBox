@@ -14,30 +14,14 @@
 
 set -e
 
-# Parameter-Verarbeitung für unbeaufsichtigten Modus
-UNATTENDED=0
-for arg in "$@"; do
-    case "$arg" in
-        --unattended|-u|--headless|headless|-q)
-            UNATTENDED=1
-            ;;
-        *)
-            echo "Unbekannter Parameter: $arg"
-            echo "Unterstützte Parameter:"
-            echo "  --unattended, -u, --headless, headless, -q: Unbeaufsichtigter Modus"
-            exit 1
-            ;;
-    esac
-done
-
 # ===========================================================================
 # Globale Konstanten (Vorgaben und Defaults für die Installation)
 # ===========================================================================
 # ---------------------------------------------------------------------------
-# Einstellungen: Projekt und Tools
+# Einstellungen: Projekt und Repository
 # ---------------------------------------------------------------------------
-# Minimale Tools für die initiale Installation
-PACKAGES_BOOT=(git lsof)
+PACKAGES_TOOLS=(git lsof)
+GIT_REPO_URL="https://github.com/DirkGoetze/MyFotoBox.git"
 INSTALL_DIR="/opt/fotobox"
 # ---------------------------------------------------------------------------
 # Einstellungen: Ordnerstruktur
@@ -46,6 +30,10 @@ BACKUP_DIR="$INSTALL_DIR/backup"
 CONF_DIR="$INSTALL_DIR/conf"
 BASH_DIR="$INSTALL_DIR/backend/scripts"
 LOG_DIR="$INSTALL_DIR/log"
+# ---------------------------------------------------------------------------
+# Einstellungen: NGINX 
+# ---------------------------------------------------------------------------
+PACKAGES_NGINX=(nginx)
 # ---------------------------------------------------------------------------
 # WICHTIG: Die Port-Konfiguration der Fotobox-Weboberfläche darf NICHT mehr
 # über eine globale Variable (z.B. FOTOBOX_PORT) erfolgen. Der aktuell
@@ -64,10 +52,8 @@ LOG_DIR="$INSTALL_DIR/log"
 SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
 SYSTEMD_DST="/etc/systemd/system/fotobox-backend.service"
 # ---------------------------------------------------------------------------
-# Einstellungen: Systemabhängigkeiten
+# Einstellungen: Datenverzeichnis
 # ---------------------------------------------------------------------------
-# Die eigentlichen Paketabhängigkeiten werden aus requirements_system.inf gelesen.
-# Siehe parse_system_requirements Funktion.
 DATA_DIR="$INSTALL_DIR/data"
 # ---------------------------------------------------------------------------
 # Einstellungen: Debug-Modus
@@ -77,22 +63,6 @@ DEBUG_MOD=0
 # ==========================================================================='
 # Hilfsfunktionen
 # ==========================================================================='
-
-check_script_location() {
-    # -----------------------------------------------------------------------
-    # check_script_location
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob das Skript sich selbst überschreiben würde (Self-Overwrite-Schutz)
-    #           und gibt ggf. eine Warnung aus. Ein Abbruch erfolgt nur noch,
-    #           wenn das Skript direkt überschrieben werden würde.
-    local script_path script_dir
-    script_path="$(readlink -f "$0")"
-    script_dir="$(cd "$(dirname "$0")" && pwd)"
-    if [ "$script_path" = "$INSTALL_DIR/install.sh" ]; then
-        echo "[WARN] Das Installationsskript liegt im Zielverzeichnis ($INSTALL_DIR) und könnte sich selbst überschreiben."
-        echo "Die Ausführung ist dennoch möglich, da das Repository bereits geklont wurde."
-    fi
-}
 
 chk_is_root() {
     # -----------------------------------------------------------------------
@@ -133,7 +103,7 @@ set_fallback_security_settings() {
 
     # - log: Dummy-Logger, falls kein Logging verfügbar ist
     type log &>/dev/null || log() {
-        local LOG_FILE="fotobox_fallback_$(date '+%Y-%m-%d').log"
+        local LOG_FILE="fallback_install_$(date '+%Y-%m-%d').log"
         if [ -z "$1" ]; then
             # Keine Nachricht: Logrotation nicht implementiert im Fallback
             return
@@ -166,19 +136,9 @@ set_fallback_security_settings() {
     }
     
     # - print_error: Fehler rot, eingerückt, mit Pfeil und Tag
-    # - Erweiterte Fehlerbehandlung gemäß best practices
     type print_error &>/dev/null || print_error()   {
-        local error_msg="$*"
-        local error_code=1
-        # Prüfen, ob ein Error-Code als letztes Argument übergeben wurde (print_error "Message" 123)
-        if [[ "$#" -gt 1 && "${!#}" =~ ^[0-9]+$ ]]; then
-            error_code=${!#}
-            # Entferne den Error-Code aus der Nachricht
-            error_msg=$(echo "$*" | sed "s/ ${!#}$//")
-        fi
-        echo -e "\033[1;31m  → [ERROR]\033[0m $error_msg\033[0m" >&2
-        log "ERROR [Code $error_code]: $error_msg"
-        return $error_code
+        echo -e "\033[1;31m  → [ERROR]\033[0m $*\033[0m" >&2
+        log "ERROR: $*"
     }
 
     # - print_prompt: Prompt blau, Leerzeile davor und danach (nur wenn nicht unattended)
@@ -202,171 +162,6 @@ debug_print() {
         echo -e "\033[1;35m  → [DEBUG]\033[0m $*"
         log "DEBUG: $*"
     fi
-}
-
-parse_system_requirements() {
-    # -----------------------------------------------------------------------
-    # parse_system_requirements
-    # -----------------------------------------------------------------------
-    # Funktion: Liest die requirements_system.inf Datei und extrahiert die benötigten Pakete
-    # Parameter: $1 = Ausgabevariable für alle Pakete
-    # Parameter: $2 = Ausgabevariable für NGINX-Pakete (optional)
-    # Parameter: $3 = Ausgabevariable für Python-Pakete (optional)
-    # Parameter: $4 = Ausgabevariable für SQLite-Pakete (optional)
-    # Rückgabe: 0 = OK, 1 = Fehler beim Lesen der Datei
-    # Extras...: Ignoriert Kommentare und leere Zeilen, verarbeitet Versionsangaben
-    local -n output_all="$1"
-    local -n output_nginx="$2"
-    local -n output_python="$3"
-    local -n output_sqlite="$4"
-    local req_file="$INSTALL_DIR/conf/requirements_system.inf"
-    
-    debug_print "parse_system_requirements: Lese Systemanforderungen aus $req_file"
-    
-    # Prüfen, ob die Datei existiert
-    if [ ! -f "$req_file" ]; then
-        print_error "Systemanforderungsdatei $req_file nicht gefunden!"
-        return 1
-    fi
-    
-    # Arrays initialisieren
-    output_all=()
-    output_nginx=()
-    output_python=()
-    output_sqlite=()
-    
-    # Datei einlesen und verarbeiten
-    while IFS= read -r line; do
-        # Kommentare und leere Zeilen überspringen
-        [[ $line =~ ^[[:space:]]*# || -z "${line// /}" ]] && continue
-        
-        # Paket und Version extrahieren
-        if [[ $line =~ ([a-zA-Z0-9-]+)\>=([0-9.]+) ]]; then
-            package="${BASH_REMATCH[1]}"
-            version="${BASH_REMATCH[2]}"
-            pkg_with_version="${package}=${version}"
-            output_all+=("$pkg_with_version")
-            
-            # Nach Kategorien sortieren
-            case "$package" in
-                nginx*)
-                    output_nginx+=("$pkg_with_version")
-                    ;;
-                python3*|pip*)
-                    output_python+=("$pkg_with_version")
-                    ;;
-                sqlite3*)
-                    output_sqlite+=("$pkg_with_version")
-                    ;;
-            esac
-            
-            debug_print "parse_system_requirements: Erkanntes Paket: $package, Version: $version"
-        else
-            # Zeilen ohne Versionsangabe sind auch okay
-            package="${line// /}"
-            if [[ -n "$package" ]]; then
-                output_all+=("$package")
-                
-                # Nach Kategorien sortieren
-                case "$package" in
-                    nginx*)
-                        output_nginx+=("$package")
-                        ;;
-                    python3*|pip*)
-                        output_python+=("$package")
-                        ;;
-                    sqlite3*)
-                        output_sqlite+=("$package")
-                        ;;
-                esac
-                
-                debug_print "parse_system_requirements: Erkanntes Paket ohne Version: $package"
-            fi
-        fi
-    done < "$req_file"
-    
-    debug_print "parse_system_requirements: Insgesamt ${#output_all[@]} Pakete gefunden"
-    return 0
-}
-
-parse_python_requirements() {
-    # -----------------------------------------------------------------------
-    # parse_python_requirements
-    # -----------------------------------------------------------------------
-    # Funktion: Liest die requirements_python.inf Datei und extrahiert die Python-Pakete
-    # Parameter: $1 = Ausgabevariable für alle Pakete
-    # Parameter: $2 = Ausgabevariable für erforderliche Pakete
-    # Parameter: $3 = Ausgabevariable für optionale Pakete
-    # Rückgabe: 0 = OK, 1 = Fehler beim Lesen der Datei
-    # Extras...: Ignoriert Kommentare und leere Zeilen, verarbeitet Versionsangaben und Kommentare
-    local -n output_all="$1"
-    local -n output_required="$2"
-    local -n output_optional="$3"
-    local req_file="$INSTALL_DIR/conf/requirements_python.inf"
-    
-    debug_print "parse_python_requirements: Lese Python-Anforderungen aus $req_file"
-    
-    # Prüfen, ob die Datei existiert
-    if [ ! -f "$req_file" ]; then
-        print_error "Python-Anforderungsdatei $req_file nicht gefunden!"
-        return 1
-    fi
-    
-    # Arrays initialisieren
-    output_all=()
-    output_required=()
-    output_optional=()
-    
-    # Datei einlesen und verarbeiten
-    while IFS= read -r line; do
-        # Kommentare und leere Zeilen überspringen - aber Zeilen mit Inline-Kommentaren behalten
-        [[ $line =~ ^[[:space:]]*# || -z "${line// /}" ]] && continue
-        
-        # Prüfen, ob das Paket optional ist (anhand des Kommentars)
-        is_optional=0
-        if [[ $line =~ .*#.*optional ]]; then
-            is_optional=1
-            debug_print "parse_python_requirements: Optionales Paket gefunden"
-        fi
-        
-        # Entferne Inline-Kommentare für die weitere Verarbeitung
-        clean_line=$(echo "$line" | sed 's/#.*$//')
-        
-        # Paket und Version extrahieren
-        if [[ $clean_line =~ ([a-zA-Z0-9_-]+)\>=([0-9.]+) ]]; then
-            package="${BASH_REMATCH[1]}"
-            version="${BASH_REMATCH[2]}"
-            pkg_with_version="$package>=$version"
-            output_all+=("$pkg_with_version")
-            
-            # Nach erforderlich/optional sortieren
-            if [ $is_optional -eq 1 ]; then
-                output_optional+=("$pkg_with_version")
-                debug_print "parse_python_requirements: Optionales Paket: $package, Version: $version"
-            else
-                output_required+=("$pkg_with_version")
-                debug_print "parse_python_requirements: Erforderliches Paket: $package, Version: $version"
-            fi
-        else
-            # Zeilen ohne Versionsangabe sind auch okay
-            package=$(echo "$clean_line" | tr -d ' \t')
-            if [[ -n "$package" ]]; then
-                output_all+=("$package")
-                
-                # Nach erforderlich/optional sortieren
-                if [ $is_optional -eq 1 ]; then
-                    output_optional+=("$package")
-                    debug_print "parse_python_requirements: Optionales Paket ohne Version: $package"
-                else
-                    output_required+=("$package")
-                    debug_print "parse_python_requirements: Erforderliches Paket ohne Version: $package"
-                fi
-            fi
-        fi
-    done < "$req_file"
-    
-    debug_print "parse_python_requirements: Insgesamt ${#output_all[@]} Pakete gefunden (${#output_required[@]} erforderlich, ${#output_optional[@]} optional)"
-    return 0
 }
 
 show_spinner() {
@@ -556,10 +351,10 @@ set_install_packages() {
     # -----------------------------------------------------------------------
     # set_install_packages
     # -----------------------------------------------------------------------
-    # Funktion: Installiert alle benötigten Systempakete basierend auf requirements_system.inf
+    # Funktion: Installiert alle benötigten Systempakete (ohne NGINX) und 
     # ........  prüft den Erfolg
-    # Rückgabe: 0 = OK, 1 = Fehler bei apt-get update, 2 = Fehler Boot-Tools, 
-    # ......... 3 = Fehler Systemanforderungen, 5 = Fehler beim Parsen
+    # Rückgabe: 0 = OK, 1 = Fehler bei apt-get update, 2 = Fehler bei Tools-Installation,
+    # ......... 3 = Fehler bei System-Requirements-Installation
     print_step "Führe apt-get update aus ..."
     (apt-get update -qq) &> "$LOG_DIR/apt_update.log" &
     show_spinner $!
@@ -568,40 +363,11 @@ set_install_packages() {
         tail -n 10 "$LOG_DIR/apt_update.log"
         return 1
     fi
+    install_package_group PACKAGES_TOOLS || return 2
     
-    # Zuerst die minimalen Tools installieren (benötigt für die weitere Installation)
-    install_package_group PACKAGES_BOOT || return 2
+    # Installiere Systempakete aus conf/requirements_system.inf
+    install_system_requirements || return 3
     
-    # Die Struktur muss existieren, damit wir requirements_system.inf parsen können
-    if [ ! -d "$INSTALL_DIR/conf" ] || [ ! -f "$INSTALL_DIR/conf/requirements_system.inf" ]; then
-        print_warning "Systemanforderungsdatei nicht gefunden. Überspringe weitere Paketinstallationen."
-        return 0
-    fi
-    
-    # Systemanforderungen parsen und kategorisieren
-    local ALL_PACKAGES=()
-    local NGINX_PACKAGES=()
-    local PYTHON_PACKAGES=()
-    local SQLITE_PACKAGES=()
-    
-    if ! parse_system_requirements ALL_PACKAGES NGINX_PACKAGES PYTHON_PACKAGES SQLITE_PACKAGES; then
-        print_error "Fehler beim Parsen der Systemanforderungen."
-        return 5
-    fi
-    
-    # Paketgruppen deklarieren
-    declare -g PACKAGES_ALL=("${ALL_PACKAGES[@]}")
-    declare -g PACKAGES_NGINX=("${NGINX_PACKAGES[@]}")
-    declare -g PACKAGES_PYTHON=("${PYTHON_PACKAGES[@]}")
-    declare -g PACKAGES_SQLITE=("${SQLITE_PACKAGES[@]}")
-    
-    debug_print "Installiere alle Systempakete aus requirements_system.inf (${#PACKAGES_ALL[@]} Pakete)"
-    print_step "Installiere alle benötigten Systempakete aus requirements_system.inf..."
-    
-    # Alle Pakete aus der Konfigurationsdatei installieren
-    install_package_group PACKAGES_ALL || return 3
-    
-    print_success "Alle Systempakete erfolgreich installiert"
     return 0
 }
 
@@ -671,11 +437,13 @@ set_structure() {
     return 0
 }
 
-# set_systemd_service
-# ------------------------------------------------------------------------------
-# Funktion: Erstellt oder kopiert die systemd-Service-Datei für das Backend
-# Rückgabe: keine (Seitenwirkung: legt Datei an, gibt Erfolgsmeldung aus)
 set_systemd_service() {
+    # -----------------------------------------------------------------------
+    # set_systemd_service
+    # -----------------------------------------------------------------------
+    # Funktion: Erstellt oder kopiert die systemd-Service-Datei für das Backend
+    # Rückgabe: keine (Seitenwirkung: legt Datei an, gibt Erfolgsmeldung aus)
+
     if [ ! -f "$SYSTEMD_SERVICE" ]; then
         cat > "$SYSTEMD_SERVICE" <<EOF
 [Unit]
@@ -696,11 +464,13 @@ EOF
     fi
 }
 
-# set_systemd_install
-# ------------------------------------------------------------------------------
-# Funktion: Kopiert systemd-Service-Datei und startet Service
-# Rückgabe: keine (Seitenwirkung: kopiert, startet und aktiviert Service)
 set_systemd_install() {
+    # -----------------------------------------------------------------------
+    # set_systemd_install
+    # -----------------------------------------------------------------------
+    # Funktion: Kopiert systemd-Service-Datei und startet Service
+    # Rückgabe: keine (Seitenwirkung: kopiert, startet und aktiviert Service)
+
     local backup="$BACKUP_DIR/fotobox-backend.service.bak.$(date +%Y%m%d%H%M%S)"
     if [ -f "$SYSTEMD_DST" ]; then
         cp "$SYSTEMD_DST" "$backup"
@@ -747,27 +517,27 @@ dlg_prepare_system() {
     # -----------------------------------------------------------------------
     # dlg_prepare_system
     # -----------------------------------------------------------------------
-    # Funktion: Installiert alle benötigten Systempakete, einschließlich NGINX
-    print_step "[3/10] Installiere alle benötigten Systempakete (inkl. NGINX) ..."
+    # Funktion: Prüft installiert Pakete
+    print_step "[3/10] Installiere benötigte Systempakete ..."
     set_install_packages
     rc=$?
     if [ $rc -eq 1 ]; then
         print_error "Fehler bei apt-get update. Prüfen Sie Ihre Internetverbindung und Paketquellen."
         exit 1
     elif [ $rc -eq 2 ]; then
-        print_error "Fehler bei der Installation der Boot-Tools (git, lsof)."
+        print_error "Fehler bei der Installation der Tools."
         exit 1
     elif [ $rc -eq 3 ]; then
-        print_error "Fehler bei der Installation der Systempakete aus requirements_system.inf."
+        print_error "Fehler bei der Installation der Python-Pakete."
         exit 1
-    elif [ $rc -eq 5 ]; then
-        print_error "Fehler beim Parsen der Systemanforderungen in requirements_system.inf."
+    elif [ $rc -eq 4 ]; then
+        print_error "Fehler bei der Installation von SQLite."
         exit 1
     elif [ $rc -ne 0 ]; then
         print_error "Unbekannter Fehler bei der Systempaket-Installation (Code $rc)."
         exit 1
     fi
-    print_success "Alle Systempakete (inkl. NGINX) wurden erfolgreich installiert."
+    print_success "Systempakete wurden erfolgreich installiert."
 }
 
 dlg_prepare_users() {
@@ -840,30 +610,34 @@ dlg_nginx_installation() {
     # -----------------------------------------------------------------------
     # dlg_nginx_installation
     # -----------------------------------------------------------------------
-    # Funktion: Führt die NGINX-Konfiguration durch (nicht mehr Installation)
-    #           Die Installation erfolgt bereits mit den anderen Systempaketen
+    # Funktion: Führt die vollständige NGINX-Installation/Integration durch
+    #           (nur noch zentrale Logik via manage_nginx.sh)
     # Rückgabe: 0 = OK, !=0 = Fehler
     # ------------------------------------------------------------------------------
-    print_step "[6/10] NGINX-Konfiguration ..."
+    print_step "[6/10] NGINX-Installation und Konfiguration ..."
 
-    debug_print "dlg_nginx_installation: Starte NGINX-Konfigurations-Dialog, UNATTENDED=$UNATTENDED, BASH_DIR=$BASH_DIR"
+    debug_print "dlg_nginx_installation: Starte NGINX-Dialog, UNATTENDED=$UNATTENDED, BASH_DIR=$BASH_DIR"
     # Prüfen, ob manage_nginx.sh existiert
     if [ ! -f "$BASH_DIR/manage_nginx.sh" ]; then
         debug_print "dlg_nginx_installation: manage_nginx.sh nicht gefunden unter $BASH_DIR"
         print_error "manage_nginx.sh nicht gefunden! Die Projektstruktur wurde vermutlich noch nicht geklont."
         exit 1
     fi
-    
-    # Prüfen, ob NGINX erfolgreich installiert wurde
-    if ! command -v nginx &>/dev/null; then
-        debug_print "dlg_nginx_installation: NGINX wurde nicht gefunden, obwohl es installiert sein sollte"
-        print_error "NGINX wurde nicht gefunden. Die Installation scheint fehlgeschlagen zu sein."
+    # NGINX-Installation prüfen/ausführen (zentral)
+    if [ "$UNATTENDED" -eq 1 ]; then
+        debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json install"
+        install_result=$(bash "$BASH_DIR/manage_nginx.sh" --json install)
+        install_rc=$?
+    else
+        debug_print "dlg_nginx_installation: Starte manage_nginx.sh install"
+        install_result=$(bash "$BASH_DIR/manage_nginx.sh" install)
+        install_rc=$?
+    fi
+    debug_print "dlg_nginx_installation: install_rc=$install_rc, install_result=$install_result"
+    if [ $install_rc -ne 0 ]; then
+        print_error "NGINX-Installation fehlgeschlagen: $install_result"
         exit 1
     fi
-    
-    # NGINX-Service starten, falls noch nicht aktiv
-    systemctl enable nginx &>/dev/null
-    systemctl start nginx &>/dev/null
     # Betriebsmodus abfragen (default/multisite)
     if [ "$UNATTENDED" -eq 1 ]; then
         debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json activ"
@@ -1012,147 +786,36 @@ dlg_nginx_installation() {
     return 0
 }
 
-# dlg_backend_integration
-# ------------------------------------------------------------------------------
-# Funktion: Richtet das Python-Backend (venv, requirements, systemd) ein und startet es
-# Rückgabe: 0 = OK, !=0 = Fehler
-# ------------------------------------------------------------------------------
-install_python_packages() {
-    # -----------------------------------------------------------------------
-    # install_python_packages
-    # -----------------------------------------------------------------------
-    # Funktion: Installiert Python-Pakete in der virtuellen Umgebung basierend auf requirements_python.inf
-    # Rückgabe: 0 = OK, 1 = Fehler beim Upgrade von pip, 2 = Fehler beim Parsen der Anforderungen,
-    #           3 = Fehler beim Installieren der erforderlichen Pakete, 
-    #           4 = Fehler beim Installieren optionaler Pakete (nicht kritisch)
-    local venv_path="$INSTALL_DIR/backend/venv"
-    local pip_cmd="$venv_path/bin/pip"
-    local log_pip="$LOG_DIR/pip_upgrade.log"
-    local log_required="$LOG_DIR/pip_required.log"
-    local log_optional="$LOG_DIR/pip_optional.log"
-    local failed_required=()
-    local failed_optional=()
-    
-    # Upgrade pip zuerst
-    debug_print "install_python_packages: Aktualisiere pip..."
-    print_step "Installiere/aktualisiere pip ..."
-    ($pip_cmd install --upgrade pip) &> "$log_pip" &
-    show_spinner $!
-    if [ $? -ne 0 ]; then
-        print_error "Fehler beim Upgrade von pip. Log-Auszug:"
-        tail -n 10 "$log_pip"
-        return 1
-    fi
-    print_success "pip wurde erfolgreich aktualisiert."
-    
-    # Python-Anforderungen parsen
-    local ALL_PACKAGES=()
-    local REQUIRED_PACKAGES=()
-    local OPTIONAL_PACKAGES=()
-    
-    if ! parse_python_requirements ALL_PACKAGES REQUIRED_PACKAGES OPTIONAL_PACKAGES; then
-        print_error "Fehler beim Parsen der Python-Anforderungen."
-        return 2
-    fi
-    
-    # Erforderliche Pakete installieren
-    if [ ${#REQUIRED_PACKAGES[@]} -gt 0 ]; then
-        print_step "Installiere erforderliche Python-Pakete (${#REQUIRED_PACKAGES[@]})..."
-        debug_print "install_python_packages: Installiere erforderliche Pakete: ${REQUIRED_PACKAGES[*]}"
-        
-        # Installiere alle erforderlichen Pakete auf einmal
-        ($pip_cmd install "${REQUIRED_PACKAGES[@]}") &> "$log_required" &
-        show_spinner $!
-        
-        if [ $? -ne 0 ]; then
-            print_error "Fehler bei der Installation der erforderlichen Python-Pakete. Log-Auszug:"
-            tail -n 15 "$log_required"
-            return 3
-        fi
-        print_success "Alle erforderlichen Python-Pakete wurden erfolgreich installiert."
-    else
-        print_info "Keine erforderlichen Python-Pakete gefunden."
-    fi
-    
-    # Optionale Pakete installieren - Fehler werden protokolliert, aber nicht kritisch
-    if [ ${#OPTIONAL_PACKAGES[@]} -gt 0 ]; then
-        print_step "Installiere optionale Python-Pakete (${#OPTIONAL_PACKAGES[@]})..."
-        debug_print "install_python_packages: Installiere optionale Pakete: ${OPTIONAL_PACKAGES[*]}"
-        
-        # Installiere jedes optionale Paket einzeln, damit bei einem Fehler die anderen noch installiert werden
-        for pkg in "${OPTIONAL_PACKAGES[@]}"; do
-            debug_print "install_python_packages: Versuche, optionales Paket zu installieren: $pkg"
-            ($pip_cmd install "$pkg") &>> "$log_optional" &
-            show_spinner $!
-            
-            if [ $? -ne 0 ]; then
-                failed_optional+=("$pkg")
-                print_warning "Optionales Paket $pkg konnte nicht installiert werden."
-            else
-                print_success "Optionales Paket $pkg wurde erfolgreich installiert."
-            fi
-        done
-        
-        if [ ${#failed_optional[@]} -gt 0 ]; then
-            print_warning "Einige optionale Python-Pakete konnten nicht installiert werden: ${failed_optional[*]}"
-            print_info "Dies kann ignoriert werden, wenn Sie diese Funktionen nicht benötigen."
-            debug_print "install_python_packages: Nicht installierte optionale Pakete: ${failed_optional[*]}"
-            # Wir geben hier 4 zurück, aber das ist nicht kritisch
-            return 4
-        else
-            print_success "Alle optionalen Python-Pakete wurden erfolgreich installiert."
-        fi
-    else
-        print_info "Keine optionalen Python-Pakete gefunden."
-    fi
-    
-    return 0
-}
-
 dlg_backend_integration() {
     # -----------------------------------------------------------------------
     # dlg_backend_integration
     # -----------------------------------------------------------------------
-    # Funktion: Richtet das Python-Backend (venv, requirements, systemd) ein und startet es
+    # Funktion: Richtet das Python-Backend (venv, requirements, systemd) ein 
+    # ........  und startet es
     # Rückgabe: 0 = OK, !=0 = Fehler
-    # ------------------------------------------------------------------------------
-    print_step "[7/10] Python-Umgebung und Backend-Service werden eingerichtet ..."
-    
+    # -----------------------------------------------------------------------
+    print_step "[Backend] Python-Umgebung und Backend-Service werden eingerichtet ..."
     # Python venv anlegen, falls nicht vorhanden
     if [ ! -d "$INSTALL_DIR/backend/venv" ]; then
-        print_step "Erstelle virtuelle Python-Umgebung ..."
-        debug_print "dlg_backend_integration: Erstelle venv unter $INSTALL_DIR/backend/venv"
-        (python3 -m venv "$INSTALL_DIR/backend/venv") &> "$LOG_DIR/venv_setup.log" &
-        show_spinner $!
-        
-        if [ $? -ne 0 ]; then
-            print_error "Konnte virtuelle Python-Umgebung nicht anlegen! Log-Auszug:"
-            tail -n 10 "$LOG_DIR/venv_setup.log"
-            exit 1
-        fi
-        print_success "Virtuelle Python-Umgebung wurde erfolgreich erstellt."
-    else
-        debug_print "dlg_backend_integration: Virtuelle Python-Umgebung existiert bereits"
+        python3 -m venv "$INSTALL_DIR/backend/venv" || { print_error "Konnte venv nicht anlegen!"; exit 1; }
     fi
-    
-    # Python-Pakete installieren mit der verbesserten Funktion
-    install_python_packages
-    install_rc=$?
-    
-    if [ $install_rc -eq 1 ]; then
-        print_error "Fehler beim Aktualisieren von pip. Installation abgebrochen."
+    # Abhängigkeiten installieren
+    print_step "Installiere/aktualisiere pip ..."
+    ("$INSTALL_DIR/backend/venv/bin/pip" install --upgrade pip) &> "$LOG_DIR/pip_upgrade.log" &
+    show_spinner $!
+    if [ $? -ne 0 ]; then
+        print_error "Fehler beim Upgrade von pip. Log-Auszug:"
+        tail -n 10 "$LOG_DIR/pip_upgrade.log"
         exit 1
-    elif [ $install_rc -eq 2 ]; then
-        print_error "Fehler beim Parsen der Python-Anforderungen. Installation abgebrochen."
-        exit 1
-    elif [ $install_rc -eq 3 ]; then
-        print_error "Fehler beim Installieren der erforderlichen Python-Pakete. Installation abgebrochen."
-        exit 1
-    elif [ $install_rc -eq 4 ]; then
-        print_warning "Einige optionale Python-Pakete konnten nicht installiert werden."
-        print_info "Die Installation wird fortgesetzt, da dies nicht kritisch ist."
     fi
-    
+    print_step "Installiere Python-Abhängigkeiten ... (inkl. bcrypt für sichere Passwörter)"
+    ("$INSTALL_DIR/backend/venv/bin/pip" install -r "$INSTALL_DIR/conf/requirements_python.inf") &> "$LOG_DIR/pip_requirements.log" &
+    show_spinner $!
+    if [ $? -ne 0 ]; then
+        print_error "Konnte Python-Abhängigkeiten nicht installieren! Log-Auszug:"
+        tail -n 10 "$LOG_DIR/pip_requirements.log"
+        exit 1
+    fi
     # systemd-Service anlegen und starten
     set_systemd_service
     set_systemd_install
@@ -1160,22 +823,73 @@ dlg_backend_integration() {
     return 0
 }
 
-# ------------------------------------------------------------------------------
-# main
-# ------------------------------------------------------------------------------
-# Funktion: Hauptablauf der Erstinstallation
-# ------------------------------------------------------------------------------
-main() {
-    check_script_location         # Prüfe, ob Skript im Zielverzeichnis liegt
-    dlg_check_root               # Prüfe, ob Skript als root ausgeführt wird
-    dlg_check_distribution       # Prüfe, ob System auf Debian/Ubuntu basiert
-    dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
-    dlg_prepare_users            # Erstelle Benutzer und Gruppe 'fotobox'
-    dlg_prepare_structure        # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
-    # Logverzeichnis explizit anlegen und Rechte setzen (jetzt in set_structure gekapselt)
-    dlg_nginx_installation       # NGINX-Konfiguration (Integration oder eigene Site)
-    dlg_backend_integration      # Python-Backend, venv, systemd-Service, Start
-    # --- NEU: NGINX-Konfiguration nach Installation ausgeben (Policy-konform, modular) ---
+install_system_requirements() {
+    # -----------------------------------------------------------------------
+    # install_system_requirements
+    # -----------------------------------------------------------------------
+    # Funktion: Liest die Systempakete aus conf/requirements_system.inf und installiert sie
+    # Rückgabe: 0 = OK, 1 = Fehler beim Lesen der Datei, 2 = Fehler bei der Installation
+    local req_file="$INSTALL_DIR/conf/requirements_system.inf"
+    
+    if [ ! -f "$req_file" ]; then
+        print_error "Datei nicht gefunden: $req_file"
+        return 1
+    fi
+    
+    print_step "Lese System-Anforderungen aus $req_file ..."
+    
+    # Array für die zu installierenden Pakete
+    local packages=()
+    
+    # Datei zeilenweise lesen und Kommentare und leere Zeilen überspringen
+    while IFS= read -r line; do
+        # Kommentare und leere Zeilen überspringen
+        if [[ "$line" =~ ^[[:space:]]*# || -z "$line" || "$line" =~ ^// ]]; then
+            continue
+        fi
+        
+        # Version-Spezifikation entfernen (z.B. nginx>=1.18.0 -> nginx)
+        local package="${line%%>=*}"
+        package="${package%%[<>=]*}"  # Entferne alle Vergleichsoperatoren
+        package="${package%%[[:space:]]*}"  # Entferne trailing spaces
+        
+        if [ -n "$package" ]; then
+            packages+=("$package")
+        fi
+    done < "$req_file"
+    
+    if [ ${#packages[@]} -eq 0 ]; then
+        print_warning "Keine Pakete in $req_file gefunden!"
+        return 0
+    fi
+    
+    print_step "Installiere ${#packages[@]} Systempakete: ${packages[*]} ..."
+    
+    # Installation der Pakete mit apt-get
+    DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}" &> "$LOG_DIR/system_requirements.log" &
+    show_spinner $!
+    
+    if [ $? -ne 0 ]; then
+        print_error "Fehler bei der Installation von Systempaketen. Log-Auszug:"
+        tail -n 10 "$LOG_DIR/system_requirements.log"
+        return 2
+    fi
+    
+    print_success "Systempakete erfolgreich installiert."
+    return 0
+}
+
+dlg_show_summary() {
+    # -----------------------------------------------------------------------
+    # dlg_show_summary
+    # -----------------------------------------------------------------------
+    # Funktion: Zeigt die Zusammenfassung der Installation an, insbesondere 
+    # ........  die URL der Weboberfläche
+    # Rückgabe: 0 = OK
+    # -----------------------------------------------------------------------
+    print_step "[7/10] Installation abgeschlossen: Zusammenfassung ..."
+    
+    # NGINX-Konfiguration nach Installation ausgeben (Policy-konform, modular)
     source "$BASH_DIR/manage_nginx.sh"
     local nginx_status_json
     nginx_status_json=$(get_nginx_status json)
@@ -1185,60 +899,102 @@ main() {
     nginx_servername=$(echo "$nginx_status_json" | grep -o '"server_name":"[^"]*"' | cut -d'"' -f4)
     nginx_webroot=$(echo "$nginx_status_json" | grep -o '"webroot_path":"[^"]*"' | cut -d'"' -f4)
     nginx_url=$(echo "$nginx_status_json" | grep -o '"url":"[^"]*"' | cut -d'"' -f4)
+    
     # Prüfe auf Platzhalter und generiere ggf. alternative URL
     if [[ "$nginx_servername" == "_" || -z "$nginx_servername" ]]; then
-        # Verbesserte IP-Ermittlung für mehrere Netzwerkkarten
-        local ipaddr=""
-        # Bevorzuge Nicht-Loopback-Interfaces und IPv4-Adressen
-        if command -v ip &>/dev/null; then
-            # Verwende "ip" Befehl, wenn verfügbar (moderne Systeme)
-            ipaddr=$(ip -4 addr show scope global | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -n1)
-        fi
-        
-        # Fallback auf hostname -I, wenn ip nicht verfügbar ist oder keine Adresse gefunden wurde
-        if [ -z "$ipaddr" ]; then
-            ipaddr=$(hostname -I | awk '{print $1}')
-        fi
-        
-        # Weitere Fallbacks
-        if [ -z "$ipaddr" ]; then
-            # Versuche es mit ifconfig (ältere Systeme)
-            if command -v ifconfig &>/dev/null; then
-                ipaddr=$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1' | head -n1 | grep -Eo '([0-9]*\.){3}[0-9]*')
-            fi
-        fi
-        
+        # Versuche, die lokale IP zu ermitteln
+        local ipaddr
+        ipaddr=$(hostname -I | awk '{print $1}')
         if [ -n "$ipaddr" ]; then
             nginx_url="http://$ipaddr:$nginx_port$nginx_webroot"
-            debug_print "Ermittelte IP-Adresse für Webzugriff: $ipaddr"
         else
             nginx_url="http://localhost:$nginx_port$nginx_webroot"
-            debug_print "Konnte keine externe IP ermitteln, verwende localhost"
         fi
     fi
+    
     log "NGINX-Konfiguration nach Installation: Port=$nginx_port, Bind=$nginx_bind, Servername=$nginx_servername, Webroot=$nginx_webroot, URL=$nginx_url"
+    
     if [ "$UNATTENDED" -eq 1 ]; then
         local logfile
         logfile=$(get_log_file)
-        # Verbesserte Ausgabe im unbeaufsichtigten Modus mit klar strukturiertem JSON für automatisierte Verarbeitung
-        cat <<EOF
-{
-    "status": "success",
-    "message": "Installation abgeschlossen",
-    "details": {
-        "log": "$logfile",
-        "url": "$nginx_url"
-    }
-}
-EOF
+        echo "Installation abgeschlossen. Details siehe Logfile: $logfile"
+        echo "Weboberfläche: $nginx_url"
     else
         print_success "Erstinstallation abgeschlossen."
         print_prompt "Bitte rufen Sie die Weboberfläche im Browser auf, um die Fotobox weiter zu konfigurieren und zu verwalten.\nURL: $nginx_url"
         echo "Weitere Wartung (Update, Deinstallation) erfolgt über die WebUI oder die Python-Skripte im backend/."
     fi
+    
+    return 0
 }
 
 # ------------------------------------------------------------------------------
+# main
+# ------------------------------------------------------------------------------
+# Funktion: Hauptablauf der Erstinstallation
+# ------------------------------------------------------------------------------
+main() {
+    dlg_check_root               # Prüfe, ob Skript als root ausgeführt wird
+    dlg_check_distribution       # Prüfe, ob System auf Debian/Ubuntu basiert
+    dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
+    dlg_prepare_users            # Erstelle Benutzer und Gruppe 'fotobox'
+    dlg_prepare_structure        # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
+    dlg_nginx_installation       # NGINX-Konfiguration (Integration oder eigene Site)
+    dlg_backend_integration      # Python-Backend, venv, systemd-Service, Start
+    dlg_show_summary             # Zeige Zusammenfassung der Installation an
+}
+
+# ------------------------------------------------------------------------------
+# UNATTENDED-Variable initialisieren, falls nicht gesetzt
+: "${UNATTENDED:=0}"
+
+# ------------------------------------------------------------------------------
+# Funktion: Verarbeitet Befehlszeilenargumente für das Skript
+# ------------------------------------------------------------------------------
+parse_args() {
+    # Standardwerte für alle Flags setzen
+    UNATTENDED=0
+    
+    # Argumente durchlaufen
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --unattended|-u|--headless|-h|-q)
+                UNATTENDED=1
+                log "Unattended-Modus aktiviert"
+                ;;
+            --help|-h|--hilfe)
+                show_help
+                exit 0
+                ;;
+            *)
+                print_warning "Unbekannte Option: $1"
+                show_help
+                exit 1
+                ;;
+        esac
+        shift
+    done
+    
+    export UNATTENDED
+}
+
+# ------------------------------------------------------------------------------
+# Funktion: Zeigt die Hilfe zu den verfügbaren Optionen an
+# ------------------------------------------------------------------------------
+show_help() {
+    cat << EOF
+Verwendung: $0 [OPTIONEN]
+
+Dieses Skript führt die Erstinstallation der Fotobox durch.
+
+Optionen:
+  --unattended, -u, --headless, -q   Starte die Installation im Unattended-Modus 
+                                     (ohne Benutzerinteraktion, verwendet sichere Standardwerte)
+  --help, -h, --hilfe                Zeigt diese Hilfe an
+
+EOF
+}
+
 # Fallback-Definitionen für Logging/Print-Funktionen zentral setzen
 set_fallback_security_settings
 
@@ -1248,6 +1004,9 @@ if [ -f "$(dirname "$0")/backend/scripts/log_helper.sh" ]; then
 else
     print_warning "Logging-Hilfsskript nicht gefunden! Logging deaktiviert."
 fi
+
+# Befehlszeilenargumente verarbeiten
+parse_args "$@"
 
 # Log-Initialisierung (Rotation) direkt nach Skriptstart
 log

@@ -7,57 +7,24 @@ Diese Anleitung beschreibt Schritt für Schritt, wie Sie die Fotobox-Software au
 - Ein Ubuntu- oder Debian-basiertes System (z.B. Raspberry Pi OS, Ubuntu Server)
 - Root-Rechte (Sie müssen das Skript als Administrator ausführen)
 - Internetverbindung
-- Git (zur Versionskontrolle)
-
-### Überprüfen, ob Git installiert ist
-
-Bevor Sie beginnen, können Sie prüfen, ob Git bereits auf Ihrem System installiert ist:
-
-```bash
-git --version
-```
-
-Wenn Sie eine Ausgabe wie `git version 2.xx.x` sehen, ist Git bereits installiert und Sie können fortfahren. Andernfalls sehen Sie eine Fehlermeldung wie `command not found`.
-
-### Git installieren (falls nicht vorhanden)
-
-Wenn Git noch nicht installiert ist, können Sie es mit folgendem Befehl installieren:
-
-```bash
-sudo apt update
-sudo apt install -y git
-```
 
 ## Vorbereitung
 
 Klonen Sie das Repository und wechseln Sie ins Projektverzeichnis:
 
 ```bash
-git clone https://github.com/DirkGoetze/MyFotoBox.git /opt/fotobox
-cd /opt/fotobox
+git clone https://github.com/DirkGoetze/fotobox2.git
+cd fotobox2
 ```
 
-### Alternative: Download als ZIP-Datei
-
-Falls Sie Probleme mit Git haben, können Sie das Repository auch als ZIP-Datei herunterladen:
-
-```bash
-# ZIP-Datei von GitHub herunterladen
-wget https://github.com/DirkGoetze/fotobox2/archive/refs/heads/main.zip
-# Entpacken
-unzip main.zip
-# In das entpackte Verzeichnis wechseln
-cd fotobox2-main
-```
-
-**Hinweis:** Das Installationsskript enthält keine Klon-Logik mehr. Sie müssen das Repository vorab selbst klonen (oder herunterladen) und das Skript im Projektverzeichnis ausführen.
+**Hinweis:** Das Installationsskript enthält keine Klon-Logik mehr. Sie müssen das Repository vorab selbst klonen und das Skript im Projektverzeichnis ausführen.
 
 ## Installation starten
 
 Führen Sie das Installationsskript als root im geklonten Projektverzeichnis aus:
 
 ```bash
-sudo ./install.sh --install
+sudo ./install.sh
 ```
 
 Das Skript prüft, ob alle notwendigen Unterverzeichnisse und Dateien vorhanden sind. Fehlen wichtige Komponenten (z.B. `backend/`, `backend/scripts/`, `conf/requirements_python.inf`), bricht das Skript mit einer Fehlermeldung ab.
@@ -81,7 +48,7 @@ Das Skript übernimmt folgende Aufgaben (jeder Schritt wird im Terminal erklärt
 ## Beispiel für den Aufruf
 
 ```bash
-sudo ./install.sh --install
+sudo ./install.sh
 ```
 
 ## Hinweise
@@ -90,7 +57,7 @@ sudo ./install.sh --install
   - [http://IP-ADRESSE:80/](http://IP-ADRESSE:80/)  (Standard)
   - [http://IP-ADRESSE:8080/](http://IP-ADRESSE:8080/) (falls Port 80 belegt war)
 - Die Zugangsdaten für die Konfigurationsseite werden beim ersten Start der Weboberfläche festgelegt.
-- Alle wichtigen Schritte und Fehler werden in der Logdatei `/var/log/fotobox_install.log` protokolliert.
+- Alle wichtigen Schritte und Fehler werden in der Logdatei `/var/log/install.log` protokolliert.
 
 ## Fehlerbehebung
 
@@ -111,14 +78,16 @@ Die Fotobox-Installation unterstützt einen vollautomatischen, interaktiven und 
 Der Modus wird durch das Flag `--unattended` (oder Synonyme wie `-u`, `--headless`, `headless`, `-q`) beim Aufruf des Installationsskripts aktiviert:
 
 ```bash
-sudo ./install.sh --unattended
+sudo ./install_fotobox.sh --unattended
 ```
 
 ### Verhalten im Unattended-Modus
 
-- **Alle Rückfragen werden automatisch mit Standardwerten beantwortet.**  - Portwahl: Standardport 80 wird verwendet (sofern frei).
+- **Alle Rückfragen werden automatisch mit Standardwerten beantwortet.**
+  - Portwahl: Standardport 80 wird verwendet (sofern frei).
   - NGINX-Integration: Default-Integration wird automatisch gewählt.
   - Paket-Upgrade: Upgrades werden abgelehnt (Standard: "n").
+  - NGINX-Installation: Wird automatisch bestätigt (Standard: "j").
   - Bei Konflikten (z.B. Port belegt): Abbruch mit Log-Eintrag.
 - **Keine Interaktion erforderlich:** Das Skript läuft ohne Benutzereingaben durch.
 - **Dialog- und Statusausgaben:**
@@ -129,7 +98,7 @@ sudo ./install.sh --unattended
   - Kritische Fehler führen zum Abbruch und werden im Logfile dokumentiert.
   - Für die Fehleranalyse ist das Logfile heranzuziehen (Pfad wird am Ende ausgegeben).
 - **Logging:**
-  - Alle wichtigen Aktionen, Status- und Fehlermeldungen werden mit Zeitstempel in eine Logdatei geschrieben (Standard: `/var/log/<datum>_install_fotobox.log` oder `/tmp/...` falls `/var/log` nicht beschreibbar).
+  - Alle wichtigen Aktionen, Status- und Fehlermeldungen werden mit Zeitstempel in eine Logdatei geschrieben (Standard: `/var/log/<datum>_install.log` oder `/tmp/...` falls `/var/log` nicht beschreibbar).
   - Die Logdatei wird täglich rotiert und ältere Logs werden komprimiert.
 
 ### Beispiel für eine Headless-Installation
@@ -141,7 +110,7 @@ sudo ./install.sh --unattended
 Nach Abschluss der Installation erscheint z.B.:
 
 ```text
-Installation abgeschlossen. Details siehe Logfile: /var/log/2025-06-03_install_fotobox.log
+Installation abgeschlossen. Details siehe Logfile: /var/log/2025-06-03_install.log
 Weboberfläche: [http://192.168.1.100:80/](http://192.168.1.100:80/)
 ```
 

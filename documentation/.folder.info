@@ -19,6 +19,6 @@ Diese Dokumentation enthält Anleitungen und Hinweise zur Installation, Wartung 
 5. **Backup-Strategie:**
    - Im BACKUP_STRATEGIE.md ist explizit erwähnt, dass alle Systemkonfigurationen (systemd, nginx etc.) vor Änderungen gesichert werden.
 
-**Beispiel für die Umsetzung siehe install_fotobox.sh, manage_update.py, manage_uninstall.py.**
+**Beispiel für die Umsetzung siehe install.sh, manage_update.py, manage_uninstall.py.**
 
 Weitere Details siehe Einzelanleitungen und Haupt-README.
