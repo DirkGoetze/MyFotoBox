@@ -352,6 +352,10 @@ set_install_packages() {
     # Funktion: Installiert alle benötigten Systempakete und prüft den Erfolg
     # Rückgabe: 0 = OK, 1 = Fehler bei apt-get update, 
     # ......... 2 = Fehler bei System-Requirements-Installation
+    
+    # Stelle sicher, dass das Logverzeichnis existiert
+    mkdir -p "$LOG_DIR"
+    
     print_step "Führe apt-get update aus ..."
     (apt-get update -qq) &> "$LOG_DIR/apt_update.log" &
     show_spinner $!
@@ -861,6 +865,9 @@ install_system_requirements() {
     
     print_step "Installiere ${#packages[@]} Systempakete: ${packages[*]} ..."
     
+    # Stelle sicher, dass das Logverzeichnis existiert
+    mkdir -p "$LOG_DIR"
+    
     # Installation der Pakete mit apt-get
     DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}" &> "$LOG_DIR/system_requirements.log" &
     show_spinner $!
@@ -930,6 +937,9 @@ dlg_show_summary() {
 # Funktion: Hauptablauf der Erstinstallation
 # ------------------------------------------------------------------------------
 main() {
+    # Stelle sicher, dass das Logverzeichnis existiert
+    mkdir -p "$LOG_DIR"
+    
     dlg_check_root               # Prüfe, ob Skript als root ausgeführt wird
     dlg_check_distribution       # Prüfe, ob System auf Debian/Ubuntu basiert
     dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
