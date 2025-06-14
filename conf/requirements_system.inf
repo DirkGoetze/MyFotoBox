@@ -22,6 +22,7 @@ libgphoto2-dev>=2.5.0
 libturbojpeg0-dev>=2.0.0
 librealsense2-dev>=2.50.0  # Für Intel RealSense Tiefensensor-Kameras (optional)
 librealsense2-utils>=2.50.0  # RealSense-Dienstprogramme (optional)
+lsof>=4.89  # Für Prozess- und Portprüfungen
 
 # Entwicklungstools
 build-essential>=12.8  # Für Kompilierung von Python-Modulen

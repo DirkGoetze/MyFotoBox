@@ -18,10 +18,8 @@ set -e
 # Globale Konstanten (Vorgaben und Defaults für die Installation)
 # ===========================================================================
 # ---------------------------------------------------------------------------
-# Einstellungen: Projekt und Repository
+# Einstellungen: Installationsverzeichnis
 # ---------------------------------------------------------------------------
-PACKAGES_TOOLS=(git lsof)
-GIT_REPO_URL="https://github.com/DirkGoetze/MyFotoBox.git"
 INSTALL_DIR="/opt/fotobox"
 # ---------------------------------------------------------------------------
 # Einstellungen: Ordnerstruktur
@@ -30,22 +28,6 @@ BACKUP_DIR="$INSTALL_DIR/backup"
 CONF_DIR="$INSTALL_DIR/conf"
 BASH_DIR="$INSTALL_DIR/backend/scripts"
 LOG_DIR="$INSTALL_DIR/log"
-# ---------------------------------------------------------------------------
-# Einstellungen: NGINX 
-# ---------------------------------------------------------------------------
-PACKAGES_NGINX=(nginx)
-# ---------------------------------------------------------------------------
-# WICHTIG: Die Port-Konfiguration der Fotobox-Weboberfläche darf NICHT mehr
-# über eine globale Variable (z.B. FOTOBOX_PORT) erfolgen. Der aktuell
-# verwendete Port ist ausschließlich über die Getter-Funktion
-#   get_nginx_port
-# aus backend/scripts/manage_nginx.sh zu beziehen.
-# Beispiel für Shell-Skripte:
-#   source "$BASH_DIR/manage_nginx.sh"
-#   port=$(get_nginx_port)
-# Die Konfigurationspfade für NGINX werden ausschließlich über 
-# manage_nginx.sh (Getter/Setter) verwaltet.
-# Policy: Siehe policies/copilot-instructions.md
 # ---------------------------------------------------------------------------
 # Einstellungen: Backend Service 
 # ---------------------------------------------------------------------------
@@ -351,10 +333,9 @@ set_install_packages() {
     # -----------------------------------------------------------------------
     # set_install_packages
     # -----------------------------------------------------------------------
-    # Funktion: Installiert alle benötigten Systempakete (ohne NGINX) und 
-    # ........  prüft den Erfolg
-    # Rückgabe: 0 = OK, 1 = Fehler bei apt-get update, 2 = Fehler bei Tools-Installation,
-    # ......... 3 = Fehler bei System-Requirements-Installation
+    # Funktion: Installiert alle benötigten Systempakete und prüft den Erfolg
+    # Rückgabe: 0 = OK, 1 = Fehler bei apt-get update, 
+    # ......... 2 = Fehler bei System-Requirements-Installation
     print_step "Führe apt-get update aus ..."
     (apt-get update -qq) &> "$LOG_DIR/apt_update.log" &
     show_spinner $!
@@ -363,10 +344,9 @@ set_install_packages() {
         tail -n 10 "$LOG_DIR/apt_update.log"
         return 1
     fi
-    install_package_group PACKAGES_TOOLS || return 2
     
     # Installiere Systempakete aus conf/requirements_system.inf
-    install_system_requirements || return 3
+    install_system_requirements || return 2
     
     return 0
 }
@@ -525,10 +505,7 @@ dlg_prepare_system() {
         print_error "Fehler bei apt-get update. Prüfen Sie Ihre Internetverbindung und Paketquellen."
         exit 1
     elif [ $rc -eq 2 ]; then
-        print_error "Fehler bei der Installation der Tools."
-        exit 1
-    elif [ $rc -eq 3 ]; then
-        print_error "Fehler bei der Installation der Python-Pakete."
+        print_error "Fehler bei der Installation der Systempakete."
         exit 1
     elif [ $rc -eq 4 ]; then
         print_error "Fehler bei der Installation von SQLite."
@@ -614,7 +591,7 @@ dlg_nginx_installation() {
     #           (nur noch zentrale Logik via manage_nginx.sh)
     # Rückgabe: 0 = OK, !=0 = Fehler
     # ------------------------------------------------------------------------------
-    print_step "[6/10] NGINX-Installation und Konfiguration ..."
+    print_step "[5/10] NGINX-Installation und Konfiguration ..."
 
     debug_print "dlg_nginx_installation: Starte NGINX-Dialog, UNATTENDED=$UNATTENDED, BASH_DIR=$BASH_DIR"
     # Prüfen, ob manage_nginx.sh existiert
@@ -794,7 +771,7 @@ dlg_backend_integration() {
     # ........  und startet es
     # Rückgabe: 0 = OK, !=0 = Fehler
     # -----------------------------------------------------------------------
-    print_step "[Backend] Python-Umgebung und Backend-Service werden eingerichtet ..."
+    print_step "[6/10] Python-Umgebung und Backend-Service werden eingerichtet ..."
     # Python venv anlegen, falls nicht vorhanden
     if [ ! -d "$INSTALL_DIR/backend/venv" ]; then
         python3 -m venv "$INSTALL_DIR/backend/venv" || { print_error "Konnte venv nicht anlegen!"; exit 1; }
@@ -1014,4 +991,3 @@ log "Installationsskript gestartet: $(date '+%Y-%m-%d %H:%M:%S')"
 
 # Hauptfunktion aufrufen 
 main
-
