@@ -146,6 +146,22 @@ debug_print() {
     fi
 }
 
+ensure_log_directory() {
+    # -----------------------------------------------------------------------
+    # ensure_log_directory
+    # -----------------------------------------------------------------------
+    # Funktion: Stellt sicher, dass das Logverzeichnis existiert, bevor es verwendet wird
+    # Rückgabe: 0 = OK, 1 = Fehler beim Erstellen
+    if [ ! -d "$LOG_DIR" ]; then
+        mkdir -p "$LOG_DIR" || return 1
+        chmod 755 "$LOG_DIR" || return 1
+        if id -u fotobox &>/dev/null; then
+            chown fotobox:fotobox "$LOG_DIR" || return 1
+        fi
+    fi
+    return 0
+}
+
 show_spinner() {
     # -----------------------------------------------------------------------
     # show_spinner
@@ -772,6 +788,9 @@ dlg_backend_integration() {
     # Rückgabe: 0 = OK, !=0 = Fehler
     # -----------------------------------------------------------------------
     print_step "[6/10] Python-Umgebung und Backend-Service werden eingerichtet ..."
+    # Stellen Sie sicher, dass das Logverzeichnis vorhanden ist
+    ensure_log_directory || mkdir -p "$LOG_DIR"
+    
     # Python venv anlegen, falls nicht vorhanden
     if [ ! -d "$INSTALL_DIR/backend/venv" ]; then
         python3 -m venv "$INSTALL_DIR/backend/venv" || { print_error "Konnte venv nicht anlegen!"; exit 1; }
