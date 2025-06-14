@@ -33,8 +33,8 @@ sudo apt install -y git
 Klonen Sie das Repository und wechseln Sie ins Projektverzeichnis:
 
 ```bash
-git clone https://github.com/DirkGoetze/fotobox2.git
-cd fotobox2
+git clone https://github.com/DirkGoetze/MyFotoBox.git /opt/fotobox
+cd /opt/fotobox
 ```
 
 ### Alternative: Download als ZIP-Datei
