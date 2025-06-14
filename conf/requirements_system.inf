@@ -7,7 +7,8 @@ python3>=3.8
 python3-pip>=20.0
 python3-venv>=3.8   # Für virtuelle Python-Umgebungen
 python3.11-venv     # Spezifisches Paket für Python 3.11
-python3-ensurepip   # Für pip innerhalb von virtuellen Umgebungen
+# python3-ensurepip wurde entfernt, da es auf vielen Distributionen nicht verfügbar ist
+# pip wird stattdessen direkt in der virtuellen Umgebung aktualisiert
 sqlite3>=3.31
 
 # Bildverarbeitung
@@ -22,8 +23,10 @@ libv4l-dev>=1.16.0
 # Weitere Abhängigkeiten
 libgphoto2-dev>=2.5.0
 libturbojpeg0-dev>=2.0.0
-librealsense2-dev>=2.50.0  # Für Intel RealSense Tiefensensor-Kameras (optional)
-librealsense2-utils>=2.50.0  # RealSense-Dienstprogramme (optional)
+# Die folgenden Pakete sind nur auf bestimmten Plattformen verfügbar und optional
+# Bitte manuell installieren, falls benötigt:
+# librealsense2-dev>=2.50.0  # Für Intel RealSense Tiefensensor-Kameras (optional)
+# librealsense2-utils>=2.50.0  # RealSense-Dienstprogramme (optional)
 lsof>=4.89  # Für Prozess- und Portprüfungen
 
 # Entwicklungstools

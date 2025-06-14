@@ -46,6 +46,36 @@ DEBUG_MOD=0
 # Hilfsfunktionen
 # ==========================================================================='
 
+parse_args() {
+    # -----------------------------------------------------------------------
+    # Funktion: Verarbeitet Befehlszeilenargumente für das Skript
+    # -----------------------------------------------------------------------
+    # Standardwerte für alle Flags setzen
+    UNATTENDED=0
+    
+    # Argumente durchlaufen
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --unattended|-u|--headless|-h|-q)
+                UNATTENDED=1
+                log "Unattended-Modus aktiviert"
+                ;;
+            --help|-h|--hilfe)
+                show_help
+                exit 0
+                ;;
+            *)
+                print_warning "Unbekannte Option: $1"
+                show_help
+                exit 1
+                ;;
+        esac
+        shift
+    done
+    
+    export UNATTENDED
+}
+
 chk_is_root() {
     # -----------------------------------------------------------------------
     # chk_is_root
@@ -72,22 +102,104 @@ chk_distribution() {
     return 0
 }
 
+chk_distribution_version() {
+    # -----------------------------------------------------------------------
+    # chk_distribution_version
+    # -----------------------------------------------------------------------
+    # Funktion: Prüft, ob die Distribution eine unterstützte Version ist
+    # Rückgabe: 0 = unterstützte Version (VERSION_ID wird als globale Variable gesetzt)
+    #           1 = /etc/os-release nicht gefunden
+    #           2 = Version nicht unterstützt
+    if [ ! -f /etc/os-release ]; then
+        DIST_NAME="Unknown"
+        DIST_VERSION="Unknown"
+        return 1
+    fi
+    . /etc/os-release
+    DIST_NAME="$NAME"
+    DIST_VERSION="$VERSION_ID"
+    case "$VERSION_ID" in
+        10|11|12|20.04|22.04)
+            return 0
+            ;;
+        *)
+            return 2
+            ;;
+    esac
+}
+
 set_fallback_security_settings() {
     # -----------------------------------------------------------------------
     # set_fallback_security_settings
     # -----------------------------------------------------------------------
-    # Funktion: Setzt Fallback-Definitionen für Logging- und Print-Funktionen,
+    # Funktion: Stellt die Verfügbarkeit aller kritischen Resourcen sicher und
+    # ......... setzt Fallback-Definitionen für Logging- und Print-Funktionen,
     # ......... falls diese nicht durch ein zentrales Logging-Hilfsskript 
-    # ......... bereitgestellt werden. Kapselt alle sicherheitsrelevanten 
-    # ......... und benutzerfreundlichen Defaults an einer zentralen Stelle.
+    # ......... bereitgestellt werden.
     # .........
-    # Farbgebung, Einrückung und Pfeile gemäß policies/cli_ausgabe_policy.md
-
+    # Rückgabe: 0 = OK, 1 = fehlerhafte Umgebung, Skript sollte abgebrochen werden
+    
+    # Default LOG_DIR setzen, falls nicht vorhanden
+    : "${LOG_DIR:=/opt/fotobox/logs}"
+    
+    # --- 1. Zunächst versuchen, externe Skript-Ressourcen einzubinden ---
+    if [ -f "$(dirname "$0")/backend/scripts/log_helper.sh" ]; then
+        source "$(dirname "$0")/backend/scripts/log_helper.sh"
+    fi
+    
+    # --- 2. Prüfen und Vorbereiten der Log-Umgebung ---
+    
+    # Wenn log_helper.sh verfügbar und get_log_path definiert ist, nutzen wir diese
+    if type get_log_path &>/dev/null; then
+        local LOG_DIR=$(get_log_path)
+    else
+        # Fallback-Logik, wenn log_helper.sh nicht geladen ist
+        # Bestimme ein funktionierendes Log-Verzeichnis
+        if [ ! -d "$LOG_DIR" ]; then
+            mkdir -p "$LOG_DIR" 2>/dev/null
+            if [ ! -d "$LOG_DIR" ]; then
+                # Fallback 1: Versuche temporäres Verzeichnis
+                if [ -w "/tmp" ]; then
+                    LOG_DIR="/tmp/fotobox_logs"
+                    mkdir -p "$LOG_DIR" 2>/dev/null
+                # Fallback 2: Versuche aktuelles Verzeichnis
+                elif [ -w "." ]; then
+                    LOG_DIR="./fotobox_logs"
+                    mkdir -p "$LOG_DIR" 2>/dev/null
+                else
+                    # Keine Schreibrechte für Logs - kritischer Fehler
+                    return 1
+                fi
+            fi
+        fi
+        
+        # Teste Schreibrecht für das Logverzeichnis
+        if [ ! -w "$LOG_DIR" ]; then
+            return 1
+        fi
+    fi
+    
+    # Erstelle eine Test-Log-Datei, um die Schreibbarkeit zu verifizieren
+    if ! touch "$LOG_DIR/test_log.tmp" 2>/dev/null; then
+        return 1
+    fi
+    rm -f "$LOG_DIR/test_log.tmp" 2>/dev/null
+    
+    # --- 3. Log-Funktionen definieren (falls noch nicht vorhanden) ---
+    
     # - log: Dummy-Logger, falls kein Logging verfügbar ist
     type log &>/dev/null || log() {
-        local LOG_FILE="fallback_install_$(date '+%Y-%m-%d').log"
+        # Wenn get_log_file verfügbar, nutzen wir diese
+        local LOG_FILE
+        if type get_log_file &>/dev/null; then
+            LOG_FILE=$(get_log_file)
+        else
+            LOG_FILE="$LOG_DIR/install_$(date '+%Y-%m-%d').log"
+        fi
+        
         if [ -z "$1" ]; then
-            # Keine Nachricht: Logrotation nicht implementiert im Fallback
+            # Bei leerem Parameter: Rotation simulieren
+            touch "$LOG_FILE" 2>/dev/null
             return
         fi
         echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG_FILE"
@@ -146,21 +258,9 @@ debug_print() {
     fi
 }
 
-ensure_log_directory() {
-    # -----------------------------------------------------------------------
-    # ensure_log_directory
-    # -----------------------------------------------------------------------
-    # Funktion: Stellt sicher, dass das Logverzeichnis existiert, bevor es verwendet wird
-    # Rückgabe: 0 = OK, 1 = Fehler beim Erstellen
-    if [ ! -d "$LOG_DIR" ]; then
-        mkdir -p "$LOG_DIR" || return 1
-        chmod 755 "$LOG_DIR" || return 1
-        if id -u fotobox &>/dev/null; then
-            chown fotobox:fotobox "$LOG_DIR" || return 1
-        fi
-    fi
-    return 0
-}
+# Die Funktion ensure_log_directory wurde entfernt.
+# Die Funktionalität wurde in set_fallback_security_settings integriert und
+# nutzt nun die Funktionen in log_helper.sh, wenn verfügbar.
 
 show_spinner() {
     # -----------------------------------------------------------------------
@@ -437,6 +537,100 @@ set_structure() {
     return 0
 }
 
+install_system_requirements() {
+    # -----------------------------------------------------------------------
+    # install_system_requirements
+    # -----------------------------------------------------------------------
+    # Funktion: Liest die Systempakete aus conf/requirements_system.inf und installiert sie
+    # Rückgabe: 0 = OK, 1 = Fehler beim Lesen der Datei, 2 = Fehler bei der Installation
+    
+    # Sicherstellen, dass INSTALL_DIR gesetzt ist
+    if [ -z "$INSTALL_DIR" ]; then
+        INSTALL_DIR=$(dirname "$(readlink -f "$0")")
+        log "WARNING: INSTALL_DIR war nicht gesetzt, setze auf: $INSTALL_DIR"
+    fi
+    
+    local req_file="$INSTALL_DIR/conf/requirements_system.inf"
+    
+    if [ ! -f "$req_file" ]; then
+        print_error "Datei nicht gefunden: $req_file"
+        log "ERROR: Anforderungsdatei nicht gefunden: $req_file"
+        return 1
+    fi
+    
+    print_step "Lese System-Anforderungen aus $req_file ..."
+    
+    # Array für die zu installierenden Pakete
+    local packages=()
+    
+    # Datei zeilenweise lesen und Kommentare und leere Zeilen überspringen
+    while IFS= read -r line; do
+        # Kommentare und leere Zeilen überspringen
+        if [[ "$line" =~ ^[[:space:]]*# || -z "$line" || "$line" =~ ^// ]]; then
+            continue
+        fi
+        
+        # Version-Spezifikation entfernen (z.B. nginx>=1.18.0 -> nginx)
+        local package="${line%%>=*}"
+        package="${package%%[<>=]*}"  # Entferne alle Vergleichsoperatoren
+        package="${package%%[[:space:]]*}"  # Entferne trailing spaces
+        
+        if [ -n "$package" ]; then
+            packages+=("$package")
+        fi
+    done < "$req_file"
+    
+    if [ ${#packages[@]} -eq 0 ]; then
+        print_warning "Keine Pakete in $req_file gefunden!"
+        return 0
+    fi
+    
+    # Stelle sicher, dass das Logverzeichnis existiert
+    # LOG_DIR wird bereits in set_fallback_security_settings korrekt gesetzt
+    
+    # Erstelle die System-Requirements-Log-Datei wenn sie nicht existiert
+    touch "$LOG_DIR/system_requirements.log" 2>/dev/null || {
+        print_warning "Konnte Log-Datei nicht erstellen. Log-Ausgaben werden möglicherweise nicht gespeichert."
+    }
+    
+    # Paketlisten aktualisieren
+    print_step "Aktualisiere Paketlisten (apt update)..."
+    apt-get update -q || {
+        print_error "Fehler bei apt-get update. Bitte prüfen Sie Ihre Internetverbindung und Paketquellen."
+        return 2
+    }
+    
+    # Pakete einzeln installieren für bessere Fehlerbehandlung
+    local failed_packages=()
+    local successful_packages=0
+    
+    for pkg in "${packages[@]}"; do
+        print_info "Installiere Paket: $pkg..."
+        if apt-get install -y "$pkg" >> "$LOG_DIR/system_requirements.log" 2>&1; then
+            print_success "Paket $pkg erfolgreich installiert."
+            ((successful_packages++))
+        else
+            print_warning "Paket $pkg konnte nicht installiert werden. Das Skript wird versuchen, fortzufahren."
+            failed_packages+=("$pkg")
+            # In die Logdatei schreiben, dass das Paket nicht installiert werden konnte
+            echo "$(date '+%Y-%m-%d %H:%M:%S') ERROR: Paket $pkg konnte nicht installiert werden" >> "$LOG_DIR/system_requirements.log"
+        fi
+    done
+    
+    # Zusammenfassung ausgeben
+    if [ ${#failed_packages[@]} -eq 0 ]; then
+        print_success "Alle $successful_packages Systempakete wurden erfolgreich installiert."
+        return 0
+    elif [ $successful_packages -gt 0 ]; then
+        print_warning "$successful_packages Pakete wurden erfolgreich installiert, aber ${#failed_packages[@]} Pakete konnten nicht installiert werden: ${failed_packages[*]}"
+        print_warning "Die Installation wird fortgesetzt, könnte aber unvollständig sein. Überprüfen Sie die Logdatei für Details."
+        return 0  # Wir setzen hier 0, um fortzufahren, aber warnen den Benutzer
+    else
+        print_error "Fehler bei der Installation aller Systempakete. Fehlgeschlagene Pakete: ${failed_packages[*]}"
+        return 2
+    fi
+}
+
 set_systemd_service() {
     # -----------------------------------------------------------------------
     # set_systemd_service
@@ -491,26 +685,95 @@ dlg_check_root() {
     # -----------------------------------------------------------------------
     # dlg_check_root
     # -----------------------------------------------------------------------
-    # Funktion: Dialog für Root-Check, gibt Fehler aus und bricht ggf. ab
+    # Funktion: Prüft, ob das Skript als root ausgeführt wird
     print_step "[1/10] Prüfe Rechte zur Ausführung ..."
     if ! chk_is_root; then
-        print_error "Bitte das Skript als root ausführen."
+        print_error "Dieses Skript muss mit Root-Rechten ausgeführt werden."
         exit 1
     fi
-    print_success "Rechteprüfung erfolgreich."
+    print_success "Rechteprüfung erfolgreich (Root-Rechte vorhanden)."
 }
 
 dlg_check_distribution() {
     # -----------------------------------------------------------------------
     # dlg_check_distribution
     # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob das System auf Debian/Ubuntu basiert
+    # Funktion: Prüft, ob das System auf Debian/Ubuntu basiert und zeigt Informationen an
     print_step "[2/10] Prüfe Distribution ..."
+    
+    # Prüfe Basis-Distribution
     if ! chk_distribution; then
         print_error "Dieses Skript ist nur für Debian/Ubuntu-basierte Systeme geeignet."
         exit 1
     fi
-    print_success "Distribution ist Debian/Ubuntu."
+    
+    # Versionsinfo-Variablen vorinitialisieren, falls sie später nicht gesetzt werden können
+    : "${DIST_NAME:=Unbekannt}"
+    : "${DIST_VERSION:=Unbekannt}"
+    
+    # Prüfe Versions-Kompatibilität
+    chk_distribution_version
+    version_check=$?
+    
+    case $version_check in
+        0)
+            print_success "Distribution erkannt: $DIST_NAME $DIST_VERSION (unterstützt)"
+            log "INFO: Unterstützte Distribution erkannt: $DIST_NAME $DIST_VERSION"
+            ;;
+        1)
+            print_warning "Distributionsversion konnte nicht erkannt werden (/etc/os-release nicht gefunden)."
+            print_success "Distribution: Debian/Ubuntu-basiertes System"
+            log "WARNING: Distributionsversion konnte nicht erkannt werden (/etc/os-release nicht gefunden)"
+            ;;
+        2)
+            print_warning "Distribution erkannt: $DIST_NAME $DIST_VERSION (nicht offiziell unterstützt)"
+            print_info "Die Installation wird fortgesetzt, aber es könnte zu unerwarteten Problemen kommen."
+            log "WARNING: Nicht offiziell unterstützte Distribution erkannt: $DIST_NAME $DIST_VERSION"
+            ;;
+    esac
+}
+
+dlg_check_system_requirements() {
+    # -----------------------------------------------------------------------
+    # dlg_check_system_requirements
+    # -----------------------------------------------------------------------
+    # Funktion: Prüft die Systemvoraussetzungen und stellt Logging-Ressourcen bereit
+    print_step "[3/10] Prüfe Systemvoraussetzungen und richte Logging ein ..."
+    
+    # Prüfe, ob externe Abhängigkeiten verfügbar sind
+    if ! command -v apt-get &>/dev/null; then
+        echo -e "\033[1;31m  → [ERROR]\033[0m apt-get nicht gefunden. Dies ist ein kritischer Fehler."
+        exit 1
+    fi
+    
+    # Auf kritische Ressourcen prüfen und Logging einrichten
+    if ! set_fallback_security_settings; then
+        echo -e "\033[1;31m  → [ERROR]\033[0m Kritische Systemvoraussetzungen nicht erfüllt oder Logging konnte nicht eingerichtet werden."
+        exit 1
+    fi
+    
+    # Prüfen, ob die log_helper.sh erfolgreich geladen wurde
+    if type get_log_file &>/dev/null; then
+        print_success "Log-Hilfsskript erfolgreich geladen, verwende zentrales Logging."
+        log "INFO: Log-Hilfsskript erfolgreich geladen, verwende zentrales Logging."
+    else
+        print_warning "Zentrales Log-Hilfsskript nicht verfügbar, verwende Fallback-Logging in $LOG_DIR."
+        log "WARNING: Zentrales Log-Hilfsskript nicht verfügbar, verwende Fallback-Logging in $LOG_DIR."
+    fi
+    
+    # Befehlszeilenargumente verarbeiten
+    parse_args "$@"
+    
+    # Log-Initialisierung (Rotation) direkt nach Skriptstart
+    if type -t log | grep -q "function"; then
+        log
+        log "Installationsskript gestartet: $(date '+%Y-%m-%d %H:%M:%S')"
+        log "Logverzeichnis: $LOG_DIR"
+    else
+        echo -e "\033[1;33mWarnung: Log-Rotation konnte nicht durchgeführt werden (log-Funktion nicht verfügbar)\033[0m"
+    fi
+
+    print_success "Systemvoraussetzungen erfüllt, Logging eingerichtet."
 }
 
 dlg_prepare_system() {
@@ -518,7 +781,7 @@ dlg_prepare_system() {
     # dlg_prepare_system
     # -----------------------------------------------------------------------
     # Funktion: Prüft installiert Pakete
-    print_step "[3/10] Installiere benötigte Systempakete ..."
+    print_step "[4/10] Installiere benötigte Systempakete ..."
     set_install_packages
     rc=$?
     if [ $rc -eq 1 ]; then
@@ -542,7 +805,7 @@ dlg_prepare_users() {
     # dlg_prepare_users
     # -----------------------------------------------------------------------
     # Funktion: Erstellen des Benutzer und der Gruppe 'fotobox'
-    print_step "[4/10] Prüfe und lege Benutzer/Gruppe an ..."
+    print_step "[5/10] Prüfe und lege Benutzer/Gruppe an ..."
     set_user_group
     rc=$?
     if [ $rc -eq 1 ]; then
@@ -567,7 +830,7 @@ dlg_prepare_structure() {
     # -----------------------------------------------------------------------
     # Funktion: Prüfen/Erstellen der Verzeichnisstruktur, Klonen des Projekt
     # Rechte setzem
-    print_step "[5/10] Erstelle Verzeichnisstruktur und setze Rechte ..."
+    print_step "[6/10] Erstelle Verzeichnisstruktur und setze Rechte ..."
     set_structure
     rc=$?
     if [ $rc -eq 1 ]; then
@@ -611,7 +874,7 @@ dlg_nginx_installation() {
     #           (nur noch zentrale Logik via manage_nginx.sh)
     # Rückgabe: 0 = OK, !=0 = Fehler
     # ------------------------------------------------------------------------------
-    print_step "[5/10] NGINX-Installation und Konfiguration ..."
+    print_step "[7/10] NGINX-Installation und Konfiguration ..."
 
     debug_print "dlg_nginx_installation: Starte NGINX-Dialog, UNATTENDED=$UNATTENDED, BASH_DIR=$BASH_DIR"
     # Prüfen, ob manage_nginx.sh existiert
@@ -791,9 +1054,9 @@ dlg_backend_integration() {
     # ........  und startet es
     # Rückgabe: 0 = OK, !=0 = Fehler
     # -----------------------------------------------------------------------
-    print_step "[6/10] Python-Umgebung und Backend-Service werden eingerichtet ..."
+    print_step "[8/10] Python-Umgebung und Backend-Service werden eingerichtet ..."
     # Stellen Sie sicher, dass das Logverzeichnis vorhanden ist
-    ensure_log_directory || mkdir -p "$LOG_DIR"
+    # LOG_DIR wird bereits in set_fallback_security_settings korrekt gesetzt
     
     # Python venv anlegen, falls nicht vorhanden
     if [ ! -d "$INSTALL_DIR/backend/venv" ]; then
@@ -823,80 +1086,6 @@ dlg_backend_integration() {
     return 0
 }
 
-install_system_requirements() {
-    # -----------------------------------------------------------------------
-    # install_system_requirements
-    # -----------------------------------------------------------------------
-    # Funktion: Liest die Systempakete aus conf/requirements_system.inf und installiert sie
-    # Rückgabe: 0 = OK, 1 = Fehler beim Lesen der Datei, 2 = Fehler bei der Installation
-    local req_file="$INSTALL_DIR/conf/requirements_system.inf"
-    
-    if [ ! -f "$req_file" ]; then
-        print_error "Datei nicht gefunden: $req_file"
-        return 1
-    fi
-    
-    print_step "Lese System-Anforderungen aus $req_file ..."
-    
-    # Array für die zu installierenden Pakete
-    local packages=()
-    
-    # Datei zeilenweise lesen und Kommentare und leere Zeilen überspringen
-    while IFS= read -r line; do
-        # Kommentare und leere Zeilen überspringen
-        if [[ "$line" =~ ^[[:space:]]*# || -z "$line" || "$line" =~ ^// ]]; then
-            continue
-        fi
-        
-        # Version-Spezifikation entfernen (z.B. nginx>=1.18.0 -> nginx)
-        local package="${line%%>=*}"
-        package="${package%%[<>=]*}"  # Entferne alle Vergleichsoperatoren
-        package="${package%%[[:space:]]*}"  # Entferne trailing spaces
-        
-        if [ -n "$package" ]; then
-            packages+=("$package")
-        fi
-    done < "$req_file"
-    
-    if [ ${#packages[@]} -eq 0 ]; then
-        print_warning "Keine Pakete in $req_file gefunden!"
-        return 0
-    fi
-    
-    print_step "Installiere ${#packages[@]} Systempakete: ${packages[*]} ..."
-    
-    # Stelle sicher, dass das Logverzeichnis existiert
-    mkdir -p "$LOG_DIR"
-    
-    # Installation der Pakete direkt ausführen, ohne Hintergrundprozess
-    # Dies stellt sicher, dass wir den korrekten Exit-Status erhalten
-    DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}" | tee "$LOG_DIR/system_requirements.log"
-    
-    # Prüfe den Rückgabewert von apt-get direkt (nicht vom Pipe)
-    local apt_exit_code=${PIPESTATUS[0]}
-    if [ $apt_exit_code -ne 0 ]; then
-        print_error "Fehler bei der Installation von Systempaketen (Exit-Code: $apt_exit_code). Log-Auszug:"
-        tail -n 10 "$LOG_DIR/system_requirements.log"
-        return 2
-    fi
-    
-    # Prüfen, ob die Pakete tatsächlich installiert wurden
-    local missing_packages=()
-    for pkg in "${packages[@]}"; do
-        if ! dpkg -l | grep -q "^ii[[:space:]]*$pkg"; then
-            missing_packages+=("$pkg")
-        fi
-    done
-    
-    if [ ${#missing_packages[@]} -gt 0 ]; then
-        print_error "Die folgenden Pakete wurden nicht korrekt installiert: ${missing_packages[*]}"
-        return 2
-    fi
-    
-    print_success "Systempakete erfolgreich installiert."
-    return 0
-}
-
 dlg_show_summary() {
     # -----------------------------------------------------------------------
     # dlg_show_summary
@@ -905,7 +1094,7 @@ dlg_show_summary() {
     # ........  die URL der Weboberfläche
     # Rückgabe: 0 = OK
     # -----------------------------------------------------------------------
-    print_step "[7/10] Installation abgeschlossen: Zusammenfassung ..."
+    print_step "[9/10] Installation abgeschlossen: Zusammenfassung ..."
     
     # NGINX-Konfiguration nach Installation ausgeben (Policy-konform, modular)
     source "$BASH_DIR/manage_nginx.sh"
@@ -952,11 +1141,11 @@ dlg_show_summary() {
 # Funktion: Hauptablauf der Erstinstallation
 # ------------------------------------------------------------------------------
 main() {
-    # Stelle sicher, dass das Logverzeichnis existiert
-    mkdir -p "$LOG_DIR"
+    # Führe die Prüfungen der Systemvoraussetzungen durch
     
-    dlg_check_root               # Prüfe, ob Skript als root ausgeführt wird
-    dlg_check_distribution       # Prüfe, ob System auf Debian/Ubuntu basiert
+    dlg_check_root               # Prüfe Root-Rechte
+    dlg_check_distribution       # Prüfe die Distribution
+    dlg_check_system_requirements "$@"  # Prüfe Systemvoraussetzungen und richte Logging ein
     dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
     dlg_prepare_users            # Erstelle Benutzer und Gruppe 'fotobox'
     dlg_prepare_structure        # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
@@ -968,36 +1157,6 @@ main() {
 # ------------------------------------------------------------------------------
 # UNATTENDED-Variable initialisieren, falls nicht gesetzt
 : "${UNATTENDED:=0}"
-
-# ------------------------------------------------------------------------------
-# Funktion: Verarbeitet Befehlszeilenargumente für das Skript
-# ------------------------------------------------------------------------------
-parse_args() {
-    # Standardwerte für alle Flags setzen
-    UNATTENDED=0
-    
-    # Argumente durchlaufen
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --unattended|-u|--headless|-h|-q)
-                UNATTENDED=1
-                log "Unattended-Modus aktiviert"
-                ;;
-            --help|-h|--hilfe)
-                show_help
-                exit 0
-                ;;
-            *)
-                print_warning "Unbekannte Option: $1"
-                show_help
-                exit 1
-                ;;
-        esac
-        shift
-    done
-    
-    export UNATTENDED
-}
 
 # ------------------------------------------------------------------------------
 # Funktion: Zeigt die Hilfe zu den verfügbaren Optionen an
@@ -1016,22 +1175,5 @@ Optionen:
 EOF
 }
 
-# Fallback-Definitionen für Logging/Print-Funktionen zentral setzen
-set_fallback_security_settings
-
-# Logging-Hilfsskript einbinden (zentral für alle Fotobox-Skripte)
-if [ -f "$(dirname "$0")/backend/scripts/log_helper.sh" ]; then
-    source "$(dirname "$0")/backend/scripts/log_helper.sh"
-else
-    print_warning "Logging-Hilfsskript nicht gefunden! Logging deaktiviert."
-fi
-
-# Befehlszeilenargumente verarbeiten
-parse_args "$@"
-
-# Log-Initialisierung (Rotation) direkt nach Skriptstart
-log
-log "Installationsskript gestartet: $(date '+%Y-%m-%d %H:%M:%S')"
-
-# Hauptfunktion aufrufen 
+# Hauptfunktion starten
 main
