@@ -241,7 +241,7 @@ parse_system_requirements() {
         [[ $line =~ ^[[:space:]]*# || -z "${line// /}" ]] && continue
         
         # Paket und Version extrahieren
-        if [[ $line =~ ([a-zA-Z0-9-]+)>=([0-9.]+) ]]; then
+        if [[ $line =~ ([a-zA-Z0-9-]+)\>=([0-9.]+) ]]; then
             package="${BASH_REMATCH[1]}"
             version="${BASH_REMATCH[2]}"
             pkg_with_version="${package}=${version}"
@@ -333,7 +333,7 @@ parse_python_requirements() {
         clean_line=$(echo "$line" | sed 's/#.*$//')
         
         # Paket und Version extrahieren
-        if [[ $clean_line =~ ([a-zA-Z0-9_-]+)>=([0-9.]+) ]]; then
+        if [[ $clean_line =~ ([a-zA-Z0-9_-]+)\>=([0-9.]+) ]]; then
             package="${BASH_REMATCH[1]}"
             version="${BASH_REMATCH[2]}"
             pkg_with_version="$package>=$version"
