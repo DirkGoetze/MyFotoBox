@@ -868,13 +868,28 @@ install_system_requirements() {
     # Stelle sicher, dass das Logverzeichnis existiert
     mkdir -p "$LOG_DIR"
     
-    # Installation der Pakete mit apt-get
-    DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}" &> "$LOG_DIR/system_requirements.log" &
-    show_spinner $!
+    # Installation der Pakete direkt ausführen, ohne Hintergrundprozess
+    # Dies stellt sicher, dass wir den korrekten Exit-Status erhalten
+    DEBIAN_FRONTEND=noninteractive apt-get install -y "${packages[@]}" | tee "$LOG_DIR/system_requirements.log"
     
-    if [ $? -ne 0 ]; then
-        print_error "Fehler bei der Installation von Systempaketen. Log-Auszug:"
+    # Prüfe den Rückgabewert von apt-get direkt (nicht vom Pipe)
+    local apt_exit_code=${PIPESTATUS[0]}
+    if [ $apt_exit_code -ne 0 ]; then
+        print_error "Fehler bei der Installation von Systempaketen (Exit-Code: $apt_exit_code). Log-Auszug:"
         tail -n 10 "$LOG_DIR/system_requirements.log"
+        return 2
+    fi
+    
+    # Prüfen, ob die Pakete tatsächlich installiert wurden
+    local missing_packages=()
+    for pkg in "${packages[@]}"; do
+        if ! dpkg -l | grep -q "^ii[[:space:]]*$pkg"; then
+            missing_packages+=("$pkg")
+        fi
+    done
+    
+    if [ ${#missing_packages[@]} -gt 0 ]; then
+        print_error "Die folgenden Pakete wurden nicht korrekt installiert: ${missing_packages[*]}"
         return 2
     fi
     
