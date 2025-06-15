@@ -148,14 +148,211 @@ function init() {
 })();
 ```
 
-### 3.2 Best Practices für Frontend-Code
+### 3.2 Beispiel für die Verwendung von Frontend-Modulen
 
-- **Modularisierung**: Ein Modul pro Datei mit klar definierter Verantwortlichkeit
-- **Asynchrone Operationen**: Verwenden Sie `async/await` für asynchrone Funktionen
-- **Fehlerbehandlung**: Implementieren Sie try/catch-Blöcke für robuste Fehlerbehandlung
-- **Logging**: Nutzen Sie `manage_logging.js` für konsistentes Logging
-- **API-Kommunikation**: Nutzen Sie `manage_api.js` für alle Backend-Anfragen
-- **Dokumentation**: Verwenden Sie JSDoc für die Dokumentation von Funktionen und Modulen
+Das folgende Beispiel zeigt, wie die verschiedenen Frontend-Module im Zusammenspiel verwendet werden können:
+
+```javascript
+/**
+ * Beispiel für die Verwendung der gemeinsamen Frontend-Module
+ */
+
+import { API_ENDPOINTS, UI_STATES, CONFIG_KEYS, EVENTS, LOCALIZED_STRINGS } from './js/constants.js';
+import * as i18n from './js/i18n.js';
+import * as theming from './js/theming.js';
+import { createDialog, createToast, createButton } from './js/ui_components.js';
+import { debounce, formatDate, validateEmail } from './js/utils.js';
+
+// Übersetzungen initialisieren
+i18n.init(LOCALIZED_STRINGS, 'de', 'en');
+
+// Themes definieren
+const themes = {
+  light: {
+    '--bg-color': '#ffffff',
+    '--text-color': '#333333',
+    '--primary-color': '#4285f4',
+    '--secondary-color': '#34a853',
+    '--accent-color': '#ea4335',
+    '--border-color': '#dadce0',
+    '--shadow-color': 'rgba(60, 64, 67, 0.3)',
+    '--card-bg-color': '#ffffff',
+    '--hover-bg-color': '#f8f9fa'
+  },
+  dark: {
+    '--bg-color': '#121212',
+    '--text-color': '#e0e0e0',
+    '--primary-color': '#8ab4f8',
+    '--secondary-color': '#81c995',
+    '--accent-color': '#f28b82',
+    '--border-color': '#5f6368',
+    '--shadow-color': 'rgba(0, 0, 0, 0.5)',
+    '--card-bg-color': '#1e1e1e',
+    '--hover-bg-color': '#2d2d2d'
+  },
+  sepia: {
+    '--bg-color': '#f8f1e3',
+    '--text-color': '#5b4636',
+    '--primary-color': '#8e6f47',
+    '--secondary-color': '#6b8e47',
+    '--accent-color': '#8e476f',
+    '--border-color': '#d3c4ad',
+    '--shadow-color': 'rgba(91, 70, 54, 0.3)',
+    '--card-bg-color': '#f8f1e3',
+    '--hover-bg-color': '#f0e9db'
+  }
+};
+
+// Themes initialisieren
+theming.init(themes, 'light');
+
+/**
+ * Dokument initialisieren, wenn DOM geladen ist
+ */
+document.addEventListener('DOMContentLoaded', () => {
+  setupUI();
+  setupEventListeners();
+  updateUIState(UI_STATES.READY);
+});
+
+/**
+ * UI-Elemente und -Struktur einrichten
+ */
+function setupUI() {
+  // Internationalisierte Überschrift setzen
+  document.querySelector('h1').textContent = i18n.t('APP_TITLE');
+  
+  // Theme-Umschalter registrieren
+  theming.registerThemeToggle('#theme-toggle', 'light', 'dark');
+  
+  // Sprach-Umschalter einrichten
+  const languageSelector = document.getElementById('language-selector');
+  const availableLanguages = i18n.getAvailableLanguages();
+  
+  availableLanguages.forEach(lang => {
+    const option = document.createElement('option');
+    option.value = lang;
+    option.textContent = lang.toUpperCase();
+    languageSelector.appendChild(option);
+  });
+  
+  languageSelector.value = i18n.getCurrentLanguage();
+  
+  // Buttons mit UI-Komponenten erstellen
+  const photoButton = createButton({
+    text: i18n.t('TAKE_PHOTO'),
+    icon: 'camera',
+    onClick: takePhoto,
+    primary: true
+  });
+  
+  const galleryButton = createButton({
+    text: i18n.t('VIEW_GALLERY'),
+    icon: 'images',
+    onClick: viewGallery
+  });
+  
+  document.getElementById('action-buttons').append(photoButton, galleryButton);
+  
+  // Alle Elemente mit data-i18n übersetzen
+  i18n.translateElement(document);
+}
+
+/**
+ * Event-Listener einrichten
+ */
+function setupEventListeners() {
+  // Sprachänderungen überwachen
+  document.getElementById('language-selector').addEventListener('change', (e) => {
+    i18n.setLanguage(e.target.value);
+  });
+  
+  // Theme-Änderungen überwachen
+  document.addEventListener(EVENTS.THEME_CHANGED, (e) => {
+    // Setze das Theme-Attribut für CSS-Selektoren
+    document.body.dataset.theme = e.detail.theme;
+    console.log(`Theme geändert zu: ${e.detail.theme}`);
+  });
+  
+  // Sprachänderungen überwachen
+  document.addEventListener(EVENTS.LANGUAGE_CHANGED, () => {
+    // Aktualisiere UI-Texte
+    document.querySelector('h1').textContent = i18n.t('APP_TITLE');
+    
+    // Alle übersetzbaren Elemente aktualisieren
+    i18n.translateElement(document);
+    console.log(`Sprache geändert zu: ${i18n.getCurrentLanguage()}`);
+  });
+}
+
+/**
+ * UI-Status aktualisieren
+ * @param {string} state - Einer der UI_STATES
+ */
+function updateUIState(state) {
+  const body = document.body;
+  
+  // Alte Zustände entfernen
+  Object.values(UI_STATES).forEach(uiState => {
+    body.classList.remove(`state-${uiState}`);
+  });
+  
+  // Neuen Zustand setzen
+  body.classList.add(`state-${state}`);
+  
+  console.log(`UI-Status geändert zu: ${state}`);
+}
+
+/**
+ * Simuliert die Aufnahme eines Fotos
+ */
+async function takePhoto() {
+  updateUIState(UI_STATES.LOADING);
+  
+  try {
+    // Simuliere API-Aufruf
+    console.log(`API-Aufruf: ${API_ENDPOINTS.TAKE_PHOTO}`);
+    
+    // Simulierte Verzögerung
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Erfolgsmeldung anzeigen
+    createToast({
+      message: i18n.t('SUCCESS'),
+      type: 'success',
+      duration: 3000
+    });
+    
+    updateUIState(UI_STATES.READY);
+  } catch (error) {
+    console.error('Fehler bei der Fotoaufnahme:', error);
+    
+    createToast({
+      message: i18n.t('ERROR'),
+      type: 'error',
+      duration: 5000
+    });
+    
+    updateUIState(UI_STATES.ERROR);
+  }
+}
+
+/**
+ * Simuliert das Anzeigen der Galerie
+ */
+function viewGallery() {
+  createDialog({
+    title: i18n.t('VIEW_GALLERY'),
+    content: `<p>${i18n.t('LOADING')}</p>`,
+    buttons: [
+      {
+        text: i18n.t('BACK'),
+        onClick: (dialog) => dialog.close()
+      }
+    ]
+  });
+}
+```
 
 ### 3.3 Abhängigkeiten zwischen Modulen
 
@@ -168,6 +365,431 @@ Achten Sie auf die Hierarchie der Abhängigkeiten:
 5. Seitenspezifische Module (`gallery.js`, `settings.js`, etc.)
 
 Vermeiden Sie zirkuläre Abhängigkeiten, indem Sie gemeinsame Funktionalitäten in niedrigere Ebenen extrahieren.
+
+### 3.4 Beispiel für ein seitenspezifisches Modul
+
+Das folgende Beispiel zeigt die Implementierung einer Einstellungsseite, die auf mehrere Systemmodule zugreift:
+
+```javascript
+/**
+ * Seitenspezifischer Code für die Einstellungsseite
+ */
+
+// Importiere Systemmodule
+import { loadSettings, updateSingleSetting, validateSettings } from './manage_settings.js';
+import { checkForUpdates, installUpdate, getUpdateStatus } from './manage_update.js';
+import { setupPasswordValidation, changePassword } from './manage_auth.js';
+import { showNotification, showDialog } from './ui_components.js';
+import { log, error } from './manage_logging.js';
+
+// DOM-Elemente
+const settingsForm = document.getElementById('settings-form');
+const updateButton = document.getElementById('check-update-btn');
+const installUpdateButton = document.getElementById('install-update-btn');
+const passwordSection = document.getElementById('password-section');
+const saveButton = document.getElementById('save-settings-btn');
+
+/**
+ * Initialisiert die Einstellungs-UI
+ */
+async function initSettingsUI() {
+    try {
+        // Einstellungen vom Backend laden
+        const settings = await loadSettings();
+        
+        // UI mit den geladenen Einstellungen füllen
+        populateSettingsForm(settings);
+        
+        // Event-Listener einrichten
+        bindSettingsEvents();
+        
+        log('Einstellungs-UI initialisiert');
+    } catch (err) {
+        error('Fehler bei der Initialisierung der Einstellungs-UI', err);
+        showNotification('Fehler beim Laden der Einstellungen', 'error');
+    }
+}
+
+/**
+ * Befüllt das Einstellungsformular mit den geladenen Daten
+ * @param {Object} settings - Die geladenen Einstellungen
+ */
+function populateSettingsForm(settings) {
+    // Durchlaufe alle Formularfelder und setze die Werte
+    for (const field of settingsForm.elements) {
+        if (field.name && settings[field.name] !== undefined) {
+            if (field.type === 'checkbox') {
+                field.checked = Boolean(settings[field.name]);
+            } else {
+                field.value = settings[field.name];
+            }
+        }
+    }
+    
+    // Zusätzliche UI-Anpassungen basierend auf den Einstellungen
+    updateUIBasedOnSettings(settings);
+}
+
+/**
+ * Passt die UI basierend auf den geladenen Einstellungen an
+ * @param {Object} settings - Die geladenen Einstellungen
+ */
+function updateUIBasedOnSettings(settings) {
+    // Beispiel: Verstecke oder zeige bestimmte Sektionen basierend auf Einstellungen
+    if (settings.enablePasswordProtection) {
+        passwordSection.classList.remove('hidden');
+    } else {
+        passwordSection.classList.add('hidden');
+    }
+    
+    // Weitere UI-Anpassungen je nach Bedarf
+}
+
+/**
+ * Bindet Event-Listener an UI-Elemente
+ */
+function bindSettingsEvents() {
+    // Update-Button
+    updateButton.addEventListener('click', async (event) => {
+        event.preventDefault();
+        await handleUpdateCheck();
+    });
+    
+    // Install-Update-Button
+    installUpdateButton.addEventListener('click', async (event) => {
+        event.preventDefault();
+        await handleUpdateInstallation();
+    });
+    
+    // Passwort-Validierung einrichten
+    setupPasswordValidation(
+        document.getElementById('current-password'),
+        document.getElementById('new-password'),
+        document.getElementById('confirm-password')
+    );
+    
+    // Live-Validierung der Formularfelder
+    for (const field of settingsForm.elements) {
+        if (field.name) {
+            field.addEventListener('change', (event) => {
+                validateFieldAndUpdateUI(field);
+            });
+        }
+    }
+    
+    // Speichern-Button
+    saveButton.addEventListener('click', async (event) => {
+        event.preventDefault();
+        await handleSaveSettings();
+    });
+}
+
+/**
+ * Verarbeitet den Klick auf den Update-Check-Button
+ */
+async function handleUpdateCheck() {
+    try {
+        // Deaktiviere Button während der Prüfung
+        updateButton.disabled = true;
+        updateButton.textContent = 'Prüfe...';
+        
+        // Auf Updates prüfen (aus manage_update.js)
+        const updateInfo = await checkForUpdates();
+        
+        if (updateInfo) {
+            // Update verfügbar
+            showNotification(`Update auf Version ${updateInfo.version} verfügbar`, 'info');
+            installUpdateButton.classList.remove('hidden');
+            
+            // Zeige Dialog mit Updatedetails
+            showUpdateDetailsDialog(updateInfo);
+        } else {
+            // Kein Update verfügbar
+            showNotification('Das System ist bereits auf dem neuesten Stand', 'success');
+            installUpdateButton.classList.add('hidden');
+        }
+    } catch (err) {
+        error('Fehler bei der Update-Prüfung', err);
+        showNotification('Fehler bei der Update-Prüfung: ' + err.message, 'error');
+    } finally {
+        // Button zurücksetzen
+        updateButton.disabled = false;
+        updateButton.textContent = 'Auf Updates prüfen';
+    }
+}
+
+/**
+ * Zeigt einen Dialog mit Update-Details an
+ * @param {Object} updateInfo - Informationen zum Update
+ */
+function showUpdateDetailsDialog(updateInfo) {
+    const changesList = updateInfo.changes.map(change => `<li>${change}</li>`).join('');
+    
+    showDialog({
+        title: `Update auf Version ${updateInfo.version}`,
+        content: `
+            <p>Veröffentlicht am: ${new Date(updateInfo.releaseDate).toLocaleDateString()}</p>
+            <p>Größe: ${formatBytes(updateInfo.size)}</p>
+            <h4>Änderungen:</h4>
+            <ul>${changesList}</ul>
+            ${updateInfo.critical ? '<p class="critical-update">Dies ist ein kritisches Update!</p>' : ''}
+        `,
+        buttons: [
+            {
+                text: 'Später',
+                action: 'close'
+            },
+            {
+                text: 'Jetzt installieren',
+                action: () => handleUpdateInstallation(),
+                primary: true
+            }
+        ]
+    });
+}
+
+/**
+ * Verarbeitet die Installation eines Updates
+ */
+async function handleUpdateInstallation() {
+    try {
+        // Dialog anzeigen
+        const confirmResult = await showDialog({
+            title: 'Update installieren',
+            content: 'Möchten Sie das Update jetzt installieren? Das System wird während der Installation neu gestartet.',
+            buttons: [
+                {
+                    text: 'Abbrechen',
+                    action: 'close'
+                },
+                {
+                    text: 'Installieren',
+                    action: 'confirm',
+                    primary: true
+                }
+            ]
+        });
+        
+        if (confirmResult !== 'confirm') {
+            return;
+        }
+        
+        // Installiere Update (aus manage_update.js)
+        await installUpdate();
+        
+        // Zeige Fortschritt an
+        showUpdateProgressDialog();
+        
+    } catch (err) {
+        error('Fehler bei der Update-Installation', err);
+        showNotification('Fehler bei der Update-Installation: ' + err.message, 'error');
+    }
+}
+
+/**
+ * Zeigt einen Dialog mit dem Update-Fortschritt an
+ */
+function showUpdateProgressDialog() {
+    const dialogContent = document.createElement('div');
+    dialogContent.innerHTML = `
+        <div class="progress-container">
+            <div class="progress-bar" id="update-progress-bar" style="width: 0%"></div>
+        </div>
+        <p id="update-status-message">Starte Update-Prozess...</p>
+    `;
+    
+    showDialog({
+        title: 'Update wird installiert',
+        content: dialogContent,
+        closable: false
+    });
+    
+    // Starte Polling für Update-Status
+    const progressBar = document.getElementById('update-progress-bar');
+    const statusMessage = document.getElementById('update-status-message');
+    
+    const statusInterval = setInterval(async () => {
+        try {
+            const status = await getUpdateStatus();
+            
+            progressBar.style.width = `${status.progress}%`;
+            statusMessage.textContent = status.message;
+            
+            if (status.status === 'error') {
+                clearInterval(statusInterval);
+                showNotification('Fehler beim Update: ' + status.message, 'error');
+                // Dialog schließen
+                document.querySelector('.dialog-close-btn').click();
+            } else if (status.status === 'idle' && status.progress === 100) {
+                clearInterval(statusInterval);
+                showNotification('Update erfolgreich installiert. Seite wird neu geladen...', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 3000);
+            }
+        } catch (err) {
+            error('Fehler beim Abrufen des Update-Status', err);
+        }
+    }, 1000);
+}
+
+/**
+ * Validiert ein Formularfeld und aktualisiert die UI entsprechend
+ * @param {HTMLElement} field - Das zu validierende Formularfeld
+ */
+function validateFieldAndUpdateUI(field) {
+    // Basisvalidierung
+    let isValid = field.checkValidity();
+    let errorMessage = field.validationMessage;
+    
+    // Erweiterte Validierung für bestimmte Felder
+    if (isValid && field.dataset.customValidation) {
+        const validationName = field.dataset.customValidation;
+        
+        switch (validationName) {
+            case 'email':
+                isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value);
+                if (!isValid) errorMessage = 'Bitte geben Sie eine gültige E-Mail-Adresse ein';
+                break;
+            case 'password':
+                isValid = field.value.length >= 8;
+                if (!isValid) errorMessage = 'Das Passwort muss mindestens 8 Zeichen lang sein';
+                break;
+            // Weitere benutzerdefinierte Validierungen...
+        }
+    }
+    
+    // UI aktualisieren
+    const fieldContainer = field.closest('.form-field');
+    const errorDisplay = fieldContainer.querySelector('.field-error');
+    
+    if (isValid) {
+        field.classList.remove('invalid');
+        field.classList.add('valid');
+        if (errorDisplay) {
+            errorDisplay.textContent = '';
+            errorDisplay.classList.add('hidden');
+        }
+    } else {
+        field.classList.remove('valid');
+        field.classList.add('invalid');
+        if (errorDisplay) {
+            errorDisplay.textContent = errorMessage;
+            errorDisplay.classList.remove('hidden');
+        }
+    }
+    
+    return isValid;
+}
+
+/**
+ * Verarbeitet das Speichern der Einstellungen
+ */
+async function handleSaveSettings() {
+    try {
+        // Alle Felder validieren
+        let isFormValid = true;
+        
+        for (const field of settingsForm.elements) {
+            if (field.name) {
+                const isFieldValid = validateFieldAndUpdateUI(field);
+                isFormValid = isFormValid && isFieldValid;
+            }
+        }
+        
+        if (!isFormValid) {
+            showNotification('Bitte korrigieren Sie die markierten Felder', 'warn');
+            return;
+        }
+        
+        // Sammle Formular-Daten
+        const formData = new FormData(settingsForm);
+        const settings = {};
+        
+        for (const [key, value] of formData.entries()) {
+            // Checkbox-Werte in Booleans umwandeln
+            const field = settingsForm.elements[key];
+            if (field && field.type === 'checkbox') {
+                settings[key] = field.checked;
+            } else {
+                settings[key] = value;
+            }
+        }
+        
+        // Validiere gesammelte Einstellungen
+        const validationResult = await validateSettings(settings);
+        
+        if (!validationResult.isValid) {
+            showNotification(validationResult.message || 'Ungültige Einstellungen', 'error');
+            
+            // Fehlerhafte Felder markieren
+            for (const fieldName of validationResult.invalidFields || []) {
+                const field = settingsForm.elements[fieldName];
+                if (field) {
+                    field.classList.add('invalid');
+                    
+                    const fieldContainer = field.closest('.form-field');
+                    const errorDisplay = fieldContainer.querySelector('.field-error');
+                    
+                    if (errorDisplay) {
+                        errorDisplay.textContent = validationResult.fieldErrors[fieldName] || 'Ungültiger Wert';
+                        errorDisplay.classList.remove('hidden');
+                    }
+                }
+            }
+            
+            return;
+        }
+        
+        // Speichere Passwortänderungen separat
+        if (settings.newPassword) {
+            const passwordResult = await changePassword(
+                settings.currentPassword,
+                settings.newPassword
+            );
+            
+            if (!passwordResult.success) {
+                showNotification(passwordResult.message || 'Fehler beim Ändern des Passworts', 'error');
+                return;
+            }
+            
+            // Entferne Passwortfelder aus den zu speichernden Einstellungen
+            delete settings.currentPassword;
+            delete settings.newPassword;
+            delete settings.confirmPassword;
+        }
+        
+        // Speichere alle Einstellungen
+        for (const [key, value] of Object.entries(settings)) {
+            await updateSingleSetting(key, value);
+        }
+        
+        showNotification('Einstellungen erfolgreich gespeichert', 'success');
+        
+    } catch (err) {
+        error('Fehler beim Speichern der Einstellungen', err);
+        showNotification('Fehler beim Speichern der Einstellungen: ' + err.message, 'error');
+    }
+}
+
+/**
+ * Formatiert Bytes in lesbare Größenangabe
+ * @param {number} bytes - Anzahl der Bytes
+ * @returns {string} Formatierte Größenangabe
+ */
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Initialisiere die Seite beim Laden
+document.addEventListener('DOMContentLoaded', initSettingsUI);
+```
 
 ## 4. Backend-Entwicklung
 
@@ -526,181 +1148,281 @@ Achten Sie beim Deployment auf:
 - Abhängigkeiten zu anderen Modulen
 - Abwärtskompatibilität oder Upgrade-Pfade
 
-### 8.4 Update-System Architektur
+### 8.4 Update-Management
 
-Das Update-System besteht aus zwei Hauptkomponenten:
+Das Update-Management-System ermöglicht die Prüfung, den Download und die Installation von System-Updates.
 
-1. **Backend-Update-Modul (`manage_update.py`)**: Verantwortlich für die serverseitige Update-Logik
-2. **Frontend-Update-Modul (`manage_update.js`)**: Bietet die Benutzeroberfläche für den Update-Prozess
-
-#### Update-Prozess im Detail
-
-Das Update-System führt einen mehrstufigen Prozess durch:
-
-1. **Versionsprüfung**: Vergleicht die lokale Version (`conf/version.inf`) mit der aktuellsten verfügbaren Version
-2. **Backup-Erstellung**: Erstellt ein vollständiges Backup vor dem Update im Ordner `backup-update-<Datum>`
-
-   ```python
-   def create_backup():
-       """Erstellt ein vollständiges Backup des aktuellen Systemzustands."""
-       timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-       backup_dir = f"backup-update-{timestamp}"
-       # Sichern wichtiger Verzeichnisse und Konfigurationsdateien
-       return backup_dir
-   ```
-
-3. **Projekt-Update**: Aktualisiert den Quellcode (git pull)
-
-   ```python
-   def update_source_code():
-       """Aktualisiert den Quellcode über Git."""
-       try:
-           subprocess.run(["git", "pull", "origin", "master"], check=True)
-           return True
-       except subprocess.CalledProcessError as e:
-           log_error(f"Fehler beim Aktualisieren des Quellcodes: {e}")
-           return False
-   ```
-
-4. **Abhängigkeiten-Update**: Installiert und aktualisiert erforderliche Abhängigkeiten
-
-   ```python
-   def update_dependencies():
-       """Aktualisiert alle System- und Python-Abhängigkeiten."""
-       update_system_dependencies()
-       update_python_dependencies()
-   ```
-
-5. **Webserver-Konfiguration**: Aktualisiert die NGINX-Konfiguration nach Bedarf
-6. **Service-Neustart**: Startet den Backend-Dienst neu
-7. **Erreichbarkeitstest**: Überprüft die Verfügbarkeit nach dem Update
-
-#### Abhängigkeiten-Management
-
-Das Abhängigkeiten-Management erfolgt über zwei Konfigurationsdateien:
-
-1. **`conf/requirements_system.inf`**: Definiert erforderliche Betriebssystem-Pakete
-
-   ```ini
-   # Format: paket>=version
-   nginx>=1.18.0
-   python3>=3.8
-   python3-pip>=20.0
-   ```
-
-2. **`conf/requirements_python.inf`**: Definiert erforderliche Python-Module
-
-   ```ini
-   # Format: modul>=version
-   Flask>=2.0.0
-   Pillow>=8.0.0
-   opencv-python>=4.5.0
-   ```
-
-Die Überprüfung und Installation erfolgt über diese Funktionen:
-
-```python
-def check_system_dependency(package, min_version=None):
-    """Prüft, ob ein Systempaket installiert ist und die Mindestversion erfüllt."""
-    # Implementierung der Versionsprüfung
-    pass
-
-def check_python_dependency(package, min_version=None):
-    """Prüft, ob ein Python-Paket installiert ist und die Mindestversion erfüllt."""
-    # Implementierung der Versionsprüfung mit pkg_resources
-    pass
-
-def install_system_dependencies(packages):
-    """Installiert erforderliche Systempakete."""
-    # Implementierung mit apt-get oder entsprechenden Paketmanager
-    pass
-
-def install_python_dependencies(packages):
-    """Installiert erforderliche Python-Pakete."""
-    # Implementierung mit pip
-    pass
-```
-
-#### Fehlerbehandlung beim Update
-
-Das Update-System implementiert eine robuste Fehlerbehandlung:
-
-1. **Rollback bei Fehlern**: Bei kritischen Fehlern wird das zuvor erstellte Backup wiederhergestellt
-
-   ```python
-   def rollback_update(backup_dir):
-       """Stellt das System aus einem Backup wieder her."""
-       # Implementierung der Wiederherstellung
-       pass
-   ```
-
-2. **Detaillierte Fehlerberichte**: Alle Fehler werden in den Logs dokumentiert und in der UI angezeigt
-
-3. **Unabhängige Teilprozesse**: Das Update ist in unabhängige Phasen unterteilt, sodass ein Fehler in einer Phase nicht den gesamten Prozess gefährdet
-
-#### Frontend-Integration
-
-Die Frontend-Integration erfolgt über `manage_update.js`:
-
-```javascript
-// Status des Update-Prozesses abfragen
-async function checkUpdateStatus() {
-    try {
-        const response = await fetch('/api/update/status');
-        const data = await response.json();
-        updateProgressUI(data.status, data.progress, data.message);
-        return data;
-    } catch (err) {
-        showError('Fehler beim Abrufen des Update-Status', err);
-        return { status: 'error', message: err.toString() };
-    }
-}
-
-// Update starten
-async function startUpdate() {
-    try {
-        showUpdateProgressModal();
-        const response = await fetch('/api/update/start', { method: 'POST' });
-        const data = await response.json();
-        
-        if (data.status === 'started') {
-            pollUpdateStatus();
-            return true;
-        } else {
-            showError('Update konnte nicht gestartet werden', data.message);
-            return false;
-        }
-    } catch (err) {
-        showError('Fehler beim Starten des Updates', err);
-        return false;
-    }
-}
-
-// Update-Status in regelmäßigen Abständen abrufen
-function pollUpdateStatus() {
-    const intervalId = setInterval(async () => {
-        const status = await checkUpdateStatus();
-        
-        if (['completed', 'failed', 'error'].includes(status.status)) {
-            clearInterval(intervalId);
-            handleUpdateCompletion(status);
-        }
-    }, 2000); // Alle 2 Sekunden aktualisieren
-}
-```
-
-#### API-Endpunkte
-
-Das Backend stellt folgende API-Endpunkte für Updates bereit:
+#### API-Endpunkte für das Update-System
 
 | Endpunkt | Methode | Beschreibung |
-|----------|---------|-------------|
-| `/api/update/check` | GET | Prüft, ob ein Update verfügbar ist |
-| `/api/update/start` | POST | Startet den Update-Prozess |
-| `/api/update/status` | GET | Ruft den aktuellen Status des laufenden Updates ab |
+|----------|---------|--------------|
+| `/api/update/version` | GET | Liefert die aktuelle Systemversion |
+| `/api/update/check` | GET | Prüft auf verfügbare Updates |
+| `/api/update/install` | POST | Installiert verfügbares Update |
+| `/api/update/status` | GET | Liefert den aktuellen Update-Status |
 | `/api/update/dependencies/check` | GET | Prüft den Status aller Abhängigkeiten |
 | `/api/update/dependencies/install` | POST | Installiert fehlende Abhängigkeiten |
 | `/api/update/rollback` | POST | Stellt das System aus dem letzten Backup wieder her |
+
+#### Beispielimplementierung des Update-Management-Moduls
+
+Das folgende Beispiel zeigt eine mögliche Implementierung des Update-Management-Moduls für das Frontend:
+
+```javascript
+/**
+ * @file manage_update.js
+ * @description Verwaltungsmodul für System-Updates in Fotobox2
+ * @module manage_update
+ */
+
+// Abhängigkeiten
+import { apiGet, apiPost } from './manage_api.js';
+import { log, error } from './manage_logging.js';
+
+/**
+ * @typedef {Object} UpdateInfo
+ * @property {string} version - Verfügbare Version
+ * @property {string} releaseDate - Veröffentlichungsdatum
+ * @property {string[]} changes - Liste der Änderungen
+ * @property {number} size - Größe des Updates in Bytes
+ * @property {boolean} critical - Gibt an, ob es sich um ein kritisches Update handelt
+ */
+
+/**
+ * @typedef {Object} VersionInfo
+ * @property {string} current - Aktuelle Version
+ * @property {string} lastCheck - Zeitpunkt der letzten Prüfung
+ * @property {boolean} updateAvailable - Gibt an, ob ein Update verfügbar ist
+ */
+
+/**
+ * @typedef {Object} StatusObject
+ * @property {string} status - Aktueller Status ("idle", "checking", "downloading", "installing", "error")
+ * @property {number} progress - Fortschritt in Prozent (0-100)
+ * @property {string} message - Statusmeldung
+ */
+
+// Lokale Variablen
+let _updateStatus = {
+    status: 'idle',
+    progress: 0,
+    message: 'Bereit'
+};
+
+let _versionInfo = {
+    current: '0.0.0',
+    lastCheck: null,
+    updateAvailable: false
+};
+
+let _updateInfo = null;
+
+/**
+ * Prüft auf verfügbare Updates
+ * @returns {Promise<UpdateInfo>} Informationen über das verfügbare Update oder null, wenn kein Update verfügbar ist
+ */
+export async function checkForUpdates() {
+    try {
+        _updateStatus = { status: 'checking', progress: 0, message: 'Prüfe auf Updates...' };
+        
+        // API-Aufruf zum Backend
+        const response = await apiGet('/api/v1/update/check');
+        
+        if (response.updateAvailable) {
+            _updateInfo = response.updateInfo;
+            _versionInfo.updateAvailable = true;
+            _versionInfo.lastCheck = new Date().toISOString();
+            
+            log('Update verfügbar: ' + _updateInfo.version);
+            
+            _updateStatus = { 
+                status: 'idle', 
+                progress: 0, 
+                message: `Update auf Version ${_updateInfo.version} verfügbar` 
+            };
+            
+            return _updateInfo;
+        } else {
+            _versionInfo.updateAvailable = false;
+            _versionInfo.lastCheck = new Date().toISOString();
+            
+            log('Kein Update verfügbar');
+            
+            _updateStatus = { 
+                status: 'idle', 
+                progress: 0, 
+                message: 'System ist aktuell' 
+            };
+            
+            return null;
+        }
+    } catch (err) {
+        error('Fehler bei der Update-Prüfung', err);
+        _updateStatus = { 
+            status: 'error', 
+            progress: 0, 
+            message: 'Fehler bei der Update-Prüfung: ' + err.message 
+        };
+        throw err;
+    }
+}
+
+/**
+ * Liefert aktuellen Update-Status
+ * @returns {Promise<StatusObject>} Status-Objekt
+ */
+export async function getUpdateStatus() {
+    try {
+        // Bei Bedarf aktualisierten Status vom Backend abrufen
+        if (_updateStatus.status === 'downloading' || _updateStatus.status === 'installing') {
+            const response = await apiGet('/api/v1/update/status');
+            _updateStatus = response;
+        }
+        
+        return _updateStatus;
+    } catch (err) {
+        error('Fehler beim Abrufen des Update-Status', err);
+        throw err;
+    }
+}
+
+/**
+ * Installiert verfügbares Update
+ * @returns {Promise<boolean>} true, wenn Update erfolgreich installiert wurde
+ */
+export async function installUpdate() {
+    if (!_updateInfo) {
+        throw new Error('Kein Update verfügbar');
+    }
+    
+    try {
+        _updateStatus = { 
+            status: 'downloading', 
+            progress: 0, 
+            message: 'Lade Update herunter...' 
+        };
+        
+        // API-Aufruf zum Backend, um Update zu starten
+        const response = await apiPost('/api/v1/update/install', { version: _updateInfo.version });
+        
+        _updateStatus = { 
+            status: 'installing', 
+            progress: 0, 
+            message: 'Installiere Update...' 
+        };
+        
+        // In der Praxis würde hier ein Polling-Mechanismus zum Einsatz kommen,
+        // um den Fortschritt zu überwachen - für dieses Beispiel vereinfacht
+        
+        log('Update-Installation gestartet');
+        
+        return true;
+    } catch (err) {
+        error('Fehler bei der Update-Installation', err);
+        _updateStatus = { 
+            status: 'error', 
+            progress: 0, 
+            message: 'Fehler bei der Update-Installation: ' + err.message 
+        };
+        throw err;
+    }
+}
+
+/**
+ * Setzt fehlgeschlagenes Update zurück
+ * @returns {Promise<boolean>} true, wenn Zurücksetzung erfolgreich
+ */
+export async function rollbackUpdate() {
+    try {
+        _updateStatus = { 
+            status: 'installing', 
+            progress: 0, 
+            message: 'Setze Update zurück...' 
+        };
+        
+        const response = await apiPost('/api/v1/update/rollback');
+        
+        if (response.success) {
+            _updateStatus = { 
+                status: 'idle', 
+                progress: 0, 
+                message: 'Update wurde zurückgesetzt' 
+            };
+            
+            log('Update zurückgesetzt');
+            return true;
+        } else {
+            throw new Error(response.error || 'Unbekannter Fehler');
+        }
+    } catch (err) {
+        error('Fehler beim Zurücksetzen des Updates', err);
+        _updateStatus = { 
+            status: 'error', 
+            progress: 0, 
+            message: 'Fehler beim Zurücksetzen: ' + err.message 
+        };
+        throw err;
+    }
+}
+
+/**
+ * Liefert Informationen zur aktuellen Version
+ * @returns {VersionInfo} Versionsinformationen
+ */
+export function getVersionInfo() {
+    return { ..._versionInfo };
+}
+
+/**
+ * Plant automatisches Update
+ * @param {Date} scheduledTime - Zeitpunkt für das geplante Update
+ * @returns {Promise<boolean>} true, wenn Update erfolgreich geplant wurde
+ */
+export async function scheduleUpdate(scheduledTime) {
+    if (!_updateInfo) {
+        throw new Error('Kein Update verfügbar für Planung');
+    }
+    
+    try {
+        const response = await apiPost('/api/v1/update/schedule', {
+            version: _updateInfo.version,
+            scheduledTime: scheduledTime.toISOString()
+        });
+        
+        if (response.success) {
+            log(`Update geplant für ${scheduledTime.toLocaleString()}`);
+            return true;
+        } else {
+            throw new Error(response.error || 'Unbekannter Fehler');
+        }
+    } catch (err) {
+        error('Fehler bei der Update-Planung', err);
+        throw err;
+    }
+}
+
+/**
+ * Initialisiert das Update-Modul
+ * @returns {Promise<void>}
+ */
+export async function init() {
+    try {
+        // Aktuelle Version vom Backend abrufen
+        const response = await apiGet('/api/v1/update/version');
+        _versionInfo.current = response.version;
+        
+        log('Update-Modul initialisiert mit Version ' + _versionInfo.current);
+    } catch (err) {
+        error('Fehler bei der Initialisierung des Update-Moduls', err);
+        throw err;
+    }
+}
+
+// Automatische Initialisierung
+init().catch(err => {
+    console.error('Fehler bei der Initialisierung des Update-Moduls:', err);
+});
+```
 
 #### Best Practices für Updates
 
@@ -1391,6 +2113,7 @@ def remove_system_user(username="fotobox"):
         
         if user_exists:
             # Benutzer löschen
+
             subprocess.run(["userdel", username], check=True)
             
             # Gruppe löschen (falls kein anderer Benutzer in der Gruppe ist)
