@@ -24,17 +24,20 @@ Die Fotobox ist ein flexibles, webbasiertes System für Events, Partys und Feier
 Vor der Nutzung muss die Fotobox auf einem Linux-System (Debian/Ubuntu) installiert werden:
 
 1. Klonen Sie das Repository in ein Verzeichnis Ihrer Wahl:
+
    ```bash
    sudo git clone https://github.com/DirkGoetze/MyFotoBox.git /opt/fotobox
    ```
 
 2. Wechseln Sie in das Projektverzeichnis und machen Sie das Installationsskript ausführbar:
+
    ```bash
    cd /opt/fotobox
    sudo chmod +x install.sh
    ```
 
 3. Führen Sie die Installation aus:
+
    ```bash
    sudo ./install.sh
    ```
@@ -148,6 +151,7 @@ Die Fotobox bietet eine integrierte Update-Funktion, die ausschließlich über d
 5. Folgen Sie den Anweisungen auf dem Bildschirm
 
 Während eines Updates:
+
 * Die Fotobox ist kurzzeitig nicht verfügbar
 * Alle Einstellungen und Daten bleiben erhalten
 * Ein automatisches Backup wird vor dem Update erstellt

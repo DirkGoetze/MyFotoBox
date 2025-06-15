@@ -1,4 +1,4 @@
-# Konsolidierte Migrations-Dokumentation: Fotobox2 Projekt
+﻿# Konsolidierte Migrations-Dokumentation: Fotobox2 Projekt
 
 Dieses Dokument konsolidiert alle migrationsbezogenen Informationen des Fotobox2-Projekts und dient als umfassende Referenz für die durchgeführten Änderungen, den aktuellen Status und die nächsten Schritte.
 
@@ -135,39 +135,46 @@ Die Ordnerverwaltung des Fotobox-Projekts wurde von einer statischen, auf `.fold
 ### 4.1 Frontend-Module
 
 #### manage_update.js
+
 - Update-Prüfung
 - Update-Installation
 - Version-Vergleich
 - Update-Statusanzeige
 
 #### manage_auth.js
+
 - Passwort-Validierung
 - Passwort-Speicherung
 - Passwort-Überprüfung
 - Login-Status-Management
 
 #### manage_settings.js
+
 - Einstellungen laden
 - Einstellungen speichern
 - Standardwerte setzen
 - Einstellungen validieren
 
 #### manage_database.js
+
 - Datenabfragen
 - Statusprüfung
 - Fehlerbehandlung bei Datenbankzugriffen
 
 #### manage_filesystem.js
+
 - Bilderdateien laden
 - Dateien speichern
 - Verzeichnisoperationen
 
 #### ui_components.js
+
 - Benachrichtigungen
 - Dialoge
 - Fortschrittsanzeigen
 
 #### manage_ui.js
+
 - Menü-Handling
 - Datum/Zeit-Anzeige
 - Header/Footer-Dynamik
@@ -177,16 +184,19 @@ Die Ordnerverwaltung des Fotobox-Projekts wurde von einer statischen, auf `.fold
 ### 4.2 Backend-Module
 
 #### manage_folders.sh und manage_folders.py
+
 - Zentralisierte Verzeichnisverwaltung
 - Dynamische Erstellung von Verzeichnissen
 - Fallback-Logik für verschiedene Umgebungen
 
 #### manage_update.py
+
 - Backend-Update-Prozesse
 - Versionsmanagement
 - Rollback-Funktionalität
 
 #### manage_auth.py
+
 - Authentifizierungs-Backend
 - Benutzer- und Passwortverwaltung
 
@@ -237,6 +247,7 @@ Die Ordnerverwaltung des Fotobox-Projekts wurde von einer statischen, auf `.fold
 ### 5.3 Testprozess
 
 Nach jeder Migration:
+
 1. Unit-Tests für das migrierte Modul
 2. Integrationstests mit anderen Modulen
 3. UI-Tests für die Benutzeroberfläche
