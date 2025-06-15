@@ -81,7 +81,7 @@ Hinweis: Das Repository muss zunächst geklont werden, bevor die Installation du
 
 4. Folgen Sie den Anweisungen auf dem Bildschirm, um die Installation abzuschließen.
 
-Für eine ausführliche Anleitung siehe [INSTALLATION](documentation/installation.md)
+Für eine ausführliche Anleitung siehe das [BENUTZERHANDBUCH](documentation/benutzerhandbuch.md#installation-und-einrichtung)
 
 ## Schnellstart
 
@@ -117,7 +117,8 @@ Die Verwaltung, das Update und die Deinstallation der Fotobox erfolgen ausschlie
 
 ## Dokumentation
 
-- [INSTALLATION](documentation/installation.md): Ausführliche Installationsanleitung
+- [BENUTZERHANDBUCH](documentation/benutzerhandbuch.md): Ausführliche Installations- und Nutzungsanleitung
+- [ENTWICKLERHANDBUCH](documentation/entwicklerhandbuch.md): Technische Details zur Architektur
 - [UPDATE](documentation/update.md): Update-Anleitung
 - [REMOVE](documentation/remove.md): Deinstallationsanleitung
 
