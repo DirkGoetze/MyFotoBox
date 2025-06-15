@@ -7,7 +7,9 @@ Diese Policy regelt die Ablage und Trennung von Skripttypen und Ressourcen im Pr
 - Verschiedene Skripttypen (z.B. Python, Bash) dürfen nicht im selben Ordner abgelegt werden.
 - Im Backend sind für Shell-Skripte und Python-Skripte jeweils eigene Unterordner zu verwenden (z.B. backend/scripts/ für Bash, backend/ für Python).
 - Diese Policy ist verbindlich und bei allen Erweiterungen, Auslagerungen oder Umstrukturierungen einzuhalten.
-- Die Struktur ist in einer `.folder.info` im jeweiligen Ordner zu dokumentieren.
+- Die Verzeichnisverwaltung erfolgt zentral über `manage_folders.sh` und den Python-Wrapper `manage_folders.py`.
+- Verzeichnispfade müssen über die entsprechenden Funktionen wie `get_data_dir()`, `get_log_dir()` etc. abgerufen werden.
+- Neue Verzeichnisse werden automatisch beim Installationsprozess oder bei Bedarf dynamisch erstellt.
 - Analoges gilt für das Frontend (z.B. js/, css/, images/ etc.).
 - Änderungen an der Ordnerstruktur müssen diese Policy berücksichtigen und dokumentiert werden.
 

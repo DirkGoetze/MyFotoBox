@@ -1,7 +1,0 @@
-# Datenverzeichnis für die Fotobox
-
-- In diesem Ordner werden alle persistenten Daten der Fotobox gespeichert.
-- Dazu gehören z.B. die SQLite-Datenbank, Fotos, Einstellungen und eventuelle temporäre Dateien.
-- Die Struktur und Inhalte werden vom Backend verwaltet.
-- Siehe BACKUP_STRATEGIE.md: Auch dieser Ordner und seine Inhalte sind in die Backup-Logik einzubeziehen.
-- Siehe policies/dokumentationsstandard.md, policies/review_policy.md, policies/ordnerstruktur_policy.md für alle Projekt-Policies.
