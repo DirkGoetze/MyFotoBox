@@ -113,14 +113,12 @@ Detaillierte Informationen finden Sie im [Benutzerhandbuch](documentation/benutz
 
 ## Update und Deinstallation
 
-Die Verwaltung, das Update und die Deinstallation der Fotobox erfolgen ausschließlich über die Weboberfläche (WebUI). Melden Sie sich dazu in den Einstellungen mit Ihrem Administrator-Passwort an und nutzen Sie die entsprechenden Funktionen im Bereich "System". Technische Kenntnisse sind dafür nicht erforderlich.
+Die Verwaltung, das Update und die Deinstallation der Fotobox erfolgen ausschließlich über die Weboberfläche (WebUI). Melden Sie sich dazu in den Einstellungen mit Ihrem Administrator-Passwort an und nutzen Sie die entsprechenden Funktionen im Bereich "System". Technische Kenntnisse sind dafür nicht erforderlich. Detaillierte Anweisungen zu Update und Deinstallation finden Sie im [BENUTZERHANDBUCH](documentation/benutzerhandbuch.md).
 
 ## Dokumentation
 
-- [BENUTZERHANDBUCH](documentation/benutzerhandbuch.md): Ausführliche Installations- und Nutzungsanleitung
-- [ENTWICKLERHANDBUCH](documentation/entwicklerhandbuch.md): Technische Details zur Architektur
-- [UPDATE](documentation/update.md): Update-Anleitung
-- [REMOVE](documentation/remove.md): Deinstallationsanleitung
+- [BENUTZERHANDBUCH](documentation/benutzerhandbuch.md): Ausführliche Installations- und Nutzungsanleitung sowie Informationen zu Update und Deinstallation
+- [ENTWICKLERHANDBUCH](documentation/entwicklerhandbuch.md): Technische Details zur Architektur und Entwicklungsrichtlinien
 
 ## Beitrag
 
