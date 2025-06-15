@@ -150,14 +150,32 @@ backup_nginx_config() {
     local config_type="$2"
     local action="$3"
     local mode="${4:-text}"
-    local backup_dir="/opt/fotobox/backup/nginx"
+    local backup_dir
+    local manage_folders_sh
+    
+    # Verwende manage_folders.sh, falls verfügbar
+    manage_folders_sh="$(dirname "$0")/manage_folders.sh"
+    if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
+        # Hole Backup-Verzeichnis über manage_folders.sh
+        backup_dir="$("$manage_folders_sh" backup_dir)/nginx"
+    else
+        # Fallback zur alten Methode
+        backup_dir="/opt/fotobox/backup/nginx"
+    fi
+    
     local timestamp
     timestamp="$(date +%Y%m%d_%H%M%S)"
     local base_name
     base_name="$(basename "$src")"
     local backup_file="$backup_dir/${base_name}.bak.$timestamp"
     local meta_file="$backup_file.meta.json"
-    mkdir -p "$backup_dir"
+    
+    # Verwende manage_folders.sh zur Verzeichniserstellung, falls verfügbar
+    if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
+        "$manage_folders_sh" create_directory "$backup_dir"
+    else
+        mkdir -p "$backup_dir"
+    fi
     if cp "$src" "$backup_file"; then
         # Metadaten schreiben
         cat > "$meta_file" <<EOF

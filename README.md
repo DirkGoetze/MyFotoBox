@@ -58,6 +58,8 @@ Gemäß unserer Projekt-Policy dürfen neue Abhängigkeiten nicht direkt install
 
 ## Installation
 
+Hinweis: Das Repository muss zunächst geklont werden, bevor die Installation durchgeführt werden kann. Die Installationsschritte sind wie folgt:
+
 1. Repository klonen (Zielverzeichnis frei wählbar, z.B. /opt/fotobox):
 
    ```sh
@@ -77,19 +79,41 @@ Gemäß unserer Projekt-Policy dürfen neue Abhängigkeiten nicht direkt install
    sudo ./install.sh
    ```
 
-4. Weitere Hinweise siehe [INSTALLATION](documentation/installation.md)
+4. Folgen Sie den Anweisungen auf dem Bildschirm, um die Installation abzuschließen.
+
+Für eine ausführliche Anleitung siehe [INSTALLATION](documentation/installation.md)
 
 ## Schnellstart
 
-- [ ] Platzhalter: Kurzanleitung für den ersten Start und Zugriff auf die Weboberfläche
+Nach erfolgreicher Installation:
+
+1. Öffnen Sie einen Webbrowser und rufen Sie die Fotobox-Oberfläche auf:
+   - Lokal: `http://localhost` oder `http://localhost:8080` (je nach konfiguriertem Port)
+   - Im Netzwerk: `http://<IP-Adresse>` oder `http://<IP-Adresse>:8080`
+
+2. Beim ersten Start werden Sie zur Ersteinrichtung weitergeleitet:
+   - Legen Sie ein Administrator-Passwort fest
+   - Konfigurieren Sie grundlegende Einstellungen (Eventname, Kamera, etc.)
+
+3. Nach der Ersteinrichtung können Sie sofort Fotos aufnehmen und die Galerie nutzen
 
 ## Konfiguration
 
-- [ ] Platzhalter: Hinweise zur Anpassung von Einstellungen, Ports, Benutzerrechten etc.
+Die gesamte Konfiguration erfolgt über die Einstellungsseite der Weboberfläche:
+
+1. Rufen Sie die Einstellungsseite auf (`settings.html`)
+2. Melden Sie sich mit Ihrem Administrator-Passwort an
+3. Hier können Sie anpassen:
+   - Event-Einstellungen (Name, Datum)
+   - Anzeigeoptionen (Darkmode, Timeouts)
+   - Kamera-Einstellungen
+   - Netzwerk- und Systemeinstellungen
+
+Detaillierte Informationen finden Sie im [Benutzerhandbuch](documentation/benutzerhandbuch.md)
 
 ## Update und Deinstallation
 
-Die Verwaltung, das Update und die Deinstallation der Fotobox können einfach und komfortabel über die Weboberfläche (WebUI) durchgeführt werden. Technische Kenntnisse sind dafür nicht erforderlich.
+Die Verwaltung, das Update und die Deinstallation der Fotobox erfolgen ausschließlich über die Weboberfläche (WebUI). Melden Sie sich dazu in den Einstellungen mit Ihrem Administrator-Passwort an und nutzen Sie die entsprechenden Funktionen im Bereich "System". Technische Kenntnisse sind dafür nicht erforderlich.
 
 ## Dokumentation
 

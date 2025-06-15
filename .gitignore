@@ -12,6 +12,16 @@ data/
 frontend/tests/
 reviews/
 tests/
+
+# Die folgenden Ordner werden im Zuge des Installationsprozesses erzeugt
+# und müssen nicht im Repository enthalten sein (vormals durch .folder.info gesichert)
+frontend/css/
+frontend/js/
+frontend/fonts/
+frontend/picture/
+frontend/photos/
+frontend/photos/originals/
+frontend/photos/gallery/
 # Dateien die von Git ignoriert werden sollen
 # Diese Dateien werden nicht versioniert
 fotobox2.code-workspace

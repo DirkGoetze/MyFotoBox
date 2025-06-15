@@ -9,26 +9,30 @@ Diese Anleitung beschreibt, wie Sie die Fotobox-Software vollständig von Ihrem 
 
 ## Deinstallation starten
 
-Führen Sie das Deinstallationsskript im Projektverzeichnis aus:
+Die Deinstallation erfolgt ausschließlich über die Weboberfläche:
 
-```bash
-sudo bash fotobox.sh --remove
-```
+1. Öffnen Sie die Einstellungsseite (`settings.html`)
+2. Melden Sie sich als Administrator an
+3. Navigieren Sie zum Bereich "System"
+4. Klicken Sie auf "Fotobox deinstallieren" und folgen Sie den Anweisungen
 
 ## Was passiert bei der Deinstallation?
 
-Das Skript übernimmt folgende Aufgaben (jeder Schritt wird im Terminal erklärt):
+Der Deinstallationsprozess über die Weboberfläche führt folgende Aufgaben aus:
 
-1. **Dienste stoppen**: Der Fotobox-Backend-Dienst und NGINX werden gestoppt.
-2. **Systemdienste entfernen**: Die systemd-Unit für das Backend wird entfernt.
-3. **NGINX-Konfiguration entfernen**: Die Fotobox-Konfiguration wird aus NGINX entfernt (Symlinks und Konfigurationsdateien werden gelöscht, Backups bleiben erhalten).
-4. **Projektdateien löschen**: Das gesamte Projektverzeichnis wird entfernt (nach Rückfrage).
-5. **Benutzer und Gruppe entfernen**: Der Systembenutzer und die Gruppe "fotobox" werden gelöscht (optional, nach Rückfrage).
-6. **Abschlusstest**: Das Skript prüft, ob alle Komponenten entfernt wurden.
+1. **Backup erstellen**: Vor der Deinstallation wird ein Sicherungsarchiv Ihrer Daten und Einstellungen erstellt.
+2. **Dienste stoppen**: Der Fotobox-Backend-Dienst und NGINX werden gestoppt.
+3. **Systemdienste entfernen**: Die systemd-Unit für das Backend wird entfernt.
+4. **NGINX-Konfiguration entfernen**: Die Fotobox-Konfiguration wird aus NGINX entfernt (Symlinks und Konfigurationsdateien werden gelöscht, Backups bleiben erhalten).
+5. **Projektdateien löschen**: Das gesamte Projektverzeichnis wird entfernt (nach Bestätigung).
+6. **Benutzer und Gruppe entfernen**: Der Systembenutzer und die Gruppe "fotobox" werden gelöscht (optional, nach Bestätigung).
+7. **Abschlussbestätigung**: Sie erhalten eine Bestätigung über die erfolgreiche Deinstallation.
 
 ## Hinweise
 
-- Backups der Konfiguration und Daten bleiben im Backup-Ordner erhalten, sofern nicht explizit gelöscht.
+- Backups der Konfiguration und Daten werden vor der Deinstallation automatisch erstellt und können bei Bedarf heruntergeladen werden.
+- Die Deinstallation ist ein endgültiger Vorgang, der nicht rückgängig gemacht werden kann.
+- Alle lokalen Fotos und Uploads werden während des Deinstallationsprozesses gelöscht, sofern Sie diese nicht vorher manuell sichern.
 - Prüfen Sie nach der Deinstallation, ob alle gewünschten Komponenten entfernt wurden.
 - Alle wichtigen Schritte und Fehler werden in der Logdatei `/var/log/install.log` protokolliert.
 

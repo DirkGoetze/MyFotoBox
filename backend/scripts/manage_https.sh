@@ -10,7 +10,7 @@
 # ==============================================================================
 # TODO-/Checkliste für manage_https.sh (Stand: 2025-06-04)
 # ==============================================================================
-# [ ] Policy-konforme Logging- und Print-Funktionen (via log_helper.sh, Fallback)
+# [ ] Policy-konforme Logging- und Print-Funktionen (via manage_logging.sh, Fallback)
 # [ ] DEBUG_MOD-Integration für Debug-Ausgaben
 # [ ] Strukturierte Rückgaben und Fehlercodes (siehe Dokumentationsstandard)
 # [ ] Keine interaktiven Abfragen im unattended/headless-Modus

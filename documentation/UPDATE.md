@@ -5,18 +5,11 @@ Diese Anleitung erklärt, wie Sie die Fotobox-Software auf den neuesten Stand br
 ## Voraussetzungen
 
 - Die Fotobox ist bereits installiert und läuft auf Ihrem System.
-- Sie haben Root-Rechte (Administrator).
 - Internetverbindung ist vorhanden.
 
-## Update starten
+## Update über die Weboberfläche durchführen
 
-Führen Sie das Update-Skript im Projektverzeichnis aus:
-
-```bash
-sudo bash fotobox.sh --update
-```
-
-Alternativ können Sie das Update über die Weboberfläche durchführen:
+Updates der Fotobox werden ausschließlich über die Weboberfläche (WebUI) durchgeführt:
 
 1. Öffnen Sie die Einstellungsseite (`settings.html`)
 2. Melden Sie sich als Administrator an
@@ -25,7 +18,7 @@ Alternativ können Sie das Update über die Weboberfläche durchführen:
 
 ## Was passiert beim Update?
 
-Das Skript übernimmt folgende Aufgaben (jeder Schritt wird im Terminal erklärt):
+Das Update-System übernimmt folgende Aufgaben (der Fortschritt wird in der Weboberfläche angezeigt):
 
 1. **Backup**: Vor dem Update werden alle wichtigen Daten und Konfigurationen gesichert (Backend, Frontend, NGINX, systemd-Service). So können Sie bei Problemen jederzeit zurückkehren.
 2. **Projekt-Update**: Das Fotobox-Projekt wird aus dem Internet aktualisiert (git pull). Falls das Skript selbst aktualisiert wurde, werden Sie informiert und müssen das Update erneut starten.
@@ -68,11 +61,19 @@ Sie können den Status der Abhängigkeiten auch über die Weboberfläche einsehe
 3. Im Bereich "System-Updates" werden fehlende oder veraltete Abhängigkeiten angezeigt
 4. Klicken Sie auf "Abhängigkeiten installieren", um fehlende Abhängigkeiten zu installieren
 
-## Beispiel für den Aufruf
+## Update-Prozess
 
-```bash
-sudo bash fotobox.sh --update
-```
+Das Update-System führt die folgenden Schritte automatisch aus:
+
+1. **Vorbereitung**: Überprüfung der aktuellen Version und Verfügbarkeit eines Updates
+2. **Backup**: Automatische Sicherung aller wichtigen Dateien und Einstellungen
+3. **Download**: Herunterladen der aktualisierten Dateien von GitHub
+4. **Installation**: Aktualisierung der Software-Komponenten
+5. **Abhängigkeiten**: Überprüfung und Aktualisierung der Systemabhängigkeiten
+6. **Dienst-Neustart**: Neustart des Backend-Dienstes mit den aktualisierten Dateien
+7. **Abschluss**: Bestätigung des erfolgreichen Updates mit Versionshinweisen
+
+Der Fortschritt wird während des gesamten Prozesses in der Weboberfläche angezeigt. Bei längeren Updates bleibt die Fortschrittsanzeige aktiv, bis der Vorgang abgeschlossen ist.
 
 ## Hinweise
 

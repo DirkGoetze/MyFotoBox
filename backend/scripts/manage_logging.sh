@@ -1,6 +1,6 @@
 #!/bin/bash
 # ------------------------------------------------------------------------------
-# log_helper.sh
+# manage_logging.sh
 # ------------------------------------------------------------------------------
 # Funktion: Stellt Logging-Funktionalität für alle Fotobox-Skripte bereit.
 # Logdateien werden im Projektordner /opt/fotobox/log/ abgelegt (empfohlen).

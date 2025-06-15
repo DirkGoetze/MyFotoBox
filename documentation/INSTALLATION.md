@@ -13,8 +13,8 @@ Diese Anleitung beschreibt Schritt für Schritt, wie Sie die Fotobox-Software au
 Klonen Sie das Repository und wechseln Sie ins Projektverzeichnis:
 
 ```bash
-git clone https://github.com/DirkGoetze/fotobox2.git
-cd fotobox2
+git clone https://github.com/DirkGoetze/MyFotoBox.git /opt/fotobox
+cd /opt/fotobox
 ```
 
 **Hinweis:** Das Installationsskript enthält keine Klon-Logik mehr. Sie müssen das Repository vorab selbst klonen und das Skript im Projektverzeichnis ausführen.
@@ -78,7 +78,7 @@ Die Fotobox-Installation unterstützt einen vollautomatischen, interaktiven und 
 Der Modus wird durch das Flag `--unattended` (oder Synonyme wie `-u`, `--headless`, `headless`, `-q`) beim Aufruf des Installationsskripts aktiviert:
 
 ```bash
-sudo ./install_fotobox.sh --unattended
+sudo ./install.sh --unattended
 ```
 
 ### Verhalten im Unattended-Modus
@@ -111,7 +111,7 @@ Nach Abschluss der Installation erscheint z.B.:
 
 ```text
 Installation abgeschlossen. Details siehe Logfile: /var/log/2025-06-03_install.log
-Weboberfläche: [http://192.168.1.100:80/](http://192.168.1.100:80/)
+Weboberfläche: http://192.168.1.100:80/
 ```
 
 ### Hinweise und Besonderheiten

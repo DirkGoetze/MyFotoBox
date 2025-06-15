@@ -185,11 +185,17 @@ set_fallback_security_settings() {
     : "${LOG_DIR:=/opt/fotobox/logs}"
     
     # --- 2. Externe Skript-Ressourcen einbinden und prüfen ---
-    # Prüfen, ob log_helper.sh existiert und einbinden
+    # Prüfen, ob manage_logging.sh existiert und einbinden
     # Erst im aktuellen Projektverzeichnis suchen, falls vorhanden
-    if [ "$IS_PROJECT_ROOT" -eq 1 ] && [ -f "$CURRENT_DIR/backend/scripts/log_helper.sh" ]; then
+    if [ "$IS_PROJECT_ROOT" -eq 1 ] && [ -f "$CURRENT_DIR/backend/scripts/manage_logging.sh" ]; then
+        source "$CURRENT_DIR/backend/scripts/manage_logging.sh"
+    # Fallback für legacy log_helper.sh
+    elif [ "$IS_PROJECT_ROOT" -eq 1 ] && [ -f "$CURRENT_DIR/backend/scripts/log_helper.sh" ]; then
         source "$CURRENT_DIR/backend/scripts/log_helper.sh"
     # Dann im konfigurierten Installationsverzeichnis
+    elif [ -f "$(dirname "$0")/backend/scripts/manage_logging.sh" ]; then
+        source "$(dirname "$0")/backend/scripts/manage_logging.sh"
+    # Fallback für legacy log_helper.sh
     elif [ -f "$(dirname "$0")/backend/scripts/log_helper.sh" ]; then
         source "$(dirname "$0")/backend/scripts/log_helper.sh"
     fi
@@ -214,11 +220,16 @@ set_fallback_security_settings() {
 
     # --- 2. Prüfen und Vorbereiten der Log-Umgebung ---
     
-    # Wenn log_helper.sh verfügbar und get_log_path definiert ist, nutzen wir diese
-    if type get_log_path &>/dev/null; then
+    # Zuerst prüfen, ob manage_folders.sh verfügbar ist und get_log_dir definieren
+    if [ -f "$BASH_DIR/manage_folders.sh" ] && bash "$BASH_DIR/manage_folders.sh" log_dir >/dev/null 2>&1; then
+        debug_print "Verwende manage_folders.sh für Log-Verzeichnis"
+        local LOG_DIR=$(bash "$BASH_DIR/manage_folders.sh" log_dir)
+    # Wenn manage_logging.sh verfügbar und get_log_path definiert ist, nutzen wir diese als Fallback
+    elif type get_log_path &>/dev/null; then
+        debug_print "Verwende get_log_path aus manage_logging.sh für Log-Verzeichnis"
         local LOG_DIR=$(get_log_path)
     else
-        # Fallback-Logik, wenn log_helper.sh nicht geladen ist
+        # Fallback-Logik, wenn weder manage_folders.sh noch manage_logging.sh verfügbar ist
         # Bestimme ein funktionierendes Log-Verzeichnis
         if [ ! -d "$LOG_DIR" ]; then
             mkdir -p "$LOG_DIR" 2>/dev/null
@@ -325,7 +336,7 @@ debug_print() {
 
 # Die Funktion ensure_log_directory wurde entfernt.
 # Die Funktionalität wurde in set_fallback_security_settings integriert und
-# nutzt nun die Funktionen in log_helper.sh, wenn verfügbar.
+# nutzt nun die Funktionen in manage_logging.sh, wenn verfügbar.
 
 show_spinner() {
     # -----------------------------------------------------------------------
@@ -559,46 +570,116 @@ set_structure() {
     # set_structure
     # -----------------------------------------------------------------------
     # Funktion: Erstellt alle benötigten Verzeichnisse und prüft, ob die Projektstruktur vorhanden ist.
-    #           Klon-Logik wurde entfernt. Gibt Fehler aus, falls Kernverzeichnisse fehlen.
+    #           Verwaltet die vollständige Ordnerstruktur über manage_folders.sh
     set -e
     debug_print "set_structure: Starte mit INSTALL_DIR=$INSTALL_DIR"
-    if ! make_dir "$INSTALL_DIR"; then
-        debug_print "set_structure: INSTALL_DIR $INSTALL_DIR konnte nicht angelegt werden"
-        return 1
-    fi
+    
     # Prüfe, ob das Backend-Verzeichnis und wichtige Dateien existieren
     if [ ! -d "$INSTALL_DIR/backend" ] || [ ! -d "$INSTALL_DIR/backend/scripts" ] || [ ! -f "$INSTALL_DIR/conf/requirements_python.inf" ]; then
         print_error "Fehler: Die Projektstruktur ist unvollständig. Bitte stellen Sie sicher, dass das Repository vollständig geklont wurde (inkl. backend/, backend/scripts/, conf/requirements_python.inf)."
         return 10
     fi
-    debug_print "set_structure: Starte mit BACKUP_DIR=$BACKUP_DIR"
-    if ! make_dir "$BACKUP_DIR"; then
-        debug_print "set_structure: BACKUP_DIR $BACKUP_DIR konnte nicht angelegt werden"
-        return 4
+    
+    # manage_folders.sh ausführbar machen
+    chmod +x "$INSTALL_DIR"/backend/scripts/*.sh || true
+    
+    # Versuche, die Ordnerstruktur über manage_folders.sh zu erstellen
+    if [ -f "$INSTALL_DIR/backend/scripts/manage_folders.sh" ]; then
+        debug_print "set_structure: Verwende manage_folders.sh zur Ordnererstellung"
+        
+        # Setze globale Variablen für manage_folders.sh
+        export INSTALL_DIR="$INSTALL_DIR"
+        export DATA_DIR="$DATA_DIR"
+        export BACKUP_DIR="$BACKUP_DIR"
+        export LOG_DIR="$LOG_DIR"
+        export FRONTEND_DIR="$FRONTEND_DIR"
+        export CONFIG_DIR="$CONFIG_DIR"
+        
+        # Führe manage_folders.sh aus, um die Ordnerstruktur zu erstellen
+        if "$INSTALL_DIR/backend/scripts/manage_folders.sh" ensure_structure; then
+            debug_print "set_structure: Ordnerstruktur erfolgreich über manage_folders.sh erstellt"
+        else
+            debug_print "set_structure: Fehler bei manage_folders.sh, verwende Fallback-Methode"
+            # Fallback zur alten Methode
+            use_fallback_structure
+            if [ $? -ne 0 ]; then
+                return $?
+            fi
+        fi
+    else
+        debug_print "set_structure: manage_folders.sh nicht gefunden, verwende Fallback-Methode"
+        # Fallback zur alten Methode
+        use_fallback_structure
+        if [ $? -ne 0 ]; then
+            return $?
+        fi
     fi
-    debug_print "set_structure: Starte mit DATA_DIR=$DATA_DIR"
-    if ! make_dir "$DATA_DIR"; then
-        debug_print "set_structure: DATA_DIR $DATA_DIR konnte nicht angelegt werden"
-        return 6
-    fi
-    debug_print "set_structure: Starte mit BASH_DIR=$BASH_DIR"
-    if [ -d "$BASH_DIR" ]; then
-        debug_print "set_structure: Setze Ausführbarkeitsrechte für $BASH_DIR/*.sh"
-        chmod +x "$BASH_DIR"/*.sh
-    fi
-    debug_print "set_structure: Starte mit LOG_DIR=$LOG_DIR"
-    if ! make_dir "$LOG_DIR"; then
-        debug_print "set_structure: Logverzeichnis $LOG_DIR konnte nicht angelegt werden"
-        return 8
-    fi
+    
     # Policy: Nach jedem schreibenden Schritt im Projektverzeichnis Rechte prüfen und ggf. korrigieren.
-    # Die Rechtevergabe für einzelne Verzeichnisse erfolgt bereits in make_dir.
+    # Die Rechtevergabe für einzelne Verzeichnisse erfolgt bereits in make_dir oder manage_folders.sh.
     # Das folgende chown -R dient als zusätzlicher Schutz, um Policy-Konformität sicherzustellen.
     chown -R fotobox:fotobox "$INSTALL_DIR" || {
         debug_print "set_structure: chown auf $INSTALL_DIR fehlgeschlagen"
         return 7
     }
     debug_print "set_structure: erfolgreich abgeschlossen"
+    return 0
+}
+
+use_fallback_structure() {
+    # -----------------------------------------------------------------------
+    # use_fallback_structure
+    # -----------------------------------------------------------------------
+    # Funktion: Fallback-Methode zur Erstellung der Ordnerstruktur,
+    #           wenn manage_folders.sh nicht verfügbar ist
+    
+    debug_print "use_fallback_structure: Erstelle grundlegende Verzeichnisstruktur"
+    
+    # Erstelle Basisverzeichnisse
+    if ! make_dir "$INSTALL_DIR"; then
+        debug_print "use_fallback_structure: INSTALL_DIR $INSTALL_DIR konnte nicht angelegt werden"
+        return 1
+    fi
+    
+    if ! make_dir "$BACKUP_DIR"; then
+        debug_print "use_fallback_structure: BACKUP_DIR $BACKUP_DIR konnte nicht angelegt werden"
+        return 4
+    fi
+    
+    if ! make_dir "$DATA_DIR"; then
+        debug_print "use_fallback_structure: DATA_DIR $DATA_DIR konnte nicht angelegt werden"
+        return 6
+    fi
+    
+    if ! make_dir "$LOG_DIR"; then
+        debug_print "use_fallback_structure: LOG_DIR $LOG_DIR konnte nicht angelegt werden"
+        return 8
+    fi
+    
+    # Erstelle Frontend-Unterverzeichnisse
+    if ! make_dir "$FRONTEND_DIR"; then
+        debug_print "use_fallback_structure: FRONTEND_DIR $FRONTEND_DIR konnte nicht angelegt werden"
+        return 9
+    fi
+    
+    # Erstelle die vormals durch .folder.info gesicherten Verzeichnisse
+    make_dir "$FRONTEND_DIR/css" || true
+    make_dir "$FRONTEND_DIR/js" || true
+    make_dir "$FRONTEND_DIR/fonts" || true
+    make_dir "$FRONTEND_DIR/picture" || true
+    
+    # Erstelle Fotos-Verzeichnisstruktur
+    make_dir "$FRONTEND_DIR/photos" || true
+    make_dir "$FRONTEND_DIR/photos/originals" || true
+    make_dir "$FRONTEND_DIR/photos/gallery" || true
+    
+    # Setze Ausführbarkeitsrechte für Skripte
+    if [ -d "$BASH_DIR" ]; then
+        debug_print "use_fallback_structure: Setze Ausführbarkeitsrechte für $BASH_DIR/*.sh"
+        chmod +x "$BASH_DIR"/*.sh || true
+    fi
+    
+    debug_print "use_fallback_structure: Grundlegende Verzeichnisstruktur erfolgreich erstellt"
     return 0
 }
 
@@ -817,7 +898,7 @@ dlg_check_system_requirements() {
         exit 1
     fi
     
-    # Prüfen, ob die log_helper.sh erfolgreich geladen wurde
+    # Prüfen, ob die manage_logging.sh erfolgreich geladen wurde
     if type get_log_file &>/dev/null; then
         print_success "Log-Hilfsskript erfolgreich geladen, verwende zentrales Logging."
         log "INFO: Log-Hilfsskript erfolgreich geladen, verwende zentrales Logging."

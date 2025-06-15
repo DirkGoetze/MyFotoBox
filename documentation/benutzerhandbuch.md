@@ -19,7 +19,31 @@ Die Fotobox ist ein flexibles, webbasiertes System für Events, Partys und Feier
 
 ## Erste Schritte
 
-Nach der [Installation](installation.md) der Fotobox können Sie die Weboberfläche über einen Browser aufrufen:
+### Installation und Einrichtung
+
+Vor der Nutzung muss die Fotobox auf einem Linux-System (Debian/Ubuntu) installiert werden:
+
+1. Klonen Sie das Repository in ein Verzeichnis Ihrer Wahl:
+   ```bash
+   sudo git clone https://github.com/DirkGoetze/MyFotoBox.git /opt/fotobox
+   ```
+
+2. Wechseln Sie in das Projektverzeichnis und machen Sie das Installationsskript ausführbar:
+   ```bash
+   cd /opt/fotobox
+   sudo chmod +x install.sh
+   ```
+
+3. Führen Sie die Installation aus:
+   ```bash
+   sudo ./install.sh
+   ```
+
+Eine detaillierte Installationsanleitung finden Sie in der [Installationsdokumentation](installation.md).
+
+### Erststart und Zugriff
+
+Nach erfolgreicher Installation können Sie die Weboberfläche über einen Browser aufrufen:
 
 * Bei lokaler Installation: `http://localhost:8080` (oder den von Ihnen konfigurierten Port)
 * Bei Netzwerkinstallation: Die IP-Adresse oder den Hostnamen des Geräts, auf dem die Fotobox läuft
@@ -113,8 +137,25 @@ Auf der Kontaktseite können Sie Informationen hinterlegen, wie Ihre Gäste die 
    * Stellen Sie sicher, dass Sie das richtige Admin-Passwort verwenden
    * Beachten Sie die Benachrichtigungen, die den Status der Einstellungsänderungen anzeigen
 
+### Updates und Systemverwaltung
+
+Die Fotobox bietet eine integrierte Update-Funktion, die ausschließlich über die Weboberfläche verfügbar ist:
+
+1. Öffnen Sie die Einstellungsseite und melden Sie sich als Administrator an
+2. Navigieren Sie zum Bereich "System"
+3. Klicken Sie auf "Auf Updates prüfen", um nach neuen Versionen zu suchen
+4. Bei verfügbaren Updates können Sie direkt "Update installieren" auswählen
+5. Folgen Sie den Anweisungen auf dem Bildschirm
+
+Während eines Updates:
+* Die Fotobox ist kurzzeitig nicht verfügbar
+* Alle Einstellungen und Daten bleiben erhalten
+* Ein automatisches Backup wird vor dem Update erstellt
+
+Sollte ein Update fehlschlagen, können Sie das System über die Wiederherstellungsoption in den vorherigen Zustand zurücksetzen.
+
 ### Support
 
-Bei weiteren Problemen konsultieren Sie bitte die [Projektwebseite](https://github.com/DirkGoetze/fotobox2) oder erstellen Sie ein Issue im GitHub-Repository.
+Bei weiteren Problemen konsultieren Sie bitte die [Projektwebseite](https://github.com/DirkGoetze/MyFotoBox) oder erstellen Sie ein Issue im GitHub-Repository.
 
-**Stand:** 11. Juni 2025
+**Stand:** 15. Juni 2025

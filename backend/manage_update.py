@@ -7,15 +7,30 @@ import glob
 import re
 from pkg_resources import parse_version
 
-BACKUP_DIR = os.path.join(os.path.dirname(__file__), '../backup')
-LOG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../backup/logs'))
+# Versuche, die neuen manage_folders-Funktionen zu verwenden
+try:
+    from manage_folders import get_backup_dir, get_log_dir, get_data_dir, get_config_dir
+    
+    # Definiere Verzeichnisse über den zentralen Verzeichnismanager
+    BACKUP_DIR = get_backup_dir()
+    LOG_DIR = get_log_dir()  # Verwende direkt die get_log_dir()-Funktion 
+    DATA_DIR = get_data_dir()
+    CONFIG_DIR = get_config_dir()
+except ImportError:
+    # Fallback zur alten Methode, wenn manage_folders nicht verfügbar ist
+    BACKUP_DIR = os.path.join(os.path.dirname(__file__), '../backup')
+    LOG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../backup/logs'))
+    DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
+    CONFIG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../conf'))
+
+# Stelle sicher, dass das Log-Verzeichnis existiert
 os.makedirs(LOG_DIR, exist_ok=True)
 
-# Pfad zur requirements_system.inf im conf-Verzeichnis
-SYSTEM_REQUIREMENTS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../conf/requirements_system.inf'))
+# Pfade zu den Requirements-Dateien im Config-Verzeichnis
+SYSTEM_REQUIREMENTS_PATH = os.path.join(CONFIG_DIR, 'requirements_system.inf')
 
 # Pfad zur requirements_python.inf im conf-Verzeichnis
-PYTHON_REQUIREMENTS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../conf/requirements_python.inf'))
+PYTHON_REQUIREMENTS_PATH = os.path.join(CONFIG_DIR, 'requirements_python.inf')
 
 # -------------------------------------------------------------------------------
 # Neue Funktionen für Abhängigkeiten
@@ -241,13 +256,17 @@ def get_dependencies_status():
 # -------------------------------------------------------------------------------
 def get_log_file():
     try:
-        log_file = subprocess.check_output(['bash', os.path.join(os.path.dirname(__file__), 'scripts', 'log_helper.sh'), 'get_log_file'])
-        return log_file.decode().strip()
+        # Versuche zuerst mit manage_logging.sh, bei Fehler fallback auf log_helper.sh
+        try:
+            log_file = subprocess.check_output(['bash', os.path.join(os.path.dirname(__file__), 'scripts', 'manage_logging.sh'), 'get_log_file'])
+            return log_file.decode().strip()
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            log_file = subprocess.check_output(['bash', os.path.join(os.path.dirname(__file__), 'scripts', 'log_helper.sh'), 'get_log_file'])
+            return log_file.decode().strip()
     except Exception as e:
-        # Fallback: Schreibe ins Backup-Verzeichnis
-        backup_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../backup/logs'))
-        os.makedirs(backup_dir, exist_ok=True)
-        return os.path.join(backup_dir, f"{datetime.now():%Y-%m-%d}_fotobox.log")
+        # Fallback: Verwende LOG_DIR aus der zentralen Verzeichnisverwaltung
+        os.makedirs(LOG_DIR, exist_ok=True)  # LOG_DIR wurde bereits zu Beginn des Skripts definiert
+        return os.path.join(LOG_DIR, f"{datetime.now():%Y-%m-%d}_fotobox.log")
 
 LOGFILE = get_log_file()
 
@@ -260,10 +279,12 @@ def rotate_logs():
         logs = sorted(glob.glob(os.path.join(LOG_DIR, '*_update.log')))
 rotate_logs()
 
-DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
+# Datenbank-Pfad definieren (DATA_DIR wurde bereits am Anfang durch get_data_dir() gesetzt)
 DB_PATH = os.path.join(DATA_DIR, 'fotobox_settings.db')
 
+# Stellen Sie sicher, dass die benötigten Verzeichnisse existieren
 os.makedirs(BACKUP_DIR, exist_ok=True)
+os.makedirs(DATA_DIR, exist_ok=True)
 
 # -------------------------------------------------------------------------------
 # log
@@ -274,12 +295,20 @@ os.makedirs(BACKUP_DIR, exist_ok=True)
 def log(msg, level="INFO", func=None, file=None):
     # Vor jedem Log-Eintrag: Logrotation und Komprimierung wie in chk_log_file
     try:
-        subprocess.run(['bash', os.path.join(os.path.dirname(__file__), 'scripts', 'log_helper.sh'), 'chk_log_file'])
+        # Versuche zuerst mit manage_logging.sh, bei Fehler fallback auf log_helper.sh
+        try:
+            subprocess.run(['bash', os.path.join(os.path.dirname(__file__), 'scripts', 'manage_logging.sh'), 'chk_log_file'])
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            subprocess.run(['bash', os.path.join(os.path.dirname(__file__), 'scripts', 'log_helper.sh'), 'chk_log_file'])
     except Exception:
         pass
-    # Log-Eintrag über log_helper.sh schreiben (Formatierung, Loglevel, Funktionsname, Datei)
+    # Log-Eintrag über manage_logging.sh schreiben (Formatierung, Loglevel, Funktionsname, Datei)
     try:
-        args = ['bash', os.path.join(os.path.dirname(__file__), 'scripts', 'log_helper.sh'), 'log', f"{level}: {msg}"]
+        # Versuche zuerst mit manage_logging.sh, bei Fehler fallback auf log_helper.sh
+        try:
+            args = ['bash', os.path.join(os.path.dirname(__file__), 'scripts', 'manage_logging.sh'), 'log', f"{level}: {msg}"]
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            args = ['bash', os.path.join(os.path.dirname(__file__), 'scripts', 'log_helper.sh'), 'log', f"{level}: {msg}"]
         if func:
             args.append(func)
         if file:
@@ -421,9 +450,10 @@ def update_backend():
 # -------------------------------------------------------------------------------
 def backup_and_install_systemd():
     import shutil, datetime, os
-    src = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'conf', 'fotobox-backend.service'))
+    # Verwende CONFIG_DIR und BACKUP_DIR aus der zentralen Verzeichnisverwaltung
+    src = os.path.join(CONFIG_DIR, 'fotobox-backend.service')
     dst = '/etc/systemd/system/fotobox-backend.service'
-    backup = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backup', f'fotobox-backend.service.bak.{datetime.datetime.now():%Y%m%d%H%M%S}'))
+    backup = os.path.join(BACKUP_DIR, f'fotobox-backend.service.bak.{datetime.datetime.now():%Y%m%d%H%M%S}')
     if os.path.exists(dst):
         shutil.copy(dst, backup)
         log(f"Backup systemd-Unit: {backup}")
@@ -440,9 +470,10 @@ def backup_and_install_systemd():
 # -------------------------------------------------------------------------------
 def backup_and_install_nginx():
     import shutil, datetime, os
-    src = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'conf', 'nginx-fotobox.conf'))
+    # Verwende CONFIG_DIR und BACKUP_DIR aus der zentralen Verzeichnisverwaltung
+    src = os.path.join(CONFIG_DIR, 'nginx-fotobox.conf')
     dst = '/etc/nginx/sites-available/fotobox'
-    backup = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backup', f'nginx-fotobox.conf.bak.{datetime.datetime.now():%Y%m%d%H%M%S}'))
+    backup = os.path.join(BACKUP_DIR, f'nginx-fotobox.conf.bak.{datetime.datetime.now():%Y%m%d%H%M%S}')
     if os.path.exists(dst):
         shutil.copy(dst, backup)
         log(f"Backup NGINX-Konfiguration: {backup}")
@@ -470,11 +501,14 @@ def migrate_db_to_data_dir():
 # Funktion: Migriert und initialisiert die Datenbank über manage_database.py
 # -------------------------------------------------------------------------------
 def migrate_and_init_db():
-    subprocess.run(['python3', os.path.join(os.path.dirname(__file__), 'manage_database.py'), 'migrate'])
-    subprocess.run(['python3', os.path.join(os.path.dirname(__file__), 'manage_database.py'), 'init'])
+    # Verwende den aktuellen Pfad für die Datenbankskripte
+    manage_db_script = os.path.join(os.path.dirname(__file__), 'manage_database.py')
+    subprocess.run(['python3', manage_db_script, 'migrate'])
+    subprocess.run(['python3', manage_db_script, 'init'])
 
 def get_local_version():
-    version_file = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'conf', 'version.inf'))
+    # Verwende CONFIG_DIR aus der zentralen Verzeichnisverwaltung
+    version_file = os.path.join(CONFIG_DIR, 'version.inf')
     try:
         with open(version_file, 'r') as f:
             return f.read().strip()
@@ -541,12 +575,12 @@ def main():
     # -------------------------------------------------------------------------------
     # backup_dir_erzeugen
     # -------------------------------------------------------------------------------
-    # Funktion: Legt das Backup-Verzeichnis an, falls nicht vorhanden
+    # Funktion: Nutzt zentrale Verzeichnisverwaltung für das Backup-Verzeichnis
     # -------------------------------------------------------------------------------
-    backup_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backup'))
-    if not os.path.exists(backup_dir):
-        os.makedirs(backup_dir)
-        with open(os.path.join(backup_dir, 'readme.md'), 'w') as f:
+    # BACKUP_DIR wird bereits zu Beginn des Skripts über get_backup_dir() gesetzt
+    if not os.path.exists(BACKUP_DIR):
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+        with open(os.path.join(BACKUP_DIR, 'readme.md'), 'w') as f:
             f.write('# backup\nDieses Verzeichnis wird automatisch durch die Installations- und Update-Skripte erzeugt und enthält Backups von Konfigurationsdateien und Logs. Es ist nicht Teil des Repositorys.')
     
     # Führe Backups und Updates durch
