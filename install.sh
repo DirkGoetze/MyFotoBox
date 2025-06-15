@@ -52,6 +52,7 @@ parse_args() {
     # -----------------------------------------------------------------------
     # Standardwerte für alle Flags setzen
     UNATTENDED=0
+    INSTALL_DIR_OVERRIDE=""
     
     # Argumente durchlaufen
     while [[ $# -gt 0 ]]; do
@@ -59,6 +60,20 @@ parse_args() {
             --unattended|-u|--headless|-h|-q)
                 UNATTENDED=1
                 log "Unattended-Modus aktiviert"
+                ;;
+            --dir|-d)
+                if [ -n "$2" ] && [ "${2:0:1}" != "-" ]; then
+                    INSTALL_DIR_OVERRIDE="$2"
+                    INSTALL_DIR="$2"
+                    # Aktualisiere alle abhängigen Pfadvariablen
+                    update_installation_paths
+                    log "Installationsverzeichnis überschrieben: $INSTALL_DIR"
+                    shift
+                else
+                    print_error "Option --dir/-d benötigt ein Argument."
+                    show_help
+                    exit 1
+                fi
                 ;;
             --help|-h|--hilfe)
                 show_help
@@ -74,6 +89,7 @@ parse_args() {
     done
     
     export UNATTENDED
+    export INSTALL_DIR_OVERRIDE
 }
 
 chk_is_root() {
@@ -136,17 +152,66 @@ set_fallback_security_settings() {
     # ......... setzt Fallback-Definitionen für Logging- und Print-Funktionen,
     # ......... falls diese nicht durch ein zentrales Logging-Hilfsskript 
     # ......... bereitgestellt werden.
+    # ......... Prüft außerdem die Verfügbarkeit von manage_nginx.sh.
+    # ......... Prüft, ob das Skript aus dem Root-Verzeichnis des Projekts ausgeführt wird
+    # ......... und aktualisiert INSTALL_DIR entsprechend.
     # .........
     # Rückgabe: 0 = OK, 1 = fehlerhafte Umgebung, Skript sollte abgebrochen werden
+    
+    # --- 1. Zuerst prüfen, ob wir uns im Root-Verzeichnis des Projekts befinden
+    #        und INSTALL_DIR entsprechend anpassen
+    local SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+    
+    # Prüfen, ob das Skript aus dem Root-Verzeichnis des Projekts ausgeführt wird
+    # Dies erkennen wir an der Existenz bestimmter Schlüsseldateien/-verzeichnisse
+    if [ -d "$SCRIPT_DIR/backend" ] && [ -d "$SCRIPT_DIR/frontend" ] && [ -d "$SCRIPT_DIR/conf" ]; then
+        # Wir sind im Projekt-Root
+        IS_PROJECT_ROOT=1
+        
+        # Wenn keine explizite Änderung des Installationsverzeichnisses gewünscht ist
+        # (z.B. durch -d /custom/path als Parameter), dann verwenden wir das aktuelle Verzeichnis
+        # für die Entwicklung und Ressourcen-Prüfung
+        if [ -z "$INSTALL_DIR_OVERRIDE" ]; then
+            # Temporär für die Entwicklung und Ressourcen-Prüfung das aktuelle Verzeichnis nutzen
+            CURRENT_DIR="$SCRIPT_DIR"
+            debug_print "set_fallback_security_settings: Projekt-Root erkannt in $SCRIPT_DIR"
+        fi
+    else
+        IS_PROJECT_ROOT=0
+        debug_print "set_fallback_security_settings: Kein Projekt-Root erkannt"
+    fi
     
     # Default LOG_DIR setzen, falls nicht vorhanden
     : "${LOG_DIR:=/opt/fotobox/logs}"
     
-    # --- 1. Zunächst versuchen, externe Skript-Ressourcen einzubinden ---
-    if [ -f "$(dirname "$0")/backend/scripts/log_helper.sh" ]; then
+    # --- 2. Externe Skript-Ressourcen einbinden und prüfen ---
+    # Prüfen, ob log_helper.sh existiert und einbinden
+    # Erst im aktuellen Projektverzeichnis suchen, falls vorhanden
+    if [ "$IS_PROJECT_ROOT" -eq 1 ] && [ -f "$CURRENT_DIR/backend/scripts/log_helper.sh" ]; then
+        source "$CURRENT_DIR/backend/scripts/log_helper.sh"
+    # Dann im konfigurierten Installationsverzeichnis
+    elif [ -f "$(dirname "$0")/backend/scripts/log_helper.sh" ]; then
         source "$(dirname "$0")/backend/scripts/log_helper.sh"
     fi
     
+    # Prüfen, ob manage_nginx.sh existiert und das Ergebnis in globaler Variable speichern
+    MANAGE_NGINX_AVAILABLE=0
+    # Prüfe zuerst im aktuellen Projektverzeichnis, falls wir im Projekt-Root sind
+    if [ "$IS_PROJECT_ROOT" -eq 1 ] && [ -f "$CURRENT_DIR/backend/scripts/manage_nginx.sh" ]; then
+        MANAGE_NGINX_AVAILABLE=1
+        # Für künftige Aufrufe den absoluten Pfad zu manage_nginx.sh merken
+        MANAGE_NGINX_PATH="$CURRENT_DIR/backend/scripts/manage_nginx.sh"
+    # Dann im aktuellen Verzeichnis-Layout
+    elif [ -f "$(dirname "$0")/backend/scripts/manage_nginx.sh" ]; then
+        MANAGE_NGINX_AVAILABLE=1
+        MANAGE_NGINX_PATH="$(dirname "$0")/backend/scripts/manage_nginx.sh"
+    # Dann im installierten Verzeichnis
+    elif [ -f "$BASH_DIR/manage_nginx.sh" ]; then
+        MANAGE_NGINX_AVAILABLE=1
+        MANAGE_NGINX_PATH="$BASH_DIR/manage_nginx.sh"
+    fi
+    
+
     # --- 2. Prüfen und Vorbereiten der Log-Umgebung ---
     
     # Wenn log_helper.sh verfügbar und get_log_path definiert ist, nutzen wir diese
@@ -877,20 +942,28 @@ dlg_nginx_installation() {
     print_step "[7/10] NGINX-Installation und Konfiguration ..."
 
     debug_print "dlg_nginx_installation: Starte NGINX-Dialog, UNATTENDED=$UNATTENDED, BASH_DIR=$BASH_DIR"
-    # Prüfen, ob manage_nginx.sh existiert
-    if [ ! -f "$BASH_DIR/manage_nginx.sh" ]; then
-        debug_print "dlg_nginx_installation: manage_nginx.sh nicht gefunden unter $BASH_DIR"
+    # Verwenden der globalen Variable zur Prüfung, ob manage_nginx.sh existiert
+    if [ "$MANAGE_NGINX_AVAILABLE" -ne 1 ]; then
+        debug_print "dlg_nginx_installation: manage_nginx.sh ist nicht verfügbar (MANAGE_NGINX_AVAILABLE=$MANAGE_NGINX_AVAILABLE)"
         print_error "manage_nginx.sh nicht gefunden! Die Projektstruktur wurde vermutlich noch nicht geklont."
         exit 1
     fi
     # NGINX-Installation prüfen/ausführen (zentral)
+    # Verwende den in set_fallback_security_settings gespeicherten Pfad zu manage_nginx.sh
+    if [ -n "$MANAGE_NGINX_PATH" ]; then
+        NGINX_SCRIPT="$MANAGE_NGINX_PATH"
+    else
+        # Fallback auf den standardmäßigen Pfad
+        NGINX_SCRIPT="$BASH_DIR/manage_nginx.sh"
+    fi
+    
     if [ "$UNATTENDED" -eq 1 ]; then
-        debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json install"
-        install_result=$(bash "$BASH_DIR/manage_nginx.sh" --json install)
+        debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT --json install"
+        install_result=$(bash "$NGINX_SCRIPT" --json install)
         install_rc=$?
     else
-        debug_print "dlg_nginx_installation: Starte manage_nginx.sh install"
-        install_result=$(bash "$BASH_DIR/manage_nginx.sh" install)
+        debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT install"
+        install_result=$(bash "$NGINX_SCRIPT" install)
         install_rc=$?
     fi
     debug_print "dlg_nginx_installation: install_rc=$install_rc, install_result=$install_result"
@@ -900,12 +973,12 @@ dlg_nginx_installation() {
     fi
     # Betriebsmodus abfragen (default/multisite)
     if [ "$UNATTENDED" -eq 1 ]; then
-        debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json activ"
-        activ_result=$(bash "$BASH_DIR/manage_nginx.sh" --json activ)
+        debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT --json activ"
+        activ_result=$(bash "$NGINX_SCRIPT" --json activ)
         activ_rc=$?
     else
-        debug_print "dlg_nginx_installation: Starte manage_nginx.sh activ"
-        activ_result=$(bash "$BASH_DIR/manage_nginx.sh" activ)
+        debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT activ"
+        activ_result=$(bash "$NGINX_SCRIPT" activ)
         activ_rc=$?
     fi
     debug_print "dlg_nginx_installation: activ_rc=$activ_rc, activ_result=$activ_result"
@@ -940,15 +1013,15 @@ dlg_nginx_installation() {
             port_rc=1
             while [ $port_rc -ne 0 ]; do
                 if [ "$UNATTENDED" -eq 1 ]; then
-                    debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json setport 80 j (unattended)"
-                    port_result=$(bash "$BASH_DIR/manage_nginx.sh" --json setport 80 j)
+                    debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT --json setport 80 j (unattended)"
+                    port_result=$(bash "$NGINX_SCRIPT" --json setport 80 j)
                     port_rc=$?
                 else
                     print_prompt "Bitte gewünschten Port für die Fotobox-Weboberfläche angeben [Default: 80]:"
                     read -r user_port
                     if [ -z "$user_port" ]; then user_port=80; fi
-                    debug_print "dlg_nginx_installation: Starte manage_nginx.sh setport $user_port N (interaktiv)"
-                    port_result=$(bash "$BASH_DIR/manage_nginx.sh" setport "$user_port" N)
+                    debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT setport $user_port N (interaktiv)"
+                    port_result=$(bash "$NGINX_SCRIPT" setport "$user_port" N)
                     port_rc=$?
                     if [ $port_rc -ne 0 ]; then
                         print_error "Portwahl/Setzen fehlgeschlagen: $port_result"
@@ -963,12 +1036,12 @@ dlg_nginx_installation() {
             done
             debug_print "dlg_nginx_installation: port_rc=$port_rc, port_result=$port_result"
             if [ "$UNATTENDED" -eq 1 ]; then
-                debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json external"
-                ext_result=$(bash "$BASH_DIR/manage_nginx.sh" --json external)
+                debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT --json external"
+                ext_result=$(bash "$NGINX_SCRIPT" --json external)
                 ext_rc=$?
             else
-                debug_print "dlg_nginx_installation: Starte manage_nginx.sh external"
-                ext_result=$(bash "$BASH_DIR/manage_nginx.sh" external)
+                debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT external"
+                ext_result=$(bash "$NGINX_SCRIPT" external)
                 ext_rc=$?
             fi
             debug_print "dlg_nginx_installation: ext_rc=$ext_rc, ext_result=$ext_result"
@@ -981,12 +1054,12 @@ dlg_nginx_installation() {
         else
             # Default-Integration (zentral)
             if [ "$UNATTENDED" -eq 1 ]; then
-                debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json internal"
-                int_result=$(bash "$BASH_DIR/manage_nginx.sh" --json internal)
+                debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT --json internal"
+                int_result=$(bash "$NGINX_SCRIPT" --json internal)
                 int_rc=$?
             else
-                debug_print "dlg_nginx_installation: Starte manage_nginx.sh internal"
-                int_result=$(bash "$BASH_DIR/manage_nginx.sh" internal)
+                debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT internal"
+                int_result=$(bash "$NGINX_SCRIPT" internal)
                 int_rc=$?
             fi
             debug_print "dlg_nginx_installation: int_rc=$int_rc, int_result=$int_result"
@@ -1012,12 +1085,12 @@ dlg_nginx_installation() {
         fi
         # Portwahl und externe Konfiguration (zentral)
         if [ "$UNATTENDED" -eq 1 ]; then
-            debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json setport"
-            port_result=$(bash "$BASH_DIR/manage_nginx.sh" --json setport)
+            debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT --json setport"
+            port_result=$(bash "$NGINX_SCRIPT" --json setport)
             port_rc=$?
         else
-            debug_print "dlg_nginx_installation: Starte manage_nginx.sh setport"
-            port_result=$(bash "$BASH_DIR/manage_nginx.sh" setport)
+            debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT setport"
+            port_result=$(bash "$NGINX_SCRIPT" setport)
             port_rc=$?
         fi
         debug_print "dlg_nginx_installation: port_rc=$port_rc, port_result=$port_result"
@@ -1026,12 +1099,12 @@ dlg_nginx_installation() {
             exit 1
         fi
         if [ "$UNATTENDED" -eq 1 ]; then
-            debug_print "dlg_nginx_installation: Starte manage_nginx.sh --json external"
-            ext_result=$(bash "$BASH_DIR/manage_nginx.sh" --json external)
+            debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT --json external"
+            ext_result=$(bash "$NGINX_SCRIPT" --json external)
             ext_rc=$?
         else
-            debug_print "dlg_nginx_installation: Starte manage_nginx.sh external"
-            ext_result=$(bash "$BASH_DIR/manage_nginx.sh" external)
+            debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT external"
+            ext_result=$(bash "$NGINX_SCRIPT" external)
             ext_rc=$?
         fi
         debug_print "dlg_nginx_installation: ext_rc=$ext_rc, ext_result=$ext_result"
@@ -1097,7 +1170,11 @@ dlg_show_summary() {
     print_step "[9/10] Installation abgeschlossen: Zusammenfassung ..."
     
     # NGINX-Konfiguration nach Installation ausgeben (Policy-konform, modular)
-    source "$BASH_DIR/manage_nginx.sh"
+    if [ -n "$MANAGE_NGINX_PATH" ]; then
+        source "$MANAGE_NGINX_PATH"
+    else
+        source "$BASH_DIR/manage_nginx.sh"
+    fi
     local nginx_status_json
     nginx_status_json=$(get_nginx_status json)
     local nginx_port nginx_bind nginx_servername nginx_webroot nginx_url
@@ -1170,9 +1247,38 @@ Dieses Skript führt die Erstinstallation der Fotobox durch.
 Optionen:
   --unattended, -u, --headless, -q   Starte die Installation im Unattended-Modus 
                                      (ohne Benutzerinteraktion, verwendet sichere Standardwerte)
+  --dir, -d VERZEICHNIS              Spezifiziert das Zielverzeichnis für die Installation
+                                     (Standard: /opt/fotobox)
   --help, -h, --hilfe                Zeigt diese Hilfe an
 
 EOF
+}
+
+# Diese Funktion sollte nach dem Ändern von INSTALL_DIR aufgerufen werden, um alle abhängigen Pfade zu aktualisieren
+update_installation_paths() {
+    # -----------------------------------------------------------------------
+    # update_installation_paths
+    # -----------------------------------------------------------------------
+    # Funktion: Aktualisiert alle von INSTALL_DIR abhängigen Pfadvariablen
+    # Parameter: keine (nutzt die globale INSTALL_DIR-Variable)
+    # Rückgabe: keine (setzt alle abhängigen globalen Variablen)
+    
+    # Nur aktualisieren, wenn INSTALL_DIR tatsächlich gesetzt ist
+    if [ -z "$INSTALL_DIR" ]; then
+        debug_print "update_installation_paths: INSTALL_DIR ist nicht gesetzt, keine Aktualisierung möglich"
+        return 1
+    fi
+    
+    # Aktualisiere alle abhängigen Pfadvariablen
+    BACKUP_DIR="$INSTALL_DIR/backup"
+    CONF_DIR="$INSTALL_DIR/conf"
+    BASH_DIR="$INSTALL_DIR/backend/scripts"
+    LOG_DIR="$INSTALL_DIR/log"
+    DATA_DIR="$INSTALL_DIR/data"
+    SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
+    
+    debug_print "update_installation_paths: Pfade aktualisiert für INSTALL_DIR=$INSTALL_DIR"
+    return 0
 }
 
 # Hauptfunktion starten
