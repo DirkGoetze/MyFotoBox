@@ -1301,9 +1301,9 @@ dlg_show_summary() {
 main() {
     # Führe die Prüfungen der Systemvoraussetzungen durch
     
+    dlg_check_system_requirements "$@"  # Prüfe Systemvoraussetzungen und richte Logging ein
     dlg_check_root               # Prüfe Root-Rechte
     dlg_check_distribution       # Prüfe die Distribution
-    dlg_check_system_requirements "$@"  # Prüfe Systemvoraussetzungen und richte Logging ein
     dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
     dlg_prepare_users            # Erstelle Benutzer und Gruppe 'fotobox'
     dlg_prepare_structure        # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
