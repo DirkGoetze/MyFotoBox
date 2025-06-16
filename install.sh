@@ -41,7 +41,22 @@ DATA_DIR="$INSTALL_DIR/data"
 # ---------------------------------------------------------------------------
 # Einstellungen: Debug-Modus
 # ---------------------------------------------------------------------------
+# Legacy-Debug-Modus (für Kompatibilität mit älterem Code)
 DEBUG_MOD=0
+# Neue Debug-Modi für zentralisiertes Debug-System
+DEBUG_MOD_LOCAL=0
+DEBUG_MOD_GLOBAL=0
+
+# ===========================================================================
+# Einbindung der zentralen Bibliothek (falls verfügbar)
+# ===========================================================================
+if [ -f "$BASH_DIR/lib_core.sh" ]; then
+    source "$BASH_DIR/lib_core.sh"
+    # Versuche, zentrale Ressourcen zu laden
+    if type load_core_resources &>/dev/null; then
+        load_core_resources || echo "Warnung: Kern-Ressourcen konnten nicht vollständig geladen werden."
+    fi
+fi
 
 # ==========================================================================='
 # Hilfsfunktionen
@@ -53,6 +68,7 @@ parse_args() {
     # -----------------------------------------------------------------------
     # Standardwerte für alle Flags setzen
     UNATTENDED=0
+    CONFIGURE_FIREWALL=0
     
     # Argumente durchlaufen
     while [[ $# -gt 0 ]]; do
@@ -60,6 +76,15 @@ parse_args() {
             --unattended|-u|--headless|-q)
                 UNATTENDED=1
                 log "Unattended-Modus aktiviert"
+                ;;
+            --debug|-d)
+                DEBUG_MOD=1
+                DEBUG_MOD_LOCAL=1
+                log "Debug-Modus aktiviert"
+                ;;
+            --firewall|-f)
+                CONFIGURE_FIREWALL=1
+                log "Firewall-Konfiguration aktiviert"
                 ;;
             --help|-h|--hilfe)
                 show_help
@@ -75,6 +100,9 @@ parse_args() {
     done
     
     export UNATTENDED
+    export DEBUG_MOD
+    export DEBUG_MOD_LOCAL
+    export CONFIGURE_FIREWALL
 }
 
 chk_is_root() {
@@ -267,10 +295,10 @@ debug_print() {
     # -----------------------------------------------------------------------
     # debug_print
     # -----------------------------------------------------------------------
-    # Funktion: Gibt Debug-Ausgaben aus, wenn DEBUG_MOD=1 gesetzt ist
+    # Funktion: Gibt Debug-Ausgaben aus, wenn Debug-Modus aktiviert ist
     # Parameter: $* = Debug-Nachricht
     # Extras...: Einheitliches Format, Policy-konform
-    if [ "$DEBUG_MOD" -eq 1 ]; then
+    if [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ] || [ "$DEBUG_MOD" -eq 1 ]; then
         # Erst nach der Definition der print-Funktionen die log-Funktion verwenden
         if type log &>/dev/null; then
             echo -e "\033[1;35m  → [DEBUG]\033[0m $*"
@@ -1192,13 +1220,104 @@ dlg_backend_integration() {
     return 0
 }
 
+dlg_firewall_config() {
+    # ------------------------------------------------------------------------------
+    # dlg_firewall_config
+    # ------------------------------------------------------------------------------
+    # Funktion: Konfiguriert die Firewall für die Fotobox
+    # ------------------------------------------------------------------------------
+    # Prüfe, ob die Fotobox-Verzeichnisstruktur schon angelegt wurde
+    if [ ! -d "$BASH_DIR" ]; then
+        print_error "Fotobox-Verzeichnisstruktur muss vor der Firewall-Konfiguration erstellt werden."
+        return 1
+    fi
+
+    # Suche nach dem Firewall-Management-Skript
+    local firewall_script="$BASH_DIR/manage_firewall.sh"
+    if [ ! -f "$firewall_script" ]; then
+        print_error "Firewall-Management-Skript nicht gefunden: $firewall_script"
+        return 1
+    fi
+
+    print_step "[8/10] Firewall-Konfiguration ..."
+
+    # Wenn im Unattended-Modus oder explizit angefordert, konfiguriere die Firewall automatisch
+    if [ "$UNATTENDED" -eq 1 ] || [ "$CONFIGURE_FIREWALL" -eq 1 ]; then
+        print_info "Firewall wird automatisch konfiguriert..."
+        # Führe das Firewall-Skript mit --setup-Parameter aus
+        if ! bash "$firewall_script" --setup; then
+            print_warning "Firewall-Konfiguration fehlgeschlagen. Die Weboberfläche könnte nicht erreichbar sein."
+            log "WARN: Firewall-Konfiguration fehlgeschlagen."
+            return 1
+        else
+            print_success "Firewall erfolgreich konfiguriert."
+            log "INFO: Firewall erfolgreich konfiguriert."
+            return 0
+        fi
+    else
+        # Im interaktiven Modus fragen wir den Benutzer
+        if ! interactive_mode; then
+            print_info "Interaktiver Modus deaktiviert, Firewall wird nicht automatisch konfiguriert."
+            return 0
+        fi
+
+        print_info "Die Fotobox verwendet HTTP-Port 80 und HTTPS-Port 443 (anpassbar in der Konfigurationsdatei)."
+        print_info "Diese Ports müssen in der Firewall freigegeben werden, damit auf die Weboberfläche zugegriffen werden kann."
+
+        local configure_firewall=0
+        if promptyn "Möchten Sie die Firewall jetzt automatisch konfigurieren?"; then
+            configure_firewall=1
+        fi
+
+        if [ "$configure_firewall" -eq 1 ]; then
+            # Firewall-Typ erkennen
+            local firewall_type=$(bash "$firewall_script" --status 2>/dev/null | grep "Firewall-System:" | cut -d: -f2 | tr -d '[:space:]')
+            
+            if [ -z "$firewall_type" ] || [ "$firewall_type" = "none" ]; then
+                print_warning "Kein unterstütztes Firewall-System gefunden."
+                
+                # Anbieten, ufw zu installieren
+                if promptyn "Möchten Sie UFW (Uncomplicated Firewall) installieren?"; then
+                    print_info "Installiere UFW..."
+                    apt-get update -qq
+                    apt-get install -y ufw
+                    
+                    if ! command -v ufw >/dev/null 2>&1; then
+                        print_error "Installation von UFW fehlgeschlagen."
+                        return 1
+                    fi
+                    
+                    print_success "UFW erfolgreich installiert."
+                else
+                    print_info "Firewall-Konfiguration wird übersprungen."
+                    return 0
+                fi
+            fi
+            
+            # Firewall konfigurieren
+            print_info "Konfiguriere Firewall..."
+            if ! bash "$firewall_script" --setup; then
+                print_warning "Firewall-Konfiguration fehlgeschlagen. Die Weboberfläche könnte nicht erreichbar sein."
+                log "WARN: Firewall-Konfiguration fehlgeschlagen."
+                return 1
+            else
+                print_success "Firewall erfolgreich konfiguriert."
+                log "INFO: Firewall erfolgreich konfiguriert."
+                return 0
+            fi
+        else
+            print_info "Firewall-Konfiguration wird übersprungen."
+            log "INFO: Firewall-Konfiguration vom Benutzer übersprungen."
+            return 0
+        fi
+    fi
+}
+
 dlg_show_summary() {
     # -----------------------------------------------------------------------
     # dlg_show_summary
     # -----------------------------------------------------------------------
-    # Funktion: Zeigt die Zusammenfassung der Installation an, insbesondere 
-    # ........  die URL der Weboberfläche
-    # Rückgabe: 0 = OK
+    # Funktion: Zeigt die Zusammenfassung der Installation an
     # -----------------------------------------------------------------------
     print_step "[9/10] Installation abgeschlossen: Zusammenfassung ..."
     
@@ -1260,6 +1379,7 @@ main() {
     dlg_prepare_users            # Erstelle Benutzer und Gruppe 'fotobox'
     dlg_prepare_structure        # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
     dlg_nginx_installation       # NGINX-Konfiguration (Integration oder eigene Site)
+    dlg_firewall_config          # Firewall-Konfiguration für HTTP/HTTPS-Ports
     dlg_backend_integration      # Python-Backend, venv, systemd-Service, Start
     dlg_show_summary             # Zeige Zusammenfassung der Installation an
 }
@@ -1280,6 +1400,8 @@ Dieses Skript führt die Erstinstallation der Fotobox durch.
 Optionen:
   --unattended, -u, --headless, -q   Starte die Installation im Unattended-Modus 
                                      (ohne Benutzerinteraktion, verwendet sichere Standardwerte)
+  --debug, -d                        Aktiviere den Debug-Modus für detaillierte Ausgaben
+  --firewall, -f                     Konfiguriere die Firewall automatisch ohne nachzufragen
   --help, -h, --hilfe                Zeigt diese Hilfe an
 
 EOF
