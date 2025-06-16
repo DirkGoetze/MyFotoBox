@@ -16,6 +16,19 @@
 # Siehe Funktionsbeispiele und DOKUMENTATIONSSTANDARD.md
 # ------------------------------------------------------------------------------
 
+# Importieren von manage_folders.sh für Verzeichnisverwaltung
+if [ -f "$(dirname "$0")/manage_folders.sh" ]; then
+    source "$(dirname "$0")/manage_folders.sh"
+else
+    echo "FEHLER: manage_folders.sh nicht gefunden. Logging-Funktionalität ist eingeschränkt."
+    # Minimale Implementierung, falls manage_folders.sh nicht verfügbar ist
+    get_log_dir() {
+        local dir="/tmp/fotobox"
+        mkdir -p "$dir"
+        echo "$dir"
+    }
+fi
+
 # Farbkonstanten für Ausgaben (Shell-ANSI)
 COLOR_RESET="\033[0m"
 COLOR_RED="\033[1;31m"
@@ -24,39 +37,13 @@ COLOR_YELLOW="\033[1;33m"
 COLOR_BLUE="\033[1;34m"
 COLOR_CYAN="\033[1;36m"
 
-get_log_path() {
-    # --------------------------------------------------------------------------
-    # get_log_path
-    # --------------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zum Log-Verzeichnis zurück (inkl. Fallback-Logik)
-    #           Erstellt das Verzeichnis falls nötig und legt ggf. Symlink an.
-    local logdir="/opt/fotobox/log"
-    if [ -d "$logdir" ]; then
-        # Symlink nach /var/log/fotobox anlegen, falls root und möglich
-        if [ "$(id -u)" = "0" ] && [ -w "/var/log" ]; then
-            ln -sf "$logdir" /var/log/fotobox
-        fi
-        echo "$logdir"
-        return
-    fi
-    if [ -w "/var/log" ]; then
-        logdir="/var/log/fotobox"
-    elif [ -w "/tmp" ]; then
-        logdir="/tmp/fotobox"
-    else
-        logdir="."
-    fi
-    mkdir -p "$logdir"
-    echo "$logdir"
-}
-
 get_log_file() {
     # --------------------------------------------------------------------------
     # get_log_file
     # --------------------------------------------------------------------------
     # Funktion: Gibt den vollständigen Pfad zur aktuellen Logdatei zurück
     local logdir
-    logdir="$(get_log_path)"
+    logdir="$(get_log_dir)"
     echo "${logdir}/$(date '+%Y-%m-%d')_fotobox.log"
 }
 
