@@ -28,6 +28,7 @@ BACKUP_DIR="$INSTALL_DIR/backup"
 CONF_DIR="$INSTALL_DIR/conf"
 BASH_DIR="$INSTALL_DIR/backend/scripts"
 LOG_DIR="$INSTALL_DIR/log"
+FRONTEND_DIR="$INSTALL_DIR/frontend"
 # ---------------------------------------------------------------------------
 # Einstellungen: Backend Service 
 # ---------------------------------------------------------------------------
@@ -46,60 +47,19 @@ DEBUG_MOD=0
 # Hilfsfunktionen
 # ==========================================================================='
 
-update_installation_paths() {
-    # -----------------------------------------------------------------------
-    # update_installation_paths
-    # -----------------------------------------------------------------------
-    # Funktion: Aktualisiert alle von INSTALL_DIR abhängigen Pfadvariablen
-    # Parameter: keine (nutzt die globale INSTALL_DIR-Variable)
-    # Rückgabe: keine (setzt alle abhängigen globalen Variablen)
-    
-    # Nur aktualisieren, wenn INSTALL_DIR tatsächlich gesetzt ist
-    if [ -z "$INSTALL_DIR" ]; then
-        debug_print "update_installation_paths: INSTALL_DIR ist nicht gesetzt, keine Aktualisierung möglich"
-        return 1
-    fi
-    
-    # Aktualisiere alle abhängigen Pfadvariablen
-    BACKUP_DIR="$INSTALL_DIR/backup"
-    CONF_DIR="$INSTALL_DIR/conf"
-    BASH_DIR="$INSTALL_DIR/backend/scripts"
-    LOG_DIR="$INSTALL_DIR/log"
-    DATA_DIR="$INSTALL_DIR/data"
-    SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
-    
-    debug_print "update_installation_paths: Pfade aktualisiert für INSTALL_DIR=$INSTALL_DIR"
-    return 0
-}
-
 parse_args() {
     # -----------------------------------------------------------------------
     # Funktion: Verarbeitet Befehlszeilenargumente für das Skript
     # -----------------------------------------------------------------------
     # Standardwerte für alle Flags setzen
     UNATTENDED=0
-    INSTALL_DIR_OVERRIDE=""
     
     # Argumente durchlaufen
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --unattended|-u|--headless|-h|-q)
+            --unattended|-u|--headless|-q)
                 UNATTENDED=1
                 log "Unattended-Modus aktiviert"
-                ;;
-            --dir|-d)
-                if [ -n "$2" ] && [ "${2:0:1}" != "-" ]; then
-                    INSTALL_DIR_OVERRIDE="$2"
-                    INSTALL_DIR="$2"
-                    # Aktualisiere alle abhängigen Pfadvariablen
-                    update_installation_paths
-                    log "Installationsverzeichnis überschrieben: $INSTALL_DIR"
-                    shift
-                else
-                    print_error "Option --dir/-d benötigt ein Argument."
-                    show_help
-                    exit 1
-                fi
                 ;;
             --help|-h|--hilfe)
                 show_help
@@ -115,7 +75,6 @@ parse_args() {
     done
     
     export UNATTENDED
-    export INSTALL_DIR_OVERRIDE
 }
 
 chk_is_root() {
@@ -174,129 +133,91 @@ set_fallback_security_settings() {
     # -----------------------------------------------------------------------
     # set_fallback_security_settings
     # -----------------------------------------------------------------------
-    # Funktion: Stellt die Verfügbarkeit aller kritischen Resourcen sicher und
-    # ......... setzt Fallback-Definitionen für Logging- und Print-Funktionen,
-    # ......... falls diese nicht durch ein zentrales Logging-Hilfsskript 
-    # ......... bereitgestellt werden.
+    # Funktion: Stellt die Verfügbarkeit aller kritischen Ressourcen sicher und
+    # ......... setzt Fallback-Definitionen für Logging- und Print-Funktionen.
     # ......... Prüft außerdem die Verfügbarkeit von manage_nginx.sh.
-    # ......... Prüft, ob das Skript aus dem Root-Verzeichnis des Projekts ausgeführt wird
-    # ......... und aktualisiert INSTALL_DIR entsprechend.
+    # ......... Prüft, ob das Skript im vorgegebenen INSTALL_DIR ausgeführt wird.
     # .........
     # Rückgabe: 0 = OK, 1 = fehlerhafte Umgebung, Skript sollte abgebrochen werden
-    
-    # --- 1. Zuerst prüfen, ob wir uns im Root-Verzeichnis des Projekts befinden
-    #        und INSTALL_DIR entsprechend anpassen
+
+    # --- 1. Prüfen, ob das Skript im vorgegebenen INSTALL_DIR ausgeführt wird
     local SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
     
-    # Prüfen, ob das Skript aus dem Root-Verzeichnis des Projekts ausgeführt wird
-    # Dies erkennen wir an der Existenz bestimmter Schlüsseldateien/-verzeichnisse
-    if [ -d "$SCRIPT_DIR/backend" ] && [ -d "$SCRIPT_DIR/frontend" ] && [ -d "$SCRIPT_DIR/conf" ]; then
-        # Wir sind im Projekt-Root
-        IS_PROJECT_ROOT=1
-        
-        # Wenn keine explizite Änderung des Installationsverzeichnisses gewünscht ist
-        # (z.B. durch -d /custom/path als Parameter), dann verwenden wir das aktuelle Verzeichnis
-        # für die Entwicklung und Ressourcen-Prüfung
-        if [ -z "$INSTALL_DIR_OVERRIDE" ]; then
-            # Temporär für die Entwicklung und Ressourcen-Prüfung das aktuelle Verzeichnis nutzen
-            CURRENT_DIR="$SCRIPT_DIR"
-            debug_print "set_fallback_security_settings: Projekt-Root erkannt in $SCRIPT_DIR"
-        fi
-    else
-        IS_PROJECT_ROOT=0
-        debug_print "set_fallback_security_settings: Kein Projekt-Root erkannt"
-    fi
-    
-    # Default LOG_DIR setzen, falls nicht vorhanden
-    : "${LOG_DIR:=/opt/fotobox/logs}"
-    
-    # --- 2. Externe Skript-Ressourcen einbinden und prüfen ---
-    # Prüfen, ob manage_logging.sh existiert und einbinden
-    # Erst im aktuellen Projektverzeichnis suchen, falls vorhanden
-    if [ "$IS_PROJECT_ROOT" -eq 1 ] && [ -f "$CURRENT_DIR/backend/scripts/manage_logging.sh" ]; then
-        source "$CURRENT_DIR/backend/scripts/manage_logging.sh"
-    # Fallback für legacy log_helper.sh
-    elif [ "$IS_PROJECT_ROOT" -eq 1 ] && [ -f "$CURRENT_DIR/backend/scripts/log_helper.sh" ]; then
-        source "$CURRENT_DIR/backend/scripts/log_helper.sh"
-    # Dann im konfigurierten Installationsverzeichnis
-    elif [ -f "$(dirname "$0")/backend/scripts/manage_logging.sh" ]; then
-        source "$(dirname "$0")/backend/scripts/manage_logging.sh"
-    # Fallback für legacy log_helper.sh
-    elif [ -f "$(dirname "$0")/backend/scripts/log_helper.sh" ]; then
-        source "$(dirname "$0")/backend/scripts/log_helper.sh"
-    fi
-    
-    # Prüfen, ob manage_nginx.sh existiert und das Ergebnis in globaler Variable speichern
-    MANAGE_NGINX_AVAILABLE=0
-    # Prüfe zuerst im aktuellen Projektverzeichnis, falls wir im Projekt-Root sind
-    if [ "$IS_PROJECT_ROOT" -eq 1 ] && [ -f "$CURRENT_DIR/backend/scripts/manage_nginx.sh" ]; then
-        MANAGE_NGINX_AVAILABLE=1
-        # Für künftige Aufrufe den absoluten Pfad zu manage_nginx.sh merken
-        MANAGE_NGINX_PATH="$CURRENT_DIR/backend/scripts/manage_nginx.sh"
-    # Dann im aktuellen Verzeichnis-Layout
-    elif [ -f "$(dirname "$0")/backend/scripts/manage_nginx.sh" ]; then
-        MANAGE_NGINX_AVAILABLE=1
-        MANAGE_NGINX_PATH="$(dirname "$0")/backend/scripts/manage_nginx.sh"
-    # Dann im installierten Verzeichnis
-    elif [ -f "$BASH_DIR/manage_nginx.sh" ]; then
-        MANAGE_NGINX_AVAILABLE=1
-        MANAGE_NGINX_PATH="$BASH_DIR/manage_nginx.sh"
-    fi
-    
-
-    # --- 2. Prüfen und Vorbereiten der Log-Umgebung ---
-    
-    # Zuerst prüfen, ob manage_folders.sh verfügbar ist und get_log_dir definieren
-    if [ -f "$BASH_DIR/manage_folders.sh" ] && bash "$BASH_DIR/manage_folders.sh" log_dir >/dev/null 2>&1; then
-        debug_print "Verwende manage_folders.sh für Log-Verzeichnis"
-        local LOG_DIR=$(bash "$BASH_DIR/manage_folders.sh" log_dir)
-    # Wenn manage_logging.sh verfügbar und get_log_path definiert ist, nutzen wir diese als Fallback
-    elif type get_log_path &>/dev/null; then
-        debug_print "Verwende get_log_path aus manage_logging.sh für Log-Verzeichnis"
-        local LOG_DIR=$(get_log_path)
-    else
-        # Fallback-Logik, wenn weder manage_folders.sh noch manage_logging.sh verfügbar ist
-        # Bestimme ein funktionierendes Log-Verzeichnis
-        if [ ! -d "$LOG_DIR" ]; then
-            mkdir -p "$LOG_DIR" 2>/dev/null
-            if [ ! -d "$LOG_DIR" ]; then
-                # Fallback 1: Versuche temporäres Verzeichnis
-                if [ -w "/tmp" ]; then
-                    LOG_DIR="/tmp/fotobox_logs"
-                    mkdir -p "$LOG_DIR" 2>/dev/null
-                # Fallback 2: Versuche aktuelles Verzeichnis
-                elif [ -w "." ]; then
-                    LOG_DIR="./fotobox_logs"
-                    mkdir -p "$LOG_DIR" 2>/dev/null
-                else
-                    # Keine Schreibrechte für Logs - kritischer Fehler
-                    return 1
-                fi
-            fi
-        fi
-        
-        # Teste Schreibrecht für das Logverzeichnis
-        if [ ! -w "$LOG_DIR" ]; then
+    # Prüfen, ob das Skript im INSTALL_DIR ausgeführt wird oder ein gültiges Projektverzeichnis ist
+    if [ "$SCRIPT_DIR" != "$INSTALL_DIR" ]; then
+        # Prüfen, ob es sich um ein gültiges Projektverzeichnis handelt
+        if [ -d "$SCRIPT_DIR/backend" ] && [ -d "$SCRIPT_DIR/frontend" ] && [ -d "$SCRIPT_DIR/conf" ]; then
+            # Valides Projektverzeichnis gefunden, wir führen die Installation von hier aus
+            echo "Projektverzeichnis erkannt in $SCRIPT_DIR. Installation wird von diesem Verzeichnis ausgeführt."
+        else
+            # Kein gültiges Verzeichnis, Abbruch
+            echo -e "\033[1;31mFehler: Das Skript muss im Installationsverzeichnis ($INSTALL_DIR) ausgeführt werden.\033[0m"
             return 1
         fi
     fi
     
-    # Erstelle eine Test-Log-Datei, um die Schreibbarkeit zu verifizieren
+    # --- 2. Externe Skript-Ressourcen einbinden und prüfen
+    
+
+    # Prüfen, ob manage_logging.sh existiert und einbinden
+    MANAGE_LOGGING_AVAILABLE=0
+    if [ -f "$BASH_DIR/manage_logging.sh" ]; then
+        source "$BASH_DIR/manage_logging.sh"
+        MANAGE_LOGGING_AVAILABLE=1
+    fi
+    
+    # Prüfen, ob manage_nginx.sh existiert und das Ergebnis in globaler Variable speichern
+    MANAGE_NGINX_AVAILABLE=0
+    if [ -f "$BASH_DIR/manage_nginx.sh" ]; then
+        MANAGE_NGINX_AVAILABLE=1
+        MANAGE_NGINX_PATH="$BASH_DIR/manage_nginx.sh"
+    fi
+    
+    # Prüfen, ob manage_folders.sh existiert
+    MANAGE_FOLDERS_AVAILABLE=0
+    if [ -f "$BASH_DIR/manage_folders.sh" ]; then
+        MANAGE_FOLDERS_AVAILABLE=1
+    fi
+
+    # --- 3. Log-Umgebung vorbereiten
+    
+    # Log-Verzeichnis prüfen/erstellen
+    if [ ! -d "$LOG_DIR" ]; then
+        mkdir -p "$LOG_DIR" 2>/dev/null
+        if [ ! -d "$LOG_DIR" ]; then
+            # Fallback 1: Temporäres Verzeichnis
+            if [ -w "/tmp" ]; then
+                echo "Standard-Logverzeichnis nicht verfügbar, nutze /tmp/fotobox_logs"
+                LOG_DIR="/tmp/fotobox_logs"
+                mkdir -p "$LOG_DIR" 2>/dev/null
+            # Fallback 2: Aktuelles Verzeichnis
+            elif [ -w "." ]; then
+                echo "Standard-Logverzeichnis nicht verfügbar, nutze ./fotobox_logs"
+                LOG_DIR="./fotobox_logs"
+                mkdir -p "$LOG_DIR" 2>/dev/null
+            else
+                echo -e "\033[1;31mFehler: Konnte kein schreibbares Logverzeichnis finden oder erstellen.\033[0m"
+                return 1
+            fi
+        fi
+    fi
+    
+    # Teste Schreibrecht für das Logverzeichnis
     if ! touch "$LOG_DIR/test_log.tmp" 2>/dev/null; then
+        echo -e "\033[1;31mFehler: Keine Schreibrechte im Logverzeichnis $LOG_DIR\033[0m"
         return 1
     fi
     rm -f "$LOG_DIR/test_log.tmp" 2>/dev/null
     
-    # --- 3. Log-Funktionen definieren (falls noch nicht vorhanden) ---
+    # --- 4. Log-Funktionen definieren (falls noch nicht vorhanden)
     
-    # - log: Dummy-Logger, falls kein Logging verfügbar ist
+    # - log: Basis-Logger für alle Ausgaben in Datei
     type log &>/dev/null || log() {
-        # Wenn get_log_file verfügbar, nutzen wir diese
-        local LOG_FILE
+        local LOG_FILE="$LOG_DIR/install_$(date '+%Y-%m-%d').log"
+        
+        # Wenn manage_logging.sh geladen ist, verwende get_log_file
         if type get_log_file &>/dev/null; then
             LOG_FILE=$(get_log_file)
-        else
-            LOG_FILE="$LOG_DIR/install_$(date '+%Y-%m-%d').log"
         fi
         
         if [ -z "$1" ]; then
@@ -308,13 +229,13 @@ set_fallback_security_settings() {
     }
 
     # - print_step: Schrittbezeichnung fett/gelb, am Zeilenanfang
-    type print_step &>/dev/null || print_step()    {
+    type print_step &>/dev/null || print_step() {
         echo -e "\033[1;33m$*\033[0m"
         log "STEP: $*"
     }
 
     # - print_info: Information neutral, eingerückt, ohne Farbe/Tag
-    type print_info &>/dev/null || print_info()    {
+    type print_info &>/dev/null || print_info() {
         echo -e "  $*"
         log "INFO: $*"
     }
@@ -332,19 +253,20 @@ set_fallback_security_settings() {
     }
     
     # - print_error: Fehler rot, eingerückt, mit Pfeil und Tag
-    type print_error &>/dev/null || print_error()   {
+    type print_error &>/dev/null || print_error() {
         echo -e "\033[1;31m  → [ERROR]\033[0m $*\033[0m" >&2
         log "ERROR: $*"
     }
 
     # - print_prompt: Prompt blau, Leerzeile davor und danach (nur wenn nicht unattended)
-    type print_prompt &>/dev/null || print_prompt()  {
+    type print_prompt &>/dev/null || print_prompt() {
         if [ "$UNATTENDED" -eq 0 ]; then
             echo -e "\n\033[1;34m$*\033[0m\n"
         fi
         log "PROMPT: $*"
     }
 
+    return 0
 }
 
 debug_print() {
@@ -355,8 +277,14 @@ debug_print() {
     # Parameter: $* = Debug-Nachricht
     # Extras...: Einheitliches Format, Policy-konform
     if [ "$DEBUG_MOD" -eq 1 ]; then
-        echo -e "\033[1;35m  → [DEBUG]\033[0m $*"
-        log "DEBUG: $*"
+        # Erst nach der Definition der print-Funktionen die log-Funktion verwenden
+        if type log &>/dev/null; then
+            echo -e "\033[1;35m  → [DEBUG]\033[0m $*"
+            log "DEBUG: $*"
+        else
+            # Vor der Definition der log-Funktion nur Echo-Ausgabe
+            echo -e "\033[1;35m  → [DEBUG]\033[0m $*"
+        fi
     fi
 }
 
@@ -910,16 +838,19 @@ dlg_check_system_requirements() {
     # dlg_check_system_requirements
     # -----------------------------------------------------------------------
     # Funktion: Prüft die Systemvoraussetzungen und stellt Logging-Ressourcen bereit
-    echo "Prüfung der Systemvoraussetzungen ..."    
-    # Prüfe, ob externe Abhängigkeiten verfügbar sind
-    if ! command -v apt-get &>/dev/null; then
-        echo -e "\033[1;31m  → [ERROR]\033[0m apt-get nicht gefunden. Dies ist ein kritischer Fehler."
-        exit 1
-    fi
+    echo -e "\033[1;33mPrüfung der Systemvoraussetzungen ...\033[0m"    
     
     # Auf kritische Ressourcen prüfen und Logging einrichten
     if ! set_fallback_security_settings; then
         echo -e "\033[1;31m  → [ERROR]\033[0m Kritische Systemvoraussetzungen nicht erfüllt oder Logging konnte nicht eingerichtet werden."
+        exit 1
+    fi
+    
+    # Ab hier können die print_* Funktionen verwendet werden
+    
+    # Prüfe, ob externe Abhängigkeiten verfügbar sind
+    if ! command -v apt-get &>/dev/null; then
+        print_error "apt-get nicht gefunden. Dies ist ein kritischer Fehler."
         exit 1
     fi
     
@@ -1355,8 +1286,6 @@ Dieses Skript führt die Erstinstallation der Fotobox durch.
 Optionen:
   --unattended, -u, --headless, -q   Starte die Installation im Unattended-Modus 
                                      (ohne Benutzerinteraktion, verwendet sichere Standardwerte)
-  --dir, -d VERZEICHNIS              Spezifiziert das Zielverzeichnis für die Installation
-                                     (Standard: /opt/fotobox)
   --help, -h, --hilfe                Zeigt diese Hilfe an
 
 EOF
