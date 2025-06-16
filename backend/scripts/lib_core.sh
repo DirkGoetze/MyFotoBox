@@ -84,10 +84,6 @@ DEFAULT_HTTPS_PORT=443
 # Konfigurationsdatei
 DEFAULT_CONFIG_FILE="$DEFAULT_CONF_DIR/fotobox-config.ini"
 
-# Debug-Flags (werden von einzelnen Skripten verwendet)
-: "${DEBUG_MOD_LOCAL:=0}"
-: "${DEBUG_MOD_GLOBAL:=0}"
-
 # ===========================================================================
 # Hilfsfunktionen zur Einbindung externer Skript-Ressourcen
 # ===========================================================================
