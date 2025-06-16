@@ -27,6 +27,7 @@ libturbojpeg0-dev>=2.0.0
 # Bitte manuell installieren, falls benötigt:
 # librealsense2-dev>=2.50.0  # Für Intel RealSense Tiefensensor-Kameras (optional)
 # librealsense2-utils>=2.50.0  # RealSense-Dienstprogramme (optional)
+# ufw>=0.36            # Empfohlene Firewall für automatische Konfiguration (optional)
 lsof>=4.89  # Für Prozess- und Portprüfungen
 
 # Entwicklungstools
