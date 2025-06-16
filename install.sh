@@ -46,6 +46,32 @@ DEBUG_MOD=0
 # Hilfsfunktionen
 # ==========================================================================='
 
+update_installation_paths() {
+    # -----------------------------------------------------------------------
+    # update_installation_paths
+    # -----------------------------------------------------------------------
+    # Funktion: Aktualisiert alle von INSTALL_DIR abhängigen Pfadvariablen
+    # Parameter: keine (nutzt die globale INSTALL_DIR-Variable)
+    # Rückgabe: keine (setzt alle abhängigen globalen Variablen)
+    
+    # Nur aktualisieren, wenn INSTALL_DIR tatsächlich gesetzt ist
+    if [ -z "$INSTALL_DIR" ]; then
+        debug_print "update_installation_paths: INSTALL_DIR ist nicht gesetzt, keine Aktualisierung möglich"
+        return 1
+    fi
+    
+    # Aktualisiere alle abhängigen Pfadvariablen
+    BACKUP_DIR="$INSTALL_DIR/backup"
+    CONF_DIR="$INSTALL_DIR/conf"
+    BASH_DIR="$INSTALL_DIR/backend/scripts"
+    LOG_DIR="$INSTALL_DIR/log"
+    DATA_DIR="$INSTALL_DIR/data"
+    SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
+    
+    debug_print "update_installation_paths: Pfade aktualisiert für INSTALL_DIR=$INSTALL_DIR"
+    return 0
+}
+
 parse_args() {
     # -----------------------------------------------------------------------
     # Funktion: Verarbeitet Befehlszeilenargumente für das Skript
@@ -884,8 +910,7 @@ dlg_check_system_requirements() {
     # dlg_check_system_requirements
     # -----------------------------------------------------------------------
     # Funktion: Prüft die Systemvoraussetzungen und stellt Logging-Ressourcen bereit
-    print_step "[3/10] Prüfe Systemvoraussetzungen und richte Logging ein ..."
-    
+    echo "Prüfung der Systemvoraussetzungen ..."    
     # Prüfe, ob externe Abhängigkeiten verfügbar sind
     if ! command -v apt-get &>/dev/null; then
         echo -e "\033[1;31m  → [ERROR]\033[0m apt-get nicht gefunden. Dies ist ein kritischer Fehler."
@@ -907,6 +932,8 @@ dlg_check_system_requirements() {
         log "WARNING: Zentrales Log-Hilfsskript nicht verfügbar, verwende Fallback-Logging in $LOG_DIR."
     fi
     
+    print_step "[3/10] Prüfe Systemvoraussetzungen und richte Logging ein ..."
+
     # Befehlszeilenargumente verarbeiten
     parse_args "$@"
     
@@ -1333,33 +1360,6 @@ Optionen:
   --help, -h, --hilfe                Zeigt diese Hilfe an
 
 EOF
-}
-
-# Diese Funktion sollte nach dem Ändern von INSTALL_DIR aufgerufen werden, um alle abhängigen Pfade zu aktualisieren
-update_installation_paths() {
-    # -----------------------------------------------------------------------
-    # update_installation_paths
-    # -----------------------------------------------------------------------
-    # Funktion: Aktualisiert alle von INSTALL_DIR abhängigen Pfadvariablen
-    # Parameter: keine (nutzt die globale INSTALL_DIR-Variable)
-    # Rückgabe: keine (setzt alle abhängigen globalen Variablen)
-    
-    # Nur aktualisieren, wenn INSTALL_DIR tatsächlich gesetzt ist
-    if [ -z "$INSTALL_DIR" ]; then
-        debug_print "update_installation_paths: INSTALL_DIR ist nicht gesetzt, keine Aktualisierung möglich"
-        return 1
-    fi
-    
-    # Aktualisiere alle abhängigen Pfadvariablen
-    BACKUP_DIR="$INSTALL_DIR/backup"
-    CONF_DIR="$INSTALL_DIR/conf"
-    BASH_DIR="$INSTALL_DIR/backend/scripts"
-    LOG_DIR="$INSTALL_DIR/log"
-    DATA_DIR="$INSTALL_DIR/data"
-    SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
-    
-    debug_print "update_installation_paths: Pfade aktualisiert für INSTALL_DIR=$INSTALL_DIR"
-    return 0
 }
 
 # Hauptfunktion starten
