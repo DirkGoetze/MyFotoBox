@@ -45,6 +45,63 @@ fotobox2/
 
 Die Ordnerstruktur wird dynamisch vom System erstellt und verwaltet durch das zentrale Ordnerverwaltungssystem (`manage_folders.sh` und `manage_folders.py`).
 
+## 1.1 Bash-Skript-Architektur
+
+Die Shell-Skripte im `backend/scripts/` Verzeichnis basieren auf einer zentralisierten Ressourcenladungs-Architektur, die seit Juni 2025 implementiert wurde. Diese Architektur reduziert Redundanzen und ermöglicht eine konsistente Konfiguration über alle Skripte hinweg.
+
+### Kernkomponenten
+
+1. **lib_core.sh**: Zentrale Bibliothek, die gemeinsame Funktionen, Konstanten und die Ressourcenladung bereitstellt
+2. **manage_*.sh**: Spezialisierte Skripte für verschiedene Verwaltungsaufgaben
+
+### Ressourcenladungsmechanismus
+
+Die zentrale Ressourcenladung wird durch folgende Funktionen in `lib_core.sh` implementiert:
+
+```bash
+# Ressourcen prüfen und einbinden
+bind_resource "GUARD_VARIABLE" "PFAD" "SKRIPTNAME"
+
+# Alle Kernressourcen laden
+load_core_resources
+
+# Systematische Prüfung und Einbindung aller Ressourcen
+chk_resources
+```
+
+Der Ressourcenladungsmechanismus bietet:
+
+- **Guard-Pattern**: Verhindert mehrfaches Laden derselben Ressource
+- **Fallback-Mechanismen**: Alternative Pfade und minimale Implementierungen für Kernfunktionen
+- **Standardisierte Fehlermeldungen**: Konsistente Fehlermeldungen bei fehlenden Ressourcen
+
+### Zentrale Konfiguration
+
+In `lib_core.sh` werden systemweite Konfigurationsparameter als Single Source of Truth definiert:
+
+- **Pfade**: `DEFAULT_INSTALL_DIR`, `DEFAULT_BASH_DIR`, etc.
+- **Farbkonstanten**: `COLOR_RED`, `COLOR_GREEN`, etc.
+- **Debug-Flags**: `DEBUG_MOD_LOCAL`, `DEBUG_MOD_GLOBAL`
+- **Benutzer/Gruppen**: `DEFAULT_USER`, `DEFAULT_GROUP`, `DEFAULT_MODE`
+- **Netzwerkkonfiguration**: `DEFAULT_HTTP_PORT`, `DEFAULT_HTTPS_PORT`
+
+### Debug-System
+
+Die Skripte implementieren ein zweistufiges Debug-System:
+
+1. **Lokales Debug**: Jedes Skript definiert seine eigene `DEBUG_MOD_LOCAL` Variable
+2. **Globales Debug**: Die `DEBUG_MOD_GLOBAL` Variable in `lib_core.sh` überschreibt bei Bedarf alle lokalen Einstellungen
+
+Debug-Ausgaben werden mit dem folgenden Muster implementiert:
+
+```bash
+if [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ]; then
+    print_debug "Debug-Nachricht"
+fi
+```
+
+Weitere Details zur Debug-Implementierung finden Sie in `/policies/debug_implementation.md`.
+
 ## 2. Modulare Architektur
 
 ### 2.1 Frontend-Module
@@ -2015,17 +2072,19 @@ Anschließend werden alle laufenden Dienste gestoppt:
 ```python
 def stop_services():
     """Stoppt alle Fotobox-bezogenen Dienste."""
-    try:
+    try {
         # Backend-Service stoppen
-        subprocess.run(["systemctl", "stop", "fotobox-backend"], check=True)
+        subprocess.run(["systemctl", "stop", "fotobox-backend"], check=True);
         
         # NGINX neustarten, um die Fotobox-Konfiguration zu deaktivieren
-        subprocess.run(["systemctl", "restart", "nginx"], check=True)
+        subprocess.run(["systemctl", "restart", "nginx"], check=True);
         
-        return True
-    except subprocess.CalledProcessError as e:
-        log_error(f"Fehler beim Stoppen der Dienste: {e}")
-        return False
+        return True;
+    } catch (subprocess.CalledProcessError as e) {
+        log_error(f"Fehler beim Stoppen der Dienste: {e}");
+        return False;
+    }
+}
 ```
 
 #### 12.2.3 Systemdienste entfernen
@@ -2035,21 +2094,23 @@ Systemdienstdateien werden entfernt:
 ```python
 def remove_system_services():
     """Entfernt die systemd-Unit für den Backend-Dienst."""
-    try:
+    try {
         # Systemd-Unit deaktivieren
-        subprocess.run(["systemctl", "disable", "fotobox-backend"], check=True)
+        subprocess.run(["systemctl", "disable", "fotobox-backend"], check=True);
         
         # Systemd-Unit-Datei entfernen
         if os.path.exists("/etc/systemd/system/fotobox-backend.service"):
-            os.remove("/etc/systemd/system/fotobox-backend.service")
+            os.remove("/etc/systemd/system/fotobox-backend.service");
         
         # Systemd neu laden
-        subprocess.run(["systemctl", "daemon-reload"], check=True)
+        subprocess.run(["systemctl", "daemon-reload"], check=True);
         
-        return True
-    except (subprocess.CalledProcessError, OSError) as e:
-        log_error(f"Fehler beim Entfernen der Systemdienste: {e}")
-        return False
+        return True;
+    } catch (subprocess.CalledProcessError, OSError as e) {
+        log_error(f"Fehler beim Entfernen der Systemdienste: {e}");
+        return False;
+    }
+}
 ```
 
 #### 12.2.4 NGINX-Konfiguration entfernen
@@ -2059,25 +2120,27 @@ Die Webserver-Konfiguration wird entfernt:
 ```python
 def remove_nginx_config():
     """Entfernt die NGINX-Konfiguration für die Fotobox."""
-    try:
+    try {
         # Symlink aus sites-enabled entfernen
         if os.path.exists("/etc/nginx/sites-enabled/fotobox"):
-            os.remove("/etc/nginx/sites-enabled/fotobox")
+            os.remove("/etc/nginx/sites-enabled/fotobox");
         
         # Konfigurationsdatei aus sites-available entfernen
         if os.path.exists("/etc/nginx/sites-available/fotobox"):
             # Optional: Backup erstellen
             shutil.copy("/etc/nginx/sites-available/fotobox", 
-                        "/etc/nginx/sites-available/fotobox.bak")
-            os.remove("/etc/nginx/sites-available/fotobox")
+                        "/etc/nginx/sites-available/fotobox.bak");
+            os.remove("/etc/nginx/sites-available/fotobox");
         
         # NGINX neustarten
-        subprocess.run(["systemctl", "restart", "nginx"], check=True)
+        subprocess.run(["systemctl", "restart", "nginx"], check=True);
         
-        return True
-    except (subprocess.CalledProcessError, OSError) as e:
-        log_error(f"Fehler beim Entfernen der NGINX-Konfiguration: {e}")
-        return False
+        return True;
+    } catch (subprocess.CalledProcessError, OSError as e) {
+        log_error(f"Fehler beim Entfernen der NGINX-Konfiguration: {e}");
+        return False;
+    }
+}
 ```
 
 #### 12.2.5 Projektdateien entfernen
@@ -2087,13 +2150,15 @@ Das Projektverzeichnis wird komplett gelöscht:
 ```python
 def remove_project_files(project_dir="/opt/fotobox"):
     """Entfernt alle Projektdateien."""
-    try:
+    try {
         if os.path.exists(project_dir) and os.path.isdir(project_dir):
-            shutil.rmtree(project_dir)
-        return True
-    except OSError as e:
-        log_error(f"Fehler beim Löschen der Projektdateien: {e}")
-        return False
+            shutil.rmtree(project_dir);
+        return True;
+    } catch (OSError as e) {
+        log_error(f"Fehler beim Löschen der Projektdateien: {e}");
+        return False;
+    }
+}
 ```
 
 #### 12.2.6 Systembenutzer entfernen
@@ -2103,28 +2168,30 @@ Optional wird der Systembenutzer entfernt:
 ```python
 def remove_system_user(username="fotobox"):
     """Entfernt den Systembenutzer und die zugehörige Gruppe."""
-    try:
+    try {
         # Prüfen, ob der Benutzer existiert
         user_exists = subprocess.run(
             ["id", username], 
             stdout=subprocess.DEVNULL, 
             stderr=subprocess.DEVNULL
-        ).returncode == 0
+        ).returncode == 0;
         
         if user_exists:
             # Benutzer löschen
 
-            subprocess.run(["userdel", username], check=True)
+            subprocess.run(["userdel", username], check=True);
             
             # Gruppe löschen (falls kein anderer Benutzer in der Gruppe ist)
             subprocess.run(["groupdel", username], 
                           stdout=subprocess.DEVNULL, 
-                          stderr=subprocess.DEVNULL)
+                          stderr=subprocess.DEVNULL);
         
-        return True
-    except subprocess.CalledProcessError as e:
-        log_error(f"Fehler beim Entfernen des Systembenutzers: {e}")
-        return False
+        return True;
+    } catch (subprocess.CalledProcessError as e) {
+        log_error(f"Fehler beim Entfernen des Systembenutzers: {e}");
+        return False;
+    }
+}
 ```
 
 ### 12.3 API-Endpunkte
@@ -2258,19 +2325,19 @@ def update_documentation(feature):
     Workflow für Dokumentationsupdates
     """
     # 1. Relevante Dokumente identifizieren
-    documents = identify_affected_documents(feature)
+    documents = identify_affected_documents(feature);
     
     # 2. Änderungen im Branch umsetzen
     for doc in documents:
-        update_document(doc, feature)
+        update_document(doc, feature);
     
     # 3. Review durch mindestens einen weiteren Entwickler
-    request_review(documents)
+    request_review(documents);
     
     # 4. Nach Genehmigung zusammenführen
     if approved:
-        merge_documentation_changes()
-        update_version_date(documents)
+        merge_documentation_changes();
+        update_version_date(documents);
 ```
 
 ### 13.4 Best Practices für die Dokumentation

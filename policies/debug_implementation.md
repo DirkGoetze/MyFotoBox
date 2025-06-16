@@ -26,11 +26,13 @@ DEBUG_MOD_LOCAL=0  # Nur für dieses Skript
 ### 2. Debug-Ausgaben anpassen
 
 Ersetzen Sie alle Vorkommnisse von:
+
 ```bash
 [ "$DEBUG_MOD" = "1" ] && print_debug "Debug-Nachricht"
 ```
 
 durch:
+
 ```bash
 if [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ]; then
     print_debug "Debug-Nachricht"
@@ -51,6 +53,7 @@ Falls Ihr Skript einen `--debug`-Parameter hat, sollte dieser `DEBUG_MOD_LOCAL` 
 ## Verwendung der Debug-Funktionen
 
 ### Für einfache Debug-Ausgaben
+
 ```bash
 if [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ]; then
     print_debug "Debug-Nachricht"
@@ -58,7 +61,9 @@ fi
 ```
 
 ### Für erweiterte Debug-Funktionalität
+
 Verwenden Sie die `debug`-Funktion aus `manage_logging.sh`:
+
 ```bash
 debug "Detaillierte Debug-Nachricht" "CLI" "funktionsname"
 ```
@@ -66,11 +71,13 @@ debug "Detaillierte Debug-Nachricht" "CLI" "funktionsname"
 ## Debug-Modi aktivieren
 
 ### Lokalen Debug-Modus aktivieren
+
 ```bash
 DEBUG_MOD_LOCAL=1 ./script.sh
 ```
 
 ### Globalen Debug-Modus aktivieren (für alle Skripte)
+
 ```bash
 DEBUG_MOD_GLOBAL=1 ./script.sh
 ```
@@ -78,6 +85,7 @@ DEBUG_MOD_GLOBAL=1 ./script.sh
 ## Beispiele
 
 ### Beispiel für korrekten Debug-Check
+
 ```bash
 if [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ]; then
     print_debug "Port: $port, Host: $host"
@@ -85,6 +93,7 @@ fi
 ```
 
 ### Beispiel für die Verwendung der debug-Funktion
+
 ```bash
 debug "Verarbeite Datei: $file" "CLI"
 ```
