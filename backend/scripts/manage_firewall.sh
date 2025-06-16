@@ -7,27 +7,37 @@
 # Für Ubuntu/Debian-basierte Systeme, muss als root ausgeführt werden.
 # ------------------------------------------------------------------------------
 
-# Importiere Logging-Funktionen
-SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-if [ -f "${SCRIPT_DIR}/manage_logging.sh" ]; then
-    source "${SCRIPT_DIR}/manage_logging.sh"
-else
-    # Minimale Fallback-Implementierung für Logging
-    log() { echo "$(date "+%Y-%m-%d %H:%M:%S") $1" >> /tmp/fotobox_firewall.log; }
-    print_info() { echo "$*"; }
-    print_step() { echo "STEP: $*"; }
-    print_success() { echo "SUCCESS: $*"; }
-    print_warning() { echo "WARNING: $*"; }
-    print_error() { echo "ERROR: $*"; }
-    print_debug() { [ "$DEBUG_MOD" = "1" ] && echo "DEBUG: $*"; }
-fi
+# ===========================================================================
+# Hilfsfunktionen zur Einbindung externer Skript-Ressourcen
+# ===========================================================================
+# Guard für dieses Management-Skript
+MANAGE_FIREWALL_LOADED=0
 
-# Konfigurationsvariablen
-DEFAULT_HTTP_PORT=80
-DEFAULT_HTTPS_PORT=443
-CONFIG_FILE="${SCRIPT_DIR}/../../conf/fotobox-config.ini"
-UNATTENDED=0  # 0=interaktiv, 1=nicht-interaktiv
-DEBUG_MOD=0   # 0=normal, 1=debug-mode
+# Skript- und BASH-Verzeichnis festlegen
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+BASH_DIR="${BASH_DIR:-$SCRIPT_DIR}"
+
+# Lade alle Basis-Ressourcen ------------------------------------------------
+if [ -f "$BASH_DIR/lib_core.sh" ]; then
+    source "$BASH_DIR/lib_core.sh"
+    load_core_resources || {
+        echo "Fehler beim Laden der Kernressourcen."
+        exit 1
+    }
+else
+    echo "Fehler: Zentrale Bibliothek lib_core.sh nicht gefunden!"
+    exit 1
+fi
+# ===========================================================================
+
+# Konfigurationsvariablen aus lib_core.sh werden verwendet
+# Debug-Modus für dieses Skript (lokales Flag)
+DEBUG_MOD_LOCAL=0  # Nur für dieses Skript
+
+# Lokale Aliase für bessere Lesbarkeit
+: "${HTTP_PORT:=$DEFAULT_HTTP_PORT}"
+: "${HTTPS_PORT:=$DEFAULT_HTTPS_PORT}"
+: "${CONFIG_FILE:=$DEFAULT_CONFIG_FILE}"
 
 # ------------------------------------------------------------------------------
 # Hilfsfunktionen
@@ -104,8 +114,10 @@ get_required_ports() {
     [ -z "$http_port" ] && http_port="$DEFAULT_HTTP_PORT"
     [ -z "$https_port" ] && https_port="$DEFAULT_HTTPS_PORT"
     
-    # Wenn Debug-Modus aktiv, zusätzliche Debug-Informationen
-    [ "$DEBUG_MOD" = "1" ] && print_debug "HTTP-Port: $http_port, HTTPS-Port: $https_port"
+    # Wenn Debug-Modus aktiv (lokal oder global), zusätzliche Debug-Informationen
+    if [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ]; then
+        print_debug "HTTP-Port: $http_port, HTTPS-Port: $https_port"
+    fi
     
     echo "$http_port $https_port"
 }
@@ -454,7 +466,7 @@ main() {
                 shift
                 ;;
             --debug|-d)
-                DEBUG_MOD=1
+                DEBUG_MOD_LOCAL=1
                 shift
                 ;;
             --unattended)

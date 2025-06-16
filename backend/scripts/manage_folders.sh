@@ -9,53 +9,40 @@
 # dass Ordner mit den korrekten Berechtigungen existieren.
 # ------------------------------------------------------------------------------
 
-# Standardpfade der Anwendung
-DEFAULT_INSTALL_DIR="/opt/fotobox"
-DEFAULT_DATA_DIR="$DEFAULT_INSTALL_DIR/data"
-DEFAULT_BACKUP_DIR="$DEFAULT_INSTALL_DIR/backup"
-DEFAULT_LOG_DIR="$DEFAULT_INSTALL_DIR/log"
-DEFAULT_FRONTEND_DIR="$DEFAULT_INSTALL_DIR/frontend"
-DEFAULT_CONFIG_DIR="$DEFAULT_INSTALL_DIR/conf"
+# Konfigurationsvariablen aus lib_core.sh werden verwendet
+# Debug-Modus für dieses Skript (lokales Flag)
+DEBUG_MOD_LOCAL=0  # Nur für dieses Skript
 
-# Fallback-Pfade, falls Standardpfade nicht verfügbar sind
-FALLBACK_INSTALL_DIR="/var/lib/fotobox"
-FALLBACK_DATA_DIR="/var/lib/fotobox/data"
-FALLBACK_BACKUP_DIR="/var/backups/fotobox"
-FALLBACK_LOG_DIR="/var/log/fotobox"  # Primärer Fallback für Logs
-FALLBACK_LOG_DIR_2="/tmp/fotobox"    # Sekundärer Fallback für Logs
-FALLBACK_LOG_DIR_3="."               # Tertiärer Fallback für Logs (aktuelles Verzeichnis)
-FALLBACK_FRONTEND_DIR="/var/www/html/fotobox"
-FALLBACK_CONFIG_DIR="/etc/fotobox"
+# Standardpfade und Fallback-Pfade werden in lib_core.sh zentral definiert
+# Nutzer- und Ordnereinstellungen werden ebenfalls in lib_core.sh zentral verwaltet
 
-# Nutzer und Gruppe für die Ordnerberechtigungen
-DEFAULT_USER="fotobox"
-DEFAULT_GROUP="fotobox"
-DEFAULT_MODE="755"
+# Lokale Aliase für bessere Lesbarkeit
+: "${USER:=$DEFAULT_USER}"
+: "${GROUP:=$DEFAULT_GROUP}"
+: "${MODE:=$DEFAULT_MODE}"
 
-# Debug-Modus: Lokal und global steuerbar
-# DEBUG_MOD_LOCAL: Nur Debug für dieses Skript (Standard: 0)
-# DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
-DEBUG_MOD_LOCAL=0
-DEBUG_MOD_GLOBAL=0
+# ===========================================================================
+# Hilfsfunktionen zur Einbindung externer Skript-Ressourcen
+# ===========================================================================
+# Guard für dieses Management-Skript
+MANAGE_FOLDERS_LOADED=0
 
-# Logging-Funktionen, wenn log_helper.sh/manage_logging.sh vorhanden ist
-if [ -f "$(dirname "$0")/manage_logging.sh" ]; then
-    source "$(dirname "$0")/manage_logging.sh"
-elif [ -f "$(dirname "$0")/log_helper.sh" ]; then
-    source "$(dirname "$0")/log_helper.sh"
+# Skript- und BASH-Verzeichnis festlegen
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+BASH_DIR="${BASH_DIR:-$SCRIPT_DIR}"
+
+# Lade alle Basis-Ressourcen ------------------------------------------------
+if [ -f "$BASH_DIR/lib_core.sh" ]; then
+    source "$BASH_DIR/lib_core.sh"
+    load_core_resources || {
+        echo "Fehler beim Laden der Kernressourcen."
+        exit 1
+    }
 else
-    # Einfache Fallback-Implementierung der Logging-Funktionen
-    log() {
-        local msg="$1"
-        echo "$(date "+%Y-%m-%d %H:%M:%S") $msg" >> /tmp/fotobox_folder_manager.log
-    }
-    debug() {
-        if [ "$DEBUG_MOD_LOCAL" = "1" ] || [ "$DEBUG_MOD_GLOBAL" = "1" ]; then
-            local msg="$1"
-            echo "DEBUG: $msg" >> /tmp/fotobox_folder_manager.log
-        fi
-    }
+    echo "Fehler: Zentrale Bibliothek lib_core.sh nicht gefunden!"
+    exit 1
 fi
+# ===========================================================================
 
 # ------------------------------------------------------------------------------
 # create_directory

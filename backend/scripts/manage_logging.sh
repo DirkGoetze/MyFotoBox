@@ -7,35 +7,31 @@
 # Optional kann ein Symlink /var/log/fotobox → /opt/fotobox/log/ angelegt werden,
 # damit Logs auch systemweit sichtbar sind.
 # ------------------------------------------------------------------------------
-# HINWEIS: Für Shellskripte gilt zusätzlich:
-# - Fehlerausgaben immer in Rot
-# - Ausgaben zu auszuführenden Schritten in Gelb
-# - Erfolgsmeldungen in Dunkelgrün
-# - Aufforderungen zur Nutzeraktion in Blau
-# - Alle anderen Ausgaben nach Systemstandard
-# Siehe Funktionsbeispiele und DOKUMENTATIONSSTANDARD.md
-# ------------------------------------------------------------------------------
 
-# Importieren von manage_folders.sh für Verzeichnisverwaltung
-if [ -f "$(dirname "$0")/manage_folders.sh" ]; then
-    source "$(dirname "$0")/manage_folders.sh"
-else
-    echo "FEHLER: manage_folders.sh nicht gefunden. Logging-Funktionalität ist eingeschränkt."
-    # Minimale Implementierung, falls manage_folders.sh nicht verfügbar ist
-    get_log_dir() {
-        local dir="/tmp/fotobox"
-        mkdir -p "$dir"
-        echo "$dir"
+# ===========================================================================
+# Hilfsfunktionen zur Einbindung externer Skript-Ressourcen
+# ===========================================================================
+# Guard für dieses Management-Skript
+MANAGE_LOGGING_LOADED=0
+
+# Skript- und BASH-Verzeichnis festlegen
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+BASH_DIR="${BASH_DIR:-$SCRIPT_DIR}"
+
+# Lade alle Basis-Ressourcen ------------------------------------------------
+if [ -f "$BASH_DIR/lib_core.sh" ]; then
+    source "$BASH_DIR/lib_core.sh"
+    load_core_resources || {
+        echo "Fehler beim Laden der Kernressourcen."
+        exit 1
     }
+else
+    echo "Fehler: Zentrale Bibliothek lib_core.sh nicht gefunden!"
+    exit 1
 fi
+# ===========================================================================
 
-# Farbkonstanten für Ausgaben (Shell-ANSI)
-COLOR_RESET="\033[0m"
-COLOR_RED="\033[1;31m"
-COLOR_GREEN="\033[1;32m"
-COLOR_YELLOW="\033[1;33m"
-COLOR_BLUE="\033[1;34m"
-COLOR_CYAN="\033[1;36m"
+# Farbkonstanten werden jetzt zentral in lib_core.sh definiert
 
 get_log_file() {
     # --------------------------------------------------------------------------
@@ -199,11 +195,9 @@ print_debug() {
     echo -e "${COLOR_CYAN}  → ${COLOR_RESET}$*"
 }
 
-# Debug-Modus: Lokal und global steuerbar
-# DEBUG_MOD_LOCAL: Nur Debug für dieses Skript (Standard: 0)
-# DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
-DEBUG_MOD_LOCAL=0
-DEBUG_MOD_GLOBAL=0
+# Debug-Modus für dieses Skript (lokales Flag)
+# Die globalen Debug-Flags werden in lib_core.sh definiert
+DEBUG_MOD_LOCAL=0  # Nur für dieses Skript
 
 debug() {
     # -----------------------------------------------------------------------

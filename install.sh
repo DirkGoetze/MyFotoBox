@@ -142,41 +142,35 @@ set_fallback_security_settings() {
 
     # --- 1. Prüfen, ob das Skript im vorgegebenen INSTALL_DIR ausgeführt wird
     local SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
-    
-    # Prüfen, ob das Skript im INSTALL_DIR ausgeführt wird oder ein gültiges Projektverzeichnis ist
     if [ "$SCRIPT_DIR" != "$INSTALL_DIR" ]; then
-        # Prüfen, ob es sich um ein gültiges Projektverzeichnis handelt
-        if [ -d "$SCRIPT_DIR/backend" ] && [ -d "$SCRIPT_DIR/frontend" ] && [ -d "$SCRIPT_DIR/conf" ]; then
-            # Valides Projektverzeichnis gefunden, wir führen die Installation von hier aus
-            echo "Projektverzeichnis erkannt in $SCRIPT_DIR. Installation wird von diesem Verzeichnis ausgeführt."
-        else
-            # Kein gültiges Verzeichnis, Abbruch
-            echo -e "\033[1;31mFehler: Das Skript muss im Installationsverzeichnis ($INSTALL_DIR) ausgeführt werden.\033[0m"
-            return 1
-        fi
+        # Kein gültiges Verzeichnis, Abbruch
+        echo -e "\033[1;31mFehler: Das Skript muss im Installationsverzeichnis ($INSTALL_DIR) ausgeführt werden.\033[0m"
+        return 1
     fi
     
     # --- 2. Externe Skript-Ressourcen einbinden und prüfen
-    
+    # Prüfen, ob manage_folders.sh existiert und einbinden
+    if [ -f "$BASH_DIR/manage_folders.sh" ] && [ -x "$BASH_DIR/manage_folders.sh" ]; then
+        source "$BASH_DIR/manage_folders.sh"
+    else
+        echo -e "\033[1;31mFehler: Das Skript '$BASH_DIR/manage_folders.sh' konnte nicht gefunden werden.\033[0m"
+        return 1
+    fi
 
     # Prüfen, ob manage_logging.sh existiert und einbinden
-    MANAGE_LOGGING_AVAILABLE=0
-    if [ -f "$BASH_DIR/manage_logging.sh" ]; then
+    if [ -f "$BASH_DIR/manage_logging.sh" ] && [ -x "$BASH_DIR/manage_logging.sh" ]; then
         source "$BASH_DIR/manage_logging.sh"
-        MANAGE_LOGGING_AVAILABLE=1
+    else
+        echo -e "\033[1;31mFehler: Das Skript '$BASH_DIR/manage_logging.sh' konnte nicht gefunden werden.\033[0m"
+        return 1
     fi
     
-    # Prüfen, ob manage_nginx.sh existiert und das Ergebnis in globaler Variable speichern
-    MANAGE_NGINX_AVAILABLE=0
-    if [ -f "$BASH_DIR/manage_nginx.sh" ]; then
-        MANAGE_NGINX_AVAILABLE=1
-        MANAGE_NGINX_PATH="$BASH_DIR/manage_nginx.sh"
-    fi
-    
-    # Prüfen, ob manage_folders.sh existiert
-    MANAGE_FOLDERS_AVAILABLE=0
-    if [ -f "$BASH_DIR/manage_folders.sh" ]; then
-        MANAGE_FOLDERS_AVAILABLE=1
+    # Prüfen, ob manage_nginx.sh existiert und und einbinden
+    if [ -f "$BASH_DIR/manage_nginx.sh" ] && [ -x "$BASH_DIR/manage_nginx.sh" ]; then
+        source "$BASH_DIR/manage_nginx.sh"
+    else
+        echo -e "\033[1;31mFehler: Das Skript '$BASH_DIR/manage_nginx.sh' konnte nicht gefunden werden.\033[0m"
+        return 1
     fi
 
     # --- 3. Log-Umgebung vorbereiten
@@ -213,7 +207,7 @@ set_fallback_security_settings() {
     
     # - log: Basis-Logger für alle Ausgaben in Datei
     type log &>/dev/null || log() {
-        local LOG_FILE="$LOG_DIR/install_$(date '+%Y-%m-%d').log"
+        local LOG_FILE="$LOG_DIR/$(date '+%Y-%m-%d')_fotobox.log"
         
         # Wenn manage_logging.sh geladen ist, verwende get_log_file
         if type get_log_file &>/dev/null; then
