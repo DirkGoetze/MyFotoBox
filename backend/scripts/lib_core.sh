@@ -105,6 +105,11 @@ SYSTEMD_DST="/etc/systemd/system/fotobox-backend.service"
 # ===========================================================================
 # Hilfsfunktionen zur Einbindung externer Skript-Ressourcen
 # ===========================================================================
+# Lademodus für Module
+# 0 = Bei Bedarf laden (für laufenden Betrieb)
+# 1 = Alle Module sofort laden (für Installation/Update/Deinstallation)
+: "${MODULE_LOAD_MODE:=0}"
+
 # Standardwerte für Guard-Variablen festlegen
 : "${MANAGE_FOLDERS_LOADED:=0}"
 : "${MANAGE_LOGGING_LOADED:=0}"
@@ -432,6 +437,46 @@ load_core_resources() {
     return $status
 }
 
+load_module() {
+    # -----------------------------------------------------------------------
+    # Funktion: Lädt ein einzelnes Modul oder bei Bedarf alle Module
+    # Parameter: $1 = Name des Moduls (z.B. "manage_folders")
+    # Rückgabe: 0 = OK, 1 = Modul nicht verfügbar
+    # -----------------------------------------------------------------------
+    local module_name="$1"
+    local module_guard="${module_name^^}_LOADED"  # Konvertiere zu Großbuchstaben und füge _LOADED an
+    
+    debug_output "load_module: Angefordert: $module_name (Guard: $module_guard, Lademodus: $MODULE_LOAD_MODE)"
+    
+    # Prüfen, ob das Modul bereits geladen ist
+    if [ "$(eval echo \$$module_guard)" -eq 1 ]; then
+        debug_output "load_module: Modul '$module_name' bereits geladen"
+        return 0
+    fi
+    
+    # Je nach Lademodus alle Module oder nur das angeforderte laden
+    if [ "$MODULE_LOAD_MODE" -eq 1 ]; then
+        debug_output "load_module: Lademodus 1 (Alle) - Lade alle Module"
+        load_core_resources
+        # Prüfen, ob das angeforderte Modul jetzt geladen ist
+        if [ "$(eval echo \$$module_guard)" -ne 1 ]; then
+            debug_output "load_module: Fehler - Modul '$module_name' konnte nicht geladen werden"
+            return 1
+        fi
+    else
+        debug_output "load_module: Lademodus 0 (Einzeln) - Lade nur '$module_name'"
+        # Nur das angeforderte Modul laden
+        local script_name="${module_name}.sh"
+        bind_resource "$module_guard" "$BASH_DIR" "$script_name"
+        if [ $? -ne 0 ]; then
+            debug_output "load_module: Fehler - Konnte Modul '$module_name' nicht laden"
+            return 1
+        fi
+    fi
+    
+    debug_output "load_module: Modul '$module_name' erfolgreich geladen"
+    return 0
+}
 # ===========================================================================
 # Markiere diese Bibliothek als geladen
 LIB_CORE_LOADED=1

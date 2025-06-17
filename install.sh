@@ -18,6 +18,9 @@ INSTALL_DIR="$(dirname "$(readlink -f "$0")")"
 BASH_DIR="$INSTALL_DIR/backend/scripts"
 
 if [ -f "$BASH_DIR/lib_core.sh" ]; then
+    # Installation/Update benötigt alle Module -> Lademodus auf 1 setzen
+    export MODULE_LOAD_MODE=1
+    
     source "$BASH_DIR/lib_core.sh"
     # Versuche, zentrale Ressourcen zu laden
     if type load_core_resources &>/dev/null; then

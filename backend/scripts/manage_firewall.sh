@@ -37,11 +37,28 @@ if [ ! -f "$BASH_DIR/lib_core.sh" ]; then
 fi
 
 source "$BASH_DIR/lib_core.sh"
-load_core_resources || {
-    echo "KRITISCHER FEHLER: Die Kernressourcen konnten nicht geladen werden." >&2
-    echo "Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch." >&2
-    exit 1
-}
+
+# Hybrides Ladeverhalten: 
+# Bei MODULE_LOAD_MODE=1 (Installation/Update) werden alle Module geladen
+# Bei MODULE_LOAD_MODE=0 (normaler Betrieb) werden Module individuell geladen
+if [ "${MODULE_LOAD_MODE:-0}" -eq 1 ]; then
+    load_core_resources || {
+        echo "KRITISCHER FEHLER: Die Kernressourcen konnten nicht geladen werden." >&2
+        echo "Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch." >&2
+        exit 1
+    }
+else
+    # Im normalen Betrieb werden manage_folders und manage_logging benötigt
+    load_module "manage_folders" || {
+        echo "KRITISCHER FEHLER: Das Modul manage_folders.sh konnte nicht geladen werden." >&2
+        exit 1
+    }
+    
+    load_module "manage_logging" || {
+        echo "KRITISCHER FEHLER: Das Modul manage_logging.sh konnte nicht geladen werden." >&2
+        exit 1
+    }
+fi
 # ===========================================================================
 
 # ===========================================================================
