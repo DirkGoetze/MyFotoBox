@@ -2,7 +2,7 @@
 
 ## Übersicht
 
-Dieses Dokument beschreibt den hybriden Ladeansatz für Shell-Module im Fotobox2-Projekt, der ab Juni 2025 implementiert wurde. Der Ansatz optimiert die Ressourcennutzung und Stabilität der Shell-Skripte je nach Ausführungskontext.
+Dieses Dokument beschreibt den hybriden Ladeansatz für Shell-Module im Fotobox2-Projekt, der ab Juni 2025 implementiert wurde. Der Ansatz optimiert die Ressourcennutzung und Stabilität der Shell-Skripte je nach Ausführungskontext und verhindert rekursive Ladeprobleme.
 
 ## Lademodi
 
@@ -17,9 +17,10 @@ Das System unterstützt zwei Lademodi, die durch die Variable `MODULE_LOAD_MODE`
 
 Die `lib_core.sh` ist das Herzstück des Modulsystems und stellt folgende Funktionen bereit:
 
-- `bind_resource`: Bindet eine einzelne Ressource ein (mit Schutz vor rekursiven Aufrufen)
-- `load_core_resources`: Lädt alle Kernressourcen auf einmal
+- `bind_resource`: Bindet eine einzelne Ressource ein (mit robustem Schutz vor rekursiven Aufrufen)
+- `load_core_resources`: Lädt alle Kernressourcen auf einmal (mit rekursiver Aufrufserkennung)
 - `load_module`: Lädt ein spezifisches Modul oder alle Module (abhängig vom MODULE_LOAD_MODE)
+- `chk_resources`: Führt die eigentliche Prüfung und das Laden aller benötigten Ressourcen durch
 
 ### Verwendung in Modulen
 

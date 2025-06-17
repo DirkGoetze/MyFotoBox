@@ -12,6 +12,8 @@
 if [ "$LIB_CORE_LOADED" -eq 1 ]; then
     return 0  # Bereits geladen
 fi
+# Sofort markieren, dass diese Bibliothek geladen wird, um rekursive Probleme zu vermeiden
+LIB_CORE_LOADED=1
 
 # Hilfsfunktion für Debug-Ausgaben (wird vor dem Laden von manage_logging.sh verwendet)
 debug_output() {
@@ -86,6 +88,11 @@ COLOR_CYAN="\033[1;36m"
 : "${DEBUG_MOD_LOCAL:=0}"    # Lokales Debug-Flag für einzelne Skripte
 DEBUG_MOD_GLOBAL=1           # Globales Flag, das alle lokalen überstimmt
 
+# Lademodus für Module
+# 0 = Bei Bedarf laden (für laufenden Betrieb)
+# 1 = Alle Module sofort laden (für Installation/Update/Deinstallation)
+: "${MODULE_LOAD_MODE:=0}"   # Standardmäßig Module nur bei Bedarf laden
+
 # Benutzer- und Berechtigungseinstellungen
 DEFAULT_USER="fotobox"
 DEFAULT_GROUP="fotobox"
@@ -133,9 +140,12 @@ bind_resource() {
     local resource_path="$2"
     local resource_name="$3"
     
-    # Schutz vor rekursiven Aufrufen: Temporäre Datei als Sperre verwenden
-    local lock_file="/tmp/binding_${resource_name}.lock"
-    if [ -f "$lock_file" ]; then
+    # Schutz vor rekursiven Aufrufen: Durch rekursive Erkennung
+    # Wir verwenden statische Variablen innerhalb von Bash-Funktionen mit declare
+    declare -g "BINDING_${resource_name}_IN_PROGRESS"
+    local binding_in_progress_var="BINDING_${resource_name}_IN_PROGRESS"
+    
+    if [ "${!binding_in_progress_var}" = "1" ]; then
         echo "TRACE: Rekursiver Aufruf für $resource_name erkannt, überspringe" >&2
         debug_output "bind_resource: Erkenne rekursiven Aufruf für '$resource_name', überspringe Laden"
         
@@ -147,6 +157,9 @@ bind_resource() {
         
         return 0  # Überspringe und kehre zurück, um Endlosschleife zu vermeiden
     fi
+    
+    # Setze Markierung, dass wir gerade dabei sind, diese Ressource zu laden
+    eval "${binding_in_progress_var}=1"
     touch "$lock_file"  # Erzeuge Sperre
     
     # Direkte Ausgabe für Debugging-Zwecke (auch ohne Debug-Flag)
@@ -214,7 +227,8 @@ bind_resource() {
     echo "TRACE: Guard-Variable $guard_var_name auf 1 gesetzt" >&2
     debug_output "bind_resource: Guard-Variable $guard_var_name auf 1 (geladen) gesetzt"
     
-    rm -f "$lock_file"  # Sperre entfernen
+    # Markierung zurücksetzen
+    eval "${binding_in_progress_var}=0"
     return 0  # Erfolgreich geladen
 }
 
@@ -424,6 +438,18 @@ load_core_resources() {
     # Parameter: keine
     # Rückgabe: 0 = OK, 1 = mind. eine Ressource fehlt oder ist nicht nutzbar
     # -----------------------------------------------------------------------
+    # Statische Variable um rekursive Aufrufe zu verhindern
+    # Verwende declare -g, um eine globale Variable zu definieren
+    declare -g CORE_RESOURCES_LOADING
+    
+    if [ "${CORE_RESOURCES_LOADING:-0}" -eq 1 ]; then
+        debug_output "load_core_resources: Rekursiver Aufruf erkannt, überspringe"
+        return 0
+    fi
+    
+    # Markiere, dass wir gerade laden
+    CORE_RESOURCES_LOADING=1
+    
     echo "TRACE: load_core_resources wird ausgeführt" >&2
     debug_output "load_core_resources: Starte das Laden aller Kernressourcen"
     
@@ -434,6 +460,10 @@ load_core_resources() {
     
     echo "TRACE: chk_resources abgeschlossen mit Status $status" >&2
     debug_output "load_core_resources: Laden aller Kernressourcen abgeschlossen mit Status: $status"
+    
+    # Zurücksetzen der statischen Variable
+    CORE_RESOURCES_LOADING=0
+    
     return $status
 }
 
@@ -449,17 +479,40 @@ load_module() {
     debug_output "load_module: Angefordert: $module_name (Guard: $module_guard, Lademodus: $MODULE_LOAD_MODE)"
     
     # Prüfen, ob das Modul bereits geladen ist
-    if [ "$(eval echo \$$module_guard)" -eq 1 ]; then
+    if [ "$(eval echo \$$module_guard 2>/dev/null)" = "1" ]; then
         debug_output "load_module: Modul '$module_name' bereits geladen"
         return 0
     fi
     
     # Je nach Lademodus alle Module oder nur das angeforderte laden
-    if [ "$MODULE_LOAD_MODE" -eq 1 ]; then
+    if [ "${MODULE_LOAD_MODE:-0}" -eq 1 ]; then
         debug_output "load_module: Lademodus 1 (Alle) - Lade alle Module"
-        load_core_resources
+        
+        # Überprüfen, ob wir aktuell schon beim Laden sind, um rekursive Aufrufe zu vermeiden
+        if [ "${CORE_RESOURCES_LOADING:-0}" -ne 1 ]; then
+            # Definiere eine Variable für dieses spezifische Modul-Loading
+            declare -g "LOADING_MODULE_${module_name}"
+            local module_loading_var="LOADING_MODULE_${module_name}"
+            
+            # Prüfen, ob dieses spezifische Modul gerade geladen wird
+            if [ "${!module_loading_var:-0}" -ne 1 ]; then
+                # Markiere, dass wir dieses Modul laden
+                eval "${module_loading_var}=1"
+                
+                # Lade alle Ressourcen
+                load_core_resources
+                
+                # Zurücksetzen der Modul-Loading-Variable
+                eval "${module_loading_var}=0"
+            else
+                debug_output "load_module: Rekursiven Aufruf für Modul '$module_name' erkannt, überspringe"
+            fi
+        else
+            debug_output "load_module: Kern-Ressourcen werden bereits geladen, überspringe load_core_resources"
+        fi
+        
         # Prüfen, ob das angeforderte Modul jetzt geladen ist
-        if [ "$(eval echo \$$module_guard)" -ne 1 ]; then
+        if [ "$(eval echo \$$module_guard 2>/dev/null)" != "1" ]; then
             debug_output "load_module: Fehler - Modul '$module_name' konnte nicht geladen werden"
             return 1
         fi
@@ -478,6 +531,6 @@ load_module() {
     return 0
 }
 # ===========================================================================
-# Markiere diese Bibliothek als geladen
-LIB_CORE_LOADED=1
+# Bibliothek wurde bereits am Anfang der Datei als geladen markiert (LIB_CORE_LOADED=1)
+# um rekursive Ladeprobleme zu vermeiden
 

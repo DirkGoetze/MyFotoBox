@@ -17,14 +17,31 @@ set -e
 INSTALL_DIR="$(dirname "$(readlink -f "$0")")"
 BASH_DIR="$INSTALL_DIR/backend/scripts"
 
+# Installation/Update benötigt alle Module -> Lademodus auf 1 setzen
+# Dies vor dem Einbinden von lib_core.sh festlegen
+export MODULE_LOAD_MODE=1
+
 if [ -f "$BASH_DIR/lib_core.sh" ]; then
-    # Installation/Update benötigt alle Module -> Lademodus auf 1 setzen
-    export MODULE_LOAD_MODE=1
-    
+    # Direkt core-Bibliothek einbinden, ohne sofort alle Module zu laden
     source "$BASH_DIR/lib_core.sh"
-    # Versuche, zentrale Ressourcen zu laden
-    if type load_core_resources &>/dev/null; then
-        load_core_resources || echo "Warnung: Kern-Ressourcen konnten nicht vollständig geladen werden."
+    
+    # Jetzt alle Ressourcen explizit laden - vermeidet rekursives Laden
+    # durch direkten Aufruf von chk_resources statt load_core_resources
+    if type chk_resources &>/dev/null; then
+        # Direkte Ausgabe für Debugging
+        echo "TRACE: Direkte Ausführung von chk_resources aus install.sh" >&2
+        # Setze Variable, um rekursive Aufrufe zu verhindern
+        CORE_RESOURCES_LOADING=1
+        # Führe Ressourcenprüfung aus
+        chk_resources
+        local result=$?
+        CORE_RESOURCES_LOADING=0
+        
+        if [ $result -ne 0 ]; then
+            echo "KRITISCHER FEHLER: Die Kernressourcen konnten nicht geladen werden." >&2
+            echo "Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch." >&2
+            exit 1
+        fi
     fi
 fi
 # ===========================================================================
