@@ -35,6 +35,16 @@ else
 fi
 # ===========================================================================
 
+# ===========================================================================
+# Globale Konstanten die für die Nutzung des Moduls erforderlich sind
+# ===========================================================================
+# ---------------------------------------------------------------------------
+# Einstellungen: Backend Service 
+# ---------------------------------------------------------------------------
+SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
+SYSTEMD_DST="/etc/systemd/system/fotobox-backend.service"
+
 # Konfigurationsvariablen aus lib_core.sh werden verwendet
 # Debug-Modus für dieses Skript (lokales Flag)
 DEBUG_MOD_LOCAL=0  # Nur für dieses Skript
+

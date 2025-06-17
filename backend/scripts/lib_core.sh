@@ -84,6 +84,10 @@ DEFAULT_HTTPS_PORT=443
 # Konfigurationsdatei
 DEFAULT_CONFIG_FILE="$DEFAULT_CONF_DIR/fotobox-config.ini"
 
+# Backend Service 
+SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
+SYSTEMD_DST="/etc/systemd/system/fotobox-backend.service"
+
 # ===========================================================================
 # Hilfsfunktionen zur Einbindung externer Skript-Ressourcen
 # ===========================================================================

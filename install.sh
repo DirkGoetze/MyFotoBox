@@ -7,49 +7,16 @@
 # Nach erfolgreicher Installation erfolgt die weitere Verwaltung (Update, Deinstallation)
 # über die WebUI bzw. Python-Skripte im backend/.
 # ------------------------------------------------------------------------------
-# HINWEIS: Die Backup-/Restore-Strategie ist verbindlich in BACKUP_STRATEGIE.md 
-# dokumentiert und für alle neuen Features, API-Endpunkte und System-
-# integrationen einzuhalten.
-# ------------------------------------------------------------------------------
 
 set -e
 
 # ===========================================================================
-# Globale Konstanten (Vorgaben und Defaults für die Installation)
-# ===========================================================================
-# ---------------------------------------------------------------------------
-# Einstellungen: Installationsverzeichnis
-# ---------------------------------------------------------------------------
-INSTALL_DIR="/opt/fotobox"
-# ---------------------------------------------------------------------------
-# Einstellungen: Ordnerstruktur
-# ---------------------------------------------------------------------------
-BACKUP_DIR="$INSTALL_DIR/backup"
-CONF_DIR="$INSTALL_DIR/conf"
-BASH_DIR="$INSTALL_DIR/backend/scripts"
-LOG_DIR="$INSTALL_DIR/log"
-FRONTEND_DIR="$INSTALL_DIR/frontend"
-# ---------------------------------------------------------------------------
-# Einstellungen: Backend Service 
-# ---------------------------------------------------------------------------
-SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
-SYSTEMD_DST="/etc/systemd/system/fotobox-backend.service"
-# ---------------------------------------------------------------------------
-# Einstellungen: Datenverzeichnis
-# ---------------------------------------------------------------------------
-DATA_DIR="$INSTALL_DIR/data"
-# ---------------------------------------------------------------------------
-# Einstellungen: Debug-Modus
-# ---------------------------------------------------------------------------
-# Neue Debug-Modi für zentralisiertes Debug-System
-# Hinweis: Das Debugging wird durch manuelle Anpassung dieser Variablen gesteuert,
-# nicht durch Befehlszeilenparameter gemäß Entwicklerrichtlinien.
-DEBUG_MOD_LOCAL=0
-DEBUG_MOD_GLOBAL=0
-
-# ===========================================================================
 # Einbindung der zentralen Bibliothek (falls verfügbar)
 # ===========================================================================
+# Skript- und BASH-Verzeichnis festlegen
+INSTALL_DIR="$(dirname "$(readlink -f "$0")")"
+BASH_DIR="$INSTALL_DIR/backend/scripts"
+
 if [ -f "$BASH_DIR/lib_core.sh" ]; then
     source "$BASH_DIR/lib_core.sh"
     # Versuche, zentrale Ressourcen zu laden
@@ -57,10 +24,28 @@ if [ -f "$BASH_DIR/lib_core.sh" ]; then
         load_core_resources || echo "Warnung: Kern-Ressourcen konnten nicht vollständig geladen werden."
     fi
 fi
+# ===========================================================================
 
-# ==========================================================================='
+# ===========================================================================
+# Globale Konstanten (Vorgaben und Defaults für die Installation)
+# ===========================================================================
+# Die meisten globalen Konstanten werden bereits durch lib_core.sh gesetzt.
+# bereitgestellt. Hier definieren wir nur Konstanten, die noch nicht durch 
+# lib_core.sh gesetzt wurden oder die speziell für die Installation 
+# überschrieben werden müssen.
+
+# ===========================================================================
+# Lokale Konstanten (Vorgaben und Defaults nur für die Installation)
+# ===========================================================================
+# Debug-Modus: Lokal und global steuerbar
+# DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
+# DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
+DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
+: "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
+
+# ===========================================================================
 # Hilfsfunktionen
-# ==========================================================================='
+# ===========================================================================
 
 parse_args() {
     # -----------------------------------------------------------------------
@@ -144,45 +129,6 @@ chk_distribution_version() {
             return 2
             ;;
     esac
-}
-
-set_fallback_security_settings() {
-    # -----------------------------------------------------------------------
-    # set_fallback_security_settings
-    # -----------------------------------------------------------------------
-    # Funktion: Stellt die Verfügbarkeit aller kritischen Ressourcen sicher und
-    # ......... setzt Fallback-Definitionen für Logging- und Print-Funktionen.
-    # ......... Prüft außerdem die Verfügbarkeit von manage_nginx.sh.
-    # ......... Prüft, ob das Skript im vorgegebenen INSTALL_DIR ausgeführt wird.
-    # .........
-    # Rückgabe: 0 = OK, 1 = fehlerhafte Umgebung, Skript sollte abgebrochen werden
-
-    # --- 1. Prüfen, ob das Skript im vorgegebenen INSTALL_DIR ausgeführt wird
-    local SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
-    if [ "$SCRIPT_DIR" != "$INSTALL_DIR" ]; then
-        # Kein gültiges Verzeichnis, Abbruch
-        echo -e "\033[1;31mFehler: Das Skript muss im Installationsverzeichnis ($INSTALL_DIR) ausgeführt werden.\033[0m"
-        return 1
-    fi
-    
-    # --- 2. Prüfen, ob die Kernressourcen geladen wurden
-    if [ "$LIB_CORE_LOADED" != "1" ]; then
-        echo -e "\033[1;31mFehler: Die zentrale Bibliothek (lib_core.sh) wurde nicht geladen.\033[0m"
-        return 1
-    fi
-    
-    # --- 3. Prüfen, ob alle benötigten Ressourcen verfügbar sind
-    # Diese Prüfung ersetzt die direkten Einbindungen der Skripte,
-    # da lib_core.sh dies bereits über load_core_resources erledigt hat
-    if [ "$MANAGE_FOLDERS_LOADED" != "1" ] || [ "$MANAGE_LOGGING_LOADED" != "1" ] || [ "$MANAGE_NGINX_LOADED" != "1" ]; then
-        echo -e "\033[1;31mFehler: Nicht alle benötigten Skripte konnten geladen werden.\033[0m"
-        [ "$MANAGE_FOLDERS_LOADED" != "1" ] && echo -e "\033[1;31m  - manage_folders.sh fehlt oder ist fehlerhaft\033[0m"
-        [ "$MANAGE_LOGGING_LOADED" != "1" ] && echo -e "\033[1;31m  - manage_logging.sh fehlt oder ist fehlerhaft\033[0m"
-        [ "$MANAGE_NGINX_LOADED" != "1" ] && echo -e "\033[1;31m  - manage_nginx.sh fehlt oder ist fehlerhaft\033[0m"
-        return 1
-    fi
-    
-    return 0
 }
 
 show_spinner() {
@@ -368,6 +314,45 @@ install_package_group() {
 # Einstellungen (Systemanpassungen)
 # ===========================================================================
 
+set_fallback_security_settings() {
+    # -----------------------------------------------------------------------
+    # set_fallback_security_settings
+    # -----------------------------------------------------------------------
+    # Funktion: Stellt die Verfügbarkeit aller kritischen Ressourcen sicher und
+    # ......... setzt Fallback-Definitionen für Logging- und Print-Funktionen.
+    # ......... Prüft außerdem die Verfügbarkeit von manage_nginx.sh.
+    # ......... Prüft, ob das Skript im vorgegebenen INSTALL_DIR ausgeführt wird.
+    # .........
+    # Rückgabe: 0 = OK, 1 = fehlerhafte Umgebung, Skript sollte abgebrochen werden
+
+    # --- 1. Prüfen, ob das Skript im vorgegebenen INSTALL_DIR ausgeführt wird
+    local SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+    if [ "$SCRIPT_DIR" != "$INSTALL_DIR" ]; then
+        # Kein gültiges Verzeichnis, Abbruch
+        echo -e "\033[1;31mFehler: Das Skript muss im Installationsverzeichnis ($INSTALL_DIR) ausgeführt werden.\033[0m"
+        return 1
+    fi
+    
+    # --- 2. Prüfen, ob die Kernressourcen geladen wurden
+    if [ "$LIB_CORE_LOADED" != "1" ]; then
+        echo -e "\033[1;31mFehler: Die zentrale Bibliothek (lib_core.sh) wurde nicht geladen.\033[0m"
+        return 1
+    fi
+    
+    # --- 3. Prüfen, ob alle benötigten Ressourcen verfügbar sind
+    # Diese Prüfung ersetzt die direkten Einbindungen der Skripte,
+    # da lib_core.sh dies bereits über load_core_resources erledigt hat
+    if [ "$MANAGE_FOLDERS_LOADED" != "1" ] || [ "$MANAGE_LOGGING_LOADED" != "1" ] || [ "$MANAGE_NGINX_LOADED" != "1" ]; then
+        echo -e "\033[1;31mFehler: Nicht alle benötigten Skripte konnten geladen werden.\033[0m"
+        [ "$MANAGE_FOLDERS_LOADED" != "1" ] && echo -e "\033[1;31m  - manage_folders.sh fehlt oder ist fehlerhaft\033[0m"
+        [ "$MANAGE_LOGGING_LOADED" != "1" ] && echo -e "\033[1;31m  - manage_logging.sh fehlt oder ist fehlerhaft\033[0m"
+        [ "$MANAGE_NGINX_LOADED" != "1" ] && echo -e "\033[1;31m  - manage_nginx.sh fehlt oder ist fehlerhaft\033[0m"
+        return 1
+    fi
+    
+    return 0
+}
+
 set_install_packages() {
     # -----------------------------------------------------------------------
     # set_install_packages
@@ -466,9 +451,6 @@ set_structure() {
     debug "erfolgreich abgeschlossen" "CLI" "set_structure"
     return 0
 }
-
-# Die use_fallback_structure() Funktion wurde entfernt, da ihre Funktionalität jetzt
-# vollständig in manage_folders.sh implementiert ist.
 
 install_system_requirements() {
     # -----------------------------------------------------------------------
@@ -614,6 +596,53 @@ set_systemd_install() {
 # Dialogfunktionen
 # ===========================================================================
 
+dlg_check_system_requirements() {
+    # -----------------------------------------------------------------------
+    # dlg_check_system_requirements
+    # -----------------------------------------------------------------------
+    # Funktion: Prüft die Systemvoraussetzungen und stellt Logging-Ressourcen bereit
+    echo -e "\033[1;33mPrüfung der Systemvoraussetzungen ...\033[0m"    
+    
+    # Auf kritische Ressourcen prüfen und Logging einrichten
+    if ! set_fallback_security_settings; then
+        echo -e "\033[1;31m  → [ERROR]\033[0m Kritische Systemvoraussetzungen nicht erfüllt oder Logging konnte nicht eingerichtet werden."
+        exit 1
+    fi
+    
+    # Ab hier können die print_* Funktionen verwendet werden
+    
+    # Prüfe, ob externe Abhängigkeiten verfügbar sind
+    if ! command -v apt-get &>/dev/null; then
+        print_error "apt-get nicht gefunden. Dies ist ein kritischer Fehler."
+        exit 1
+    fi
+    
+    # Prüfen, ob die manage_logging.sh erfolgreich geladen wurde
+    if type get_log_file &>/dev/null; then
+        print_success "Log-Hilfsskript erfolgreich geladen, verwende zentrales Logging."
+        log "INFO: Log-Hilfsskript erfolgreich geladen, verwende zentrales Logging."
+    else
+        print_warning "Zentrales Log-Hilfsskript nicht verfügbar, verwende Fallback-Logging in $LOG_DIR."
+        log "WARNING: Zentrales Log-Hilfsskript nicht verfügbar, verwende Fallback-Logging in $LOG_DIR."
+    fi
+    
+    print_step "[3/10] Prüfe Systemvoraussetzungen und richte Logging ein ..."
+
+    # Befehlszeilenargumente verarbeiten
+    parse_args "$@"
+    
+    # Log-Initialisierung (Rotation) direkt nach Skriptstart
+    if type -t log | grep -q "function"; then
+        log
+        log "Installationsskript gestartet: $(date '+%Y-%m-%d %H:%M:%S')"
+        log "Logverzeichnis: $LOG_DIR"
+    else
+        echo -e "\033[1;33mWarnung: Log-Rotation konnte nicht durchgeführt werden (log-Funktion nicht verfügbar)\033[0m"
+    fi
+
+    print_success "Systemvoraussetzungen erfüllt, Logging eingerichtet."
+}
+
 dlg_check_root() {
     # -----------------------------------------------------------------------
     # dlg_check_root
@@ -664,53 +693,6 @@ dlg_check_distribution() {
             log "WARNING: Nicht offiziell unterstützte Distribution erkannt: $DIST_NAME $DIST_VERSION"
             ;;
     esac
-}
-
-dlg_check_system_requirements() {
-    # -----------------------------------------------------------------------
-    # dlg_check_system_requirements
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft die Systemvoraussetzungen und stellt Logging-Ressourcen bereit
-    echo -e "\033[1;33mPrüfung der Systemvoraussetzungen ...\033[0m"    
-    
-    # Auf kritische Ressourcen prüfen und Logging einrichten
-    if ! set_fallback_security_settings; then
-        echo -e "\033[1;31m  → [ERROR]\033[0m Kritische Systemvoraussetzungen nicht erfüllt oder Logging konnte nicht eingerichtet werden."
-        exit 1
-    fi
-    
-    # Ab hier können die print_* Funktionen verwendet werden
-    
-    # Prüfe, ob externe Abhängigkeiten verfügbar sind
-    if ! command -v apt-get &>/dev/null; then
-        print_error "apt-get nicht gefunden. Dies ist ein kritischer Fehler."
-        exit 1
-    fi
-    
-    # Prüfen, ob die manage_logging.sh erfolgreich geladen wurde
-    if type get_log_file &>/dev/null; then
-        print_success "Log-Hilfsskript erfolgreich geladen, verwende zentrales Logging."
-        log "INFO: Log-Hilfsskript erfolgreich geladen, verwende zentrales Logging."
-    else
-        print_warning "Zentrales Log-Hilfsskript nicht verfügbar, verwende Fallback-Logging in $LOG_DIR."
-        log "WARNING: Zentrales Log-Hilfsskript nicht verfügbar, verwende Fallback-Logging in $LOG_DIR."
-    fi
-    
-    print_step "[3/10] Prüfe Systemvoraussetzungen und richte Logging ein ..."
-
-    # Befehlszeilenargumente verarbeiten
-    parse_args "$@"
-    
-    # Log-Initialisierung (Rotation) direkt nach Skriptstart
-    if type -t log | grep -q "function"; then
-        log
-        log "Installationsskript gestartet: $(date '+%Y-%m-%d %H:%M:%S')"
-        log "Logverzeichnis: $LOG_DIR"
-    else
-        echo -e "\033[1;33mWarnung: Log-Rotation konnte nicht durchgeführt werden (log-Funktion nicht verfügbar)\033[0m"
-    fi
-
-    print_success "Systemvoraussetzungen erfüllt, Logging eingerichtet."
 }
 
 dlg_prepare_system() {

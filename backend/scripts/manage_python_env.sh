@@ -2,15 +2,20 @@
 # ------------------------------------------------------------------------------
 # manage_python_env.sh
 # ------------------------------------------------------------------------------
-# Funktion: Verwaltung, Initialisierung und Update der Python-Umgebung (venv, pip, requirements)
-# ------------------------------------------------------------------------------
-
-# ===============================================================================
-# TODO-Liste für manage_python_env.sh wurde gemäß Policy ausgelagert.
-# Siehe: .manage_python_env.todo
-# ===============================================================================
-
-# ... Skript-Logik folgt ...
+# Funktion: Verwaltung, Initialisierung und Update der Python-Umgebung (venv, 
+# ......... pip, requirements)
+# ......... 
+# ......... 
+# ......... 
+# ---------------------------------------------------------------------------
+# HINWEIS: Dieses Skript ist Bestandteil der Backend-Logik und darf nur im
+# Unterordner 'backend/scripts/' abgelegt werden 
+# ---------------------------------------------------------------------------
+# POLICY-HINWEIS: Dieses Skript ist ein reines Funktions-/Modulskript und 
+# enthält keine main()-Funktion mehr. Die Nutzung als eigenständiges 
+# CLI-Programm ist nicht vorgesehen. Die Policy zur main()-Funktion gilt nur 
+# für Hauptskripte.
+# ---------------------------------------------------------------------------
 
 # ===========================================================================
 # Hilfsfunktionen zur Einbindung externer Skript-Ressourcen
@@ -35,6 +40,26 @@ else
 fi
 # ===========================================================================
 
-# Konfigurationsvariablen aus lib_core.sh werden verwendet
-# Debug-Modus für dieses Skript (lokales Flag)
-DEBUG_MOD_LOCAL=0  # Nur für dieses Skript
+# ===========================================================================
+# Globale Konstanten (Vorgaben und Defaults für die Installation)
+# ===========================================================================
+# Die meisten globalen Konstanten werden bereits durch lib_core.sh gesetzt.
+# bereitgestellt. Hier definieren wir nur Konstanten, die noch nicht durch 
+# lib_core.sh gesetzt wurden oder die speziell für die Installation 
+# überschrieben werden müssen.
+# ---------------------------------------------------------------------------
+
+# ===========================================================================
+# Lokale Konstanten (Vorgaben und Defaults nur für die Installation)
+# ===========================================================================
+# Debug-Modus: Lokal und global steuerbar
+# DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
+# DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
+DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
+: "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
+
+# ===========================================================================
+# Hilfsfunktionen
+# ===========================================================================
+
+# ... Funktionsimplementierung folgt ...
