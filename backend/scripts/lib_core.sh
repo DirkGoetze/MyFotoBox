@@ -133,6 +133,13 @@ bind_resource() {
     if [ -f "$lock_file" ]; then
         echo "TRACE: Rekursiver Aufruf für $resource_name erkannt, überspringe" >&2
         debug_output "bind_resource: Erkenne rekursiven Aufruf für '$resource_name', überspringe Laden"
+        
+        # Setze die Guard-Variable auf 1, auch bei rekursiven Aufrufen
+        # Dies behebt das Problem, dass die Variablen bei rekursiven Aufrufen nicht gesetzt werden
+        eval "$guard_var_name=1"
+        echo "TRACE: Setze Guard-Variable $guard_var_name auf 1 trotz rekursivem Aufruf" >&2
+        debug_output "bind_resource: Setze Guard-Variable $guard_var_name auf 1 (geladen) trotz rekursivem Aufruf"
+        
         return 0  # Überspringe und kehre zurück, um Endlosschleife zu vermeiden
     fi
     touch "$lock_file"  # Erzeuge Sperre
