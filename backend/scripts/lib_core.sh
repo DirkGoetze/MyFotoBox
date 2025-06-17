@@ -165,11 +165,39 @@ chk_resources() {
         # Minimale Implementierung, falls manage_folders.sh nicht verfügbar ist
         get_log_dir() {
             local dir="./logs"
-            mkdir -p "$dir"
+            
+            # Versuche Standardverzeichnis zu erstellen
+            mkdir -p "$dir" 2>/dev/null
+            
+            # Fallback-Mechanismus, wenn Standardverzeichnis nicht erstellt werden kann
+            if [ ! -d "$dir" ]; then
+                # Fallback 1: Temporäres Verzeichnis
+                if [ -w "/tmp" ]; then
+                    echo "Standard-Logverzeichnis nicht verfügbar, nutze /tmp/fotobox_logs" >&2
+                    dir="/tmp/fotobox_logs"
+                    mkdir -p "$dir" 2>/dev/null
+                # Fallback 2: Aktuelles Verzeichnis
+                elif [ -w "." ]; then
+                    echo "Standard-Logverzeichnis nicht verfügbar, nutze ./fotobox_logs" >&2
+                    dir="./fotobox_logs"
+                    mkdir -p "$dir" 2>/dev/null
+                else
+                    echo "Fehler: Konnte kein schreibbares Logverzeichnis finden oder erstellen." >&2
+                    return 1
+                fi
+            fi
+            
+            # Teste Schreibrecht für das Logverzeichnis
+            if ! touch "$dir/test_log.tmp" 2>/dev/null; then
+                echo "Fehler: Keine Schreibrechte im Logverzeichnis $dir" >&2
+                return 1
+            fi
+            rm -f "$dir/test_log.tmp" 2>/dev/null
+            
             echo "$dir"
         }
 
-        result=1
+        result=0 # kein Fehler, da Fallback-Funktion vorhanden
     fi
     
     # 2. manage_logging.sh einbinden
@@ -177,16 +205,64 @@ chk_resources() {
     if [ $? -ne 0 ]; then
         echo "Fehler: manage_logging.sh konnte nicht geladen werden."
         
-        # Fallback für Logging bereitstellen
-        log() { echo "$(date "+%Y-%m-%d %H:%M:%S") $*" >> ./fotobox.log; }
-        print_info() { echo "INFO: $*"; }
-        print_step() { echo -e "\e[1;33mSCHRITT:\e[0m $*"; }
-        print_success() { echo -e "\e[1;32mERFOLG:\e[0m $*"; }
-        print_warning() { echo -e "\e[1;33mWARNUNG:\e[0m $*"; }
-        print_error() { echo -e "\e[1;31mFEHLER:\e[0m $*"; }
-        print_debug() { [ "${DEBUG_MOD:-0}" = "1" ] && echo -e "\e[0;36mDEBUG:\e[0m $*"; }
+        # Fallback für Logging bereitstellen mit erweiterten Funktionen
+        log() {
+            local LOG_FILE="$(get_log_dir)/$(date '+%Y-%m-%d')_fotobox.log"
+
+            # Wenn get_log_file verfügbar ist, verwenden wir diese Funktion
+            if type get_log_file &>/dev/null; then
+                LOG_FILE=$(get_log_file)
+            fi
+            
+            if [ -z "$1" ]; then
+                # Bei leerem Parameter: Rotation simulieren
+                touch "$LOG_FILE" 2>/dev/null
+                return
+            fi
+            echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG_FILE"
+        }
         
-        result=1
+        # Erweiterte Ausgabefunktionen mit konsistenter Formatierung
+        print_step() { 
+            echo -e "${COLOR_YELLOW}$*${COLOR_RESET}"
+            log "STEP: $*"
+        }
+        
+        print_info() { 
+            echo -e "  $*"
+            log "INFO: $*"
+        }
+        
+        print_success() { 
+            echo -e "${COLOR_GREEN}  → [OK]${COLOR_RESET} $*"
+            log "SUCCESS: $*"
+        }
+        
+        print_warning() { 
+            echo -e "${COLOR_YELLOW}  → [WARN]${COLOR_RESET} $*"
+            log "WARNING: $*"
+        }
+        
+        print_error() { 
+            echo -e "${COLOR_RED}  → [ERROR]${COLOR_RESET} $*" >&2
+            log "ERROR: $*"
+        }
+        
+        print_prompt() {
+            if [ "${UNATTENDED:-0}" -eq 0 ]; then
+                echo -e "\n${COLOR_BLUE}$*${COLOR_RESET}\n"
+            fi
+            log "PROMPT: $*"
+        }
+        
+        print_debug() { 
+            if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ] || [ "${DEBUG_MOD:-0}" = "1" ]; then
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $*"
+                log "DEBUG: $*"
+            fi
+        }
+        
+        result=0 # kein Fehler, da Fallback-Funktion vorhanden
     fi
     
     # 3. manage_nginx.sh einbinden

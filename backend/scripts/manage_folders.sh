@@ -116,9 +116,12 @@ get_folder_path() {
     local standard_path="$1"
     local fallback_path="$2"
     local use_root_fallback="${3:-1}" # Standard: Ja, Root-Fallback verwenden
+    
+    debug "Prüfe Pfad: Standardpfad=$standard_path, Fallback=$fallback_path" "CLI" "get_folder_path"
 
     # Versuchen, den Standardpfad zu verwenden
     if create_directory "$standard_path"; then
+        debug "Verwende Standardpfad: $standard_path" "CLI" "get_folder_path"
         echo "$standard_path"
         return 0
     fi
@@ -127,6 +130,7 @@ get_folder_path() {
     
     # Versuchen, den Fallback-Pfad zu verwenden
     if create_directory "$fallback_path"; then
+        debug "Verwende Fallback-Pfad: $fallback_path" "CLI" "get_folder_path"
         echo "$fallback_path"
         return 0
     fi
@@ -138,7 +142,7 @@ get_folder_path() {
         local root_path
         root_path=$(get_install_dir)
         if [ -n "$root_path" ] && create_directory "$root_path"; then
-            debug "Verwende Root-Verzeichnis als letzten Fallback" "CLI" "get_folder_path"
+            debug "Verwende Root-Verzeichnis als letzten Fallback: $root_path" "CLI" "get_folder_path"
             echo "$root_path"
             return 0
         fi
@@ -158,21 +162,27 @@ get_folder_path() {
 get_install_dir() {
     local dir
     
+    debug "Ermittle Installations-Verzeichnis" "CLI" "get_install_dir"
+    
     # Prüfen, ob INSTALL_DIR bereits gesetzt ist (z.B. vom install.sh)
     if [ -n "$INSTALL_DIR" ] && [ -d "$INSTALL_DIR" ]; then
+        debug "Verwende bereits definiertes INSTALL_DIR: $INSTALL_DIR" "CLI" "get_install_dir"
         create_directory "$INSTALL_DIR" || true
         echo "$INSTALL_DIR"
         return 0
     fi
     
     # Verwende die in dieser Datei definierten Pfade
+    debug "Prüfe Standard- und Fallback-Pfade für Installations-Verzeichnis" "CLI" "get_install_dir"
     dir=$(get_folder_path "$DEFAULT_INSTALL_DIR" "$FALLBACK_INSTALL_DIR" 0)
     if [ -n "$dir" ]; then
+        debug "Verwende Pfad für Installations-Verzeichnis: $dir" "CLI" "get_install_dir"
         echo "$dir"
         return 0
     fi
     
     # Als absoluten Notfall das aktuelle Verzeichnis verwenden
+    debug "Alle Pfade für Installations-Verzeichnis fehlgeschlagen, verwende aktuelles Verzeichnis" "CLI" "get_install_dir"
     echo "$(pwd)/fotobox"
     return 0
 }
@@ -187,16 +197,21 @@ get_install_dir() {
 get_data_dir() {
     local dir
     
+    debug "Ermittle Daten-Verzeichnis" "CLI" "get_data_dir"
+    
     # Prüfen, ob DATA_DIR bereits gesetzt ist (z.B. vom install.sh)
     if [ -n "$DATA_DIR" ] && [ -d "$DATA_DIR" ]; then
+        debug "Verwende bereits definiertes DATA_DIR: $DATA_DIR" "CLI" "get_data_dir"
         create_directory "$DATA_DIR" || true
         echo "$DATA_DIR"
         return 0
     fi
     
     # Verwende die in dieser Datei definierten Pfade
+    debug "Prüfe Standard- und Fallback-Pfade für Daten-Verzeichnis" "CLI" "get_data_dir"
     dir=$(get_folder_path "$DEFAULT_DATA_DIR" "$FALLBACK_DATA_DIR" 1)
     if [ -n "$dir" ]; then
+        debug "Verwende Pfad für Daten-Verzeichnis: $dir" "CLI" "get_data_dir"
         echo "$dir"
         return 0
     fi
@@ -204,6 +219,7 @@ get_data_dir() {
     # Als absoluten Notfall ein Unterverzeichnis des Installationsverzeichnisses verwenden
     local install_dir
     install_dir=$(get_install_dir)
+    debug "Alle Pfade für Daten-Verzeichnis fehlgeschlagen, verwende $install_dir/data" "CLI" "get_data_dir"
     echo "$install_dir/data"
     return 0
 }
@@ -218,16 +234,21 @@ get_data_dir() {
 get_backup_dir() {
     local dir
     
+    debug "Ermittle Backup-Verzeichnis" "CLI" "get_backup_dir"
+    
     # Prüfen, ob BACKUP_DIR bereits gesetzt ist (z.B. vom install.sh)
     if [ -n "$BACKUP_DIR" ] && [ -d "$BACKUP_DIR" ]; then
+        debug "Verwende bereits definiertes BACKUP_DIR: $BACKUP_DIR" "CLI" "get_backup_dir"
         create_directory "$BACKUP_DIR" || true
         echo "$BACKUP_DIR"
         return 0
     fi
     
     # Verwende die in dieser Datei definierten Pfade
+    debug "Prüfe Standard- und Fallback-Pfade für Backup-Verzeichnis" "CLI" "get_backup_dir"
     dir=$(get_folder_path "$DEFAULT_BACKUP_DIR" "$FALLBACK_BACKUP_DIR" 1)
     if [ -n "$dir" ]; then
+        debug "Verwende Pfad für Backup-Verzeichnis: $dir" "CLI" "get_backup_dir"
         echo "$dir"
         return 0
     fi
@@ -235,6 +256,7 @@ get_backup_dir() {
     # Als absoluten Notfall ein Unterverzeichnis des Installationsverzeichnisses verwenden
     local install_dir
     install_dir=$(get_install_dir)
+    debug "Alle Pfade für Backup-Verzeichnis fehlgeschlagen, verwende $install_dir/backup" "CLI" "get_backup_dir"
     echo "$install_dir/backup"
     return 0
 }
@@ -252,8 +274,11 @@ get_backup_dir() {
 get_log_dir() {
     local logdir
     
+    debug "Ermittle Log-Verzeichnis" "CLI" "get_log_dir"
+    
     # Prüfen, ob LOG_DIR bereits gesetzt ist (z.B. vom install.sh)
     if [ -n "$LOG_DIR" ] && [ -d "$LOG_DIR" ]; then
+        debug "Verwende bereits definiertes LOG_DIR: $LOG_DIR" "CLI" "get_log_dir"
         create_directory "$LOG_DIR" || true
         echo "$LOG_DIR"
         return 0
@@ -261,26 +286,51 @@ get_log_dir() {
     
     # Exakt die gleiche Logik wie in get_log_path aus manage_logging.sh
     logdir="$DEFAULT_LOG_DIR"
+    debug "Prüfe Standard-Logverzeichnis: $logdir" "CLI" "get_log_dir"
     if [ -d "$logdir" ]; then
         # Symlink nach /var/log/fotobox anlegen, falls root und möglich
         if [ "$(id -u)" = "0" ] && [ -w "/var/log" ]; then
+            debug "Erstelle Symlink in /var/log/fotobox" "CLI" "get_log_dir"
             ln -sf "$logdir" /var/log/fotobox
         fi
         create_directory "$logdir" || true
+        debug "Verwende Standard-Logverzeichnis: $logdir" "CLI" "get_log_dir"
         echo "$logdir"
         return 0
     fi
     
     # Fallback-Kette wie in get_log_path
+    debug "Standard-Logverzeichnis nicht verfügbar, prüfe Fallback-Optionen" "CLI" "get_log_dir"
     if [ -w "/var/log" ]; then
         logdir="$FALLBACK_LOG_DIR"
+        debug "Verwende Fallback 1: $logdir" "CLI" "get_log_dir"
     elif [ -w "/tmp" ]; then
         logdir="$FALLBACK_LOG_DIR_2"
+        debug "Verwende Fallback 2: $logdir" "CLI" "get_log_dir"
     else
         logdir="$FALLBACK_LOG_DIR_3"
+        debug "Verwende Fallback 3: $logdir" "CLI" "get_log_dir"
     fi
     
     create_directory "$logdir" || true
+    
+    # Teste Schreibrecht für das Logverzeichnis
+    if ! touch "$logdir/test_log.tmp" 2>/dev/null; then
+        echo "Fehler: Keine Schreibrechte im Logverzeichnis $logdir" >&2
+        # Versuche Fallback zu /tmp
+        if [ -w "/tmp" ] && [ "$logdir" != "$FALLBACK_LOG_DIR_2" ]; then
+            logdir="$FALLBACK_LOG_DIR_2"
+            create_directory "$logdir" || true
+            if ! touch "$logdir/test_log.tmp" 2>/dev/null; then
+                echo "Fehler: Auch Fallback-Logverzeichnis $logdir nicht schreibbar" >&2
+                return 1
+            fi
+        else
+            return 1
+        fi
+    fi
+    rm -f "$logdir/test_log.tmp" 2>/dev/null
+    
     echo "$logdir"
     return 0
 }
@@ -295,16 +345,21 @@ get_log_dir() {
 get_frontend_dir() {
     local dir
     
+    debug "Ermittle Frontend-Verzeichnis" "CLI" "get_frontend_dir"
+    
     # Prüfen, ob FRONTEND_DIR bereits gesetzt ist
     if [ -n "$FRONTEND_DIR" ] && [ -d "$FRONTEND_DIR" ]; then
+        debug "Verwende bereits definiertes FRONTEND_DIR: $FRONTEND_DIR" "CLI" "get_frontend_dir"
         create_directory "$FRONTEND_DIR" || true
         echo "$FRONTEND_DIR"
         return 0
     fi
     
     # Verwende die in dieser Datei definierten Pfade
+    debug "Prüfe Standard- und Fallback-Pfade für Frontend-Verzeichnis" "CLI" "get_frontend_dir"
     dir=$(get_folder_path "$DEFAULT_FRONTEND_DIR" "$FALLBACK_FRONTEND_DIR" 1)
     if [ -n "$dir" ]; then
+        debug "Verwende Pfad für Frontend-Verzeichnis: $dir" "CLI" "get_frontend_dir"
         echo "$dir"
         return 0
     fi
@@ -312,6 +367,7 @@ get_frontend_dir() {
     # Als absoluten Notfall ein Unterverzeichnis des Installationsverzeichnisses verwenden
     local install_dir
     install_dir=$(get_install_dir)
+    debug "Alle Pfade für Frontend-Verzeichnis fehlgeschlagen, verwende $install_dir/frontend" "CLI" "get_frontend_dir"
     echo "$install_dir/frontend"
     return 0
 }
@@ -326,16 +382,21 @@ get_frontend_dir() {
 get_config_dir() {
     local dir
     
+    debug "Ermittle Konfigurations-Verzeichnis" "CLI" "get_config_dir"
+    
     # Prüfen, ob CONFIG_DIR bereits gesetzt ist
     if [ -n "$CONFIG_DIR" ] && [ -d "$CONFIG_DIR" ]; then
+        debug "Verwende bereits definiertes CONFIG_DIR: $CONFIG_DIR" "CLI" "get_config_dir"
         create_directory "$CONFIG_DIR" || true
         echo "$CONFIG_DIR"
         return 0
     fi
     
     # Verwende die in dieser Datei definierten Pfade
+    debug "Prüfe Standard- und Fallback-Pfade für Konfigurations-Verzeichnis" "CLI" "get_config_dir"
     dir=$(get_folder_path "$DEFAULT_CONFIG_DIR" "$FALLBACK_CONFIG_DIR" 1)
     if [ -n "$dir" ]; then
+        debug "Verwende Pfad für Konfigurations-Verzeichnis: $dir" "CLI" "get_config_dir"
         echo "$dir"
         return 0
     fi
@@ -343,6 +404,7 @@ get_config_dir() {
     # Als absoluten Notfall ein Unterverzeichnis des Installationsverzeichnisses verwenden
     local install_dir
     install_dir=$(get_install_dir)
+    debug "Alle Pfade für Konfigurations-Verzeichnis fehlgeschlagen, verwende $install_dir/conf" "CLI" "get_config_dir"
     echo "$install_dir/conf"
     return 0
 }
@@ -355,11 +417,15 @@ get_config_dir() {
 # Rückgabe: Pfad zum Fotos-Verzeichnis oder leerer String bei Fehler
 # ------------------------------------------------------------------------------
 get_photos_dir() {
+    debug "Ermittle Fotos-Verzeichnis" "CLI" "get_photos_dir"
+    
     local frontend_dir
     frontend_dir=$(get_frontend_dir)
     
     local photos_dir="$frontend_dir/photos"
+    debug "Prüfe Standard-Fotos-Verzeichnis: $photos_dir" "CLI" "get_photos_dir"
     if create_directory "$photos_dir"; then
+        debug "Verwende Standard-Fotos-Verzeichnis: $photos_dir" "CLI" "get_photos_dir"
         echo "$photos_dir"
         return 0
     fi
@@ -367,6 +433,7 @@ get_photos_dir() {
     # Fallback zum Datenverzeichnis
     local data_dir
     data_dir=$(get_data_dir)
+    debug "Standard-Fotos-Verzeichnis nicht verfügbar, verwende Fallback: $data_dir/photos" "CLI" "get_photos_dir"
     echo "$data_dir/photos"
     return 0
 }
@@ -380,24 +447,31 @@ get_photos_dir() {
 # ------------------------------------------------------------------------------
 get_photos_originals_dir() {
     local event_name="$1"
+    debug "Ermittle Original-Fotos-Verzeichnis" "CLI" "get_photos_originals_dir"
+    
     local photos_dir
     photos_dir=$(get_photos_dir)
     local originals_dir="$photos_dir/originals"
     
+    debug "Prüfe Originals-Verzeichnis: $originals_dir" "CLI" "get_photos_originals_dir"
     if create_directory "$originals_dir"; then
         if [ -n "$event_name" ]; then
             local event_dir="$originals_dir/$event_name"
+            debug "Event-Name angegeben, prüfe Verzeichnis: $event_dir" "CLI" "get_photos_originals_dir"
             if create_directory "$event_dir"; then
+                debug "Verwende Event-spezifisches Original-Fotos-Verzeichnis: $event_dir" "CLI" "get_photos_originals_dir"
                 echo "$event_dir"
                 return 0
             fi
         else
+            debug "Verwende Standard Original-Fotos-Verzeichnis: $originals_dir" "CLI" "get_photos_originals_dir"
             echo "$originals_dir"
             return 0
         fi
     fi
     
     # Fallback, wenn Event-Verzeichnis nicht erstellt werden konnte
+    debug "Originals-Verzeichnis nicht verfügbar, verwende Fallback: $photos_dir" "CLI" "get_photos_originals_dir"
     echo "$photos_dir"
     return 0
 }
@@ -411,36 +485,69 @@ get_photos_originals_dir() {
 # ------------------------------------------------------------------------------
 get_photos_gallery_dir() {
     local event_name="$1"
+    debug "Ermittle Galerie-Verzeichnis" "CLI" "get_photos_gallery_dir"
+    
     local photos_dir
     photos_dir=$(get_photos_dir)
     local gallery_dir="$photos_dir/gallery"
     
+    debug "Prüfe Galerie-Verzeichnis: $gallery_dir" "CLI" "get_photos_gallery_dir"
     if create_directory "$gallery_dir"; then
         if [ -n "$event_name" ]; then
             local event_dir="$gallery_dir/$event_name"
+            debug "Event-Name angegeben, prüfe Verzeichnis: $event_dir" "CLI" "get_photos_gallery_dir"
             if create_directory "$event_dir"; then
+                debug "Verwende Event-spezifisches Galerie-Verzeichnis: $event_dir" "CLI" "get_photos_gallery_dir"
                 echo "$event_dir"
                 return 0
             fi
         else
+            debug "Verwende Standard Galerie-Verzeichnis: $gallery_dir" "CLI" "get_photos_gallery_dir"
             echo "$gallery_dir"
             return 0
         fi
     fi
     
     # Fallback, wenn Event-Verzeichnis nicht erstellt werden konnte
+    debug "Galerie-Verzeichnis nicht verfügbar, verwende Fallback: $photos_dir" "CLI" "get_photos_gallery_dir"
     echo "$photos_dir"
     return 0
 }
 
-# ------------------------------------------------------------------------------
-# ensure_folder_structure
-# ------------------------------------------------------------------------------
-# Funktion: Stellt sicher, dass die gesamte Ordnerstruktur existiert
-# Parameter: keine
-# Rückgabe: 0 bei Erfolg, 1 bei Fehler
-# ------------------------------------------------------------------------------
+set_script_permissions() {
+    # -----------------------------------------------------------------------
+    # set_script_permissions
+    # -----------------------------------------------------------------------
+    # Funktion: Setzt Ausführbarkeitsrechte für alle Skripte im BASH_DIR
+    # Parameter: keine
+    # Rückgabe: 0 = OK, 1 = Verzeichnis existiert nicht
+    # -----------------------------------------------------------------------
+    local bash_dir="$DEFAULT_BASH_DIR"
+    
+    if [ -n "$BASH_DIR" ]; then
+        bash_dir="$BASH_DIR"
+    fi
+    
+    if [ ! -d "$bash_dir" ]; then
+        debug "BASH_DIR $bash_dir existiert nicht" "CLI" "set_script_permissions"
+        return 1
+    fi
+    
+    debug "Setze Ausführbarkeitsrechte für $bash_dir/*.sh" "CLI" "set_script_permissions"
+    chmod +x "$bash_dir"/*.sh 2>/dev/null || true
+    
+    debug "Ausführbarkeitsrechte erfolgreich gesetzt" "CLI" "set_script_permissions"
+    return 0
+}
+
 ensure_folder_structure() {
+    # -----------------------------------------------------------------------
+    # ensure_folder_structure
+    # -----------------------------------------------------------------------
+    # Funktion: Stellt sicher, dass die gesamte Ordnerstruktur existiert
+    # Parameter: keine
+    # Rückgabe: 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
     debug "Stelle sicher, dass alle notwendigen Verzeichnisse existieren" "CLI" "ensure_folder_structure"
     
     # Hauptverzeichnisse erstellen
@@ -463,6 +570,9 @@ ensure_folder_structure() {
     get_photos_dir >/dev/null || return 1
     get_photos_originals_dir >/dev/null || return 1
     get_photos_gallery_dir >/dev/null || return 1
+    
+    # Setze Ausführbarkeitsrechte für Skripte
+    set_script_permissions || true
     
     debug "Ordnerstruktur erfolgreich erstellt" "CLI" "ensure_folder_structure"
     return 0

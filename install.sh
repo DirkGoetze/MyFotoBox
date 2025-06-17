@@ -41,8 +41,6 @@ DATA_DIR="$INSTALL_DIR/data"
 # ---------------------------------------------------------------------------
 # Einstellungen: Debug-Modus
 # ---------------------------------------------------------------------------
-# Legacy-Debug-Modus (für Kompatibilität mit älterem Code)
-DEBUG_MOD=0
 # Neue Debug-Modi für zentralisiertes Debug-System
 DEBUG_MOD_LOCAL=0
 DEBUG_MOD_GLOBAL=0
@@ -78,7 +76,6 @@ parse_args() {
                 log "Unattended-Modus aktiviert"
                 ;;
             --debug|-d)
-                DEBUG_MOD=1
                 DEBUG_MOD_LOCAL=1
                 log "Debug-Modus aktiviert"
                 ;;
@@ -100,8 +97,8 @@ parse_args() {
     done
     
     export UNATTENDED
-    export DEBUG_MOD
     export DEBUG_MOD_LOCAL
+    export DEBUG_MOD_GLOBAL
     export CONFIGURE_FIREWALL
 }
 
@@ -176,143 +173,25 @@ set_fallback_security_settings() {
         return 1
     fi
     
-    # --- 2. Externe Skript-Ressourcen einbinden und prüfen
-    # Prüfen, ob manage_folders.sh existiert und einbinden
-    if [ -f "$BASH_DIR/manage_folders.sh" ] && [ -x "$BASH_DIR/manage_folders.sh" ]; then
-        source "$BASH_DIR/manage_folders.sh"
-    else
-        echo -e "\033[1;31mFehler: Das Skript '$BASH_DIR/manage_folders.sh' konnte nicht gefunden werden.\033[0m"
-        return 1
-    fi
-
-    # Prüfen, ob manage_logging.sh existiert und einbinden
-    if [ -f "$BASH_DIR/manage_logging.sh" ] && [ -x "$BASH_DIR/manage_logging.sh" ]; then
-        source "$BASH_DIR/manage_logging.sh"
-    else
-        echo -e "\033[1;31mFehler: Das Skript '$BASH_DIR/manage_logging.sh' konnte nicht gefunden werden.\033[0m"
+    # --- 2. Prüfen, ob die Kernressourcen geladen wurden
+    if [ "$LIB_CORE_LOADED" != "1" ]; then
+        echo -e "\033[1;31mFehler: Die zentrale Bibliothek (lib_core.sh) wurde nicht geladen.\033[0m"
         return 1
     fi
     
-    # Prüfen, ob manage_nginx.sh existiert und und einbinden
-    if [ -f "$BASH_DIR/manage_nginx.sh" ] && [ -x "$BASH_DIR/manage_nginx.sh" ]; then
-        source "$BASH_DIR/manage_nginx.sh"
-    else
-        echo -e "\033[1;31mFehler: Das Skript '$BASH_DIR/manage_nginx.sh' konnte nicht gefunden werden.\033[0m"
+    # --- 3. Prüfen, ob alle benötigten Ressourcen verfügbar sind
+    # Diese Prüfung ersetzt die direkten Einbindungen der Skripte,
+    # da lib_core.sh dies bereits über load_core_resources erledigt hat
+    if [ "$MANAGE_FOLDERS_LOADED" != "1" ] || [ "$MANAGE_LOGGING_LOADED" != "1" ] || [ "$MANAGE_NGINX_LOADED" != "1" ]; then
+        echo -e "\033[1;31mFehler: Nicht alle benötigten Skripte konnten geladen werden.\033[0m"
+        [ "$MANAGE_FOLDERS_LOADED" != "1" ] && echo -e "\033[1;31m  - manage_folders.sh fehlt oder ist fehlerhaft\033[0m"
+        [ "$MANAGE_LOGGING_LOADED" != "1" ] && echo -e "\033[1;31m  - manage_logging.sh fehlt oder ist fehlerhaft\033[0m"
+        [ "$MANAGE_NGINX_LOADED" != "1" ] && echo -e "\033[1;31m  - manage_nginx.sh fehlt oder ist fehlerhaft\033[0m"
         return 1
     fi
-
-    # --- 3. Log-Umgebung vorbereiten
     
-    # Log-Verzeichnis prüfen/erstellen
-    if [ ! -d "$LOG_DIR" ]; then
-        mkdir -p "$LOG_DIR" 2>/dev/null
-        if [ ! -d "$LOG_DIR" ]; then
-            # Fallback 1: Temporäres Verzeichnis
-            if [ -w "/tmp" ]; then
-                echo "Standard-Logverzeichnis nicht verfügbar, nutze /tmp/fotobox_logs"
-                LOG_DIR="/tmp/fotobox_logs"
-                mkdir -p "$LOG_DIR" 2>/dev/null
-            # Fallback 2: Aktuelles Verzeichnis
-            elif [ -w "." ]; then
-                echo "Standard-Logverzeichnis nicht verfügbar, nutze ./fotobox_logs"
-                LOG_DIR="./fotobox_logs"
-                mkdir -p "$LOG_DIR" 2>/dev/null
-            else
-                echo -e "\033[1;31mFehler: Konnte kein schreibbares Logverzeichnis finden oder erstellen.\033[0m"
-                return 1
-            fi
-        fi
-    fi
-    
-    # Teste Schreibrecht für das Logverzeichnis
-    if ! touch "$LOG_DIR/test_log.tmp" 2>/dev/null; then
-        echo -e "\033[1;31mFehler: Keine Schreibrechte im Logverzeichnis $LOG_DIR\033[0m"
-        return 1
-    fi
-    rm -f "$LOG_DIR/test_log.tmp" 2>/dev/null
-    
-    # --- 4. Log-Funktionen definieren (falls noch nicht vorhanden)
-    
-    # - log: Basis-Logger für alle Ausgaben in Datei
-    type log &>/dev/null || log() {
-        local LOG_FILE="$LOG_DIR/$(date '+%Y-%m-%d')_fotobox.log"
-        
-        # Wenn manage_logging.sh geladen ist, verwende get_log_file
-        if type get_log_file &>/dev/null; then
-            LOG_FILE=$(get_log_file)
-        fi
-        
-        if [ -z "$1" ]; then
-            # Bei leerem Parameter: Rotation simulieren
-            touch "$LOG_FILE" 2>/dev/null
-            return
-        fi
-        echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG_FILE"
-    }
-
-    # - print_step: Schrittbezeichnung fett/gelb, am Zeilenanfang
-    type print_step &>/dev/null || print_step() {
-        echo -e "\033[1;33m$*\033[0m"
-        log "STEP: $*"
-    }
-
-    # - print_info: Information neutral, eingerückt, ohne Farbe/Tag
-    type print_info &>/dev/null || print_info() {
-        echo -e "  $*"
-        log "INFO: $*"
-    }
-
-    # - print_success: Erfolg grün, eingerückt, mit Pfeil und [OK]-Tag
-    type print_success &>/dev/null || print_success() {
-        echo -e "\033[1;32m  → [OK]\033[0m $*"
-        log "SUCCESS: $*"
-    }
-
-    # - print_warning: Warnung gelb, eingerückt, mit Pfeil und Tag
-    type print_warning &>/dev/null || print_warning() {
-        echo -e "\033[1;33m  → [WARN]\033[0m $*"
-        log "WARNING: $*"
-    }
-    
-    # - print_error: Fehler rot, eingerückt, mit Pfeil und Tag
-    type print_error &>/dev/null || print_error() {
-        echo -e "\033[1;31m  → [ERROR]\033[0m $*\033[0m" >&2
-        log "ERROR: $*"
-    }
-
-    # - print_prompt: Prompt blau, Leerzeile davor und danach (nur wenn nicht unattended)
-    type print_prompt &>/dev/null || print_prompt() {
-        if [ "$UNATTENDED" -eq 0 ]; then
-            echo -e "\n\033[1;34m$*\033[0m\n"
-        fi
-        log "PROMPT: $*"
-    }
-
     return 0
 }
-
-debug_print() {
-    # -----------------------------------------------------------------------
-    # debug_print
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt Debug-Ausgaben aus, wenn Debug-Modus aktiviert ist
-    # Parameter: $* = Debug-Nachricht
-    # Extras...: Einheitliches Format, Policy-konform
-    if [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ] || [ "$DEBUG_MOD" -eq 1 ]; then
-        # Erst nach der Definition der print-Funktionen die log-Funktion verwenden
-        if type log &>/dev/null; then
-            echo -e "\033[1;35m  → [DEBUG]\033[0m $*"
-            log "DEBUG: $*"
-        else
-            # Vor der Definition der log-Funktion nur Echo-Ausgabe
-            echo -e "\033[1;35m  → [DEBUG]\033[0m $*"
-        fi
-    fi
-}
-
-# Die Funktion ensure_log_directory wurde entfernt.
-# Die Funktionalität wurde in set_fallback_security_settings integriert und
-# nutzt nun die Funktionen in manage_logging.sh, wenn verfügbar.
 
 show_spinner() {
     # -----------------------------------------------------------------------
@@ -346,20 +225,20 @@ make_dir() {
 
     if [ -z "$dir" ]; then
         log "make_dir: Kein Verzeichnis angegeben!"
-        debug_print "make_dir: Kein Verzeichnis angegeben!"
+        debug "Kein Verzeichnis angegeben!" "CLI" "make_dir"
         return 1
     fi
     if [ ! -d "$dir" ]; then
-        debug_print "make_dir: $dir existiert nicht, versuche mkdir -p"
+        debug "$dir existiert nicht, versuche mkdir -p" "CLI" "make_dir"
         mkdir -p "$dir"
         if [ ! -d "$dir" ]; then
             log "make_dir: Fehler beim Anlegen von $dir!"
-            debug_print "make_dir: Fehler beim Anlegen von $dir!"
+            debug "Fehler beim Anlegen von $dir!" "CLI" "make_dir"
             return 2
         fi
         log "make_dir: Verzeichnis $dir wurde neu angelegt."
     else
-        debug_print "make_dir: $dir existiert bereits."
+        debug "$dir existiert bereits." "CLI" "make_dir"
     fi
     # Rechte prüfen und ggf. setzen
     local owner_group
@@ -367,7 +246,7 @@ make_dir() {
     if [ "$owner_group" != "$user:$group" ]; then
         chown "$user:$group" "$dir" || {
             log "make_dir: Fehler beim Setzen von chown $user:$group für $dir!"
-            debug_print "make_dir: Fehler beim Setzen von chown $user:$group für $dir!"
+            debug "Fehler beim Setzen von chown $user:$group für $dir!" "CLI" "make_dir"
             return 2
         }
         log "make_dir: chown $user:$group für $dir gesetzt."
@@ -377,12 +256,12 @@ make_dir() {
     if [ "$perms" != "$mode" ]; then
         chmod "$mode" "$dir" || {
             log "make_dir: Fehler beim Setzen von chmod $mode für $dir!"
-            debug_print "make_dir: Fehler beim Setzen von chmod $mode für $dir!"
+            debug "Fehler beim Setzen von chmod $mode für $dir!" "CLI" "make_dir"
             return 2
         }
         log "make_dir: chmod $mode für $dir gesetzt."
     fi
-    debug_print "make_dir: $dir ist vorhanden, Rechte und Eigentümer korrekt."
+    debug "$dir ist vorhanden, Rechte und Eigentümer korrekt." "CLI" "make_dir"
     return 0
 }
 
@@ -398,11 +277,11 @@ install_package() {
     local pkg="$1"
     local version="$2"
 
-    debug_print "install_package: Prüfe $pkg $version"
+    debug "Prüfe $pkg $version" "CLI" "install_package"
     if [ -n "$version" ]; then
         local installed_version
         installed_version=$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null)
-        debug_print "install_package: installierte Version von $pkg: $installed_version"
+        debug "installierte Version von $pkg: $installed_version" "CLI" "install_package"
         if [ "$installed_version" = "$version" ]; then
             return 0
         elif [ -n "$installed_version" ]; then
@@ -418,7 +297,7 @@ install_package() {
     if [ -n "$version" ]; then
         local new_version
         new_version=$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null)
-        debug_print "install_package: neue Version von $pkg: $new_version"
+        debug "neue Version von $pkg: $new_version" "CLI" "install_package"
         if [ "$new_version" = "$version" ]; then
             return 0
         else
@@ -444,7 +323,7 @@ install_package_group() {
     local group_name="$1[@]"
     local group=("${!group_name}")
 
-    debug_print "install_package_group: Starte für Gruppe $group_name"
+    debug "Starte für Gruppe $group_name" "CLI" "install_package_group"
     for entry in "${group[@]}"; do
         local pkg
         local version
@@ -455,10 +334,10 @@ install_package_group() {
             pkg="$entry"
             version=""
         fi
-        debug_print "install_package_group: Installiere $pkg $version"
+        debug "Installiere $pkg $version" "CLI" "install_package_group"
         install_package "$pkg" "$version"
         result=$?
-        debug_print "install_package_group: Ergebnis für $pkg: $result"
+        debug "Ergebnis für $pkg: $result" "CLI" "install_package_group"
         if [ $result -eq 0 ]; then
             print_success "$pkg${version:+ ($version)} ist bereits installiert."
         elif [ $result -eq 2 ]; then
@@ -548,7 +427,7 @@ set_structure() {
     # Funktion: Erstellt alle benötigten Verzeichnisse und prüft, ob die Projektstruktur vorhanden ist.
     #           Verwaltet die vollständige Ordnerstruktur über manage_folders.sh
     set -e
-    debug_print "set_structure: Starte mit INSTALL_DIR=$INSTALL_DIR"
+    debug "Starte mit INSTALL_DIR=$INSTALL_DIR" "CLI" "set_structure"
     
     # Prüfe, ob das Backend-Verzeichnis und wichtige Dateien existieren
     if [ ! -d "$INSTALL_DIR/backend" ] || [ ! -d "$INSTALL_DIR/backend/scripts" ] || [ ! -f "$INSTALL_DIR/conf/requirements_python.inf" ]; then
@@ -561,7 +440,7 @@ set_structure() {
     
     # Versuche, die Ordnerstruktur über manage_folders.sh zu erstellen
     if [ -f "$INSTALL_DIR/backend/scripts/manage_folders.sh" ]; then
-        debug_print "set_structure: Verwende manage_folders.sh zur Ordnererstellung"
+        debug "Verwende manage_folders.sh zur Ordnererstellung" "CLI" "set_structure"
         
         # Setze globale Variablen für manage_folders.sh
         export INSTALL_DIR="$INSTALL_DIR"
@@ -573,91 +452,31 @@ set_structure() {
         
         # Führe manage_folders.sh aus, um die Ordnerstruktur zu erstellen
         if "$INSTALL_DIR/backend/scripts/manage_folders.sh" ensure_structure; then
-            debug_print "set_structure: Ordnerstruktur erfolgreich über manage_folders.sh erstellt"
+            debug "Ordnerstruktur erfolgreich über manage_folders.sh erstellt" "CLI" "set_structure"
         else
-            debug_print "set_structure: Fehler bei manage_folders.sh, verwende Fallback-Methode"
-            # Fallback zur alten Methode
-            use_fallback_structure
-            if [ $? -ne 0 ]; then
-                return $?
-            fi
+            print_error "Fehler bei der Erstellung der Ordnerstruktur über manage_folders.sh."
+            debug "Fehler bei manage_folders.sh" "CLI" "set_structure"
+            return 1
         fi
     else
-        debug_print "set_structure: manage_folders.sh nicht gefunden, verwende Fallback-Methode"
-        # Fallback zur alten Methode
-        use_fallback_structure
-        if [ $? -ne 0 ]; then
-            return $?
-        fi
+        print_error "manage_folders.sh nicht gefunden. Die Projektstruktur scheint unvollständig zu sein."
+        debug "manage_folders.sh nicht gefunden" "CLI" "set_structure"
+        return 1
     fi
     
     # Policy: Nach jedem schreibenden Schritt im Projektverzeichnis Rechte prüfen und ggf. korrigieren.
     # Die Rechtevergabe für einzelne Verzeichnisse erfolgt bereits in make_dir oder manage_folders.sh.
     # Das folgende chown -R dient als zusätzlicher Schutz, um Policy-Konformität sicherzustellen.
     chown -R fotobox:fotobox "$INSTALL_DIR" || {
-        debug_print "set_structure: chown auf $INSTALL_DIR fehlgeschlagen"
+        debug "chown auf $INSTALL_DIR fehlgeschlagen" "CLI" "set_structure"
         return 7
     }
-    debug_print "set_structure: erfolgreich abgeschlossen"
+    debug "erfolgreich abgeschlossen" "CLI" "set_structure"
     return 0
 }
 
-use_fallback_structure() {
-    # -----------------------------------------------------------------------
-    # use_fallback_structure
-    # -----------------------------------------------------------------------
-    # Funktion: Fallback-Methode zur Erstellung der Ordnerstruktur,
-    #           wenn manage_folders.sh nicht verfügbar ist
-    
-    debug_print "use_fallback_structure: Erstelle grundlegende Verzeichnisstruktur"
-    
-    # Erstelle Basisverzeichnisse
-    if ! make_dir "$INSTALL_DIR"; then
-        debug_print "use_fallback_structure: INSTALL_DIR $INSTALL_DIR konnte nicht angelegt werden"
-        return 1
-    fi
-    
-    if ! make_dir "$BACKUP_DIR"; then
-        debug_print "use_fallback_structure: BACKUP_DIR $BACKUP_DIR konnte nicht angelegt werden"
-        return 4
-    fi
-    
-    if ! make_dir "$DATA_DIR"; then
-        debug_print "use_fallback_structure: DATA_DIR $DATA_DIR konnte nicht angelegt werden"
-        return 6
-    fi
-    
-    if ! make_dir "$LOG_DIR"; then
-        debug_print "use_fallback_structure: LOG_DIR $LOG_DIR konnte nicht angelegt werden"
-        return 8
-    fi
-    
-    # Erstelle Frontend-Unterverzeichnisse
-    if ! make_dir "$FRONTEND_DIR"; then
-        debug_print "use_fallback_structure: FRONTEND_DIR $FRONTEND_DIR konnte nicht angelegt werden"
-        return 9
-    fi
-    
-    # Erstelle die vormals durch .folder.info gesicherten Verzeichnisse
-    make_dir "$FRONTEND_DIR/css" || true
-    make_dir "$FRONTEND_DIR/js" || true
-    make_dir "$FRONTEND_DIR/fonts" || true
-    make_dir "$FRONTEND_DIR/picture" || true
-    
-    # Erstelle Fotos-Verzeichnisstruktur
-    make_dir "$FRONTEND_DIR/photos" || true
-    make_dir "$FRONTEND_DIR/photos/originals" || true
-    make_dir "$FRONTEND_DIR/photos/gallery" || true
-    
-    # Setze Ausführbarkeitsrechte für Skripte
-    if [ -d "$BASH_DIR" ]; then
-        debug_print "use_fallback_structure: Setze Ausführbarkeitsrechte für $BASH_DIR/*.sh"
-        chmod +x "$BASH_DIR"/*.sh || true
-    fi
-    
-    debug_print "use_fallback_structure: Grundlegende Verzeichnisstruktur erfolgreich erstellt"
-    return 0
-}
+# Die use_fallback_structure() Funktion wurde entfernt, da ihre Funktionalität jetzt
+# vollständig in manage_folders.sh implementiert ist.
 
 install_system_requirements() {
     # -----------------------------------------------------------------------
@@ -1002,10 +821,10 @@ dlg_nginx_installation() {
     # ------------------------------------------------------------------------------
     print_step "[7/10] NGINX-Installation und Konfiguration ..."
 
-    debug_print "dlg_nginx_installation: Starte NGINX-Dialog, UNATTENDED=$UNATTENDED, BASH_DIR=$BASH_DIR"
+    debug "Starte NGINX-Dialog, UNATTENDED=$UNATTENDED, BASH_DIR=$BASH_DIR" "CLI" "dlg_nginx_installation"
     # Verwenden der globalen Variable zur Prüfung, ob manage_nginx.sh existiert
     if [ "$MANAGE_NGINX_AVAILABLE" -ne 1 ]; then
-        debug_print "dlg_nginx_installation: manage_nginx.sh ist nicht verfügbar (MANAGE_NGINX_AVAILABLE=$MANAGE_NGINX_AVAILABLE)"
+        debug "manage_nginx.sh ist nicht verfügbar (MANAGE_NGINX_AVAILABLE=$MANAGE_NGINX_AVAILABLE)" "CLI" "dlg_nginx_installation"
         print_error "manage_nginx.sh nicht gefunden! Die Projektstruktur wurde vermutlich noch nicht geklont."
         exit 1
     fi
@@ -1019,30 +838,30 @@ dlg_nginx_installation() {
     fi
     
     if [ "$UNATTENDED" -eq 1 ]; then
-        debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT --json install"
+        debug "Starte $NGINX_SCRIPT --json install" "CLI" "dlg_nginx_installation"
         install_result=$(bash "$NGINX_SCRIPT" --json install)
         install_rc=$?
     else
-        debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT install"
+        debug "Starte $NGINX_SCRIPT install" "CLI" "dlg_nginx_installation"
         install_result=$(bash "$NGINX_SCRIPT" install)
         install_rc=$?
     fi
-    debug_print "dlg_nginx_installation: install_rc=$install_rc, install_result=$install_result"
+    debug "install_rc=$install_rc, install_result=$install_result" "CLI" "dlg_nginx_installation"
     if [ $install_rc -ne 0 ]; then
         print_error "NGINX-Installation fehlgeschlagen: $install_result"
         exit 1
     fi
     # Betriebsmodus abfragen (default/multisite)
     if [ "$UNATTENDED" -eq 1 ]; then
-        debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT --json activ"
+        debug "Starte $NGINX_SCRIPT --json activ" "CLI" "dlg_nginx_installation"
         activ_result=$(bash "$NGINX_SCRIPT" --json activ)
         activ_rc=$?
     else
-        debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT activ"
+        debug "Starte $NGINX_SCRIPT activ" "CLI" "dlg_nginx_installation"
         activ_result=$(bash "$NGINX_SCRIPT" activ)
         activ_rc=$?
     fi
-    debug_print "dlg_nginx_installation: activ_rc=$activ_rc, activ_result=$activ_result"
+    debug "activ_rc=$activ_rc, activ_result=$activ_result" "CLI" "dlg_nginx_installation"
     if [ $activ_rc -eq 2 ]; then
         print_error "Konnte NGINX-Betriebsmodus nicht eindeutig ermitteln. Bitte prüfen Sie die Konfiguration."
         exit 1
@@ -1056,7 +875,7 @@ dlg_nginx_installation() {
             print_prompt "NGINX läuft nur im Default-Modus. Fotobox in Default-Konfiguration integrieren? [J/n]"
             read -r antwort
         fi
-        debug_print "dlg_nginx_installation: Antwort auf Default-Integration: $antwort"
+        debug "Antwort auf Default-Integration: $antwort" "CLI" "dlg_nginx_installation"
         if [[ "$antwort" =~ ^([nN])$ ]]; then
             if [ "$UNATTENDED" -eq 1 ]; then
                 antwort2="j"
@@ -1065,7 +884,7 @@ dlg_nginx_installation() {
                 print_prompt "Stattdessen eigene Fotobox-Konfiguration anlegen? [J/n]"
                 read -r antwort2
             fi
-            debug_print "dlg_nginx_installation: Antwort auf eigene Konfiguration: $antwort2"
+            debug "Antwort auf eigene Konfiguration: $antwort2" "CLI" "dlg_nginx_installation"
             if [[ "$antwort2" =~ ^([nN])$ ]]; then
                 print_error "Abbruch: Keine NGINX-Integration gewählt."
                 exit 1
@@ -1074,14 +893,14 @@ dlg_nginx_installation() {
             port_rc=1
             while [ $port_rc -ne 0 ]; do
                 if [ "$UNATTENDED" -eq 1 ]; then
-                    debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT --json setport 80 j (unattended)"
+                    debug "Starte $NGINX_SCRIPT --json setport 80 j (unattended)" "CLI" "dlg_nginx_installation"
                     port_result=$(bash "$NGINX_SCRIPT" --json setport 80 j)
                     port_rc=$?
                 else
                     print_prompt "Bitte gewünschten Port für die Fotobox-Weboberfläche angeben [Default: 80]:"
                     read -r user_port
                     if [ -z "$user_port" ]; then user_port=80; fi
-                    debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT setport $user_port N (interaktiv)"
+                    debug "Starte $NGINX_SCRIPT setport $user_port N (interaktiv)" "CLI" "dlg_nginx_installation"
                     port_result=$(bash "$NGINX_SCRIPT" setport "$user_port" N)
                     port_rc=$?
                     if [ $port_rc -ne 0 ]; then
@@ -1095,17 +914,17 @@ dlg_nginx_installation() {
                     fi
                 fi
             done
-            debug_print "dlg_nginx_installation: port_rc=$port_rc, port_result=$port_result"
+            debug "port_rc=$port_rc, port_result=$port_result" "CLI" "dlg_nginx_installation"
             if [ "$UNATTENDED" -eq 1 ]; then
-                debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT --json external"
+                debug "Starte $NGINX_SCRIPT --json external" "CLI" "dlg_nginx_installation"
                 ext_result=$(bash "$NGINX_SCRIPT" --json external)
                 ext_rc=$?
             else
-                debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT external"
+                debug "Starte $NGINX_SCRIPT external" "CLI" "dlg_nginx_installation"
                 ext_result=$(bash "$NGINX_SCRIPT" external)
                 ext_rc=$?
             fi
-            debug_print "dlg_nginx_installation: ext_rc=$ext_rc, ext_result=$ext_result"
+            debug "ext_rc=$ext_rc, ext_result=$ext_result" "CLI" "dlg_nginx_installation"
             if [ $ext_rc -eq 0 ]; then
                 print_success "Eigene Fotobox-Konfiguration wurde angelegt und aktiviert."
             else
@@ -1115,15 +934,15 @@ dlg_nginx_installation() {
         else
             # Default-Integration (zentral)
             if [ "$UNATTENDED" -eq 1 ]; then
-                debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT --json internal"
+                debug "Starte $NGINX_SCRIPT --json internal" "CLI" "dlg_nginx_installation"
                 int_result=$(bash "$NGINX_SCRIPT" --json internal)
                 int_rc=$?
             else
-                debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT internal"
+                debug "Starte $NGINX_SCRIPT internal" "CLI" "dlg_nginx_installation"
                 int_result=$(bash "$NGINX_SCRIPT" internal)
                 int_rc=$?
             fi
-            debug_print "dlg_nginx_installation: int_rc=$int_rc, int_result=$int_result"
+            debug "int_rc=$int_rc, int_result=$int_result" "CLI" "dlg_nginx_installation"
             if [ $int_rc -eq 0 ]; then
                 print_success "Fotobox wurde in Default-Konfiguration integriert."
             else
@@ -1139,36 +958,36 @@ dlg_nginx_installation() {
             print_prompt "NGINX betreibt mehrere Sites. Eigene Fotobox-Konfiguration anlegen? [J/n]"
             read -r antwort
         fi
-        debug_print "dlg_nginx_installation: Antwort auf eigene Konfiguration (multisite): $antwort"
+        debug "Antwort auf eigene Konfiguration (multisite): $antwort" "CLI" "dlg_nginx_installation"
         if [[ "$antwort" =~ ^([nN])$ ]]; then
             print_error "Abbruch: Keine NGINX-Integration gewählt."
             exit 1
         fi
         # Portwahl und externe Konfiguration (zentral)
         if [ "$UNATTENDED" -eq 1 ]; then
-            debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT --json setport"
+            debug "Starte $NGINX_SCRIPT --json setport" "CLI" "dlg_nginx_installation"
             port_result=$(bash "$NGINX_SCRIPT" --json setport)
             port_rc=$?
         else
-            debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT setport"
+            debug "Starte $NGINX_SCRIPT setport" "CLI" "dlg_nginx_installation"
             port_result=$(bash "$NGINX_SCRIPT" setport)
             port_rc=$?
         fi
-        debug_print "dlg_nginx_installation: port_rc=$port_rc, port_result=$port_result"
+        debug "port_rc=$port_rc, port_result=$port_result" "CLI" "dlg_nginx_installation"
         if [ $port_rc -ne 0 ]; then
             print_error "Portwahl/Setzen fehlgeschlagen: $port_result"
             exit 1
         fi
         if [ "$UNATTENDED" -eq 1 ]; then
-            debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT --json external"
+            debug "Starte $NGINX_SCRIPT --json external" "CLI" "dlg_nginx_installation"
             ext_result=$(bash "$NGINX_SCRIPT" --json external)
             ext_rc=$?
         else
-            debug_print "dlg_nginx_installation: Starte $NGINX_SCRIPT external"
+            debug "Starte $NGINX_SCRIPT external" "CLI" "dlg_nginx_installation"
             ext_result=$(bash "$NGINX_SCRIPT" external)
             ext_rc=$?
         fi
-        debug_print "dlg_nginx_installation: ext_rc=$ext_rc, ext_result=$ext_result"
+        debug "ext_rc=$ext_rc, ext_result=$ext_result" "CLI" "dlg_nginx_installation"
         if [ $ext_rc -eq 0 ]; then
             print_success "Eigene Fotobox-Konfiguration wurde angelegt und aktiviert."
         else
@@ -1176,7 +995,7 @@ dlg_nginx_installation() {
             exit 1
         fi
     fi
-    debug_print "dlg_nginx_installation: Dialog erfolgreich abgeschlossen"
+    debug "Dialog erfolgreich abgeschlossen" "CLI" "dlg_nginx_installation"
     return 0
 }
 
