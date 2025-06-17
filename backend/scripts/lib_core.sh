@@ -128,22 +128,28 @@ bind_resource() {
     local resource_path="$2"
     local resource_name="$3"
     
+    # Direkte Ausgabe für Debugging-Zwecke (auch ohne Debug-Flag)
+    echo "TRACE: bind_resource für $guard_var_name ($resource_name) gestartet" >&2
+    
     debug_output "bind_resource: Versuche Ressource zu laden - Guard: $guard_var_name, Pfad: $resource_path, Name: $resource_name"
     
     # Prüfen, ob die Ressource bereits geladen ist
     if [ "$(eval echo \$$guard_var_name)" -ne 0 ]; then
+        echo "TRACE: Ressource $resource_name bereits geladen" >&2
         debug_output "bind_resource: Ressource '$resource_name' bereits geladen (Guard: $guard_var_name = $(eval echo \$$guard_var_name))"
         return 0  # Bereits geladen, alles OK
     fi
     
     # Prüfung des Ressourcen-Verzeichnisses
     if [ ! -d "$resource_path" ]; then
+        echo "TRACE: Verzeichnis $resource_path nicht gefunden" >&2
         debug_output "bind_resource: Fehler - Verzeichnis '$resource_path' nicht gefunden"
         echo "Fehler: Verzeichnis '$resource_path' nicht gefunden."
         return 2  # Verzeichnis nicht gefunden
     fi
     
     if [ ! -r "$resource_path" ]; then
+        echo "TRACE: Verzeichnis $resource_path nicht lesbar" >&2
         debug_output "bind_resource: Fehler - Verzeichnis '$resource_path' nicht lesbar"
         echo "Fehler: Verzeichnis '$resource_path' nicht lesbar."
         return 2  # Verzeichnis nicht lesbar
@@ -151,29 +157,35 @@ bind_resource() {
     
     # Pfad zur Ressource zusammensetzen
     local resource_file="$resource_path/$resource_name"
+    echo "TRACE: Versuche Datei zu laden: $resource_file" >&2
     debug_output "bind_resource: Vollständiger Ressourcen-Pfad: $resource_file"
     
     # Prüfen, ob die Ressource existiert und ausführbar ist
     if [ ! -f "$resource_file" ]; then
+        echo "TRACE: Datei $resource_file existiert nicht" >&2
         debug_output "bind_resource: Fehler - Die Datei '$resource_file' existiert nicht"
         echo "Fehler: Die Datei '$resource_file' existiert nicht."
         return 1  # Ressource nicht gefunden
     fi
     
     if [ ! -r "$resource_file" ]; then
+        echo "TRACE: Datei $resource_file ist nicht lesbar" >&2
         debug_output "bind_resource: Fehler - Die Datei '$resource_file' ist nicht lesbar"
         echo "Fehler: Die Datei '$resource_file' ist nicht lesbar."
         return 1  # Ressource nicht lesbar
     fi
     
     # Ressource laden
+    echo "TRACE: Lade Ressource $resource_file" >&2
     debug_output "bind_resource: Lade Ressource '$resource_file'"
     source "$resource_file"
     local source_result=$?
+    echo "TRACE: Laden von $resource_file abgeschlossen mit Status $source_result" >&2
     debug_output "bind_resource: Laden von '$resource_file' abgeschlossen mit Status: $source_result"
     
     # Guard-Variable auf "geladen" setzen (1)
     eval "$guard_var_name=1"
+    echo "TRACE: Guard-Variable $guard_var_name auf 1 gesetzt" >&2
     debug_output "bind_resource: Guard-Variable $guard_var_name auf 1 (geladen) gesetzt"
     
     return 0  # Erfolgreich geladen
@@ -385,9 +397,15 @@ load_core_resources() {
     # Parameter: keine
     # Rückgabe: 0 = OK, 1 = mind. eine Ressource fehlt oder ist nicht nutzbar
     # -----------------------------------------------------------------------
+    echo "TRACE: load_core_resources wird ausgeführt" >&2
     debug_output "load_core_resources: Starte das Laden aller Kernressourcen"
-    local result=$(chk_resources)
+    
+    # Direkt chk_resources aufrufen ohne Zuweisung (könnte Probleme verursachen)
+    echo "TRACE: Rufe chk_resources direkt auf" >&2
+    chk_resources
     local status=$?
+    
+    echo "TRACE: chk_resources abgeschlossen mit Status $status" >&2
     debug_output "load_core_resources: Laden aller Kernressourcen abgeschlossen mit Status: $status"
     return $status
 }
