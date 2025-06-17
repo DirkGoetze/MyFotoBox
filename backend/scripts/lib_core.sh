@@ -142,8 +142,10 @@ bind_resource() {
     
     # Schutz vor rekursiven Aufrufen: Durch rekursive Erkennung
     # Wir verwenden statische Variablen innerhalb von Bash-Funktionen mit declare
-    declare -g "BINDING_${resource_name}_IN_PROGRESS"
-    local binding_in_progress_var="BINDING_${resource_name}_IN_PROGRESS"
+    # Entferne Sonderzeichen aus dem Ressourcennamen für gültige Variablennamen
+    local safe_resource_name="${resource_name//[^a-zA-Z0-9_]/_}"
+    declare -g "BINDING_${safe_resource_name}_IN_PROGRESS"
+    local binding_in_progress_var="BINDING_${safe_resource_name}_IN_PROGRESS"
     
     if [ "${!binding_in_progress_var}" = "1" ]; then
         echo "TRACE: Rekursiver Aufruf für $resource_name erkannt, überspringe" >&2
@@ -491,8 +493,10 @@ load_module() {
         # Überprüfen, ob wir aktuell schon beim Laden sind, um rekursive Aufrufe zu vermeiden
         if [ "${CORE_RESOURCES_LOADING:-0}" -ne 1 ]; then
             # Definiere eine Variable für dieses spezifische Modul-Loading
-            declare -g "LOADING_MODULE_${module_name}"
-            local module_loading_var="LOADING_MODULE_${module_name}"
+            # Entferne Sonderzeichen aus dem Modulnamen für gültige Variablennamen
+            local safe_module_name="${module_name//[^a-zA-Z0-9_]/_}"
+            declare -g "LOADING_MODULE_${safe_module_name}"
+            local module_loading_var="LOADING_MODULE_${safe_module_name}"
             
             # Prüfen, ob dieses spezifische Modul gerade geladen wird
             if [ "${!module_loading_var:-0}" -ne 1 ]; then

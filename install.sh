@@ -37,6 +37,14 @@ if [ -f "$BASH_DIR/lib_core.sh" ]; then
         local result=$?
         CORE_RESOURCES_LOADING=0
         
+        # Überprüfe, ob die Ausgabe-Funktionen verfügbar sind
+        if ! type print_warning &>/dev/null || ! type print_info &>/dev/null; then
+            echo "WARNUNG: Ausgabefunktionen nicht verfügbar, erzeuge erneut Fallbacks" >&2
+            # Explizites Laden der Fallback-Funktionen erzwingen
+            MANAGE_LOGGING_LOADED=0  # Zurücksetzen für erneutes Laden
+            chk_resources  # Erneut Ressourcen prüfen und Fallbacks erzeugen
+        fi
+        
         if [ $result -ne 0 ]; then
             echo "KRITISCHER FEHLER: Die Kernressourcen konnten nicht geladen werden." >&2
             echo "Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch." >&2
