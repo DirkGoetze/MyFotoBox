@@ -42,6 +42,8 @@ DATA_DIR="$INSTALL_DIR/data"
 # Einstellungen: Debug-Modus
 # ---------------------------------------------------------------------------
 # Neue Debug-Modi für zentralisiertes Debug-System
+# Hinweis: Das Debugging wird durch manuelle Anpassung dieser Variablen gesteuert,
+# nicht durch Befehlszeilenparameter gemäß Entwicklerrichtlinien.
 DEBUG_MOD_LOCAL=0
 DEBUG_MOD_GLOBAL=0
 
@@ -66,7 +68,6 @@ parse_args() {
     # -----------------------------------------------------------------------
     # Standardwerte für alle Flags setzen
     UNATTENDED=0
-    CONFIGURE_FIREWALL=0
     
     # Argumente durchlaufen
     while [[ $# -gt 0 ]]; do
@@ -74,14 +75,6 @@ parse_args() {
             --unattended|-u|--headless|-q)
                 UNATTENDED=1
                 log "Unattended-Modus aktiviert"
-                ;;
-            --debug|-d)
-                DEBUG_MOD_LOCAL=1
-                log "Debug-Modus aktiviert"
-                ;;
-            --firewall|-f)
-                CONFIGURE_FIREWALL=1
-                log "Firewall-Konfiguration aktiviert"
                 ;;
             --help|-h|--hilfe)
                 show_help
@@ -99,7 +92,6 @@ parse_args() {
     export UNATTENDED
     export DEBUG_MOD_LOCAL
     export DEBUG_MOD_GLOBAL
-    export CONFIGURE_FIREWALL
 }
 
 chk_is_root() {
@@ -1060,9 +1052,9 @@ dlg_firewall_config() {
 
     print_step "[8/10] Firewall-Konfiguration ..."
 
-    # Wenn im Unattended-Modus oder explizit angefordert, konfiguriere die Firewall automatisch
-    if [ "$UNATTENDED" -eq 1 ] || [ "$CONFIGURE_FIREWALL" -eq 1 ]; then
-        print_info "Firewall wird automatisch konfiguriert..."
+    # Im Unattended-Modus wird die Firewall automatisch konfiguriert
+    if [ "$UNATTENDED" -eq 1 ]; then
+        print_info "Firewall wird im Unattended-Modus automatisch konfiguriert..."
         # Führe das Firewall-Skript mit --setup-Parameter aus
         if ! bash "$firewall_script" --setup; then
             print_warning "Firewall-Konfiguration fehlgeschlagen. Die Weboberfläche könnte nicht erreichbar sein."
@@ -1219,8 +1211,6 @@ Dieses Skript führt die Erstinstallation der Fotobox durch.
 Optionen:
   --unattended, -u, --headless, -q   Starte die Installation im Unattended-Modus 
                                      (ohne Benutzerinteraktion, verwendet sichere Standardwerte)
-  --debug, -d                        Aktiviere den Debug-Modus für detaillierte Ausgaben
-  --firewall, -f                     Konfiguriere die Firewall automatisch ohne nachzufragen
   --help, -h, --hilfe                Zeigt diese Hilfe an
 
 EOF
