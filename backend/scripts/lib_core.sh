@@ -128,6 +128,15 @@ bind_resource() {
     local resource_path="$2"
     local resource_name="$3"
     
+    # Schutz vor rekursiven Aufrufen: Temporäre Datei als Sperre verwenden
+    local lock_file="/tmp/binding_${resource_name}.lock"
+    if [ -f "$lock_file" ]; then
+        echo "TRACE: Rekursiver Aufruf für $resource_name erkannt, überspringe" >&2
+        debug_output "bind_resource: Erkenne rekursiven Aufruf für '$resource_name', überspringe Laden"
+        return 0  # Überspringe und kehre zurück, um Endlosschleife zu vermeiden
+    fi
+    touch "$lock_file"  # Erzeuge Sperre
+    
     # Direkte Ausgabe für Debugging-Zwecke (auch ohne Debug-Flag)
     echo "TRACE: bind_resource für $guard_var_name ($resource_name) gestartet" >&2
     
@@ -137,6 +146,7 @@ bind_resource() {
     if [ "$(eval echo \$$guard_var_name)" -ne 0 ]; then
         echo "TRACE: Ressource $resource_name bereits geladen" >&2
         debug_output "bind_resource: Ressource '$resource_name' bereits geladen (Guard: $guard_var_name = $(eval echo \$$guard_var_name))"
+        rm -f "$lock_file"  # Sperre entfernen
         return 0  # Bereits geladen, alles OK
     fi
     
@@ -145,6 +155,7 @@ bind_resource() {
         echo "TRACE: Verzeichnis $resource_path nicht gefunden" >&2
         debug_output "bind_resource: Fehler - Verzeichnis '$resource_path' nicht gefunden"
         echo "Fehler: Verzeichnis '$resource_path' nicht gefunden."
+        rm -f "$lock_file"  # Sperre entfernen
         return 2  # Verzeichnis nicht gefunden
     fi
     
@@ -152,6 +163,7 @@ bind_resource() {
         echo "TRACE: Verzeichnis $resource_path nicht lesbar" >&2
         debug_output "bind_resource: Fehler - Verzeichnis '$resource_path' nicht lesbar"
         echo "Fehler: Verzeichnis '$resource_path' nicht lesbar."
+        rm -f "$lock_file"  # Sperre entfernen
         return 2  # Verzeichnis nicht lesbar
     fi
     
@@ -165,6 +177,7 @@ bind_resource() {
         echo "TRACE: Datei $resource_file existiert nicht" >&2
         debug_output "bind_resource: Fehler - Die Datei '$resource_file' existiert nicht"
         echo "Fehler: Die Datei '$resource_file' existiert nicht."
+        rm -f "$lock_file"  # Sperre entfernen
         return 1  # Ressource nicht gefunden
     fi
     
@@ -172,6 +185,7 @@ bind_resource() {
         echo "TRACE: Datei $resource_file ist nicht lesbar" >&2
         debug_output "bind_resource: Fehler - Die Datei '$resource_file' ist nicht lesbar"
         echo "Fehler: Die Datei '$resource_file' ist nicht lesbar."
+        rm -f "$lock_file"  # Sperre entfernen
         return 1  # Ressource nicht lesbar
     fi
     
@@ -188,6 +202,7 @@ bind_resource() {
     echo "TRACE: Guard-Variable $guard_var_name auf 1 gesetzt" >&2
     debug_output "bind_resource: Guard-Variable $guard_var_name auf 1 (geladen) gesetzt"
     
+    rm -f "$lock_file"  # Sperre entfernen
     return 0  # Erfolgreich geladen
 }
 
