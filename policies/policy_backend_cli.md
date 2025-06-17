@@ -4,6 +4,13 @@
 
 Diese Policy legt verbindliche Regeln für die Gestaltung von Ausgaben in allen Shellskripten und CLI-Tools des Projekts fest. Ziel ist eine international verständliche, barrierearme und übersichtliche Benutzerführung.
 
+## Abhängigkeiten und Skriptorganisation
+
+- Alle `manage_*.sh`-Skripte sind Module und setzen zwingend `lib_core.sh` voraus
+- Module dürfen nicht direkt aufgerufen werden, sondern nur über andere Skripte eingebunden werden
+- Module enthalten keine temporären Fallback-Funktionen für Logging
+- Bei fehlender `lib_core.sh` soll eine klare Fehlermeldung ausgegeben und das Skript beendet werden
+
 ## Farbgebung (Ampelprinzip)
 
 - **Grün** (`\033[1;32m`): Erfolgsmeldungen (z.B. "OK", "Fertig", "Erfolgreich abgeschlossen")

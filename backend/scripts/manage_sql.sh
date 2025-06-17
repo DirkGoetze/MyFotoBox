@@ -15,6 +15,8 @@
 # enthält keine main()-Funktion mehr. Die Nutzung als eigenständiges 
 # CLI-Programm ist nicht vorgesehen. Die Policy zur main()-Funktion gilt nur 
 # für Hauptskripte.
+#
+# HINWEIS: Dieses Skript erfordert lib_core.sh und sollte nie direkt aufgerufen werden.
 # ---------------------------------------------------------------------------
 
 # ===========================================================================
@@ -28,16 +30,18 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 BASH_DIR="${BASH_DIR:-$SCRIPT_DIR}"
 
 # Lade alle Basis-Ressourcen ------------------------------------------------
-if [ -f "$BASH_DIR/lib_core.sh" ]; then
-    source "$BASH_DIR/lib_core.sh"
-    load_core_resources || {
-        echo "Fehler beim Laden der Kernressourcen."
-        exit 1
-    }
-else
-    echo "Fehler: Zentrale Bibliothek lib_core.sh nicht gefunden!"
+if [ ! -f "$BASH_DIR/lib_core.sh" ]; then
+    echo "KRITISCHER FEHLER: Zentrale Bibliothek lib_core.sh nicht gefunden!" >&2
+    echo "Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch." >&2
     exit 1
 fi
+
+source "$BASH_DIR/lib_core.sh"
+load_core_resources || {
+    echo "KRITISCHER FEHLER: Die Kernressourcen konnten nicht geladen werden." >&2
+    echo "Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch." >&2
+    exit 1
+}
 # ===========================================================================
 
 # ===========================================================================
@@ -63,3 +67,6 @@ DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 # ===========================================================================
 
 # ... Funktionsimplementierung folgt ...
+
+# Markiere dieses Modul als geladen
+MANAGE_SQL_LOADED=1

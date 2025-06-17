@@ -15,6 +15,8 @@
 # enthält keine main()-Funktion mehr. Die Nutzung als eigenständiges 
 # CLI-Programm ist nicht vorgesehen. Die Policy zur main()-Funktion gilt nur 
 # für Hauptskripte.
+#
+# HINWEIS: Dieses Skript erfordert lib_core.sh und sollte nie direkt aufgerufen werden.
 # ---------------------------------------------------------------------------
 
 # ===========================================================================
@@ -28,16 +30,18 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 BASH_DIR="${BASH_DIR:-$SCRIPT_DIR}"
 
 # Lade alle Basis-Ressourcen ------------------------------------------------
-if [ -f "$BASH_DIR/lib_core.sh" ]; then
-    source "$BASH_DIR/lib_core.sh"
-    load_core_resources || {
-        echo "Fehler beim Laden der Kernressourcen."
-        exit 1
-    }
-else
-    echo "Fehler: Zentrale Bibliothek lib_core.sh nicht gefunden!"
+if [ ! -f "$BASH_DIR/lib_core.sh" ]; then
+    echo "KRITISCHER FEHLER: Zentrale Bibliothek lib_core.sh nicht gefunden!" >&2
+    echo "Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch." >&2
     exit 1
 fi
+
+source "$BASH_DIR/lib_core.sh"
+load_core_resources || {
+    echo "KRITISCHER FEHLER: Die Kernressourcen konnten nicht geladen werden." >&2
+    echo "Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch." >&2
+    exit 1
+}
 # ===========================================================================
 
 # ===========================================================================
@@ -442,125 +446,5 @@ reset_firewall() {
     return 0
 }
 
-# ------------------------------------------------------------------------------
-# Parameter-Verarbeitung und Hauptfunktion
-# ------------------------------------------------------------------------------
-
-show_help() {
-    echo "Verwendung: $0 [OPTIONEN]"
-    echo ""
-    echo "Verwaltet und konfiguriert die Firewall für die Fotobox."
-    echo ""
-    echo "Optionen:"
-    echo "  --setup, -s       Richtet Firewall-Regeln für die Fotobox ein"
-    echo "  --reset, -r       Entfernt Fotobox-spezifische Firewall-Regeln"
-    echo "  --status          Zeigt den Status der Firewall und der Fotobox-Regeln"
-    echo "  --update, -u      Aktualisiert die Firewall-Regeln (entfernt alte und fügt neue hinzu)"
-    echo "  --debug, -d       Aktiviert den Debug-Modus für detaillierte Ausgaben"
-    echo "  --help, -h        Zeigt diese Hilfe an"
-    echo ""
-    echo "Beispiele:"
-    echo "  $0 --setup        # Richtet Firewall-Regeln ein"
-    echo "  $0 --status       # Zeigt den Status der Firewall-Regeln"
-    echo ""
-}
-
-# Hauptfunktion
-main() {
-    local action=""
-    
-    # Parameter verarbeiten
-    while [ "$#" -gt 0 ]; do
-        case "$1" in
-            --setup|-s)
-                action="setup"
-                shift
-                ;;
-            --reset|-r)
-                action="reset"
-                shift
-                ;;
-            --status)
-                action="status"
-                shift
-                ;;
-            --update|-u)
-                action="update"
-                shift
-                ;;
-            --debug|-d)
-                DEBUG_MOD_LOCAL=1
-                shift
-                ;;
-            --unattended)
-                UNATTENDED=1
-                shift
-                ;;
-            --help|-h)
-                show_help
-                exit 0
-                ;;
-            *)
-                print_error "Unbekannter Parameter: $1"
-                show_help
-                exit 1
-                ;;
-        esac
-    done
-    
-    # Prüfe Root-Rechte für alle Aktionen außer Hilfe und Status
-    if [ "$action" != "status" ] && [ "$action" != "" ]; then
-        check_root || exit 1
-    fi
-    
-    # Führe die angeforderte Aktion aus
-    case "$action" in
-        "setup")
-            setup_firewall
-            exit $?
-            ;;
-        "reset")
-            reset_firewall
-            exit $?
-            ;;
-        "status")
-            status_firewall
-            exit $?
-            ;;
-        "update")
-            # Bei Update zuerst alte Regeln entfernen, dann neue hinzufügen
-            reset_firewall
-            setup_firewall
-            exit $?
-            ;;
-        "")
-            # Wenn keine Aktion angegeben ist, interaktiven Modus starten
-            if [ "$UNATTENDED" -eq 1 ]; then
-                print_error "Im nicht-interaktiven Modus muss eine Aktion angegeben werden."
-                exit 1
-            fi
-            
-            echo "Fotobox Firewall-Verwaltung"
-            echo "==========================="
-            echo "Bitte wählen Sie eine Aktion:"
-            echo "1) Firewall-Regeln einrichten"
-            echo "2) Firewall-Status anzeigen"
-            echo "3) Firewall-Regeln zurücksetzen"
-            echo "4) Firewall-Regeln aktualisieren"
-            echo "q) Beenden"
-            
-            read -p "Auswahl: " choice
-            case "$choice" in
-                1) setup_firewall ;;
-                2) status_firewall ;;
-                3) reset_firewall ;;
-                4) reset_firewall && setup_firewall ;;
-                q|Q) exit 0 ;;
-                *) print_error "Ungültige Auswahl" ;;
-            esac
-            ;;
-    esac
-}
-
-# Skript ausführen, Parameter weitergeben
-main "$@"
+# Markiere dieses Modul als geladen
+MANAGE_FIREWALL_LOADED=1

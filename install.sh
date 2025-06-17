@@ -401,9 +401,7 @@ set_structure() {
     # -----------------------------------------------------------------------
     # set_structure
     # -----------------------------------------------------------------------
-    # Funktion: Erstellt alle benötigten Verzeichnisse und prüft, ob die Projektstruktur vorhanden ist.
-    #           Verwaltet die vollständige Ordnerstruktur über manage_folders.sh
-    set -e
+    # Funktion: Prüft die Projektstruktur und delegiert die Ordnerstrukturierung an manage_folders.sh
     debug "Starte mit INSTALL_DIR=$INSTALL_DIR" "CLI" "set_structure"
     
     # Prüfe, ob das Backend-Verzeichnis und wichtige Dateien existieren
@@ -415,40 +413,37 @@ set_structure() {
     # manage_folders.sh ausführbar machen
     chmod +x "$INSTALL_DIR"/backend/scripts/*.sh || true
     
-    # Versuche, die Ordnerstruktur über manage_folders.sh zu erstellen
-    if [ -f "$INSTALL_DIR/backend/scripts/manage_folders.sh" ]; then
-        debug "Verwende manage_folders.sh zur Ordnererstellung" "CLI" "set_structure"
-        
-        # Setze globale Variablen für manage_folders.sh
-        export INSTALL_DIR="$INSTALL_DIR"
-        export DATA_DIR="$DATA_DIR"
-        export BACKUP_DIR="$BACKUP_DIR"
-        export LOG_DIR="$LOG_DIR"
-        export FRONTEND_DIR="$FRONTEND_DIR"
-        export CONFIG_DIR="$CONFIG_DIR"
-        
-        # Führe manage_folders.sh aus, um die Ordnerstruktur zu erstellen
-        if "$INSTALL_DIR/backend/scripts/manage_folders.sh" ensure_structure; then
-            debug "Ordnerstruktur erfolgreich über manage_folders.sh erstellt" "CLI" "set_structure"
-        else
-            print_error "Fehler bei der Erstellung der Ordnerstruktur über manage_folders.sh."
-            debug "Fehler bei manage_folders.sh" "CLI" "set_structure"
-            return 1
-        fi
-    else
+    # Prüfe, ob manage_folders.sh vorhanden ist
+    if [ ! -f "$INSTALL_DIR/backend/scripts/manage_folders.sh" ]; then
         print_error "manage_folders.sh nicht gefunden. Die Projektstruktur scheint unvollständig zu sein."
         debug "manage_folders.sh nicht gefunden" "CLI" "set_structure"
         return 1
     fi
     
-    # Policy: Nach jedem schreibenden Schritt im Projektverzeichnis Rechte prüfen und ggf. korrigieren.
-    # Die Rechtevergabe für einzelne Verzeichnisse erfolgt bereits in make_dir oder manage_folders.sh.
-    # Das folgende chown -R dient als zusätzlicher Schutz, um Policy-Konformität sicherzustellen.
-    chown -R fotobox:fotobox "$INSTALL_DIR" || {
+    # Umgebungsvariablen für manage_folders.sh setzen
+    export INSTALL_DIR="$INSTALL_DIR"
+    export DATA_DIR="$DATA_DIR"
+    export BACKUP_DIR="$BACKUP_DIR"
+    export LOG_DIR="$LOG_DIR"
+    export FRONTEND_DIR="$FRONTEND_DIR"
+    export CONFIG_DIR="$CONFIG_DIR"
+    
+    # manage_folders.sh für die Ordnerstruktur nutzen
+    debug "Delegiere Ordnerverwaltung an manage_folders.sh" "CLI" "set_structure"
+    if ! "$INSTALL_DIR/backend/scripts/manage_folders.sh" ensure_structure; then
+        print_error "Fehler bei der Erstellung der Ordnerstruktur über manage_folders.sh."
+        debug "Fehler bei manage_folders.sh" "CLI" "set_structure"
+        return 1
+    fi
+    
+    # Abschließende Rechteanpassung (Policy-Konformität)
+    if ! chown -R fotobox:fotobox "$INSTALL_DIR"; then
+        print_warning "chown auf $INSTALL_DIR fehlgeschlagen, Rechte könnten nicht vollständig korrekt sein."
         debug "chown auf $INSTALL_DIR fehlgeschlagen" "CLI" "set_structure"
         return 7
-    }
-    debug "erfolgreich abgeschlossen" "CLI" "set_structure"
+    fi
+    
+    debug "Ordnerstruktur erfolgreich eingerichtet" "CLI" "set_structure"
     return 0
 }
 
@@ -747,42 +742,36 @@ dlg_prepare_structure() {
     # -----------------------------------------------------------------------
     # dlg_prepare_structure
     # -----------------------------------------------------------------------
-    # Funktion: Prüfen/Erstellen der Verzeichnisstruktur, Klonen des Projekt
-    # Rechte setzem
-    print_step "[6/10] Erstelle Verzeichnisstruktur und setze Rechte ..."
+    # Funktion: Prüft die Projektstruktur und richtet über manage_folders.sh die Verzeichnisstruktur ein
+    print_step "[6/10] Prüfe Projektstruktur und richte Verzeichnisse ein..."
+    
+    # Basierend auf manage_folders.sh die Struktur einrichten
     set_structure
     rc=$?
-    if [ $rc -eq 1 ]; then
-        print_error "Verzeichnis $INSTALL_DIR konnte nicht angelegt werden!"
-        exit 1
-    elif [ $rc -eq 2 ]; then
-        print_error "Fehler beim Nachinstallieren von git."
-        exit 1
-    elif [ $rc -eq 3 ]; then
-        print_error "Fehler beim Klonen des Projekts per git."
-        exit 1
-    elif [ $rc -eq 4 ]; then
-        print_error "Backup-Verzeichnis $BACKUP_DIR konnte nicht angelegt werden!"
-        exit 1
-    elif [ $rc -eq 5 ]; then
-        print_error "Konfigurationsverzeichnis $CONF_DIR konnte nicht angelegt werden!"
-        exit 1
-    elif [ $rc -eq 6 ]; then
-        print_error "Datenverzeichnis $DATA_DIR konnte nicht angelegt werden!"
-        exit 1
-    elif [ $rc -eq 7 ]; then
-        print_error "Rechte für $INSTALL_DIR konnten nicht gesetzt werden!"
-        exit 1
-    elif [ $rc -eq 8 ]; then
-        print_error "Logverzeichnis $INSTALL_DIR/log konnte nicht angelegt werden!"
-        exit 1
-    elif [ $rc -eq 10 ]; then
-        print_warning "Klonen des Projekts per git fehlgeschlagen, aber Verzeichnisstruktur und Rechte wurden gesetzt.\nBitte prüfen Sie, ob das Zielverzeichnis bereits (teilweise) belegt ist oder eine abgebrochene Installation vorliegt."
-    elif [ $rc -ne 0 ]; then
-        print_error "Unbekannter Fehler bei der Verzeichnisstruktur (Code $rc)."
-        exit 1
-    fi
-    print_success "Verzeichnisstruktur wurde erfolgreich erstellt."
+    
+    case $rc in
+        0)  # Erfolgreiche Installation
+            print_success "Verzeichnisstruktur wurde erfolgreich eingerichtet."
+            ;;
+        1)  # Fehler bei manage_folders.sh
+            print_error "Die Verzeichnisstruktur konnte nicht über manage_folders.sh eingerichtet werden."
+            print_info "Prüfen Sie die Logdateien für weitere Details."
+            exit 1
+            ;;
+        7)  # Rechte konnten nicht vollständig gesetzt werden
+            print_warning "Die Verzeichnisstruktur wurde erstellt, aber die Rechte konnten nicht vollständig gesetzt werden."
+            print_info "Die Installation wird fortgesetzt, aber einige Funktionen könnten beeinträchtigt sein."
+            ;;
+        10) # Unvollständige Projektstruktur
+            print_error "Die Projektstruktur ist unvollständig. Die benötigten Dateien und Verzeichnisse fehlen."
+            print_info "Stellen Sie sicher, dass das Repository korrekt geklont wurde."
+            exit 1
+            ;;
+        *)  # Unbekannter Fehler
+            print_error "Unbekannter Fehler bei der Einrichtung der Verzeichnisstruktur (Code $rc)."
+            exit 1
+            ;;
+    esac
 }
 
 dlg_nginx_installation() {

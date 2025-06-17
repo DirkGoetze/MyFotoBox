@@ -28,16 +28,18 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 BASH_DIR="${BASH_DIR:-$SCRIPT_DIR}"
 
 # Lade alle Basis-Ressourcen ------------------------------------------------
-if [ -f "$BASH_DIR/lib_core.sh" ]; then
-    source "$BASH_DIR/lib_core.sh"
-    load_core_resources || {
-        echo "Fehler beim Laden der Kernressourcen."
-        exit 1
-    }
-else
-    echo "Fehler: Zentrale Bibliothek lib_core.sh nicht gefunden!"
+if [ ! -f "$BASH_DIR/lib_core.sh" ]; then
+    echo "KRITISCHER FEHLER: Zentrale Bibliothek lib_core.sh nicht gefunden!" >&2
+    echo "Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch." >&2
     exit 1
 fi
+
+source "$BASH_DIR/lib_core.sh"
+load_core_resources || {
+    echo "KRITISCHER FEHLER: Die Kernressourcen konnten nicht geladen werden." >&2
+    echo "Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch." >&2
+    exit 1
+}
 # ===========================================================================
 
 # ===========================================================================
@@ -829,3 +831,6 @@ set_nginx_cnf_external() {
     return 0
 }
 
+
+# Markiere dieses Modul als geladen
+MANAGE_NGINX_LOADED=1
