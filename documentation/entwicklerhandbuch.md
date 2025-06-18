@@ -1766,7 +1766,7 @@ Das Shell-Modul `manage_nginx.sh` stellt wesentliche Funktionen zur Verwaltung d
 
 **Rechteverwaltung:**
 - Konfigurationsverzeichnis (`conf/nginx`): Standardrechte (755, Eigentümer: fotobox:fotobox)
-- Backup-Verzeichnis (`conf/nginx/backup`): Restriktive Rechte (750, Eigentümer: fotobox:fotobox)
+- Backup-Verzeichnis (`backup/nginx`): Restriktive Rechte (750, Eigentümer: fotobox:fotobox)
   - Dies sichert sensible Konfigurationsbackups vor unbefugtem Zugriff
   - Nur Benutzer "fotobox" und Mitglieder der Gruppe "fotobox" haben Zugriff
 
@@ -1787,7 +1787,20 @@ Das Shell-Modul `manage_nginx.sh` stellt wesentliche Funktionen zur Verwaltung d
   - `get_nginx_conf_dir()`: Gibt den Pfad zum NGINX-Konfigurationsverzeichnis zurück (Berechtigungen: 755)
   - `get_nginx_backup_dir()`: Gibt den Pfad zum NGINX-Backup-Verzeichnis zurück (Berechtigungen: 750)
   - `get_nginx_template_file()`: Ermittelt den Pfad zur benötigten Template-Konfigurationsdatei
-  - `backup_nginx_config()`: Sichert eine NGINX-Konfigurationsdatei mit Metadaten
+  - `backup_nginx_config()`: Sichert eine NGINX-Konfigurationsdatei mit einfachen Metadaten
+
+- **Erweiterte Backup- und Wiederherstellungsfunktionen:**
+  - `backup_nginx_config_json()`: Erstellt ein JSON-basiertes Backup der NGINX-Konfiguration
+    - Unterstützt vollständiges Backup des Konfigurationsverzeichnisses
+    - Speichert detaillierte Metadaten im JSON-Format (Version, Status, Systeminfo)
+    - Erstellt separates Aktionsprotokoll für Nachvollziehbarkeit
+    - Dateibenennung: `backup/nginx/TIMESTAMP_nginx_backup.json` und `.tar.gz`
+  
+  - `nginx_restore_config()`: Stellt eine NGINX-Konfiguration aus einem Backup wieder her
+    - Unterstützt Wiederherstellung über Backup-ID oder Zeitstempel
+    - Erstellt vor der Wiederherstellung automatisch ein Sicherheitsbackup
+    - Prüft die wiederhergestellte Konfiguration auf Syntaxfehler
+    - Behält den vorherigen NGINX-Laufzeitstatus bei (gestartet/gestoppt)
 
 **Verwendungsbeispiel:**
 
@@ -1976,13 +1989,14 @@ server {
 ```python
 # SSL-Zertifikat mit Let's Encrypt erstellen
 def setup_letsencrypt_cert(domain):
-    try:
+    try {
         # Let's Encrypt Certbot aufrufen
         subprocess.run(["certbot", "--nginx", "-d", domain, "--non-interactive", "--agree-tos"], check=True)
-        return True
-    except subprocess.CalledProcessError:
+        return True;
+    } catch (subprocess.CalledProcessError:
         log.error(f"Fehler beim Generieren des Let's Encrypt Zertifikats für {domain}")
-        return False
+        return False;
+}
 ```
 
 ### 11.3 Übersicht der Netzwerkeinstellungen

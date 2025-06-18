@@ -963,12 +963,12 @@ get_nginx_conf_dir() {
 # ------------------------------------------------------------------------------
 get_nginx_backup_dir() {
     local dir
-    local nginx_conf_dir
+    local backup_dir
     
     debug "Ermittle NGINX-Backup-Verzeichnis" "CLI" "get_nginx_backup_dir"
     
-    # Zuerst das NGINX-Konfigurationsverzeichnis ermitteln
-    nginx_conf_dir=$(get_nginx_conf_dir)
+    # Zuerst das generelle Backup-Verzeichnis ermitteln
+    backup_dir=$(get_backup_dir)
     
     # Prüfen, ob NGINX_BACKUP_DIR bereits gesetzt ist
     if [ -n "$NGINX_BACKUP_DIR" ] && [ -d "$NGINX_BACKUP_DIR" ]; then
@@ -989,8 +989,8 @@ get_nginx_backup_dir() {
         return 0
     fi
     
-    # Als Fallback ein Unterverzeichnis im NGINX-Konfigurationsverzeichnis verwenden
-    dir="$nginx_conf_dir/backup"
+    # Als Fallback ein Unterverzeichnis im allgemeinen Backup-Verzeichnis verwenden
+    dir="$backup_dir/nginx"
     debug "Fallback für NGINX-Backup-Verzeichnis: $dir" "CLI" "get_nginx_backup_dir"
     # Setze restriktivere Berechtigungen für das Backup-Verzeichnis (nur Besitzer und Gruppe haben Zugriff)
     create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true

@@ -927,7 +927,7 @@ get_nginx_template_file() {
             conf_dir="$("$manage_folders_sh" config_dir)"
             if [ -f "$conf_dir/nginx-$template_type.conf" ]; then
                 mkdir -p "$nginx_conf_dir"
-                cp "$conf_dir/nginx-$template_type.conf" "$conf_file"
+                cp "$conf_dir/nginx-$template-type.conf" "$conf_file"
                 log "NGINX-Template wurde in das neue Verzeichnis kopiert: $conf_file"
             else
                 # Fallback zur alten Methode
@@ -1139,5 +1139,339 @@ nginx_test_config() {
     fi
 }
 
+# ===========================================================================
+# Erweiterte Backup- und Wiederherstellungsfunktionen für NGINX-Konfiguration
+# ===========================================================================
+
+backup_nginx_config_json() {
+    # -----------------------------------------------------------------------
+    # backup_nginx_config_json
+    # -----------------------------------------------------------------------
+    # Funktion: Erstellt ein JSON-basiertes Backup der NGINX-Konfiguration
+    # Parameter: $1 = Quellverzeichnis oder Datei (Standard: /etc/nginx)
+    #            $2 = Aktionsnotiz (z.B. "Vor Installation", "Vor Update", etc.)
+    #            $3 = Ausgabeformat (text|json, Default: text)
+    # Rückgabe:  0 = OK, 1 = Fehler, Backup wurde nicht erstellt
+    # -----------------------------------------------------------------------
+    local src="${1:-/etc/nginx}"
+    local action="${2:-Manuelles Backup}"
+    local mode="${3:-text}"
+
+    local backup_dir
+    local manage_folders_sh
+    local timestamp
+    local backup_file
+    local json_file
+    local log_file
+    local is_default_config
+    
+    # Verwende manage_folders.sh für die Verzeichnisverwaltung
+    manage_folders_sh="$(dirname "$0")/manage_folders.sh"
+    if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
+        backup_dir="$("$manage_folders_sh" get_nginx_backup_dir)"
+    else
+        # Fallback zur direkten Pfadnutzung
+        backup_dir="/opt/fotobox/backup/nginx"
+        mkdir -p "$backup_dir"
+    fi
+    
+    # Generiere Zeitstempel und Dateinamen
+    timestamp="$(date +%Y%m%d_%H%M%S)"
+    backup_file="$backup_dir/${timestamp}_nginx_backup.tar.gz"
+    json_file="$backup_dir/${timestamp}_nginx_backup.json"
+    log_file="$backup_dir/${timestamp}_nginx_actions.log"
+    
+    # Prüfe den aktuellen NGINX-Konfigurationszustand
+    is_default_config="false"
+    if is_nginx_default; then
+        is_default_config="true"
+    fi
+    
+    # Erstelle Archiv mit Konfigurationen
+    if [ -d "$src" ]; then
+        if ! tar -czf "$backup_file" -C "$(dirname "$src")" "$(basename "$src")"; then
+            if [ "$mode" = "json" ]; then
+                json_out "error" "Backup der NGINX-Konfiguration fehlgeschlagen" 1
+            else
+                print_error "Backup der NGINX-Konfiguration fehlgeschlagen"
+            fi
+            return 1
+        fi
+    elif [ -f "$src" ]; then
+        if ! tar -czf "$backup_file" -C "$(dirname "$src")" "$(basename "$src")"; then
+            if [ "$mode" = "json" ]; then
+                json_out "error" "Backup der NGINX-Konfiguration fehlgeschlagen" 1
+            else
+                print_error "Backup der NGINX-Konfiguration fehlgeschlagen"
+            fi
+            return 1
+        fi
+    else
+        if [ "$mode" = "json" ]; then
+            json_out "error" "Ungültige Quelle für Backup: $src existiert nicht" 1
+        else
+            print_error "Ungültige Quelle für Backup: $src existiert nicht"
+        fi
+        return 1
+    fi
+    
+    # Hole Informationen zum NGINX-Status
+    local nginx_version=""
+    local nginx_running="false"
+    local nginx_conf_test="false"
+    
+    if command -v nginx >/dev/null 2>&1; then
+        nginx_version="$(nginx -v 2>&1 | sed 's/^nginx version: nginx\///')"
+    fi
+    
+    if is_nginx_running; then
+        nginx_running="true"
+    fi
+    
+    if nginx_test_config >/dev/null 2>&1; then
+        nginx_conf_test="true"
+    fi
+    
+    # Erstelle JSON-Metadaten
+    cat > "$json_file" <<EOF
+{
+  "timestamp": "$timestamp",
+  "source": "$src",
+  "backup_file": "$backup_file",
+  "action": "$action",
+  "nginx_status": {
+    "version": "$nginx_version",
+    "is_running": $nginx_running,
+    "is_default_config": $is_default_config,
+    "config_valid": $nginx_conf_test
+  },
+  "system_info": {
+    "hostname": "$(hostname)",
+    "date": "$(date)",
+    "user": "$(whoami)"
+  }
+}
+EOF
+    
+    # Erstelle Aktions-Log
+    echo "# NGINX-Konfigurationsänderung" > "$log_file"
+    echo "Zeitpunkt: $(date)" >> "$log_file"
+    echo "Aktion: $action" >> "$log_file"
+    echo "Konfiguration: $src" >> "$log_file"
+    echo "Backup: $backup_file" >> "$log_file"
+    echo "Status vor Änderung: $(if [ "$is_default_config" = "true" ]; then echo "Default"; else echo "Angepasst"; fi)" >> "$log_file"
+    echo "NGINX läuft: $(if [ "$nginx_running" = "true" ]; then echo "Ja"; else echo "Nein"; fi)" >> "$log_file"
+    
+    # Ausgabe je nach Modus
+    if [ "$mode" = "json" ]; then
+        json_out "success" "Backup der NGINX-Konfiguration erfolgreich erstellt: $backup_file" 0 "$json_file"
+    else
+        print_success "Backup der NGINX-Konfiguration erfolgreich erstellt: $backup_file"
+        print_info "JSON-Metadaten: $json_file"
+        print_info "Aktions-Log: $log_file"
+    fi
+    
+    return 0
+}
+
+nginx_restore_config() {
+    # -----------------------------------------------------------------------
+    # nginx_restore_config
+    # -----------------------------------------------------------------------
+    # Funktion: Stellt eine NGINX-Konfiguration aus einem Backup wieder her
+    # Parameter: $1 = Backup-ID oder Zeitstempel (Format: YYYYMMDD_HHMMSS)
+    #            $2 = Zielpfad (Standard: /etc/nginx)
+    #            $3 = Ausgabeformat (text|json, Default: text)
+    # Rückgabe:  0 = OK, 1 = Fehler bei Wiederherstellung
+    # -----------------------------------------------------------------------
+    local backup_id="$1"
+    local target_path="${2:-/etc/nginx}"
+    local mode="${3:-text}"
+    
+    local backup_dir
+    local manage_folders_sh
+    local backup_file
+    local json_file
+    local timestamp
+    
+    # Prüfe, ob ein Backup-ID/Zeitstempel angegeben wurde
+    if [ -z "$backup_id" ]; then
+        if [ "$mode" = "json" ]; then
+            json_out "error" "Keine Backup-ID oder Zeitstempel angegeben" 1
+        else
+            print_error "Keine Backup-ID oder Zeitstempel angegeben"
+        fi
+        return 1
+    fi
+    
+    # Verwende manage_folders.sh für die Verzeichnisverwaltung
+    manage_folders_sh="$(dirname "$0")/manage_folders.sh"
+    if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
+        backup_dir="$("$manage_folders_sh" get_nginx_backup_dir)"
+    else
+        # Fallback zur direkten Pfadnutzung
+        backup_dir="/opt/fotobox/backup/nginx"
+    fi
+    
+    # Finde Backupfiles anhand der ID/des Zeitstempels
+    if [[ "$backup_id" =~ ^[0-9]{8}_[0-9]{6}$ ]]; then
+        # Exakter Zeitstempel im Format YYYYMMDD_HHMMSS
+        timestamp="$backup_id"
+        backup_file="$backup_dir/${timestamp}_nginx_backup.tar.gz"
+        json_file="$backup_dir/${timestamp}_nginx_backup.json"
+    else
+        # Suche nach partieller Übereinstimmung
+        backup_file=$(find "$backup_dir" -name "*${backup_id}*_nginx_backup.tar.gz" | sort | tail -n 1)
+        if [ -n "$backup_file" ]; then
+            timestamp=$(basename "$backup_file" | sed 's/^\([0-9]\{8\}_[0-9]\{6\}\).*/\1/')
+            json_file="$backup_dir/${timestamp}_nginx_backup.json"
+        fi
+    fi
+    
+    # Prüfe, ob Backup-Dateien gefunden wurden
+    if [ ! -f "$backup_file" ]; then
+        if [ "$mode" = "json" ]; then
+            json_out "error" "Kein passendes Backup für ID/Zeitstempel '$backup_id' gefunden" 1
+        else
+            print_error "Kein passendes Backup für ID/Zeitstempel '$backup_id' gefunden"
+        fi
+        return 1
+    fi
+    
+    # Erstelle Backup der aktuellen Konfiguration vor der Wiederherstellung
+    local pre_restore_backup
+    pre_restore_backup=$(backup_nginx_config_json "$target_path" "Vor Wiederherstellung von $timestamp" "$mode")
+    
+    # Stoppe NGINX vor der Wiederherstellung
+    local nginx_was_running=false
+    if is_nginx_running; then
+        nginx_was_running=true
+        nginx_stop > /dev/null
+    fi
+    
+    # Erstelle temporäres Verzeichnis für die Wiederherstellung
+    local temp_dir
+    temp_dir=$(mktemp -d)
+    
+    # Entpacke das Backup
+    if ! tar -xzf "$backup_file" -C "$temp_dir"; then
+        if [ "$mode" = "json" ]; then
+            json_out "error" "Fehler beim Entpacken des Backups: $backup_file" 1
+        else
+            print_error "Fehler beim Entpacken des Backups: $backup_file"
+        fi
+        rm -rf "$temp_dir"
+        # Starte NGINX wieder, falls es vorher lief
+        if [ "$nginx_was_running" = true ]; then
+            nginx_start > /dev/null
+        fi
+        return 1
+    fi
+    
+    # Sichere den Inhalt des Zielverzeichnisses
+    local target_contents
+    target_contents=$(ls -A "$target_path" 2>/dev/null)
+    
+    # Lösche vorhandene Konfiguration (wenn Ziel nicht leer ist)
+    if [ -n "$target_contents" ]; then
+        if ! rm -rf "${target_path:?}"/*; then
+            if [ "$mode" = "json" ]; then
+                json_out "error" "Fehler beim Löschen der vorhandenen Konfiguration: $target_path" 1
+            else
+                print_error "Fehler beim Löschen der vorhandenen Konfiguration: $target_path"
+            fi
+            rm -rf "$temp_dir"
+            # Starte NGINX wieder, falls es vorher lief
+            if [ "$nginx_was_running" = true ]; then
+                nginx_start > /dev/null
+            fi
+            return 1
+        fi
+    fi
+    
+    # Kopiere wiederhergestellte Dateien
+    local nginx_dir_name
+    nginx_dir_name=$(basename "$target_path")
+    if [ -d "$temp_dir/$nginx_dir_name" ]; then
+        # Falls das Backup den vollständigen Pfad enthält
+        if ! cp -a "$temp_dir/$nginx_dir_name"/* "$target_path"/; then
+            if [ "$mode" = "json" ]; then
+                json_out "error" "Fehler beim Kopieren der wiederhergestellten Konfiguration" 1
+            else
+                print_error "Fehler beim Kopieren der wiederhergestellten Konfiguration"
+            fi
+            rm -rf "$temp_dir"
+            # Starte NGINX wieder, falls es vorher lief
+            if [ "$nginx_was_running" = true ]; then
+                nginx_start > /dev/null
+            fi
+            return 1
+        fi
+    else
+        # Falls das Backup direkt die Dateien enthält
+        if ! cp -a "$temp_dir"/* "$target_path"/; then
+            if [ "$mode" = "json" ]; then
+                json_out "error" "Fehler beim Kopieren der wiederhergestellten Konfiguration" 1
+            else
+                print_error "Fehler beim Kopieren der wiederhergestellten Konfiguration"
+            fi
+            rm -rf "$temp_dir"
+            # Starte NGINX wieder, falls es vorher lief
+            if [ "$nginx_was_running" = true ]; then
+                nginx_start > /dev/null
+            fi
+            return 1
+        fi
+    fi
+    
+    # Aufräumen
+    rm -rf "$temp_dir"
+    
+    # Teste die wiederhergestellte Konfiguration
+    if ! nginx_test_config > /dev/null; then
+        if [ "$mode" = "json" ]; then
+            json_out "error" "Die wiederhergestellte NGINX-Konfiguration enthält Fehler" 1
+        else
+            print_error "Die wiederhergestellte NGINX-Konfiguration enthält Fehler"
+            print_warning "NGINX wird nicht gestartet, um weitere Fehler zu vermeiden"
+        fi
+        return 1
+    fi
+    
+    # Starte NGINX neu, falls es vorher lief
+    if [ "$nginx_was_running" = true ]; then
+        if ! nginx_start > /dev/null; then
+            if [ "$mode" = "json" ]; then
+                json_out "error" "NGINX konnte nach der Wiederherstellung nicht gestartet werden" 1
+            else
+                print_error "NGINX konnte nach der Wiederherstellung nicht gestartet werden"
+            fi
+            return 1
+        fi
+    fi
+    
+    # Setze korrekte Berechtigungen
+    if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
+        "$manage_folders_sh" fix_permissions "$target_path" > /dev/null
+    else
+        chown -R www-data:www-data "$target_path"
+    fi
+    
+    # Ausgabe je nach Modus
+    if [ "$mode" = "json" ]; then
+        json_out "success" "NGINX-Konfiguration erfolgreich wiederhergestellt von $timestamp" 0
+    else
+        print_success "NGINX-Konfiguration erfolgreich wiederhergestellt von $timestamp"
+        print_info "Quelle: $backup_file"
+        print_info "Ziel: $target_path"
+        if [ "$nginx_was_running" = true ]; then
+            print_info "NGINX wurde neu gestartet"
+        else
+            print_info "NGINX war gestoppt und wurde nicht gestartet"
+        fi
+    fi
+    
+    return 0
+}
 # Markiere dieses Modul als geladen
 MANAGE_NGINX_LOADED=1
