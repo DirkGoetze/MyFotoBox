@@ -1198,7 +1198,6 @@ dlg_backend_integration() {
     else
         echo -e "\r  → [OK] Python-Abhängigkeiten erfolgreich installiert (inkl. bcrypt für sichere Passwörter)."
     fi
-    fi
     # systemd-Service anlegen und starten
     echo -n "[/] Erstelle systemd-Service-Datei..."
     set_systemd_service &>/dev/null &
