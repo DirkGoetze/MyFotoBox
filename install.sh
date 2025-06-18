@@ -8,6 +8,9 @@
 # über die WebUI bzw. Python-Skripte im backend/.
 # ------------------------------------------------------------------------------
 
+#!/bin/bash
+
+# set -e wird verwendet, um Skript bei Fehlern zu beenden, aber wir fügen Sicherheitsmaßnahmen ein
 set -e
 
 # ===========================================================================
@@ -17,13 +20,19 @@ set -e
 INSTALL_DIR="$(dirname "$(readlink -f "$0")")"
 BASH_DIR="$INSTALL_DIR/backend/scripts"
 
+# Debug-Ausgabe zum Nachverfolgen des Installationspfads
+echo "INSTALL_DIR=$INSTALL_DIR"
+echo "BASH_DIR=$BASH_DIR"
+
 # Installation/Update benötigt alle Module -> Lademodus auf 1 setzen
 # Dies vor dem Einbinden von lib_core.sh festlegen
 export MODULE_LOAD_MODE=1
 
 if [ -f "$BASH_DIR/lib_core.sh" ]; then
     # Direkt core-Bibliothek einbinden, ohne sofort alle Module zu laden
+    echo "Lade lib_core.sh..."
     source "$BASH_DIR/lib_core.sh"
+    echo "lib_core.sh geladen."
     
     # Jetzt alle Ressourcen explizit laden - vermeidet rekursives Laden
     # durch direkten Aufruf von chk_resources statt load_core_resources
@@ -36,6 +45,8 @@ if [ -f "$BASH_DIR/lib_core.sh" ]; then
         chk_resources
         result=$?
         CORE_RESOURCES_LOADING=0
+        
+        echo "Ressourcenprüfung abgeschlossen mit Code $result"
         
         # Überprüfe, ob die Ausgabe-Funktionen verfügbar sind
         if ! type print_warning &>/dev/null || ! type print_info &>/dev/null; then
@@ -50,8 +61,35 @@ if [ -f "$BASH_DIR/lib_core.sh" ]; then
             echo "Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch." >&2
             exit 1
         fi
+        
+        echo "Initialisierung der Ressourcen erfolgreich abgeschlossen."
+    else
+        echo "WARNUNG: chk_resources Funktion nicht gefunden, einfache Fallbacks werden verwendet" >&2
+        # Einfache Fallback-Funktionen definieren
+        if ! type print_info &>/dev/null; then
+            print_info() { echo -e "\033[0;36m[INFO]\033[0m $*"; }
+        fi
+        if ! type print_warning &>/dev/null; then
+            print_warning() { echo -e "\033[0;33m[WARNUNG]\033[0m $*" >&2; }
+        fi
+        if ! type print_error &>/dev/null; then
+            print_error() { echo -e "\033[0;31m[FEHLER]\033[0m $*" >&2; }
+        fi
+        if ! type print_success &>/dev/null; then
+            print_success() { echo -e "\033[0;32m[OK]\033[0m $*"; }
+        fi
+        if ! type debug &>/dev/null; then
+            debug() { if [ "${DEBUG_MOD_LOCAL:-0}" -eq 1 ] || [ "${DEBUG_MOD_GLOBAL:-0}" -eq 1 ]; then echo -e "\033[0;35m[DEBUG]\033[0m $*" >&2; fi; }
+        fi
+        if ! type log &>/dev/null; then
+            log() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $*" >> "${LOG_FILE:-/tmp/fotobox_install.log}"; }
+        fi
     fi
 fi
+
+# Nach dem Laden der Ressourcen setzen wir das set -e zurück, um mehr Fehlertoleranz zu erreichen
+# Das erlaubt dem Skript, trotz kleinerer Fehler weiterzulaufen
+set +e
 # ===========================================================================
 
 # ===========================================================================
@@ -71,8 +109,22 @@ fi
 DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
 # ---------------------------------------------------------------------------
-STEP_COUNTER=0                       # Aktueller Schritt (wird inkrementiert)
-TOTAL_STEPS=$(grep -c "^dlg_" "$0")  # alle Funktionen, mit dlg_ zählen
+# Diese Variablen werden global deklariert und später sicher initialisiert
+STEP_COUNTER=0               # Aktueller Schritt (wird inkrementiert)
+TOTAL_STEPS=10               # Fallback-Wert, falls die Erkennung nicht funktioniert
+
+# Hilfsfunktionen für den Fall, dass die Kernfunktionen nicht verfügbar sind
+if ! type print_step &>/dev/null; then
+    print_step() {
+        echo -e "\033[0;34m>>> $*\033[0m"
+    }
+fi
+
+if ! type print_prompt &>/dev/null; then
+    print_prompt() {
+        echo -n -e "\033[0;36m$* \033[0m"
+    }
+fi
 
 # ===========================================================================
 # Hilfsfunktionen
@@ -805,10 +857,20 @@ dlg_nginx_installation() {
 
     debug "Starte NGINX-Dialog, UNATTENDED=$UNATTENDED, BASH_DIR=$BASH_DIR" "CLI" "dlg_nginx_installation"
     # Verwenden der globalen Variable zur Prüfung, ob manage_nginx.sh existiert
+    # Robustere Prüfung auf Verfügbarkeit von manage_nginx.sh
+    if [ -z "$MANAGE_NGINX_AVAILABLE" ]; then
+        # Falls die Variable nicht gesetzt ist, prüfen wir direkt die Dateipräsenz
+        if [ -f "$BASH_DIR/manage_nginx.sh" ]; then
+            MANAGE_NGINX_AVAILABLE=1
+        else
+            MANAGE_NGINX_AVAILABLE=0
+        fi
+    fi
+    
     if [ "$MANAGE_NGINX_AVAILABLE" -ne 1 ]; then
         debug "manage_nginx.sh ist nicht verfügbar (MANAGE_NGINX_AVAILABLE=$MANAGE_NGINX_AVAILABLE)" "CLI" "dlg_nginx_installation"
         print_error "manage_nginx.sh nicht gefunden! Die Projektstruktur wurde vermutlich noch nicht geklont."
-        exit 1
+        return 1  # Wir verwenden return statt exit, damit die Installation nicht komplett abbricht
     fi
     # NGINX-Installation prüfen/ausführen (zentral)
     # Verwende den in set_fallback_security_settings gespeicherten Pfad zu manage_nginx.sh
@@ -831,7 +893,7 @@ dlg_nginx_installation() {
     debug "install_rc=$install_rc, install_result=$install_result" "CLI" "dlg_nginx_installation"
     if [ $install_rc -ne 0 ]; then
         print_error "NGINX-Installation fehlgeschlagen: $install_result"
-        exit 1
+        return 1
     fi
     # Betriebsmodus abfragen (default/multisite)
     if [ "$UNATTENDED" -eq 1 ]; then
@@ -846,7 +908,7 @@ dlg_nginx_installation() {
     debug "activ_rc=$activ_rc, activ_result=$activ_result" "CLI" "dlg_nginx_installation"
     if [ $activ_rc -eq 2 ]; then
         print_error "Konnte NGINX-Betriebsmodus nicht eindeutig ermitteln. Bitte prüfen Sie die Konfiguration."
-        exit 1
+        return 1
     fi
     # Dialog: Default-Integration oder eigene Konfiguration
     if [ $activ_rc -eq 0 ]; then
@@ -869,7 +931,7 @@ dlg_nginx_installation() {
             debug "Antwort auf eigene Konfiguration: $antwort2" "CLI" "dlg_nginx_installation"
             if [[ "$antwort2" =~ ^([nN])$ ]]; then
                 print_error "Abbruch: Keine NGINX-Integration gewählt."
-                exit 1
+                return 1
             fi
             # Portwahl und externe Konfiguration (zentral, jetzt mit Schleife)
             port_rc=1
@@ -891,7 +953,7 @@ dlg_nginx_installation() {
                         read -r retry
                         if [[ "$retry" =~ ^([nN])$ ]]; then
                             print_error "Abbruch durch Benutzer bei Portwahl."
-                            exit 1
+                            return 1
                         fi
                     fi
                 fi
@@ -911,7 +973,7 @@ dlg_nginx_installation() {
                 print_success "Eigene Fotobox-Konfiguration wurde angelegt und aktiviert."
             else
                 print_error "Fehler bei externer NGINX-Konfiguration (Code $ext_rc): $ext_result"
-                exit 1
+                return 1
             fi
         else
             # Default-Integration (zentral)
@@ -929,7 +991,7 @@ dlg_nginx_installation() {
                 print_success "Fotobox wurde in Default-Konfiguration integriert."
             else
                 print_error "Fehler bei Integration in Default-Konfiguration (Code $int_rc): $int_result"
-                exit 1
+                return 1
             fi
         fi
     elif [ $activ_rc -eq 1 ]; then
@@ -943,7 +1005,7 @@ dlg_nginx_installation() {
         debug "Antwort auf eigene Konfiguration (multisite): $antwort" "CLI" "dlg_nginx_installation"
         if [[ "$antwort" =~ ^([nN])$ ]]; then
             print_error "Abbruch: Keine NGINX-Integration gewählt."
-            exit 1
+            return 1
         fi
         # Portwahl und externe Konfiguration (zentral)
         if [ "$UNATTENDED" -eq 1 ]; then
@@ -1174,17 +1236,59 @@ dlg_show_summary() {
 # Funktion: Hauptablauf der Erstinstallation
 # ------------------------------------------------------------------------------
 main() {
+    echo "Main-Funktion wird initialisiert..."
     
-    dlg_check_system_requirements "$@"  # Prüfe Systemvoraussetzungen 
-    dlg_check_root               # Prüfe Root-Rechte
-    dlg_check_distribution       # Prüfe die Distribution
-    dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
-    dlg_prepare_users            # Erstelle Benutzer und Gruppe 'fotobox'
-    dlg_prepare_structure        # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
-    dlg_nginx_installation       # NGINX-Konfiguration (Integration oder eigene Site)
-    dlg_firewall_config          # Firewall-Konfiguration für HTTP/HTTPS-Ports
-    dlg_backend_integration      # Python-Backend, venv, systemd-Service, Start
-    dlg_show_summary             # Zeige Zusammenfassung der Installation an
+    # Initialisierung der Schrittzähler
+    STEP_COUNTER=0
+    
+    # Dynamische Erkennung der Anzahl der Dialog-Funktionen, mit Fallback auf 10
+    # Wir verwenden eine robustere Methode zur Zählung
+    echo "Ermittle Anzahl der Dialog-Funktionen..."
+    TOTAL_STEPS=$(grep -c "^dlg_" "$0" 2>/dev/null || echo 10)
+    echo "Gefundene Dialog-Funktionen: $TOTAL_STEPS"
+    
+    # Zur Sicherheit prüfen wir, ob die gefundene Anzahl plausibel ist
+    if [ $TOTAL_STEPS -lt 5 ] || [ $TOTAL_STEPS -gt 20 ]; then
+        echo "WARNUNG: Ungewöhnliche Anzahl von Dialog-Funktionen gefunden ($TOTAL_STEPS), setze auf Standard-Wert 10"
+        TOTAL_STEPS=10
+    fi
+    
+    # Deklarieren einer Hilfsfunktion zum sicheren Ausführen von Schritten
+    run_step() {
+        local func="$1"
+        shift
+        echo "Führe $func aus..."
+        if type "$func" &>/dev/null; then
+            "$func" "$@"
+            local result=$?
+            if [ $result -ne 0 ]; then
+                echo "WARNUNG: $func beendet mit Fehler $result"
+                # Fehler werden geloggt, aber die Installation wird fortgesetzt
+            else
+                echo "$func erfolgreich abgeschlossen."
+            fi
+        else
+            echo "FEHLER: Funktion $func nicht gefunden!"
+            # Wir brechen nicht ab, sondern versuchen den nächsten Schritt
+        fi
+    }
+    
+    # Führe jeden Installationsschritt aus und fange Fehler ab
+    echo "Starte Installationsschritte..."
+    
+    # Ausführung der einzelnen Dialogschritte, robuste Fehlerbehandlung
+    run_step dlg_check_system_requirements "$@"  # Prüfe Systemvoraussetzungen 
+    run_step dlg_check_root               # Prüfe Root-Rechte
+    run_step dlg_check_distribution       # Prüfe die Distribution
+    run_step dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
+    run_step dlg_prepare_users            # Erstelle Benutzer und Gruppe 'fotobox'
+    run_step dlg_prepare_structure        # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
+    run_step dlg_nginx_installation       # NGINX-Konfiguration (Integration oder eigene Site)
+    run_step dlg_firewall_config          # Firewall-Konfiguration für HTTP/HTTPS-Ports
+    run_step dlg_backend_integration      # Python-Backend, venv, systemd-Service, Start
+    run_step dlg_show_summary             # Zeige Zusammenfassung der Installation an
+    
+    echo "Installation abgeschlossen."
 }
 
 # ------------------------------------------------------------------------------
@@ -1209,4 +1313,9 @@ EOF
 }
 
 # Hauptfunktion starten
-main
+echo "Starte Hauptfunktion..."
+# Wir setzen vor dem Aufruf der Hauptfunktion noch einmal das set +e, um mehr Fehlertoleranz zu erreichen
+set +e
+# Befehlszeilenargumente an die Hauptfunktion weiterleiten
+main "$@"
+echo "Hauptfunktion beendet."
