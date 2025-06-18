@@ -113,19 +113,6 @@ DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 STEP_COUNTER=0               # Aktueller Schritt (wird inkrementiert)
 TOTAL_STEPS=10               # Fallback-Wert, falls die Erkennung nicht funktioniert
 
-# Hilfsfunktionen für den Fall, dass die Kernfunktionen nicht verfügbar sind
-if ! type print_step &>/dev/null; then
-    print_step() {
-        echo -e "\033[0;34m>>> $*\033[0m"
-    }
-fi
-
-if ! type print_prompt &>/dev/null; then
-    print_prompt() {
-        echo -n -e "\033[0;36m$* \033[0m"
-    }
-fi
-
 # ===========================================================================
 # Hilfsfunktionen
 # ===========================================================================
@@ -157,6 +144,9 @@ parse_args() {
         shift
     done
     
+    # UNATTENDED wird exportiert, damit andere Skripte darauf zugreifen können
+    # Um zu prüfen, ob der interaktive Modus aktiv ist: [ "$UNATTENDED" -eq 0 ]
+    # Um zu prüfen, ob der unbeaufsichtigte Modus aktiv ist: [ "$UNATTENDED" -eq 1 ]
     export UNATTENDED
     export DEBUG_MOD_LOCAL
     export DEBUG_MOD_GLOBAL
@@ -413,8 +403,13 @@ install_package_group() {
                 upgrade="n"
                 log "Automatische Antwort (unattended) auf Upgrade-Rückfrage: $upgrade"
             else
-                print_prompt "Soll $pkg auf Version $version aktualisiert werden? [j/N]"
-                read -r upgrade
+                # Verwende print_prompt für die Ja/Nein-Abfrage
+                print_prompt "Soll $pkg auf Version $version aktualisiert werden?" "yn"
+                if [ $? -eq 0 ]; then
+                    upgrade="j"
+                else
+                    upgrade="n"
+                fi
             fi
             if [[ "$upgrade" =~ ^([jJ]|[yY])$ ]]; then
                 apt-get install -y -qq "$pkg=$version"
@@ -1007,8 +1002,13 @@ dlg_nginx_installation() {
             antwort="j"
             log "Automatische Antwort (unattended) auf Default-Integration: $antwort"
         else
-            print_prompt "NGINX läuft nur im Default-Modus. Fotobox in Default-Konfiguration integrieren? [J/n]"
-            read -r antwort
+            # Verwende print_prompt mit Ja/Nein-Abfrage und Default-Wert "j"
+            print_prompt "NGINX läuft nur im Default-Modus. Fotobox in Default-Konfiguration integrieren?" "yn" "y"
+            if [ $? -eq 0 ]; then
+                antwort=""  # Leere Antwort oder "j" bedeutet Ja
+            else
+                antwort="n"
+            fi
         fi
         debug "Antwort auf Default-Integration: $antwort" "CLI" "dlg_nginx_installation"
         if [[ "$antwort" =~ ^([nN])$ ]]; then
@@ -1016,8 +1016,13 @@ dlg_nginx_installation() {
                 antwort2="j"
                 log "Automatische Antwort (unattended) auf eigene Konfiguration: $antwort2"
             else
-                print_prompt "Stattdessen eigene Fotobox-Konfiguration anlegen? [J/n]"
-                read -r antwort2
+                # Verwende print_prompt mit Ja/Nein-Abfrage und Default-Wert "j"
+                print_prompt "Stattdessen eigene Fotobox-Konfiguration anlegen?" "yn" "y"
+                if [ $? -eq 0 ]; then
+                    antwort2=""  # Leere Antwort oder "j" bedeutet Ja
+                else
+                    antwort2="n"
+                fi
             fi
             debug "Antwort auf eigene Konfiguration: $antwort2" "CLI" "dlg_nginx_installation"
             if [[ "$antwort2" =~ ^([nN])$ ]]; then
@@ -1032,16 +1037,21 @@ dlg_nginx_installation() {
                     port_result=$(bash "$NGINX_SCRIPT" --json setport 80 j)
                     port_rc=$?
                 else
-                    print_prompt "Bitte gewünschten Port für die Fotobox-Weboberfläche angeben [Default: 80]:"
-                    read -r user_port
+                    # Verwende print_prompt für Texteingabe
+                    user_port=$(print_prompt "Bitte gewünschten Port für die Fotobox-Weboberfläche angeben [Default: 80]:" "text")
                     if [ -z "$user_port" ]; then user_port=80; fi
                     debug "Starte $NGINX_SCRIPT setport $user_port N (interaktiv)" "CLI" "dlg_nginx_installation"
                     port_result=$(bash "$NGINX_SCRIPT" setport "$user_port" N)
                     port_rc=$?
                     if [ $port_rc -ne 0 ]; then
                         print_error "Portwahl/Setzen fehlgeschlagen: $port_result"
-                        print_prompt "Anderen Port wählen? [J/n]"
-                        read -r retry
+                        # Verwende print_prompt mit Ja/Nein-Abfrage und Default-Wert "j"
+                        print_prompt "Anderen Port wählen?" "yn" "y"
+                        if [ $? -eq 0 ]; then
+                            retry=""  # Leere Antwort oder "j" bedeutet Ja
+                        else
+                            retry="n"
+                        fi
                         if [[ "$retry" =~ ^([nN])$ ]]; then
                             print_error "Abbruch durch Benutzer bei Portwahl."
                             return 1
@@ -1090,8 +1100,13 @@ dlg_nginx_installation() {
             antwort="j"
             log "Automatische Antwort (unattended) auf eigene Konfiguration: $antwort"
         else
-            print_prompt "NGINX betreibt mehrere Sites. Eigene Fotobox-Konfiguration anlegen? [J/n]"
-            read -r antwort
+            # Verwende print_prompt mit Ja/Nein-Abfrage und Default-Wert "j"
+            print_prompt "NGINX betreibt mehrere Sites. Eigene Fotobox-Konfiguration anlegen?" "yn" "y"
+            if [ $? -eq 0 ]; then
+                antwort=""  # Leere Antwort oder "j" bedeutet Ja
+            else
+                antwort="n"
+            fi
         fi
         debug "Antwort auf eigene Konfiguration (multisite): $antwort" "CLI" "dlg_nginx_installation"
         if [[ "$antwort" =~ ^([nN])$ ]]; then
@@ -1235,43 +1250,79 @@ dlg_firewall_config() {
     ((STEP_COUNTER++))
     print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Firewall-Konfiguration ..."
 
+    # Ermittle die aktuellen Ports aus der NGINX-Konfiguration
+    local http_port https_port
+    
+    # Lade NGINX-Management-Modul, wenn noch nicht geladen
+    if [ -z "$MANAGE_NGINX_LOADED" ] || [ "$MANAGE_NGINX_LOADED" -ne 1 ]; then
+        local nginx_script="$BASH_DIR/manage_nginx.sh"
+        if [ -f "$nginx_script" ]; then
+            source "$nginx_script"
+        else
+            print_warning "NGINX-Management-Skript nicht gefunden, verwende Standard-Ports."
+            http_port=80
+            https_port=443
+        fi
+    fi
+    
+    # Wenn NGINX-Modul erfolgreich geladen wurde, hole die tatsächlichen Ports
+    if [ "${MANAGE_NGINX_LOADED:-0}" -eq 1 ]; then
+        http_port=$(get_nginx_port text 2>/dev/null || echo 80)
+        https_port=443  # HTTPS-Port ist oft separat konfiguriert
+        
+        print_info "Erkannte Web-Ports: HTTP=$http_port, HTTPS=$https_port"
+    else
+        http_port=80
+        https_port=443
+        print_info "Verwende Standard-Ports: HTTP=$http_port, HTTPS=$https_port"
+    fi
+    
     # Im Unattended-Modus wird die Firewall automatisch konfiguriert
     if [ "$UNATTENDED" -eq 1 ]; then
         print_info "Firewall wird im Unattended-Modus automatisch konfiguriert..."
-        # Führe das Firewall-Skript mit --setup-Parameter aus
-        if ! bash "$firewall_script" --setup; then
+        
+        # Setze die benötigten Ports als Umgebungsvariablen für das Firewall-Skript
+        export HTTP_PORT="$http_port"
+        export HTTPS_PORT="$https_port"
+        
+        # Führe das Firewall-Skript korrekt mit der setup_firewall Funktion aus
+        if ! bash -c "source \"$firewall_script\"; setup_firewall"; then
             print_warning "Firewall-Konfiguration fehlgeschlagen. Die Weboberfläche könnte nicht erreichbar sein."
             log "WARN: Firewall-Konfiguration fehlgeschlagen."
             return 1
         else
-            print_success "Firewall erfolgreich konfiguriert."
-            log "INFO: Firewall erfolgreich konfiguriert."
+            print_success "Firewall erfolgreich konfiguriert für Ports HTTP=$http_port und HTTPS=$https_port."
+            log "INFO: Firewall erfolgreich konfiguriert für Ports HTTP=$http_port und HTTPS=$https_port."
             return 0
         fi
     else
-        # Im interaktiven Modus fragen wir den Benutzer
-        if ! interactive_mode; then
-            print_info "Interaktiver Modus deaktiviert, Firewall wird nicht automatisch konfiguriert."
-            return 0
-        fi
-
-        print_info "Die Fotobox verwendet HTTP-Port 80 und HTTPS-Port 443 (anpassbar in der Konfigurationsdatei)."
+        # Im interaktiven Modus
+        print_info "Die Fotobox verwendet HTTP-Port $http_port und HTTPS-Port $https_port."
         print_info "Diese Ports müssen in der Firewall freigegeben werden, damit auf die Weboberfläche zugegriffen werden kann."
 
+        # Verwende print_prompt für Ja/Nein-Abfrage
         local configure_firewall=0
-        if promptyn "Möchten Sie die Firewall jetzt automatisch konfigurieren?"; then
+        print_prompt "Möchten Sie die Firewall jetzt automatisch konfigurieren?" "yn"
+        if [ $? -eq 0 ]; then
             configure_firewall=1
         fi
 
         if [ "$configure_firewall" -eq 1 ]; then
+            # Setze die benötigten Ports als Umgebungsvariablen für das Firewall-Skript
+            export HTTP_PORT="$http_port"
+            export HTTPS_PORT="$https_port"
+            
             # Firewall-Typ erkennen
-            local firewall_type=$(bash "$firewall_script" --status 2>/dev/null | grep "Firewall-System:" | cut -d: -f2 | tr -d '[:space:]')
+            local firewall_type
+            # Starten des Skripts mit einer sicheren Methode zur Erkennung
+            firewall_type=$(bash -c "source \"$firewall_script\"; detect_firewall" 2>/dev/null || echo "none")
             
             if [ -z "$firewall_type" ] || [ "$firewall_type" = "none" ]; then
                 print_warning "Kein unterstütztes Firewall-System gefunden."
                 
                 # Anbieten, ufw zu installieren
-                if promptyn "Möchten Sie UFW (Uncomplicated Firewall) installieren?"; then
+                print_prompt "Möchten Sie UFW (Uncomplicated Firewall) installieren?" "yn"
+                if [ $? -eq 0 ]; then
                     print_info "Installiere UFW..."
                     apt-get update -qq
                     apt-get install -y ufw
@@ -1289,14 +1340,16 @@ dlg_firewall_config() {
             fi
             
             # Firewall konfigurieren
-            print_info "Konfiguriere Firewall..."
-            if ! bash "$firewall_script" --setup; then
+            print_info "Konfiguriere Firewall für HTTP-Port $http_port und HTTPS-Port $https_port..."
+            
+            # Korrekter Aufruf: Verwende source statt bash und übergebe die Funktion korrekt
+            if ! bash -c "source \"$firewall_script\"; setup_firewall"; then
                 print_warning "Firewall-Konfiguration fehlgeschlagen. Die Weboberfläche könnte nicht erreichbar sein."
                 log "WARN: Firewall-Konfiguration fehlgeschlagen."
                 return 1
             else
-                print_success "Firewall erfolgreich konfiguriert."
-                log "INFO: Firewall erfolgreich konfiguriert."
+                print_success "Firewall erfolgreich konfiguriert für Ports HTTP=$http_port und HTTPS=$https_port."
+                log "INFO: Firewall erfolgreich konfiguriert für Ports HTTP=$http_port und HTTPS=$https_port."
                 return 0
             fi
         else
@@ -1352,6 +1405,7 @@ dlg_show_summary() {
         echo "Weboberfläche: $nginx_url"
     else
         print_success "Erstinstallation abgeschlossen."
+        # Nutze print_prompt ohne Parameter für einfache Ausgabe
         print_prompt "Bitte rufen Sie die Weboberfläche im Browser auf, um die Fotobox weiter zu konfigurieren und zu verwalten.\nURL: $nginx_url"
         echo "Weitere Wartung (Update, Deinstallation) erfolgt über die WebUI oder die Python-Skripte im backend/."
     fi

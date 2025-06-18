@@ -151,10 +151,20 @@ get_required_ports() {
     # Funktion: Ermittelt die für die Fotobox benötigten Ports
     # Rückgabe: Liste der Ports (durch Leerzeichen getrennt)
     
-    local http_port=$(read_config "http_port")
-    local https_port=$(read_config "https_port")
+    # Zuerst Umgebungsvariablen prüfen (z.B. bei Aufruf aus install.sh)
+    local http_port="${HTTP_PORT:-}"
+    local https_port="${HTTPS_PORT:-}"
     
-    # Fallback auf Standardports, falls nicht in der Konfiguration definiert
+    # Wenn keine Umgebungsvariablen gesetzt sind, aus Config lesen
+    if [ -z "$http_port" ]; then
+        http_port=$(read_config "http_port")
+    fi
+    
+    if [ -z "$https_port" ]; then
+        https_port=$(read_config "https_port")
+    fi
+    
+    # Fallback auf Standardports, falls weder Umgebungsvariablen noch Konfiguration definiert
     [ -z "$http_port" ] && http_port="$DEFAULT_HTTP_PORT"
     [ -z "$https_port" ] && https_port="$DEFAULT_HTTPS_PORT"
     
@@ -462,6 +472,45 @@ reset_firewall() {
     print_success "Fotobox-Firewall-Regeln wurden entfernt"
     return 0
 }
+
+# Command-Line-Interface für Rückwärtskompatibilität
+# Warnung: Diese Funktion ist veraltet und sollte nicht mehr direkt verwendet werden
+# Sie ist nur für die Rückwärtskompatibilität vorhanden und wird bei einem Update entfernt
+handle_cli_args() {
+    # Wenn dieses Skript direkt mit Argumenten aufgerufen wird
+    # Zeige die Warnung im Entwicklermodus
+    if [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ]; then
+        print_warning "VERALTET: Direkter Aufruf von manage_firewall.sh mit Parametern ist veraltet."
+        print_warning "Bitte verwende stattdessen: source manage_firewall.sh; setup_firewall | status_firewall | reset_firewall"
+    fi
+
+    # Parameter auswerten
+    local command="$1"
+    case "$command" in
+        "--setup")
+            setup_firewall
+            exit $?
+            ;;
+        "--status")
+            status_firewall
+            exit $?
+            ;;
+        "--reset")
+            reset_firewall
+            exit $?
+            ;;
+        *)
+            print_error "Unbekannter Parameter: $command"
+            print_info "Gültige Parameter: --setup, --status, --reset"
+            exit 1
+            ;;
+    esac
+}
+
+# Prüfe auf direkten Aufruf (nur für Rückwärtskompatibilität)
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]] && [ $# -gt 0 ]; then
+    handle_cli_args "$@"
+fi
 
 # Markiere dieses Modul als geladen
 MANAGE_FIREWALL_LOADED=1

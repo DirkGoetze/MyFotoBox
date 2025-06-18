@@ -361,11 +361,68 @@ chk_resources() {
         }
         
         print_prompt() {
-            debug_output "print_prompt (Fallback): $*"
-            if [ "${UNATTENDED:-0}" -eq 0 ]; then
-                echo -e "\n${COLOR_BLUE}$*${COLOR_RESET}\n"
+            # Parameter:
+            # $1 = Text für die Benutzerabfrage
+            # $2 = (optional) Prompt-Typ:
+            #      "yn" = Ja/Nein-Abfrage, gibt 0 für Ja und 1 für Nein zurück
+            #      "text" = Texteingabe, gibt eingegebenen Text zurück
+            #      Standardwert: Nur Anzeige ohne Eingabe
+            # $3 = (optional) Default-Wert für Ja/Nein-Abfragen:
+            #      "y" = Default ist Ja
+            #      "n" = Default ist Nein (Standard)
+            
+            local prompt_type="${2:-}"
+            local default="${3:-n}"
+            local prompt_text="$1"
+            local prompt_suffix=""
+            local answer=""
+            
+            debug_output "print_prompt (Fallback): $prompt_text [$prompt_type/$default]"
+            
+            # Wenn unattended-Modus aktiv ist, keine interaktive Abfrage
+            if [ "${UNATTENDED:-0}" -eq 1 ]; then
+                # Bei Ja/Nein-Abfragen im unattended-Modus immer Nein zurückgeben
+                if [ "$prompt_type" = "yn" ]; then
+                    return 1
+                fi
+                return 0
             fi
-            log "PROMPT: $*"
+            
+            # Prompt-Suffix je nach Typ anpassen
+            if [ "$prompt_type" = "yn" ]; then
+                if [ "$default" = "y" ]; then
+                    prompt_suffix=" [J/n]"
+                else
+                    prompt_suffix=" [j/N]"
+                fi
+            fi
+            
+            # Prompt ausgeben
+            echo -e "\n${COLOR_BLUE}${prompt_text}${prompt_suffix}${COLOR_RESET}"
+            
+            # Bei Bedarf Benutzereingabe abfragen
+            if [ -n "$prompt_type" ]; then
+                read -r answer
+                
+                # Ja/Nein-Abfrage auswerten
+                if [ "$prompt_type" = "yn" ]; then
+                    log "PROMPT-YN: $prompt_text => $answer"
+                    if [ -z "$answer" ]; then
+                        # Leere Eingabe: Default-Wert verwenden
+                        [ "$default" = "y" ] && return 0 || return 1
+                    else
+                        # Eingabe auf J/j/Y/y prüfen
+                        [[ "$answer" =~ ^([jJ]|[yY])$ ]]
+                        return $?
+                    fi
+                elif [ "$prompt_type" = "text" ]; then
+                    log "PROMPT-TEXT: $prompt_text => $answer"
+                    # Text zurückgeben (wenn mit eval aufgerufen)
+                    echo "$answer"
+                fi
+            else
+                log "PROMPT: $prompt_text"
+            fi
         }
         
         print_debug() { 
