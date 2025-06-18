@@ -222,8 +222,8 @@ backup_nginx_config() {
     # Verwende manage_folders.sh, falls verfügbar
     manage_folders_sh="$(dirname "$0")/manage_folders.sh"
     if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
-        # Hole Backup-Verzeichnis über manage_folders.sh
-        backup_dir="$("$manage_folders_sh" backup_dir)/nginx"
+        # Hole Backup-Verzeichnis über manage_folders.sh mit der neuen get_nginx_backup_dir Funktion
+        backup_dir="$("$manage_folders_sh" get_nginx_backup_dir)"
     else
         # Fallback zur alten Methode
         backup_dir="/opt/fotobox/backup/nginx"
@@ -238,6 +238,8 @@ backup_nginx_config() {
     
     # Verwende manage_folders.sh zur Verzeichniserstellung, falls verfügbar
     if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
+        # Die Verzeichniserstellung wird automatisch durch get_nginx_backup_dir erledigt,
+        # aber um sicherzugehen, verwenden wir create_directory
         "$manage_folders_sh" create_directory "$backup_dir"
     else
         mkdir -p "$backup_dir"
@@ -863,6 +865,49 @@ set_nginx_cnf_external() {
     return 0
 }
 
+get_nginx_template_file() {
+    # -----------------------------------------------------------------------
+    # get_nginx_template_file
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zur NGINX-Template-Konfigurationsdatei zurück
+    # Parameter: $1 - Template-Typ (default: fotobox)
+    # Rückgabe: Pfad zur NGINX-Konfigurationsdatei
+    # -----------------------------------------------------------------------
+    local template_type="${1:-fotobox}"
+    local conf_file=""
+    local manage_folders_sh
+    
+    # Verwende manage_folders.sh, falls verfügbar
+    manage_folders_sh="$(dirname "$0")/manage_folders.sh"
+    
+    if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
+        # Hole NGINX-Konfigurationsverzeichnis
+        local nginx_conf_dir
+        nginx_conf_dir="$("$manage_folders_sh" get_nginx_conf_dir)"
+        conf_file="$nginx_conf_dir/template_$template_type.conf"
+        
+        # Prüfe, ob die Datei existiert, sonst Fallback auf Standardvorlage
+        if [ ! -f "$conf_file" ]; then
+            # Fallback: Datei aus conf-Verzeichnis kopieren, falls verfügbar
+            local conf_dir
+            conf_dir="$("$manage_folders_sh" config_dir)"
+            if [ -f "$conf_dir/nginx-$template_type.conf" ]; then
+                mkdir -p "$nginx_conf_dir"
+                cp "$conf_dir/nginx-$template_type.conf" "$conf_file"
+                log "NGINX-Template wurde in das neue Verzeichnis kopiert: $conf_file"
+            else
+                # Fallback zur alten Methode
+                conf_file="/opt/fotobox/conf/nginx-$template_type.conf"
+            fi
+        fi
+    else
+        # Fallback zur alten Methode
+        conf_file="/opt/fotobox/conf/nginx-$template_type.conf"
+    fi
+    
+    echo "$conf_file"
+    return 0
+}
 
 # Markiere dieses Modul als geladen
 MANAGE_NGINX_LOADED=1

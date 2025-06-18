@@ -691,7 +691,7 @@ ensure_folder_structure() {
     # Hauptverzeichnisse erstellen
     get_install_dir >/dev/null || return 1
     get_data_dir >/dev/null || return 1
-    get_backup_dir >/dev>null || return 1
+    get_backup_dir >/dev/null || return 1
     get_log_dir >/dev/null || return 1
     get_frontend_dir >/dev/null || return 1
     get_config_dir >/dev/null || return 1
@@ -708,6 +708,10 @@ ensure_folder_structure() {
     get_photos_dir >/dev/null || return 1
     get_photos_originals_dir >/dev/null || return 1
     get_photos_gallery_dir >/dev/null || return 1
+    
+    # NGINX-Verzeichnisstruktur
+    get_nginx_conf_dir >/dev/null || return 1
+    get_nginx_backup_dir >/dev/null || return 1
     
     # Setze Ausführbarkeitsrechte für Skripte
     set_script_permissions || true
@@ -902,6 +906,88 @@ get_pip_path() {
     # Als Fallback geben wir einfach "pip" zurück und hoffen, dass es im PATH ist
     debug "Kein pip im venv gefunden, fallback auf System-pip" "CLI" "get_pip_path"
     echo "pip"
+    return 0
+}
+
+# ------------------------------------------------------------------------------
+# get_nginx_conf_dir
+# ------------------------------------------------------------------------------
+# Funktion: Gibt den Pfad zum NGINX-Konfigurationsverzeichnis zurück
+# Parameter: keine
+# Rückgabe: Pfad zum NGINX-Konfigurationsverzeichnis oder leerer String bei Fehler
+# ------------------------------------------------------------------------------
+get_nginx_conf_dir() {
+    local dir
+    local config_dir
+    
+    debug "Ermittle NGINX-Konfigurations-Verzeichnis" "CLI" "get_nginx_conf_dir"
+    
+    # Zuerst den übergeordneten Konfigurationsordner ermitteln
+    config_dir=$(get_config_dir)
+    
+    # Prüfen, ob NGINX_CONF_DIR bereits gesetzt ist
+    if [ -n "$NGINX_CONF_DIR" ] && [ -d "$NGINX_CONF_DIR" ]; then
+        debug "Verwende bereits definiertes NGINX_CONF_DIR: $NGINX_CONF_DIR" "CLI" "get_nginx_conf_dir"
+        create_directory "$NGINX_CONF_DIR" || true
+        echo "$NGINX_CONF_DIR"
+        return 0
+    fi
+    
+    # Verwende die in lib_core definierten Pfade
+    debug "Prüfe Standard- und Fallback-Pfade für NGINX-Konfigurations-Verzeichnis" "CLI" "get_nginx_conf_dir"
+    dir=$(get_folder_path "$DEFAULT_NGINX_CONF_DIR" "$FALLBACK_NGINX_CONF_DIR" 1)
+    if [ -n "$dir" ]; then
+        debug "Verwende Pfad für NGINX-Konfigurations-Verzeichnis: $dir" "CLI" "get_nginx_conf_dir"
+        echo "$dir"
+        return 0
+    fi
+    
+    # Als Fallback ein Unterverzeichnis im Konfigurations-Verzeichnis verwenden
+    dir="$config_dir/nginx"
+    debug "Fallback für NGINX-Konfigurations-Verzeichnis: $dir" "CLI" "get_nginx_conf_dir"
+    create_directory "$dir" || true
+    echo "$dir"
+    return 0
+}
+
+# ------------------------------------------------------------------------------
+# get_nginx_backup_dir
+# ------------------------------------------------------------------------------
+# Funktion: Gibt den Pfad zum NGINX-Backup-Verzeichnis zurück
+# Parameter: keine
+# Rückgabe: Pfad zum NGINX-Backup-Verzeichnis oder leerer String bei Fehler
+# ------------------------------------------------------------------------------
+get_nginx_backup_dir() {
+    local dir
+    local nginx_conf_dir
+    
+    debug "Ermittle NGINX-Backup-Verzeichnis" "CLI" "get_nginx_backup_dir"
+    
+    # Zuerst das NGINX-Konfigurationsverzeichnis ermitteln
+    nginx_conf_dir=$(get_nginx_conf_dir)
+    
+    # Prüfen, ob NGINX_BACKUP_DIR bereits gesetzt ist
+    if [ -n "$NGINX_BACKUP_DIR" ] && [ -d "$NGINX_BACKUP_DIR" ]; then
+        debug "Verwende bereits definiertes NGINX_BACKUP_DIR: $NGINX_BACKUP_DIR" "CLI" "get_nginx_backup_dir"
+        create_directory "$NGINX_BACKUP_DIR" || true
+        echo "$NGINX_BACKUP_DIR"
+        return 0
+    fi
+    
+    # Verwende die in lib_core definierten Pfade
+    debug "Prüfe Standard- und Fallback-Pfade für NGINX-Backup-Verzeichnis" "CLI" "get_nginx_backup_dir"
+    dir=$(get_folder_path "$DEFAULT_NGINX_BACKUP_DIR" "$FALLBACK_NGINX_BACKUP_DIR" 1)
+    if [ -n "$dir" ]; then
+        debug "Verwende Pfad für NGINX-Backup-Verzeichnis: $dir" "CLI" "get_nginx_backup_dir"
+        echo "$dir"
+        return 0
+    fi
+    
+    # Als Fallback ein Unterverzeichnis im NGINX-Konfigurationsverzeichnis verwenden
+    dir="$nginx_conf_dir/backup"
+    debug "Fallback für NGINX-Backup-Verzeichnis: $dir" "CLI" "get_nginx_backup_dir"
+    create_directory "$dir" || true
+    echo "$dir"
     return 0
 }
 

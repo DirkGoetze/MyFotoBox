@@ -1516,6 +1516,21 @@ Die Verzeichnisstruktur wird über ein dediziertes System verwaltet:
 - Bei Nichtverfügbarkeit wird auf `use_fallback_structure()` zurückgegriffen
 - Explizite Prüfung der Schreibrechte durch Test-Dateien für kritische Verzeichnisse
 - Standardisierte Fehlerrückgaben für detaillierte Diagnosen
+- Spezialisierte Verzeichnisse für verschiedene Systemkomponenten (z.B. NGINX, Firewall)
+
+Die wichtigsten verwalteten Verzeichnisse sind:
+
+```bash
+/opt/fotobox/                   # Hauptverzeichnis der Installation
+├── backend/                    # Backend-Logik und Python-Code
+├── conf/                       # Konfigurationsdateien
+│   └── nginx/                  # NGINX-Konfiguration
+│       └── backup/             # Backup der NGINX-Konfigurationen
+├── data/                       # Anwendungsdaten und Datenbank
+├── log/                        # Logdateien
+├── backup/                     # Sicherungen und Backups
+└── frontend/                   # Web-Frontend mit HTML, CSS und JavaScript
+```
 
 #### Dialog-Funktionen
 
