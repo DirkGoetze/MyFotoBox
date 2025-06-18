@@ -70,6 +70,9 @@ fi
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
 DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
+# ---------------------------------------------------------------------------
+STEP_COUNTER=0                       # Aktueller Schritt (wird inkrementiert)
+TOTAL_STEPS=$(grep -c "^dlg_" "$0")  # alle Funktionen, mit dlg_ zählen
 
 # ===========================================================================
 # Hilfsfunktionen
@@ -381,31 +384,8 @@ set_fallback_security_settings() {
     return 0
 }
 
-set_install_packages() {
-    # -----------------------------------------------------------------------
-    # set_install_packages
-    # -----------------------------------------------------------------------
-    # Funktion: Installiert alle benötigten Systempakete und prüft den Erfolg
-    # Rückgabe: 0 = OK, 1 = Fehler bei apt-get update, 
-    # ......... 2 = Fehler bei System-Requirements-Installation
-    
-    # Stelle sicher, dass das Logverzeichnis existiert
-    mkdir -p "$LOG_DIR"
-    
-    print_step "Führe apt-get update aus ..."
-    (apt-get update -qq) &> "$LOG_DIR/apt_update.log" &
-    show_spinner $!
-    if [ $? -ne 0 ]; then
-        print_error "Fehler bei apt-get update. Log-Auszug:"
-        tail -n 10 "$LOG_DIR/apt_update.log"
-        return 1
-    fi
-    
-    # Installiere Systempakete aus conf/requirements_system.inf
-    install_system_requirements || return 2
-    
-    return 0
-}
+# set_install_packages wurde entfernt (redundant mit install_system_requirements)
+# Die Funktion wurde direkt in dlg_prepare_system() integriert
 
 set_user_group() {
     # -----------------------------------------------------------------------
@@ -496,7 +476,7 @@ install_system_requirements() {
         return 1
     fi
     
-    print_step "Lese System-Anforderungen aus $req_file ..."
+    print_info "Lese System-Anforderungen aus $req_file ..."
     
     # Array für die zu installierenden Pakete
     local packages=()
@@ -532,9 +512,12 @@ install_system_requirements() {
     }
     
     # Paketlisten aktualisieren
-    print_step "Aktualisiere Paketlisten (apt update)..."
-    apt-get update -q || {
-        print_error "Fehler bei apt-get update. Bitte prüfen Sie Ihre Internetverbindung und Paketquellen."
+    print_info "Update der Paketquellen ..."
+    (apt-get update -qq) &> "$LOG_DIR/apt_update.log" &
+    show_spinner $!
+    if [ $? -ne 0 ]; then
+        print_error "Fehler bei apt-get update. Log-Auszug:"
+        tail -n 10 "$LOG_DIR/apt_update.log"
         return 2
     }
     
@@ -649,7 +632,8 @@ dlg_check_system_requirements() {
         log "WARNING: Zentrales Log-Hilfsskript nicht verfügbar, verwende Fallback-Logging in $LOG_DIR."
     fi
     
-    print_step "[3/10] Prüfe Systemvoraussetzungen und richte Logging ein ..."
+    ((STEP_COUNTER++))
+    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfe Systemvoraussetzungen ..."
 
     # Befehlszeilenargumente verarbeiten
     parse_args "$@"
@@ -663,7 +647,7 @@ dlg_check_system_requirements() {
         echo -e "\033[1;33mWarnung: Log-Rotation konnte nicht durchgeführt werden (log-Funktion nicht verfügbar)\033[0m"
     fi
 
-    print_success "Systemvoraussetzungen erfüllt, Logging eingerichtet."
+    print_success "Systemvoraussetzungen erfüllt."
 }
 
 dlg_check_root() {
@@ -671,7 +655,8 @@ dlg_check_root() {
     # dlg_check_root
     # -----------------------------------------------------------------------
     # Funktion: Prüft, ob das Skript als root ausgeführt wird
-    print_step "[1/10] Prüfe Rechte zur Ausführung ..."
+    ((STEP_COUNTER++))
+    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfe Rechte zur Ausführung ..."
     if ! chk_is_root; then
         print_error "Dieses Skript muss mit Root-Rechten ausgeführt werden."
         exit 1
@@ -684,7 +669,8 @@ dlg_check_distribution() {
     # dlg_check_distribution
     # -----------------------------------------------------------------------
     # Funktion: Prüft, ob das System auf Debian/Ubuntu basiert und zeigt Informationen an
-    print_step "[2/10] Prüfe Distribution ..."
+    ((STEP_COUNTER++))
+    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfe Distribution ..."
     
     # Prüfe Basis-Distribution
     if ! chk_distribution; then
@@ -722,18 +708,21 @@ dlg_prepare_system() {
     # -----------------------------------------------------------------------
     # dlg_prepare_system
     # -----------------------------------------------------------------------
-    # Funktion: Prüft installiert Pakete
-    print_step "[4/10] Installiere benötigte Systempakete ..."
-    set_install_packages
+    # Funktion: Prüft und installiert benötigte Systempakete
+    ((STEP_COUNTER++))
+    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Installiere benötigte Systempakete ..."
+    
+    # Stelle sicher, dass das Logverzeichnis existiert
+    mkdir -p "$LOG_DIR"
+    
+    # Direkt die Systemanforderungen prüfen und installieren
+    install_system_requirements
     rc=$?
     if [ $rc -eq 1 ]; then
-        print_error "Fehler bei apt-get update. Prüfen Sie Ihre Internetverbindung und Paketquellen."
+        print_error "Fehler beim Lesen der Anforderungsdatei. Prüfen Sie die Projektstruktur."
         exit 1
     elif [ $rc -eq 2 ]; then
-        print_error "Fehler bei der Installation der Systempakete."
-        exit 1
-    elif [ $rc -eq 4 ]; then
-        print_error "Fehler bei der Installation von SQLite."
+        print_error "Fehler bei der Installation der Systempakete. Prüfen Sie Ihre Internetverbindung und Paketquellen."
         exit 1
     elif [ $rc -ne 0 ]; then
         print_error "Unbekannter Fehler bei der Systempaket-Installation (Code $rc)."
@@ -747,7 +736,8 @@ dlg_prepare_users() {
     # dlg_prepare_users
     # -----------------------------------------------------------------------
     # Funktion: Erstellen des Benutzer und der Gruppe 'fotobox'
-    print_step "[5/10] Prüfe und lege Benutzer/Gruppe an ..."
+    ((STEP_COUNTER++))
+    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfe und lege Benutzer/Gruppe an ..."
     set_user_group
     rc=$?
     if [ $rc -eq 1 ]; then
@@ -771,7 +761,8 @@ dlg_prepare_structure() {
     # dlg_prepare_structure
     # -----------------------------------------------------------------------
     # Funktion: Prüft die Projektstruktur und richtet über manage_folders.sh die Verzeichnisstruktur ein
-    print_step "[6/10] Prüfe Projektstruktur und richte Verzeichnisse ein..."
+    ((STEP_COUNTER++))
+    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfe Projektstruktur und richte Verzeichnisse ein..."
     
     # Basierend auf manage_folders.sh die Struktur einrichten
     set_structure
@@ -810,7 +801,8 @@ dlg_nginx_installation() {
     #           (nur noch zentrale Logik via manage_nginx.sh)
     # Rückgabe: 0 = OK, !=0 = Fehler
     # ------------------------------------------------------------------------------
-    print_step "[7/10] NGINX-Installation und Konfiguration ..."
+    ((STEP_COUNTER++))
+    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] NGINX-Installation und Konfiguration ..."
 
     debug "Starte NGINX-Dialog, UNATTENDED=$UNATTENDED, BASH_DIR=$BASH_DIR" "CLI" "dlg_nginx_installation"
     # Verwenden der globalen Variable zur Prüfung, ob manage_nginx.sh existiert
@@ -998,7 +990,8 @@ dlg_backend_integration() {
     # ........  und startet es
     # Rückgabe: 0 = OK, !=0 = Fehler
     # -----------------------------------------------------------------------
-    print_step "[8/10] Python-Umgebung und Backend-Service werden eingerichtet ..."
+    ((STEP_COUNTER++))
+    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Python-Umgebung und Backend-Service werden eingerichtet ..."
     # Stellen Sie sicher, dass das Logverzeichnis vorhanden ist
     # LOG_DIR wird bereits in set_fallback_security_settings korrekt gesetzt
     
@@ -1049,7 +1042,8 @@ dlg_firewall_config() {
         return 1
     fi
 
-    print_step "[8/10] Firewall-Konfiguration ..."
+    ((STEP_COUNTER++))
+    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Firewall-Konfiguration ..."
 
     # Im Unattended-Modus wird die Firewall automatisch konfiguriert
     if [ "$UNATTENDED" -eq 1 ]; then
@@ -1129,7 +1123,8 @@ dlg_show_summary() {
     # -----------------------------------------------------------------------
     # Funktion: Zeigt die Zusammenfassung der Installation an
     # -----------------------------------------------------------------------
-    print_step "[9/10] Installation abgeschlossen: Zusammenfassung ..."
+    ((STEP_COUNTER++))
+    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Installation abgeschlossen: Zusammenfassung ..."
     
     # NGINX-Konfiguration nach Installation ausgeben (Policy-konform, modular)
     if [ -n "$MANAGE_NGINX_PATH" ]; then
@@ -1180,9 +1175,8 @@ dlg_show_summary() {
 # Funktion: Hauptablauf der Erstinstallation
 # ------------------------------------------------------------------------------
 main() {
-    # Führe die Prüfungen der Systemvoraussetzungen durch
     
-    dlg_check_system_requirements "$@"  # Prüfe Systemvoraussetzungen und richte Logging ein
+    dlg_check_system_requirements "$@"  # Prüfe Systemvoraussetzungen 
     dlg_check_root               # Prüfe Root-Rechte
     dlg_check_distribution       # Prüfe die Distribution
     dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
