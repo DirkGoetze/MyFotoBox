@@ -681,9 +681,14 @@ install_system_requirements() {
     # Stelle sicher, dass das Logverzeichnis existiert
     # LOG_DIR wird bereits in set_fallback_security_settings korrekt gesetzt
     
-    # Erstelle die System-Requirements-Log-Datei wenn sie nicht existiert
-    touch "$LOG_DIR/system_requirements.log" 2>/dev/null || \
-        print_warning "Konnte Log-Datei nicht erstellen. Log-Ausgaben werden möglicherweise nicht gespeichert."
+    # Stelle sicher, dass die Log-Funktionalität verfügbar ist
+    if ! type -t log &>/dev/null; then
+        print_warning "Log-Funktion nicht verfügbar. Log-Ausgaben werden möglicherweise nicht gespeichert."
+    else
+        # Log-Funktion ohne Parameter aufrufen führt die Rotation durch, falls nötig
+        log
+        log "START: Systemanforderungen werden installiert" "install_system_requirements" "install.sh"
+    fi
     
     # Paketlisten aktualisieren
     echo -n "[/] Update der Paketquellen ..."
@@ -720,11 +725,27 @@ install_system_requirements() {
     for pkg in "${packages[@]}"; do
         # Spinner während der Installation anzeigen
         echo -n "[/] Installiere Paket: $pkg..."
-        apt-get install -y "$pkg" >> "$LOG_DIR/system_requirements.log" 2>&1 &
+        
+        # Temporäre Datei für die Ausgabe der apt-get Installation
+        local apt_install_output=$(create_temp_file "apt_install_${pkg}")
+        
+        apt-get install -y "$pkg" &> "$apt_install_output" &
         local install_pid=$!
         show_spinner "$install_pid" "slash"
         wait "$install_pid"
         local install_result=$?
+        
+        # Log der Installationsausgabe
+        log "SYSTEM-REQ: Installation von $pkg (Ergebnis: $install_result)" "install_system_requirements" "install.sh"
+        
+        # Bei Bedarf Details loggen
+        if [ $install_result -ne 0 ]; then
+            log "ERROR: Details zur fehlgeschlagenen Installation von $pkg:" "install_system_requirements" "install.sh"
+            log "$(cat "$apt_install_output")" "install_system_requirements" "install.sh"
+        fi
+        
+        # Temporäre Datei löschen
+        rm -f "$apt_install_output"
         
         if [ $install_result -eq 0 ]; then
             echo -e "\r  → [OK] Paket $pkg erfolgreich installiert."
@@ -733,8 +754,8 @@ install_system_requirements() {
             echo -e "\r  → [FEHLER] Installation von $pkg fehlgeschlagen."
             print_warning "Paket $pkg konnte nicht installiert werden. Das Skript wird versuchen, fortzufahren."
             failed_packages+=("$pkg")
-            # In die Logdatei schreiben, dass das Paket nicht installiert werden konnte
-            echo "$(date '+%Y-%m-%d %H:%M:%S') ERROR: Paket $pkg konnte nicht installiert werden" >> "$LOG_DIR/system_requirements.log"
+            # Fehler für nicht installiertes Paket über die zentrale Logfunktion melden
+            log "ERROR: Paket $pkg konnte nicht installiert werden" "install_system_requirements" "install.sh"
         fi
     done
     
