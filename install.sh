@@ -117,12 +117,55 @@ TOTAL_STEPS=10               # Fallback-Wert, falls die Erkennung nicht funktion
 # Hilfsfunktionen
 # ===========================================================================
 
+create_temp_file() {
+    # -----------------------------------------------------------------------
+    # create_temp_file
+    # -----------------------------------------------------------------------
+    # Funktion: Erstellt eine temporäre Datei im Projektverzeichnis
+    # Parameter: $1 = (Optional) Präfix für den Dateinamen
+    # Rückgabe: Pfad zur temporären Datei
+    
+    local prefix="${1:-fotobox}"
+    local tmpdir
+    
+    # Prüfen, ob get_tmp_dir verfügbar ist
+    if type -t get_tmp_dir >/dev/null; then
+        tmpdir="$(get_tmp_dir)"
+    elif [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ]; then
+        tmpdir="$TMP_DIR"
+    elif [ -d "$DEFAULT_TMP_DIR" ] || mkdir -p "$DEFAULT_TMP_DIR" 2>/dev/null; then
+        tmpdir="$DEFAULT_TMP_DIR"
+    else
+        # Fallback auf System-temp, wenn Projektverzeichnis nicht verfügbar
+        tmpdir="/tmp"
+    fi
+    
+    # Sicherstellen, dass das Verzeichnis existiert
+    mkdir -p "$tmpdir" 2>/dev/null || true
+    
+    # Temporäre Datei mit zufälligem Suffix erstellen
+    local random_suffix
+    random_suffix="$(date +%s%N | md5sum | head -c 10)"
+    local tempfile="${tmpdir}/${prefix}_${random_suffix}.tmp"
+    
+    # Datei erstellen
+    touch "$tempfile" 2>/dev/null
+    
+    # Ausgabe des Dateipfads
+    echo "$tempfile"
+}
+
 parse_args() {
     # -----------------------------------------------------------------------
     # Funktion: Verarbeitet Befehlszeilenargumente für das Skript
     # -----------------------------------------------------------------------
     # Standardwerte für alle Flags setzen
     UNATTENDED=0
+    
+    # Temporäres Verzeichnis für Befehlsausgaben erstellen (wenn es nicht existiert)
+    if [ ! -d "/tmp" ]; then
+        mkdir -p "/tmp" 2>/dev/null || true
+    fi
     
     # Argumente durchlaufen
     while [[ $# -gt 0 ]]; do
@@ -603,18 +646,30 @@ install_system_requirements() {
     
     # Paketlisten aktualisieren
     echo -n "[/] Update der Paketquellen ..."
-    (apt-get update -qq) &> "$LOG_DIR/apt_update.log" &
+    
+    # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
+    apt_update_output=$(create_temp_file "apt_update")
+    
+    # Führe den Befehl aus und speichere Ausgabe in temporärer Datei
+    (apt-get update -qq) &> "$apt_update_output" &
     show_spinner $! "dots"
     wait $!
     update_result=$?
     
+    # Logge die Ausgabe in die zentrale Logdatei
+    log "APT UPDATE AUSGABE: $(cat "$apt_update_output")" "install.sh" "apt_update"
+    
     if [ $update_result -ne 0 ]; then
         echo -e "\r  → [FEHLER] Update der Paketquellen fehlgeschlagen."
         print_error "Fehler bei apt-get update. Log-Auszug:"
-        tail -n 10 "$LOG_DIR/apt_update.log"
+        tail -n 10 "$apt_update_output"
+        # Lösche temporäre Datei
+        rm -f "$apt_update_output"
         return 2
     else
         echo -e "\r  → [OK] Update der Paketquellen erfolgreich abgeschlossen."
+        # Lösche temporäre Datei
+        rm -f "$apt_update_output"
     fi
     
     # Pakete einzeln installieren für bessere Fehlerbehandlung
@@ -1165,17 +1220,29 @@ dlg_backend_integration() {
     # Python venv anlegen, falls nicht vorhanden
     if [ ! -d "$INSTALL_DIR/backend/venv" ]; then
         echo -n "[/] Erstelle Python-Virtualenv..."
-        python3 -m venv "$INSTALL_DIR/backend/venv" &> "$LOG_DIR/venv_create.log" &
+        
+        # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
+        venv_output=$(create_temp_file "venv_create")
+        
+        python3 -m venv "$INSTALL_DIR/backend/venv" &> "$venv_output" &
         local venv_pid=$!
         show_spinner "$venv_pid" "dots"
         wait $venv_pid
+        
+        # Logge die Ausgabe in die zentrale Logdatei
+        log "VENV CREATE AUSGABE: $(cat "$venv_output")" "install.sh" "venv_create"
+        
         if [ $? -ne 0 ]; then
             echo -e "\r  → [FEHLER] Virtualenv-Erstellung fehlgeschlagen."
             print_error "Konnte venv nicht anlegen! Log-Auszug:"
-            tail -n 10 "$LOG_DIR/venv_create.log"
+            tail -n 10 "$venv_output"
+            # Lösche temporäre Datei
+            rm -f "$venv_output"
             return 1
         else
             echo -e "\r  → [OK] Python-Virtualenv erfolgreich erstellt."
+            # Lösche temporäre Datei
+            rm -f "$venv_output"
         fi
     else
         echo "  → [OK] Python-Virtualenv existiert bereits."
@@ -1183,35 +1250,57 @@ dlg_backend_integration() {
     
     # Abhängigkeiten installieren
     echo -n "[/] Installiere/aktualisiere pip ..."
-    ("$INSTALL_DIR/backend/venv/bin/pip" install --upgrade pip) &> "$LOG_DIR/pip_upgrade.log" &
+    
+    # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
+    pip_output=$(create_temp_file "pip_upgrade")
+    
+    ("$INSTALL_DIR/backend/venv/bin/pip" install --upgrade pip) &> "$pip_output" &
     local pip_pid=$!
     show_spinner "$pip_pid" "dots"
     wait $pip_pid
     local pip_result=$?
     
+    # Logge die Ausgabe in die zentrale Logdatei
+    log "PIP UPGRADE AUSGABE: $(cat "$pip_output")" "install.sh" "pip_upgrade"
+    
     if [ $pip_result -ne 0 ]; then
         echo -e "\r  → [FEHLER] Pip-Upgrade fehlgeschlagen."
         print_error "Fehler beim Upgrade von pip. Log-Auszug:"
-        tail -n 10 "$LOG_DIR/pip_upgrade.log"
+        tail -n 10 "$pip_output"
+        # Lösche temporäre Datei
+        rm -f "$pip_output"
         return 1
     else
         echo -e "\r  → [OK] Pip erfolgreich aktualisiert."
+        # Lösche temporäre Datei
+        rm -f "$pip_output"
     fi
     
     echo -n "[/] Installiere Python-Abhängigkeiten ..."
-    ("$INSTALL_DIR/backend/venv/bin/pip" install -r "$INSTALL_DIR/conf/requirements_python.inf") &> "$LOG_DIR/pip_requirements.log" &
+    
+    # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
+    req_output=$(create_temp_file "pip_requirements")
+    
+    ("$INSTALL_DIR/backend/venv/bin/pip" install -r "$INSTALL_DIR/conf/requirements_python.inf") &> "$req_output" &
     local req_pid=$!
     show_spinner "$req_pid" "dots"
     wait $req_pid
     local req_result=$?
     
+    # Logge die Ausgabe in die zentrale Logdatei
+    log "PIP REQUIREMENTS AUSGABE: $(cat "$req_output")" "install.sh" "pip_requirements"
+    
     if [ $req_result -ne 0 ]; then
         echo -e "\r  → [FEHLER] Installation der Python-Abhängigkeiten fehlgeschlagen."
         print_error "Konnte Python-Abhängigkeiten nicht installieren! Log-Auszug:"
-        tail -n 10 "$LOG_DIR/pip_requirements.log"
+        tail -n 10 "$req_output"
+        # Lösche temporäre Datei
+        rm -f "$req_output"
         return 1
     else
         echo -e "\r  → [OK] Python-Abhängigkeiten erfolgreich installiert (inkl. bcrypt für sichere Passwörter)."
+        # Lösche temporäre Datei
+        rm -f "$req_output"
     fi
     # systemd-Service anlegen und starten
     echo -n "[/] Erstelle systemd-Service-Datei..."

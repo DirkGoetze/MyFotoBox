@@ -40,6 +40,7 @@ DEFAULT_CONF_DIR="$DEFAULT_INSTALL_DIR/conf"
 DEFAULT_DATA_DIR="$DEFAULT_INSTALL_DIR/data"
 DEFAULT_LOG_DIR="$DEFAULT_INSTALL_DIR/log"
 DEFAULT_FRONTEND_DIR="$DEFAULT_INSTALL_DIR/frontend"
+DEFAULT_TMP_DIR="$DEFAULT_INSTALL_DIR/tmp"
 
 # Fallback-Pfade für den Fall, dass Standardpfade nicht verfügbar sind
 FALLBACK_INSTALL_DIR="/var/lib/fotobox"
@@ -51,6 +52,7 @@ FALLBACK_LOG_DIR_2="/tmp/fotobox"
 FALLBACK_LOG_DIR_3="."
 FALLBACK_FRONTEND_DIR="/var/www/html/fotobox"
 FALLBACK_CONF_DIR="/etc/fotobox"
+FALLBACK_TMP_DIR="/tmp/fotobox_tmp"
 
 # Initialisiere Runtime-Variablen mit den Standardwerten
 : "${INSTALL_DIR:=$DEFAULT_INSTALL_DIR}"
@@ -60,6 +62,7 @@ FALLBACK_CONF_DIR="/etc/fotobox"
 : "${DATA_DIR:=$DEFAULT_DATA_DIR}"
 : "${LOG_DIR:=$DEFAULT_LOG_DIR}"
 : "${FRONTEND_DIR:=$DEFAULT_FRONTEND_DIR}"
+: "${TMP_DIR:=$DEFAULT_TMP_DIR}"
 
 # Farbkonstanten für Ausgaben (Shell-ANSI)
 # ------------------------------------------------------------------------------

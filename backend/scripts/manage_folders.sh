@@ -403,57 +403,86 @@ get_frontend_dir() {
         return 0
     fi
     
-    # Verwende die in dieser Datei definierten Pfade
-    debug "Prüfe Standard- und Fallback-Pfade für Frontend-Verzeichnis" "CLI" "get_frontend_dir"
-    dir=$(get_folder_path "$DEFAULT_FRONTEND_DIR" "$FALLBACK_FRONTEND_DIR" 1)
-    if [ -n "$dir" ]; then
-        debug "Verwende Pfad für Frontend-Verzeichnis: $dir" "CLI" "get_frontend_dir"
+    # Standardpfad verwenden
+    dir="$DEFAULT_FRONTEND_DIR"
+    debug "Prüfe Standard-Frontend-Verzeichnis: $dir" "CLI" "get_frontend_dir"
+    
+    if [ -d "$dir" ]; then
+        create_directory "$dir" || true
         echo "$dir"
         return 0
     fi
     
-    # Als absoluten Notfall ein Unterverzeichnis des Installationsverzeichnisses verwenden
-    local install_dir
-    install_dir=$(get_install_dir)
-    debug "Alle Pfade für Frontend-Verzeichnis fehlgeschlagen, verwende $install_dir/frontend" "CLI" "get_frontend_dir"
-    echo "$install_dir/frontend"
+    # Fallback auf Systemweb-Verzeichnis
+    dir="$FALLBACK_FRONTEND_DIR"
+    debug "Standard-Frontend-Verzeichnis nicht verfügbar, verwende Fallback: $dir" "CLI" "get_frontend_dir"
+    create_directory "$dir" || true
+    
+    echo "$dir"
     return 0
 }
 
 # ------------------------------------------------------------------------------
-# get_config_dir
+# get_tmp_dir
 # ------------------------------------------------------------------------------
-# Funktion: Gibt den Pfad zum Konfigurationsverzeichnis zurück
+# Funktion: Gibt den Pfad zum temporären Verzeichnis zurück
 # Parameter: keine
-# Rückgabe: Pfad zum Konfigurationsverzeichnis oder leerer String bei Fehler
+# Rückgabe: Pfad zum temporären Verzeichnis oder leerer String bei Fehler
 # ------------------------------------------------------------------------------
-get_config_dir() {
-    local dir
+get_tmp_dir() {
+    local tmpdir
     
-    debug "Ermittle Konfigurations-Verzeichnis" "CLI" "get_config_dir"
+    debug "Ermittle temporäres Verzeichnis" "CLI" "get_tmp_dir" >/dev/null 2>&1
     
-    # Prüfen, ob CONFIG_DIR bereits gesetzt ist
-    if [ -n "$CONFIG_DIR" ] && [ -d "$CONFIG_DIR" ]; then
-        debug "Verwende bereits definiertes CONFIG_DIR: $CONFIG_DIR" "CLI" "get_config_dir"
-        create_directory "$CONFIG_DIR" || true
-        echo "$CONFIG_DIR"
+    # Prüfen, ob TMP_DIR bereits gesetzt ist (z.B. vom install.sh)
+    if [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ]; then
+        debug "Verwende bereits definiertes TMP_DIR: $TMP_DIR" "CLI" "get_tmp_dir" >/dev/null 2>&1
+        create_directory "$TMP_DIR" || true
+        echo "$TMP_DIR"
         return 0
     fi
     
-    # Verwende die in dieser Datei definierten Pfade
-    debug "Prüfe Standard- und Fallback-Pfade für Konfigurations-Verzeichnis" "CLI" "get_config_dir"
-    dir=$(get_folder_path "$DEFAULT_CONFIG_DIR" "$FALLBACK_CONFIG_DIR" 1)
-    if [ -n "$dir" ]; then
-        debug "Verwende Pfad für Konfigurations-Verzeichnis: $dir" "CLI" "get_config_dir"
-        echo "$dir"
+    # Standardpfad verwenden
+    tmpdir="$DEFAULT_TMP_DIR"
+    debug "Prüfe Standard-Temp-Verzeichnis: $tmpdir" "CLI" "get_tmp_dir" >/dev/null 2>&1
+    
+    if [ -d "$tmpdir" ] || mkdir -p "$tmpdir" 2>/dev/null; then
+        # Symlink nach /tmp/fotobox anlegen, falls root und möglich
+        if [ "$(id -u)" = "0" ] && [ -w "/tmp" ]; then
+            debug "Erstelle Symlink in /tmp/fotobox" "CLI" "get_tmp_dir" >/dev/null 2>&1
+            ln -sf "$tmpdir" /tmp/fotobox
+        fi
+        create_directory "$tmpdir" || true
+        debug "Verwende Standard-Temp-Verzeichnis: $tmpdir" "CLI" "get_tmp_dir" >/dev/null 2>&1
+        echo "$tmpdir"
         return 0
     fi
     
-    # Als absoluten Notfall ein Unterverzeichnis des Installationsverzeichnisses verwenden
-    local install_dir
-    install_dir=$(get_install_dir)
-    debug "Alle Pfade für Konfigurations-Verzeichnis fehlgeschlagen, verwende $install_dir/conf" "CLI" "get_config_dir"
-    echo "$install_dir/conf"
+    # Fallback-Optionen, wenn das Standardverzeichnis nicht verfügbar ist
+    debug "Standard-Temp-Verzeichnis nicht verfügbar, prüfe Fallback-Optionen" "CLI" "get_tmp_dir" >/dev/null 2>&1
+    
+    # Fallback auf das Projekt-Log-Verzeichnis
+    tmpdir="$(get_log_dir)/tmp"
+    if mkdir -p "$tmpdir" 2>/dev/null; then
+        debug "Verwende Fallback im Log-Verzeichnis: $tmpdir" "CLI" "get_tmp_dir" >/dev/null 2>&1
+        create_directory "$tmpdir" || true
+        echo "$tmpdir"
+        return 0
+    fi
+    
+    # Fallback auf System-temp
+    tmpdir="$FALLBACK_TMP_DIR" # /tmp/fotobox_tmp
+    if mkdir -p "$tmpdir" 2>/dev/null; then
+        debug "Verwende Fallback-System-Temp: $tmpdir" "CLI" "get_tmp_dir" >/dev/null 2>&1
+        create_directory "$tmpdir" || true
+        echo "$tmpdir"
+        return 0
+    fi
+    
+    # Als absolute Notlösung: Verwende /tmp direkt
+    tmpdir="/tmp"
+    debug "Verwende Systemverzeichnis /tmp als letzte Option" "CLI" "get_tmp_dir" >/dev/null 2>&1
+    echo "$tmpdir"
     return 0
 }
 
@@ -601,7 +630,7 @@ ensure_folder_structure() {
     # Hauptverzeichnisse erstellen
     get_install_dir >/dev/null || return 1
     get_data_dir >/dev/null || return 1
-    get_backup_dir >/dev/null || return 1
+    get_backup_dir >/dev>null || return 1
     get_log_dir >/dev/null || return 1
     get_frontend_dir >/dev/null || return 1
     get_config_dir >/dev/null || return 1

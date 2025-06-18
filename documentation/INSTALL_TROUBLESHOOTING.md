@@ -13,6 +13,22 @@ Dieses Problem tritt auf, wenn das Skript nach dem Laden der Ressourcen nicht ko
 3. Robustere Fehlerbehandlung innerhalb der Dialog-Funktionen
 4. Debugging-Ausgaben zur besseren Nachverfolgung des Installationsablaufs
 
+### Seltsame Verzeichnisse mit ANSI-Farbcodes werden erstellt
+
+Wenn während der Installation Verzeichnisse mit seltsamen Namen wie `[1;36mVerwende` erstellt werden, handelt es sich um ein Problem mit Debug-Ausgaben in der Funktion `get_log_dir()`. Dieses Problem wurde in neueren Versionen gelöst, indem Debug-Ausgaben nach `/dev/null` umgeleitet werden.
+
+Wenn auf Ihrem System bereits solche Verzeichnisse erstellt wurden, können Sie das Reparaturskript `fix_logging_issues.sh` verwenden:
+
+```bash
+sudo bash fix_logging_issues.sh
+```
+
+### Separate Log-Dateien statt zentraler Logging-Lösung
+
+In früheren Versionen wurden bei der Installation separate Log-Dateien für verschiedene Prozesse erstellt (z.B. `apt_update.log`, `venv_create.log`), was die zentrale Logging-Lösung umging. Dieses Problem wurde behoben, und alle Ausgaben werden nun in die zentrale Logdatei geschrieben.
+
+Detaillierte Informationen zu Logging-Problemen und deren Lösungen finden Sie in der Dokumentation unter `documentation/logging_probleme_und_loesungen.md`.
+
 ### Verwendung des Debug-Installationsskripts
 
 Für eine detailliertere Fehlerbehebung wurde ein Debug-Installationsskript erstellt. Dieses kann anstelle des normalen Installationsskripts verwendet werden:
