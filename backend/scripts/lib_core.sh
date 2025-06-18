@@ -34,7 +34,9 @@ debug_output() {
 # ===========================================================================
 # Primäre Pfaddefinitionen (Single Source of Truth)
 DEFAULT_INSTALL_DIR="/opt/fotobox"
-DEFAULT_BASH_DIR="$DEFAULT_INSTALL_DIR/backend/scripts"
+DEFAULT_BACKEND_DIR="$DEFAULT_INSTALL_DIR/backend"
+DEFAULT_BASH_DIR="$DEFAULT_BACKEND_DIR/scripts"
+DEFAULT_BACKEND_VENV_DIR="$DEFAULT_BACKEND_DIR/venv"
 DEFAULT_BACKUP_DIR="$DEFAULT_INSTALL_DIR/backup"
 DEFAULT_CONF_DIR="$DEFAULT_INSTALL_DIR/conf"
 DEFAULT_DATA_DIR="$DEFAULT_INSTALL_DIR/data"
@@ -44,7 +46,9 @@ DEFAULT_TMP_DIR="$DEFAULT_INSTALL_DIR/tmp"
 
 # Fallback-Pfade für den Fall, dass Standardpfade nicht verfügbar sind
 FALLBACK_INSTALL_DIR="/var/lib/fotobox"
+FALLBACK_BACKEND_DIR="/var/lib/fotobox/backend"
 FALLBACK_BASH_DIR="/var/lib/fotobox/backend/scripts"
+FALLBACK_BACKEND_VENV_DIR="/var/lib/fotobox/backend/venv"
 FALLBACK_DATA_DIR="/var/lib/fotobox/data"
 FALLBACK_BACKUP_DIR="/var/backups/fotobox"
 FALLBACK_LOG_DIR="/var/log/fotobox"
@@ -56,7 +60,9 @@ FALLBACK_TMP_DIR="/tmp/fotobox_tmp"
 
 # Initialisiere Runtime-Variablen mit den Standardwerten
 : "${INSTALL_DIR:=$DEFAULT_INSTALL_DIR}"
+: "${BACKEND_DIR:=$DEFAULT_BACKEND_DIR}"
 : "${BASH_DIR:=$DEFAULT_BASH_DIR}"
+: "${BACKEND_VENV_DIR:=$DEFAULT_BACKEND_VENV_DIR}"
 : "${BACKUP_DIR:=$DEFAULT_BACKUP_DIR}"
 : "${CONF_DIR:=$DEFAULT_CONF_DIR}"
 : "${DATA_DIR:=$DEFAULT_DATA_DIR}"
@@ -89,7 +95,7 @@ COLOR_CYAN="\033[1;36m"
 # DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
 : "${DEBUG_MOD_LOCAL:=0}"    # Lokales Debug-Flag für einzelne Skripte
-DEBUG_MOD_GLOBAL=1           # Globales Flag, das alle lokalen überstimmt
+DEBUG_MOD_GLOBAL=0           # Globales Flag, das alle lokalen überstimmt
 
 # Lademodus für Module
 # 0 = Bei Bedarf laden (für laufenden Betrieb)

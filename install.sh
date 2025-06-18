@@ -19,6 +19,8 @@ set -e
 # Skript- und BASH-Verzeichnis festlegen
 INSTALL_DIR="$(dirname "$(readlink -f "$0")")"
 BASH_DIR="$INSTALL_DIR/backend/scripts"
+# Diese Variablen werden zu Beginn direkt gesetzt, damit die lib_core.sh geladen werden kann
+# Nach dem Laden der lib_core.sh sollten die Getter-Funktionen verwendet werden
 
 # Debug-Ausgabe zum Nachverfolgen des Installationspfads
 echo "INSTALL_DIR=$INSTALL_DIR"
@@ -546,17 +548,36 @@ set_structure() {
     # Funktion: Prüft die Projektstruktur und delegiert die Ordnerstrukturierung an manage_folders.sh
     debug "Starte mit INSTALL_DIR=$INSTALL_DIR" "CLI" "set_structure"
     
-    # Prüfe, ob das Backend-Verzeichnis und wichtige Dateien existieren
-    if [ ! -d "$INSTALL_DIR/backend" ] || [ ! -d "$INSTALL_DIR/backend/scripts" ] || [ ! -f "$INSTALL_DIR/conf/requirements_python.inf" ]; then
+    # Prüfe, ob die benötigten Verzeichnisse und wichtige Dateien existieren
+    local backend_dir
+    local conf_dir
+    
+    if type -t get_backend_dir >/dev/null; then
+        backend_dir=$(get_backend_dir)
+    else
+        backend_dir="$INSTALL_DIR/backend"
+    fi
+    
+    if type -t get_config_dir >/dev/null; then
+        conf_dir=$(get_config_dir)
+    else
+        conf_dir="$INSTALL_DIR/conf"
+    fi
+    
+    if [ ! -d "$backend_dir" ] || [ ! -d "$backend_dir/scripts" ] || [ ! -f "$conf_dir/requirements_python.inf" ]; then
         print_error "Fehler: Die Projektstruktur ist unvollständig. Bitte stellen Sie sicher, dass das Repository vollständig geklont wurde (inkl. backend/, backend/scripts/, conf/requirements_python.inf)."
         return 10
     fi
     
     # manage_folders.sh ausführbar machen
-    chmod +x "$INSTALL_DIR"/backend/scripts/*.sh || true
+    if [ -d "$backend_dir/scripts" ]; then
+        chmod +x "$backend_dir"/scripts/*.sh || true
+    else
+        chmod +x "$BASH_DIR"/*.sh || true
+    fi
     
     # Prüfe, ob manage_folders.sh vorhanden ist
-    if [ ! -f "$INSTALL_DIR/backend/scripts/manage_folders.sh" ]; then
+    if [ ! -f "$backend_dir/scripts/manage_folders.sh" ] && [ ! -f "$BASH_DIR/manage_folders.sh" ]; then
         print_error "manage_folders.sh nicht gefunden. Die Projektstruktur scheint unvollständig zu sein."
         debug "manage_folders.sh nicht gefunden" "CLI" "set_structure"
         return 1
@@ -572,9 +593,20 @@ set_structure() {
     
     # manage_folders.sh für die Ordnerstruktur nutzen
     debug "Delegiere Ordnerverwaltung an manage_folders.sh" "CLI" "set_structure"
-    if ! "$INSTALL_DIR/backend/scripts/manage_folders.sh" ensure_structure; then
-        print_error "Fehler bei der Erstellung der Ordnerstruktur über manage_folders.sh."
-        debug "Fehler bei manage_folders.sh" "CLI" "set_structure"
+    if [ -f "$backend_dir/scripts/manage_folders.sh" ]; then
+        if ! "$backend_dir/scripts/manage_folders.sh" ensure_structure; then
+            print_error "Fehler bei der Erstellung der Ordnerstruktur über manage_folders.sh."
+            debug "Fehler bei manage_folders.sh" "CLI" "set_structure"
+            return 1
+        fi
+    elif [ -f "$BASH_DIR/manage_folders.sh" ]; then
+        if ! "$BASH_DIR/manage_folders.sh" ensure_structure; then
+            print_error "Fehler bei der Erstellung der Ordnerstruktur über manage_folders.sh."
+            debug "Fehler bei manage_folders.sh" "CLI" "set_structure"
+            return 1
+        fi
+    else
+        print_error "manage_folders.sh konnte nicht ausgeführt werden."
         return 1
     fi
     
@@ -602,7 +634,16 @@ install_system_requirements() {
         log "WARNING: INSTALL_DIR war nicht gesetzt, setze auf: $INSTALL_DIR"
     fi
     
-    local req_file="$INSTALL_DIR/conf/requirements_system.inf"
+    local req_file
+    local conf_dir
+    
+    if type -t get_config_dir >/dev/null; then
+        conf_dir=$(get_config_dir)
+    else
+        conf_dir="$INSTALL_DIR/conf"
+    fi
+    
+    req_file="$conf_dir/requirements_system.inf"
     
     if [ ! -f "$req_file" ]; then
         print_error "Datei nicht gefunden: $req_file"
@@ -719,6 +760,21 @@ set_systemd_service() {
     # Rückgabe: keine (Seitenwirkung: legt Datei an, gibt Erfolgsmeldung aus)
 
     if [ ! -f "$SYSTEMD_SERVICE" ]; then
+        local backend_dir
+        local venv_dir
+        
+        if type -t get_backend_dir >/dev/null; then
+            backend_dir=$(get_backend_dir)
+        else
+            backend_dir="$INSTALL_DIR/backend"
+        fi
+        
+        if type -t get_venv_dir >/dev/null; then
+            venv_dir=$(get_venv_dir)
+        else
+            venv_dir="$backend_dir/venv"
+        fi
+        
         cat > "$SYSTEMD_SERVICE" <<EOF
 [Unit]
 Description=Fotobox Backend (Flask)
@@ -727,8 +783,8 @@ After=network.target
 [Service]
 Type=simple
 User=fotobox
-WorkingDirectory=$INSTALL_DIR/backend
-ExecStart=$INSTALL_DIR/backend/venv/bin/python app.py
+WorkingDirectory=$backend_dir
+ExecStart=$venv_dir/bin/python app.py
 Restart=on-failure
 
 [Install]
@@ -1217,14 +1273,30 @@ dlg_backend_integration() {
     # Stellen Sie sicher, dass das Logverzeichnis vorhanden ist
     # LOG_DIR wird bereits in set_fallback_security_settings korrekt gesetzt
     
+    # Pfade für Backend und Virtualenv ermitteln
+    local backend_dir
+    local venv_dir
+    
+    if type -t get_backend_dir >/dev/null; then
+        backend_dir=$(get_backend_dir)
+    else
+        backend_dir="$INSTALL_DIR/backend"
+    fi
+    
+    if type -t get_venv_dir >/dev/null; then
+        venv_dir=$(get_venv_dir)
+    else
+        venv_dir="$backend_dir/venv"
+    fi
+    
     # Python venv anlegen, falls nicht vorhanden
-    if [ ! -d "$INSTALL_DIR/backend/venv" ]; then
+    if [ ! -d "$venv_dir" ]; then
         echo -n "[/] Erstelle Python-Virtualenv..."
         
         # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
         venv_output=$(create_temp_file "venv_create")
         
-        python3 -m venv "$INSTALL_DIR/backend/venv" &> "$venv_output" &
+        python3 -m venv "$venv_dir" &> "$venv_output" &
         local venv_pid=$!
         show_spinner "$venv_pid" "dots"
         wait $venv_pid
@@ -1254,7 +1326,7 @@ dlg_backend_integration() {
     # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
     pip_output=$(create_temp_file "pip_upgrade")
     
-    ("$INSTALL_DIR/backend/venv/bin/pip" install --upgrade pip) &> "$pip_output" &
+    ("$venv_dir/bin/pip" install --upgrade pip) &> "$pip_output" &
     local pip_pid=$!
     show_spinner "$pip_pid" "dots"
     wait $pip_pid
@@ -1281,7 +1353,14 @@ dlg_backend_integration() {
     # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
     req_output=$(create_temp_file "pip_requirements")
     
-    ("$INSTALL_DIR/backend/venv/bin/pip" install -r "$INSTALL_DIR/conf/requirements_python.inf") &> "$req_output" &
+    local conf_dir
+    if type -t get_config_dir >/dev/null; then
+        conf_dir=$(get_config_dir)
+    else
+        conf_dir="$INSTALL_DIR/conf"
+    fi
+    
+    ("$venv_dir/bin/pip" install -r "$conf_dir/requirements_python.inf") &> "$req_output" &
     local req_pid=$!
     show_spinner "$req_pid" "dots"
     wait $req_pid

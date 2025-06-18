@@ -655,5 +655,140 @@ ensure_folder_structure() {
     return 0
 }
 
+# ------------------------------------------------------------------------------
+# get_config_dir
+# ------------------------------------------------------------------------------
+# Funktion: Gibt den Pfad zum Konfigurationsverzeichnis zurück
+# Parameter: keine
+# Rückgabe: Pfad zum Konfigurationsverzeichnis oder leerer String bei Fehler
+# ------------------------------------------------------------------------------
+get_config_dir() {
+    local dir
+    
+    debug "Ermittle Konfigurations-Verzeichnis" "CLI" "get_config_dir"
+    
+    # Prüfen, ob CONF_DIR bereits gesetzt ist (z.B. vom install.sh)
+    if [ -n "$CONF_DIR" ] && [ -d "$CONF_DIR" ]; then
+        debug "Verwende bereits definiertes CONF_DIR: $CONF_DIR" "CLI" "get_config_dir"
+        create_directory "$CONF_DIR" || true
+        echo "$CONF_DIR"
+        return 0
+    fi
+    
+    # Verwende die in dieser Datei definierten Pfade
+    debug "Prüfe Standard- und Fallback-Pfade für Konfigurations-Verzeichnis" "CLI" "get_config_dir"
+    dir=$(get_folder_path "$DEFAULT_CONF_DIR" "$FALLBACK_CONF_DIR" 1)
+    if [ -n "$dir" ]; then
+        debug "Verwende Pfad für Konfigurations-Verzeichnis: $dir" "CLI" "get_config_dir"
+        echo "$dir"
+        return 0
+    fi
+    
+    # Als absoluten Notfall ein Unterverzeichnis des Installationsverzeichnisses verwenden
+    local install_dir
+    install_dir=$(get_install_dir)
+    debug "Alle Pfade für Konfigurations-Verzeichnis fehlgeschlagen, verwende $install_dir/conf" "CLI" "get_config_dir"
+    echo "$install_dir/conf"
+    return 0
+}
+
+# ------------------------------------------------------------------------------
+# get_backend_dir
+# ------------------------------------------------------------------------------
+# Funktion: Gibt den Pfad zum Backend-Verzeichnis zurück
+# Parameter: keine
+# Rückgabe: Pfad zum Backend-Verzeichnis oder leerer String bei Fehler
+# ------------------------------------------------------------------------------
+get_backend_dir() {
+    local dir
+    
+    debug "Ermittle Backend-Verzeichnis" "CLI" "get_backend_dir"
+    
+    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    if [ -n "$BACKEND_DIR" ] && [ -d "$BACKEND_DIR" ]; then
+        debug "Verwende bereits definiertes BACKEND_DIR: $BACKEND_DIR" "CLI" "get_backend_dir"
+        create_directory "$BACKEND_DIR" || true
+        echo "$BACKEND_DIR"
+        return 0
+    fi
+    
+    # Standardpfad verwenden
+    dir="$DEFAULT_BACKEND_DIR"
+    debug "Prüfe Standard-Backend-Verzeichnis: $dir" "CLI" "get_backend_dir"
+    
+    if [ -d "$dir" ]; then
+        create_directory "$dir" || true
+        debug "Verwende Standard-Backend-Verzeichnis: $dir" "CLI" "get_backend_dir"
+        echo "$dir"
+        return 0
+    fi
+    
+    # Fallback auf alternatives Verzeichnis
+    dir="$FALLBACK_BACKEND_DIR"
+    debug "Standard-Backend-Verzeichnis nicht verfügbar, verwende Fallback: $dir" "CLI" "get_backend_dir"
+    create_directory "$dir" || true
+    
+    # Als letzten Ausweg, ein Unterverzeichnis des Install-Verzeichnisses verwenden
+    if [ ! -d "$dir" ]; then
+        local install_dir
+        install_dir=$(get_install_dir)
+        dir="$install_dir/backend"
+        debug "Fallback-Backend-Verzeichnis nicht verfügbar, verwende: $dir" "CLI" "get_backend_dir"
+        create_directory "$dir" || true
+    fi
+    
+    echo "$dir"
+    return 0
+}
+
+# ------------------------------------------------------------------------------
+# get_venv_dir
+# ------------------------------------------------------------------------------
+# Funktion: Gibt den Pfad zum Python Virtual Environment zurück
+# Parameter: keine
+# Rückgabe: Pfad zum Python Virtual Environment oder leerer String bei Fehler
+# ------------------------------------------------------------------------------
+get_venv_dir() {
+    local dir
+    
+    debug "Ermittle Python Virtual Environment-Verzeichnis" "CLI" "get_venv_dir"
+    
+    # Prüfen, ob BACKEND_VENV_DIR bereits gesetzt ist (z.B. vom install.sh)
+    if [ -n "$BACKEND_VENV_DIR" ] && [ -d "$BACKEND_VENV_DIR" ]; then
+        debug "Verwende bereits definiertes BACKEND_VENV_DIR: $BACKEND_VENV_DIR" "CLI" "get_venv_dir"
+        create_directory "$BACKEND_VENV_DIR" || true
+        echo "$BACKEND_VENV_DIR"
+        return 0
+    fi
+    
+    # Standardpfad verwenden
+    dir="$DEFAULT_BACKEND_VENV_DIR"
+    debug "Prüfe Standard-VENV-Verzeichnis: $dir" "CLI" "get_venv_dir"
+    
+    if [ -d "$dir" ]; then
+        create_directory "$dir" || true
+        debug "Verwende Standard-VENV-Verzeichnis: $dir" "CLI" "get_venv_dir"
+        echo "$dir"
+        return 0
+    fi
+    
+    # Fallback auf alternatives Verzeichnis
+    dir="$FALLBACK_BACKEND_VENV_DIR"
+    debug "Standard-VENV-Verzeichnis nicht verfügbar, verwende Fallback: $dir" "CLI" "get_venv_dir"
+    create_directory "$dir" || true
+    
+    # Als letzten Ausweg, ein Unterverzeichnis im Backend-Verzeichnis verwenden
+    if [ ! -d "$dir" ]; then
+        local backend_dir
+        backend_dir=$(get_backend_dir)
+        dir="$backend_dir/venv"
+        debug "Fallback-VENV-Verzeichnis nicht verfügbar, verwende: $dir" "CLI" "get_venv_dir"
+        create_directory "$dir" || true
+    fi
+    
+    echo "$dir"
+    return 0
+}
+
 # Markiere dieses Modul als geladen
 MANAGE_FOLDERS_LOADED=1
