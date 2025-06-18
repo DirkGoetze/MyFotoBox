@@ -303,6 +303,7 @@ get_backup_dir() {
 # ------------------------------------------------------------------------------
 get_log_dir() {
     local logdir
+    local found_dir=0
     
     debug "Ermittle Log-Verzeichnis" "CLI" "get_log_dir"
     
@@ -310,39 +311,41 @@ get_log_dir() {
     if [ -n "$LOG_DIR" ] && [ -d "$LOG_DIR" ]; then
         debug "Verwende bereits definiertes LOG_DIR: $LOG_DIR" "CLI" "get_log_dir" >/dev/null 2>&1
         create_directory "$LOG_DIR" || true
-        echo "$LOG_DIR"
-        return 0
+        logdir="$LOG_DIR"
+        found_dir=1
     fi
     
-    # Exakt die gleiche Logik wie in get_log_path aus manage_logging.sh
-    logdir="$DEFAULT_LOG_DIR"
-    debug "Prüfe Standard-Logverzeichnis: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
-    if [ -d "$logdir" ]; then
-        # Symlink nach /var/log/fotobox anlegen, falls root und möglich
-        if [ "$(id -u)" = "0" ] && [ -w "/var/log" ]; then
-            debug "Erstelle Symlink in /var/log/fotobox" "CLI" "get_log_dir" >/dev/null 2>&1
-            ln -sf "$logdir" /var/log/fotobox
+    # Wenn kein Verzeichnis gefunden wurde, exakt die gleiche Logik wie in get_log_path
+    if [ $found_dir -eq 0 ]; then
+        logdir="$DEFAULT_LOG_DIR"
+        debug "Prüfe Standard-Logverzeichnis: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
+        if [ -d "$logdir" ] || mkdir -p "$logdir" 2>/dev/null; then
+            create_directory "$logdir" || true
+            debug "Verwende Standard-Logverzeichnis: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
+            found_dir=1
         fi
-        create_directory "$logdir" || true
-        debug "Verwende Standard-Logverzeichnis: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
-        echo "$logdir"
-        return 0
     fi
     
-    # Fallback-Kette wie in get_log_path
-    debug "Standard-Logverzeichnis nicht verfügbar, prüfe Fallback-Optionen" "CLI" "get_log_dir" >/dev/null 2>&1
-    if [ -w "/var/log" ]; then
-        logdir="$FALLBACK_LOG_DIR"
-        debug "Verwende Fallback 1: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
-    elif [ -w "/tmp" ]; then
-        logdir="$FALLBACK_LOG_DIR_2"
-        debug "Verwende Fallback 2: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
-    else
-        logdir="$FALLBACK_LOG_DIR_3"
-        debug "Verwende Fallback 3: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
+    # Fallback-Kette wie in get_log_path, wenn kein Verzeichnis gefunden wurde
+    if [ $found_dir -eq 0 ]; then
+        debug "Standard-Logverzeichnis nicht verfügbar, prüfe Fallback-Optionen" "CLI" "get_log_dir" >/dev/null 2>&1
+        if [ -w "/var/log" ]; then
+            logdir="$FALLBACK_LOG_DIR"
+            debug "Verwende Fallback 1: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
+            create_directory "$logdir" || true
+            found_dir=1
+        elif [ -w "/tmp" ]; then
+            logdir="$FALLBACK_LOG_DIR_2"
+            debug "Verwende Fallback 2: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
+            create_directory "$logdir" || true
+            found_dir=1
+        else
+            logdir="$FALLBACK_LOG_DIR_3"
+            debug "Verwende Fallback 3: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
+            create_directory "$logdir" || true
+            found_dir=1
+        fi
     fi
-    
-    create_directory "$logdir" || true
     
     # Teste Schreibrecht für das Logverzeichnis - stellen wir sicher, dass es existiert
     if [ ! -d "$logdir" ]; then
@@ -361,6 +364,7 @@ get_log_dir() {
                     echo "Fehler: Auch Fallback-Logverzeichnis $logdir nicht schreibbar" >&2
                     return 1
                 fi
+                rm -f "$logdir/test_log.tmp" 2>/dev/null || true
             else
                 # Als letztes Mittel das aktuelle Verzeichnis verwenden
                 logdir="."
@@ -377,6 +381,33 @@ get_log_dir() {
         # Verzeichnis konnte nicht erstellt werden, verwende aktuelles Verzeichnis
         echo "Warnung: Logverzeichnis konnte nicht erstellt werden, verwende aktuelles Verzeichnis" >&2
         logdir="."
+    fi
+    
+    # Als letzter Schritt: Symlink setzen, unabhängig davon, wie das Verzeichnis ermittelt wurde
+    # Dies ist wichtig, um sicherzustellen, dass der Symlink immer auf das tatsächlich verwendete Verzeichnis zeigt
+    if [ "$(id -u)" = "0" ] && [ -w "/var/log" ]; then
+        # Prüfen, ob das Ziel ein Verzeichnis ist (kein Symlink)
+        if [ -d "/var/log/fotobox" ] && [ ! -L "/var/log/fotobox" ]; then
+            debug "Entferne vorhandenes Verzeichnis /var/log/fotobox" "CLI" "get_log_dir" >/dev/null 2>&1
+            rm -rf /var/log/fotobox 2>/dev/null || true
+        fi
+        
+        # Wenn /var/log/fotobox ein Symlink ist, der auf einen anderen Pfad als $logdir zeigt, korrigiere ihn
+        if [ -L "/var/log/fotobox" ]; then
+            local current_target
+            current_target=$(readlink -f "/var/log/fotobox")
+            if [ "$current_target" != "$logdir" ]; then
+                debug "Symlink /var/log/fotobox zeigt auf $current_target, wird auf $logdir geändert" "CLI" "get_log_dir" >/dev/null 2>&1
+                rm -f /var/log/fotobox 2>/dev/null || true
+            else
+                debug "Symlink /var/log/fotobox zeigt bereits korrekt auf $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
+                echo "$logdir"
+                return 0
+            fi
+        fi
+        
+        debug "Erstelle Symlink in /var/log/fotobox zu $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
+        ln -sf "$logdir" /var/log/fotobox
     fi
     
     echo "$logdir"
@@ -431,6 +462,7 @@ get_frontend_dir() {
 # ------------------------------------------------------------------------------
 get_tmp_dir() {
     local tmpdir
+    local found_dir=0
     
     debug "Ermittle temporäres Verzeichnis" "CLI" "get_tmp_dir" >/dev/null 2>&1
     
@@ -438,50 +470,79 @@ get_tmp_dir() {
     if [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ]; then
         debug "Verwende bereits definiertes TMP_DIR: $TMP_DIR" "CLI" "get_tmp_dir" >/dev/null 2>&1
         create_directory "$TMP_DIR" || true
-        echo "$TMP_DIR"
-        return 0
+        tmpdir="$TMP_DIR"
+        found_dir=1
     fi
     
-    # Standardpfad verwenden
-    tmpdir="$DEFAULT_TMP_DIR"
-    debug "Prüfe Standard-Temp-Verzeichnis: $tmpdir" "CLI" "get_tmp_dir" >/dev/null 2>&1
-    
-    if [ -d "$tmpdir" ] || mkdir -p "$tmpdir" 2>/dev/null; then
-        # Symlink nach /tmp/fotobox anlegen, falls root und möglich
-        if [ "$(id -u)" = "0" ] && [ -w "/tmp" ]; then
-            debug "Erstelle Symlink in /tmp/fotobox" "CLI" "get_tmp_dir" >/dev/null 2>&1
-            ln -sf "$tmpdir" /tmp/fotobox
+    # Wenn kein Verzeichnis gefunden wurde, den Standardpfad verwenden
+    if [ $found_dir -eq 0 ]; then
+        tmpdir="$DEFAULT_TMP_DIR"
+        debug "Prüfe Standard-Temp-Verzeichnis: $tmpdir" "CLI" "get_tmp_dir" >/dev/null 2>&1
+        
+        if [ -d "$tmpdir" ] || mkdir -p "$tmpdir" 2>/dev/null; then
+            create_directory "$tmpdir" || true
+            debug "Verwende Standard-Temp-Verzeichnis: $tmpdir" "CLI" "get_tmp_dir" >/dev/null 2>&1
+            found_dir=1
         fi
-        create_directory "$tmpdir" || true
-        debug "Verwende Standard-Temp-Verzeichnis: $tmpdir" "CLI" "get_tmp_dir" >/dev/null 2>&1
-        echo "$tmpdir"
-        return 0
     fi
     
     # Fallback-Optionen, wenn das Standardverzeichnis nicht verfügbar ist
-    debug "Standard-Temp-Verzeichnis nicht verfügbar, prüfe Fallback-Optionen" "CLI" "get_tmp_dir" >/dev/null 2>&1
-    
-    # Fallback auf das Projekt-Log-Verzeichnis
-    tmpdir="$(get_log_dir)/tmp"
-    if mkdir -p "$tmpdir" 2>/dev/null; then
-        debug "Verwende Fallback im Log-Verzeichnis: $tmpdir" "CLI" "get_tmp_dir" >/dev/null 2>&1
-        create_directory "$tmpdir" || true
-        echo "$tmpdir"
-        return 0
+    if [ $found_dir -eq 0 ]; then
+        debug "Standard-Temp-Verzeichnis nicht verfügbar, prüfe Fallback-Optionen" "CLI" "get_tmp_dir" >/dev/null 2>&1
+        
+        # Fallback auf das Projekt-Log-Verzeichnis
+        tmpdir="$(get_log_dir)/tmp"
+        if mkdir -p "$tmpdir" 2>/dev/null; then
+            debug "Verwende Fallback im Log-Verzeichnis: $tmpdir" "CLI" "get_tmp_dir" >/dev/null 2>&1
+            create_directory "$tmpdir" || true
+            found_dir=1
+        fi
     fi
     
-    # Fallback auf System-temp
-    tmpdir="$FALLBACK_TMP_DIR" # /tmp/fotobox_tmp
-    if mkdir -p "$tmpdir" 2>/dev/null; then
-        debug "Verwende Fallback-System-Temp: $tmpdir" "CLI" "get_tmp_dir" >/dev/null 2>&1
-        create_directory "$tmpdir" || true
-        echo "$tmpdir"
-        return 0
+    if [ $found_dir -eq 0 ]; then
+        # Fallback auf System-temp
+        tmpdir="$FALLBACK_TMP_DIR" # /tmp/fotobox_tmp
+        if mkdir -p "$tmpdir" 2>/dev/null; then
+            debug "Verwende Fallback-System-Temp: $tmpdir" "CLI" "get_tmp_dir" >/dev/null 2>&1
+            create_directory "$tmpdir" || true
+            found_dir=1
+        fi
     fi
     
-    # Als absolute Notlösung: Verwende /tmp direkt
-    tmpdir="/tmp"
-    debug "Verwende Systemverzeichnis /tmp als letzte Option" "CLI" "get_tmp_dir" >/dev/null 2>&1
+    if [ $found_dir -eq 0 ]; then
+        # Als absolute Notlösung: Verwende /tmp direkt
+        tmpdir="/tmp"
+        debug "Verwende Systemverzeichnis /tmp als letzte Option" "CLI" "get_tmp_dir" >/dev/null 2>&1
+        found_dir=1
+    fi
+    
+    # Als letzter Schritt: Symlink setzen, unabhängig davon, wie das Verzeichnis ermittelt wurde
+    # Dies ist wichtig, um sicherzustellen, dass der Symlink immer auf das tatsächlich verwendete Verzeichnis zeigt
+    if [ "$(id -u)" = "0" ] && [ -w "/tmp" ]; then
+        # Prüfen, ob das Ziel ein Verzeichnis ist (kein Symlink)
+        if [ -d "/tmp/fotobox" ] && [ ! -L "/tmp/fotobox" ]; then
+            debug "Entferne vorhandenes Verzeichnis /tmp/fotobox" "CLI" "get_tmp_dir" >/dev/null 2>&1
+            rm -rf /tmp/fotobox 2>/dev/null || true
+        fi
+        
+        # Wenn /tmp/fotobox ein Symlink ist, der auf einen anderen Pfad als $tmpdir zeigt, korrigiere ihn
+        if [ -L "/tmp/fotobox" ]; then
+            local current_target
+            current_target=$(readlink -f "/tmp/fotobox")
+            if [ "$current_target" != "$tmpdir" ]; then
+                debug "Symlink /tmp/fotobox zeigt auf $current_target, wird auf $tmpdir geändert" "CLI" "get_tmp_dir" >/dev/null 2>&1
+                rm -f /tmp/fotobox 2>/dev/null || true
+            else
+                debug "Symlink /tmp/fotobox zeigt bereits korrekt auf $tmpdir" "CLI" "get_tmp_dir" >/dev/null 2>&1
+                echo "$tmpdir"
+                return 0
+            fi
+        fi
+        
+        debug "Erstelle Symlink in /tmp/fotobox zu $tmpdir" "CLI" "get_tmp_dir" >/dev/null 2>&1
+        ln -sf "$tmpdir" /tmp/fotobox
+    fi
+    
     echo "$tmpdir"
     return 0
 }
@@ -787,6 +848,60 @@ get_venv_dir() {
     fi
     
     echo "$dir"
+    return 0
+}
+
+# ------------------------------------------------------------------------------
+# get_pip_path
+# ------------------------------------------------------------------------------
+# Funktion: Gibt den Pfad zur pip-Binary im Virtual Environment zurück
+# Parameter: keine
+# Rückgabe: Pfad zur pip-Binary oder leerer String bei Fehler
+# ------------------------------------------------------------------------------
+get_pip_path() {
+    local venv_dir
+    debug "Ermittle Pfad zur pip-Binary" "CLI" "get_pip_path"
+    
+    # Hole das Virtual Environment-Verzeichnis
+    venv_dir=$(get_venv_dir)
+    
+    # Standard-Unix/Linux-Pfad
+    local pip_path="$venv_dir/bin/pip"
+    
+    # Prüfe, ob wir auf Unix/Linux oder Windows sind
+    if [ -f "$pip_path" ]; then
+        debug "Verwende Unix/Linux pip-Pfad: $pip_path" "CLI" "get_pip_path"
+        echo "$pip_path"
+        return 0
+    fi
+    
+    # Windows-Pfad prüfen
+    pip_path="$venv_dir/Scripts/pip.exe"
+    if [ -f "$pip_path" ]; then
+        debug "Verwende Windows pip-Pfad: $pip_path" "CLI" "get_pip_path"
+        echo "$pip_path"
+        return 0
+    fi
+    
+    # Python-Pfade ermitteln für python -m pip Fallback
+    local python_path="$venv_dir/bin/python3"
+    if [ ! -f "$python_path" ]; then
+        python_path="$venv_dir/bin/python"
+    fi
+    if [ ! -f "$python_path" ]; then
+        python_path="$venv_dir/Scripts/python.exe"
+    fi
+    
+    # Wenn Python existiert, können wir python -m pip verwenden
+    if [ -f "$python_path" ]; then
+        debug "Verwende Python-Modul für pip: $python_path -m pip" "CLI" "get_pip_path"
+        echo "$python_path -m pip"
+        return 0
+    fi
+    
+    # Als Fallback geben wir einfach "pip" zurück und hoffen, dass es im PATH ist
+    debug "Kein pip im venv gefunden, fallback auf System-pip" "CLI" "get_pip_path"
+    echo "pip"
     return 0
 }
 

@@ -855,7 +855,8 @@ dlg_check_system_requirements() {
     # dlg_check_system_requirements
     # -----------------------------------------------------------------------
     # Funktion: Prüft die Systemvoraussetzungen und stellt Logging-Ressourcen bereit
-    echo -e "\033[1;33mPrüfung der Systemvoraussetzungen ...\033[0m"    
+    ((STEP_COUNTER++))
+    echo -e "\033[1;33m[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfung der Systemvoraussetzungen ...\033[0m"    
     
     # Auf kritische Ressourcen prüfen und Logging einrichten
     if ! set_fallback_security_settings; then
@@ -880,9 +881,6 @@ dlg_check_system_requirements() {
         log "WARNING: Zentrales Log-Hilfsskript nicht verfügbar, verwende Fallback-Logging in $LOG_DIR."
     fi
     
-    ((STEP_COUNTER++))
-    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfe Systemvoraussetzungen ..."
-
     # Befehlszeilenargumente verarbeiten
     parse_args "$@"
     
@@ -1296,7 +1294,19 @@ dlg_backend_integration() {
         # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
         venv_output=$(create_temp_file "venv_create")
         
-        python3 -m venv "$venv_dir" &> "$venv_output" &
+        # Ermittlung des Python-Interpreters (python3 oder python)
+        local python_cmd
+        if command -v python3 &>/dev/null; then
+            python_cmd="python3"
+        elif command -v python &>/dev/null; then
+            python_cmd="python"
+        else
+            echo -e "\r  → [FEHLER] Kein Python-Interpreter gefunden. Bitte installieren Sie Python 3."
+            return 1
+        fi
+        
+        debug "Verwende Python-Interpreter: $python_cmd" "CLI" "dlg_backend_integration"
+        "$python_cmd" -m venv "$venv_dir" &> "$venv_output" &
         local venv_pid=$!
         show_spinner "$venv_pid" "dots"
         wait $venv_pid
@@ -1323,10 +1333,26 @@ dlg_backend_integration() {
     # Abhängigkeiten installieren
     echo -n "[/] Installiere/aktualisiere pip ..."
     
+    # Python-Executable und pip-Pfad aus dem venv ermitteln
+    local python_bin="$venv_dir/bin/python3"
+    local pip_bin="$venv_dir/bin/pip"
+    
+    # Als Fallback prüfen wir, ob wir auf Windows sind (wo die Binaries in Scripts/ liegen)
+    if [ ! -f "$python_bin" ] && [ -f "$venv_dir/Scripts/python.exe" ]; then
+        python_bin="$venv_dir/Scripts/python.exe"
+        pip_bin="$venv_dir/Scripts/pip.exe"
+    fi
+    
     # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
     pip_output=$(create_temp_file "pip_upgrade")
     
-    ("$venv_dir/bin/pip" install --upgrade pip) &> "$pip_output" &
+    # Prüfen ob pip direkt oder via python -m pip aufgerufen werden soll
+    if [ -f "$pip_bin" ]; then
+        ("$pip_bin" install --upgrade pip) &> "$pip_output" &
+    else
+        ("$python_bin" -m pip install --upgrade pip) &> "$pip_output" &
+    fi
+    
     local pip_pid=$!
     show_spinner "$pip_pid" "dots"
     wait $pip_pid
@@ -1360,7 +1386,25 @@ dlg_backend_integration() {
         conf_dir="$INSTALL_DIR/conf"
     fi
     
-    ("$venv_dir/bin/pip" install -r "$conf_dir/requirements_python.inf") &> "$req_output" &
+    # Python-Executable und pip-Pfad aus dem venv ermitteln
+    local python_bin="$venv_dir/bin/python3"
+    local pip_bin="$venv_dir/bin/pip"
+    
+    # Als Fallback prüfen wir, ob wir auf Windows sind (wo die Binaries in Scripts/ liegen)
+    if [ ! -f "$python_bin" ] && [ -f "$venv_dir/Scripts/python.exe" ]; then
+        python_bin="$venv_dir/Scripts/python.exe"
+        pip_bin="$venv_dir/Scripts/pip.exe"
+    fi
+    
+    # Prüfen ob pip direkt oder via python -m pip aufgerufen werden soll
+    if [ -f "$pip_bin" ]; then
+        debug "Verwende pip-Binary: $pip_bin" "CLI" "dlg_backend_integration"
+        ("$pip_bin" install -r "$conf_dir/requirements_python.inf") &> "$req_output" &
+    else
+        debug "Verwende python -m pip: $python_bin" "CLI" "dlg_backend_integration"
+        ("$python_bin" -m pip install -r "$conf_dir/requirements_python.inf") &> "$req_output" &
+    fi
+    
     local req_pid=$!
     show_spinner "$req_pid" "dots"
     wait $req_pid
@@ -1454,7 +1498,7 @@ dlg_firewall_config() {
         export HTTPS_PORT="$https_port"
         
         # Führe das Firewall-Skript korrekt mit der setup_firewall Funktion aus
-        if ! bash -c "source \"$firewall_script\"; setup_firewall"; then
+        if ! bash -c "BASH_DIR=\"$BASH_DIR\"; source \"$firewall_script\"; setup_firewall"; then
             print_warning "Firewall-Konfiguration fehlgeschlagen. Die Weboberfläche könnte nicht erreichbar sein."
             log "WARN: Firewall-Konfiguration fehlgeschlagen."
             return 1
@@ -1510,8 +1554,8 @@ dlg_firewall_config() {
             # Firewall konfigurieren
             print_info "Konfiguriere Firewall für HTTP-Port $http_port und HTTPS-Port $https_port..."
             
-            # Korrekter Aufruf: Verwende source statt bash und übergebe die Funktion korrekt
-            if ! bash -c "source \"$firewall_script\"; setup_firewall"; then
+            # Korrekter Aufruf mit Übergabe der benötigten Umgebungsvariablen
+            if ! bash -c "BASH_DIR=\"$BASH_DIR\"; source \"$firewall_script\"; setup_firewall"; then
                 print_warning "Firewall-Konfiguration fehlgeschlagen. Die Weboberfläche könnte nicht erreichbar sein."
                 log "WARN: Firewall-Konfiguration fehlgeschlagen."
                 return 1
