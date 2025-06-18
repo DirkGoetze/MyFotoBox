@@ -507,9 +507,8 @@ install_system_requirements() {
     # LOG_DIR wird bereits in set_fallback_security_settings korrekt gesetzt
     
     # Erstelle die System-Requirements-Log-Datei wenn sie nicht existiert
-    touch "$LOG_DIR/system_requirements.log" 2>/dev/null || {
+    touch "$LOG_DIR/system_requirements.log" 2>/dev/null || \
         print_warning "Konnte Log-Datei nicht erstellen. Log-Ausgaben werden möglicherweise nicht gespeichert."
-    }
     
     # Paketlisten aktualisieren
     print_info "Update der Paketquellen ..."
