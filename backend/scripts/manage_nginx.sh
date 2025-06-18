@@ -645,10 +645,25 @@ get_nginx_webroot_path() {
         conf_file="/etc/nginx/sites-available/fotobox"
     elif [ -f /etc/nginx/sites-enabled/default ] && grep -q "# Fotobox-Integration BEGIN" /etc/nginx/sites-enabled/default; then
         conf_file="/etc/nginx/sites-available/default"
+    elif [ -f /etc/nginx/conf.d/nginx-fotobox.conf ]; then
+        conf_file="/etc/nginx/conf.d/nginx-fotobox.conf"
     fi
     if [ -n "$conf_file" ]; then
-        path=$(grep -Eo 'location[[:space:]]+/[^ ]*' "$conf_file" | grep -v '/api' | head -n1 | awk '{print $2}')
-        [ -z "$path" ] && path="/fotobox/"
+        # Prüfe zuerst, ob wir eine direkte root-Direktive ohne spezifischen Location-Block haben
+        local has_root_directive
+        has_root_directive=$(grep -E "^[[:space:]]*root[[:space:]]+/opt/fotobox/frontend;" "$conf_file")
+        local has_location_block
+        has_location_block=$(grep -E 'location[[:space:]]+/[^[:space:]/]+' "$conf_file" | grep -v '/api' | grep -v '/photos')
+        
+        if [ -n "$has_root_directive" ] && [ -z "$has_location_block" ]; then
+            # Wenn wir eine direkte root-Direktive haben und keinen spezifischen Location-Block,
+            # dann ist der Zugriff direkt auf / möglich
+            path=""
+        else
+            # Sonst extrahiere den Pfad aus dem Location-Block
+            path=$(grep -Eo 'location[[:space:]]+/[^[:space:]/]+' "$conf_file" | grep -v '/api' | head -n1 | awk '{print $2}')
+            [ -z "$path" ] && path="/fotobox/"
+        fi
     else
         path="/fotobox/"
     fi
