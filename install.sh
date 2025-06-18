@@ -34,7 +34,7 @@ if [ -f "$BASH_DIR/lib_core.sh" ]; then
         CORE_RESOURCES_LOADING=1
         # Führe Ressourcenprüfung aus
         chk_resources
-        local result=$?
+        result=$?
         CORE_RESOURCES_LOADING=0
         
         # Überprüfe, ob die Ausgabe-Funktionen verfügbar sind
