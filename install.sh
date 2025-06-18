@@ -518,7 +518,7 @@ install_system_requirements() {
         print_error "Fehler bei apt-get update. Log-Auszug:"
         tail -n 10 "$LOG_DIR/apt_update.log"
         return 2
-    }
+    fi
     
     # Pakete einzeln installieren für bessere Fehlerbehandlung
     local failed_packages=()
