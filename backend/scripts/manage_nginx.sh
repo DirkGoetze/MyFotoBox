@@ -97,6 +97,40 @@ chk_nginx_reload_txt_0004="Fehler in der NGINX-Konfiguration!"
 chk_nginx_reload_txt_0005="Fehler in der NGINX-Konfiguration! Bitte prüfen."
 chk_nginx_reload_txt_0006="NGINX konnte nicht neu geladen werden!"
 
+# is_nginx_available
+is_nginx_available_txt_0001="NGINX ist installiert."
+is_nginx_available_txt_0002="NGINX ist nicht installiert."
+is_nginx_available_txt_0003="Prüfe NGINX-Installation..."
+
+# is_nginx_running
+is_nginx_running_txt_0001="NGINX-Dienst läuft."
+is_nginx_running_txt_0002="NGINX-Dienst ist gestoppt."
+is_nginx_running_txt_0003="Prüfe NGINX-Status..."
+
+# is_nginx_default
+is_nginx_default_txt_0001="NGINX verwendet Default-Konfiguration."
+is_nginx_default_txt_0002="NGINX verwendet angepasste Konfiguration."
+is_nginx_default_txt_0003="NGINX-Konfigurationsstatus unklar."
+is_nginx_default_txt_0004="Prüfe NGINX-Konfigurationsstatus..."
+
+# nginx_start
+nginx_start_txt_0001="Starte NGINX-Dienst..."
+nginx_start_txt_0002="NGINX-Dienst erfolgreich gestartet."
+nginx_start_txt_0003="NGINX-Dienst konnte nicht gestartet werden!"
+nginx_start_txt_0004="NGINX ist nicht installiert."
+
+# nginx_stop
+nginx_stop_txt_0001="Stoppe NGINX-Dienst..."
+nginx_stop_txt_0002="NGINX-Dienst erfolgreich gestoppt."
+nginx_stop_txt_0003="NGINX-Dienst konnte nicht gestoppt werden!"
+nginx_stop_txt_0004="NGINX ist nicht installiert."
+
+# nginx_test_config
+nginx_test_config_txt_0001="Prüfe NGINX-Konfiguration..."
+nginx_test_config_txt_0002="NGINX-Konfiguration ist fehlerfrei."
+nginx_test_config_txt_0003="Fehler in der NGINX-Konfiguration gefunden!"
+nginx_test_config_txt_0004="NGINX ist nicht installiert."
+
 # chk_nginx_port
 chk_nginx_port_txt_0001="Port-Prüfung starten ..."
 chk_nginx_port_txt_0002="lsof ist nicht verfügbar. Portprüfung nicht möglich."
@@ -907,6 +941,202 @@ get_nginx_template_file() {
     
     echo "$conf_file"
     return 0
+}
+
+is_nginx_available() {
+    # -----------------------------------------------------------------------
+    # is_nginx_available
+    # -----------------------------------------------------------------------
+    # Funktion: Prüft, ob NGINX installiert ist
+    # Parameter: $1 = Modus (text|json), optional (Default: text)
+    # Rückgabe:  0 = NGINX installiert, 1 = NGINX nicht installiert
+    # Seiteneffekte: keine
+    
+    local mode="${1:-text}"
+    
+    log_debug "${is_nginx_available_txt_0003}"
+    
+    if command -v nginx >/dev/null 2>&1; then
+        # NGINX ist installiert
+        log_or_json "$mode" "success" "${is_nginx_available_txt_0001}" 0
+        return 0
+    else
+        # NGINX ist nicht installiert
+        log_or_json "$mode" "info" "${is_nginx_available_txt_0002}" 1
+        return 1
+    fi
+}
+
+is_nginx_running() {
+    # -----------------------------------------------------------------------
+    # is_nginx_running
+    # -----------------------------------------------------------------------
+    # Funktion: Prüft, ob der NGINX-Dienst aktiv läuft
+    # Parameter: $1 = Modus (text|json), optional (Default: text)
+    # Rückgabe:  0 = NGINX läuft, 1 = NGINX gestoppt/Fehler
+    # Seiteneffekte: keine
+    
+    local mode="${1:-text}"
+    
+    log_debug "${is_nginx_running_txt_0003}"
+    
+    # Zuerst prüfen, ob NGINX überhaupt installiert ist
+    if is_nginx_available >/dev/null; then
+        # NGINX ist installiert, jetzt Status prüfen
+        if systemctl is-active nginx >/dev/null 2>&1; then
+            # NGINX läuft
+            log_or_json "$mode" "success" "${is_nginx_running_txt_0001}" 0
+            return 0
+        else
+            # NGINX ist gestoppt oder hat Fehler
+            log_or_json "$mode" "warning" "${is_nginx_running_txt_0002}" 1
+            return 1
+        fi
+    else
+        # NGINX ist nicht installiert
+        log_or_json "$mode" "warning" "${is_nginx_available_txt_0002}" 1
+        return 1
+    fi
+}
+
+is_nginx_default() {
+    # -----------------------------------------------------------------------
+    # is_nginx_default
+    # -----------------------------------------------------------------------
+    # Funktion: Prüft, ob NGINX in Default-Konfiguration vorliegt
+    # Parameter: $1 = Modus (text|json), optional (Default: text)
+    # Rückgabe:  0 = Default-Konfiguration, 1 = angepasste Konfiguration, 2 = Status unklar
+    # Seiteneffekte: keine
+    
+    local mode="${1:-text}"
+    
+    log_debug "${is_nginx_default_txt_0004}"
+    
+    # Zuerst prüfen, ob NGINX überhaupt installiert ist
+    if ! is_nginx_available >/dev/null; then
+        log_or_json "$mode" "warning" "${is_nginx_available_txt_0002}" 2
+        return 2
+    fi
+    
+    local enabled_sites
+    enabled_sites=$(ls /etc/nginx/sites-enabled 2>/dev/null | wc -l)
+    
+    # Prüfen, ob nur die Default-Site aktiv ist
+    if [ "$enabled_sites" -eq 1 ] && [ -f /etc/nginx/sites-enabled/default ]; then
+        # Nur Default-Site aktiv
+        log_or_json "$mode" "success" "${is_nginx_default_txt_0001}" 0
+        return 0
+    elif [ "$enabled_sites" -ge 1 ]; then
+        # Eine oder mehrere Sites aktiv, die nicht der Default entsprechen
+        log_or_json "$mode" "info" "${is_nginx_default_txt_0002}" 1
+        return 1
+    else
+        # Status unklar
+        log_or_json "$mode" "warning" "${is_nginx_default_txt_0003}" 2
+        return 2
+    fi
+}
+
+nginx_start() {
+    # -----------------------------------------------------------------------
+    # nginx_start
+    # -----------------------------------------------------------------------
+    # Funktion: Startet den NGINX-Dienst
+    # Parameter: $1 = Modus (text|json), optional (Default: text)
+    # Rückgabe:  0 = erfolgreich gestartet, 1 = Fehler
+    # Seiteneffekte: Startet den NGINX-Dienst (systemctl start nginx)
+    
+    local mode="${1:-text}"
+    
+    # Zuerst prüfen, ob NGINX überhaupt installiert ist
+    if ! is_nginx_available >/dev/null; then
+        log_or_json "$mode" "error" "${nginx_start_txt_0004}" 1
+        return 1
+    fi
+    
+    log_or_json "$mode" "info" "${nginx_start_txt_0001}" 0
+    
+    # NGINX-Dienst starten
+    if systemctl start nginx; then
+        # Start erfolgreich
+        log_or_json "$mode" "success" "${nginx_start_txt_0002}" 0
+        return 0
+    else
+        # Start fehlgeschlagen, Fehlerdetails ausgeben
+        local status_out
+        status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
+        log_or_json "$mode" "error" "${nginx_start_txt_0003}" 1
+        log "$status_out"
+        return 1
+    fi
+}
+
+nginx_stop() {
+    # -----------------------------------------------------------------------
+    # nginx_stop
+    # -----------------------------------------------------------------------
+    # Funktion: Stoppt den NGINX-Dienst
+    # Parameter: $1 = Modus (text|json), optional (Default: text)
+    # Rückgabe:  0 = erfolgreich gestoppt, 1 = Fehler
+    # Seiteneffekte: Stoppt den NGINX-Dienst (systemctl stop nginx)
+    
+    local mode="${1:-text}"
+    
+    # Zuerst prüfen, ob NGINX überhaupt installiert ist
+    if ! is_nginx_available >/dev/null; then
+        log_or_json "$mode" "error" "${nginx_stop_txt_0004}" 1
+        return 1
+    fi
+    
+    log_or_json "$mode" "info" "${nginx_stop_txt_0001}" 0
+    
+    # NGINX-Dienst stoppen
+    if systemctl stop nginx; then
+        # Stop erfolgreich
+        log_or_json "$mode" "success" "${nginx_stop_txt_0002}" 0
+        return 0
+    else
+        # Stop fehlgeschlagen, Fehlerdetails ausgeben
+        local status_out
+        status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
+        log_or_json "$mode" "error" "${nginx_stop_txt_0003}" 1
+        log "$status_out"
+        return 1
+    fi
+}
+
+nginx_test_config() {
+    # -----------------------------------------------------------------------
+    # nginx_test_config
+    # -----------------------------------------------------------------------
+    # Funktion: Prüft die NGINX-Konfiguration auf Syntaxfehler
+    # Parameter: $1 = Modus (text|json), optional (Default: text)
+    # Rückgabe:  0 = Konfiguration gültig, 1 = Fehler
+    # Seiteneffekte: keine
+    
+    local mode="${1:-text}"
+    
+    # Zuerst prüfen, ob NGINX überhaupt installiert ist
+    if ! is_nginx_available >/dev/null; then
+        log_or_json "$mode" "error" "${nginx_test_config_txt_0004}" 1
+        return 1
+    fi
+    
+    log_or_json "$mode" "info" "${nginx_test_config_txt_0001}" 0
+    
+    # NGINX-Konfiguration testen
+    if nginx -t 2>&1 | grep -q "syntax is ok"; then
+        # Konfiguration ist fehlerfrei
+        log_or_json "$mode" "success" "${nginx_test_config_txt_0002}" 0
+        return 0
+    else
+        # Konfiguration fehlerhaft, Fehlerdetails ausgeben
+        local error_out
+        error_out=$(nginx -t 2>&1)
+        log_or_json "$mode" "error" "${nginx_test_config_txt_0003}" 1
+        log "$error_out"
+        return 1
+    fi
 }
 
 # Markiere dieses Modul als geladen

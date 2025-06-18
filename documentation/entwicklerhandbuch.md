@@ -1758,7 +1758,61 @@ Die Fotobox unterstützt verschiedene Netzwerkkonfigurationen, die es ermöglich
 
 ### 11.1 Netzwerkarchitektur
 
-Die Netzwerkarchitektur der Fotobox basiert auf einem eingebetteten Webserver (NGINX), der die Weboberfläche bereitstellt und als Reverse-Proxy für die Backend-API fungiert. Die Konfiguration des Webservers wird dynamisch durch das Modul `manage_network.py` verwaltet.
+Die Netzwerkarchitektur der Fotobox basiert auf einem eingebetteten Webserver (NGINX), der die Weboberfläche bereitstellt und als Reverse-Proxy für die Backend-API fungiert. Die Konfiguration des Webservers wird dynamisch durch die Module `manage_network.py` und `manage_nginx.sh` verwaltet.
+
+#### 11.1.1 NGINX-Verwaltungsmodul (`manage_nginx.sh`)
+
+Das Shell-Modul `manage_nginx.sh` stellt wesentliche Funktionen zur Verwaltung des NGINX-Webservers bereit. Es ist zuständig für die Installation, Konfiguration, Prüfung und Steuerung des NGINX-Dienstes.
+
+**Rechteverwaltung:**
+- Konfigurationsverzeichnis (`conf/nginx`): Standardrechte (755, Eigentümer: fotobox:fotobox)
+- Backup-Verzeichnis (`conf/nginx/backup`): Restriktive Rechte (750, Eigentümer: fotobox:fotobox)
+  - Dies sichert sensible Konfigurationsbackups vor unbefugtem Zugriff
+  - Nur Benutzer "fotobox" und Mitglieder der Gruppe "fotobox" haben Zugriff
+
+**Zentrale Hilfsfunktionen:**
+
+- **Prüffunktionen:**
+  - `is_nginx_available()`: Prüft, ob NGINX installiert ist (0 = installiert, 1 = nicht installiert)
+  - `is_nginx_running()`: Prüft, ob der NGINX-Dienst aktiv läuft (0 = läuft, 1 = gestoppt/Fehler)
+  - `is_nginx_default()`: Prüft, ob NGINX in Default-Konfiguration vorliegt (0 = Default, 1 = angepasst)
+  - `nginx_test_config()`: Prüft die NGINX-Konfiguration auf Syntaxfehler (0 = gültig, 1 = Fehler)
+
+- **Steuerungsfunktionen:**
+  - `nginx_start()`: Startet den NGINX-Dienst (0 = erfolgreich, 1 = Fehler)
+  - `nginx_stop()`: Stoppt den NGINX-Dienst (0 = erfolgreich, 1 = Fehler)
+  - `chk_nginx_reload()`: Testet die Konfiguration und lädt sie neu (0 = OK, 1 = Fehler)
+
+- **Konfigurationsfunktionen:**
+  - `get_nginx_conf_dir()`: Gibt den Pfad zum NGINX-Konfigurationsverzeichnis zurück (Berechtigungen: 755)
+  - `get_nginx_backup_dir()`: Gibt den Pfad zum NGINX-Backup-Verzeichnis zurück (Berechtigungen: 750)
+  - `get_nginx_template_file()`: Ermittelt den Pfad zur benötigten Template-Konfigurationsdatei
+  - `backup_nginx_config()`: Sichert eine NGINX-Konfigurationsdatei mit Metadaten
+
+**Verwendungsbeispiel:**
+
+```bash
+# NGINX-Status prüfen
+if is_nginx_available; then
+    echo "NGINX ist installiert"
+    
+    if is_nginx_running; then
+        echo "NGINX-Dienst läuft"
+    else
+        echo "NGINX-Dienst ist gestoppt"
+        nginx_start
+    fi
+    
+    # Konfiguration testen
+    if nginx_test_config; then
+        echo "Konfiguration gültig"
+    else
+        echo "Konfiguration fehlerhaft"
+    fi
+else
+    echo "NGINX ist nicht installiert"
+fi
+```
 
 ### 11.2 Unterstützte Einsatzszenarien
 

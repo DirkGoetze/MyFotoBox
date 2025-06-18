@@ -928,7 +928,8 @@ get_nginx_conf_dir() {
     # Prüfen, ob NGINX_CONF_DIR bereits gesetzt ist
     if [ -n "$NGINX_CONF_DIR" ] && [ -d "$NGINX_CONF_DIR" ]; then
         debug "Verwende bereits definiertes NGINX_CONF_DIR: $NGINX_CONF_DIR" "CLI" "get_nginx_conf_dir"
-        create_directory "$NGINX_CONF_DIR" || true
+        # Setze explizit die Standard-Berechtigungen (755)
+        create_directory "$NGINX_CONF_DIR" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
         echo "$NGINX_CONF_DIR"
         return 0
     fi
@@ -938,6 +939,8 @@ get_nginx_conf_dir() {
     dir=$(get_folder_path "$DEFAULT_NGINX_CONF_DIR" "$FALLBACK_NGINX_CONF_DIR" 1)
     if [ -n "$dir" ]; then
         debug "Verwende Pfad für NGINX-Konfigurations-Verzeichnis: $dir" "CLI" "get_nginx_conf_dir"
+        # Setze explizit die Standard-Berechtigungen (755)
+        create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
         echo "$dir"
         return 0
     fi
@@ -945,7 +948,8 @@ get_nginx_conf_dir() {
     # Als Fallback ein Unterverzeichnis im Konfigurations-Verzeichnis verwenden
     dir="$config_dir/nginx"
     debug "Fallback für NGINX-Konfigurations-Verzeichnis: $dir" "CLI" "get_nginx_conf_dir"
-    create_directory "$dir" || true
+    # Setze explizit die Standard-Berechtigungen (755)
+    create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
     echo "$dir"
     return 0
 }
@@ -969,7 +973,7 @@ get_nginx_backup_dir() {
     # Prüfen, ob NGINX_BACKUP_DIR bereits gesetzt ist
     if [ -n "$NGINX_BACKUP_DIR" ] && [ -d "$NGINX_BACKUP_DIR" ]; then
         debug "Verwende bereits definiertes NGINX_BACKUP_DIR: $NGINX_BACKUP_DIR" "CLI" "get_nginx_backup_dir"
-        create_directory "$NGINX_BACKUP_DIR" || true
+        create_directory "$NGINX_BACKUP_DIR" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
         echo "$NGINX_BACKUP_DIR"
         return 0
     fi
@@ -979,6 +983,8 @@ get_nginx_backup_dir() {
     dir=$(get_folder_path "$DEFAULT_NGINX_BACKUP_DIR" "$FALLBACK_NGINX_BACKUP_DIR" 1)
     if [ -n "$dir" ]; then
         debug "Verwende Pfad für NGINX-Backup-Verzeichnis: $dir" "CLI" "get_nginx_backup_dir"
+        # Setze restriktivere Berechtigungen für das Backup-Verzeichnis (nur Besitzer und Gruppe haben Zugriff)
+        create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
         echo "$dir"
         return 0
     fi
@@ -986,7 +992,8 @@ get_nginx_backup_dir() {
     # Als Fallback ein Unterverzeichnis im NGINX-Konfigurationsverzeichnis verwenden
     dir="$nginx_conf_dir/backup"
     debug "Fallback für NGINX-Backup-Verzeichnis: $dir" "CLI" "get_nginx_backup_dir"
-    create_directory "$dir" || true
+    # Setze restriktivere Berechtigungen für das Backup-Verzeichnis (nur Besitzer und Gruppe haben Zugriff)
+    create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
     echo "$dir"
     return 0
 }
