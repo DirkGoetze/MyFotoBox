@@ -564,8 +564,16 @@ set_nginx_port() {
     backup_nginx_config "$conf_file" "$(get_nginx_config_type text)" "set_nginx_port" "$mode" || return 3
     sed -i -E "s/(listen[[:space:]]+)[0-9.]*(:[0-9]+)?/\1$port/" "$conf_file" || { log_or_json "$mode" "error" "$set_nginx_port_txt_0004" 4; return 4; }
     log_or_json "$mode" "success" "$(printf "$set_nginx_port_txt_0005" "$port")" 0
-    chk_nginx_reload "$mode"
-    return $?
+    
+    # NGINX neu laden
+    local reload_result
+    reload_result=$(chk_nginx_reload "$mode")
+    local reload_status=$?
+    
+    # Firewall-Regeln aktualisieren
+    update_firewall_rules "$mode"
+    
+    return $reload_status
 }
 
 get_nginx_bind_address() {
@@ -829,7 +837,18 @@ conf_nginx_port() {
     chk_nginx_port "$port" "$mode"
     if [ $? -eq 0 ]; then
         log_or_json "$mode" "success" "$(printf "$set_nginx_port_txt_0005" "$port")" 0
-        return 0
+        
+        # Port in der Konfiguration setzen
+        local set_result
+        set_result=$(set_nginx_port "$port" "$mode")
+        local set_status=$?
+        
+        if [ $set_status -eq 0 ]; then
+            # Firewall-Regeln wurden bereits in set_nginx_port aktualisiert
+            return 0
+        else
+            return $set_status
+        fi
     else
         log_or_json "$mode" "error" "$(printf "$set_nginx_port_txt_0006" "$port")" 13
         log_or_json "$mode" "prompt" "$set_nginx_port_txt_0007" 14
@@ -867,7 +886,18 @@ set_nginx_cnf_internal() {
     else
         log_or_json "$mode" "info" "$set_nginx_cnf_internal_txt_0006" 0
     fi
-    chk_nginx_reload "$mode" || { log_or_json "$mode" "error" "NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!" 4; return 4; }
+    local reload_result
+    reload_result=$(chk_nginx_reload "$mode")
+    local reload_status=$?
+    
+    if [ $reload_status -ne 0 ]; then 
+        log_or_json "$mode" "error" "NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!" 4
+        return 4
+    fi
+    
+    # Firewall-Regeln aktualisieren
+    update_firewall_rules "$mode"
+    
     return 0
 }
 
@@ -895,7 +925,18 @@ set_nginx_cnf_external() {
         ln -s "$nginx_dst" /etc/nginx/sites-enabled/fotobox || { log_or_json "$mode" "error" "$set_nginx_cnf_external_txt_0006" 10; return 10; }
         log_or_json "$mode" "success" "$set_nginx_cnf_external_txt_0007" 0
     fi
-    chk_nginx_reload "$mode" || { log_or_json "$mode" "error" "NGINX-Konfiguration konnte nach externer Integration nicht neu geladen werden!" 4; return 4; }
+    local reload_result
+    reload_result=$(chk_nginx_reload "$mode")
+    local reload_status=$?
+    
+    if [ $reload_status -ne 0 ]; then 
+        log_or_json "$mode" "error" "$set_nginx_cnf_external_txt_0008" 4
+        return 4
+    fi
+    
+    # Firewall-Regeln aktualisieren
+    update_firewall_rules "$mode"
+    
     return 0
 }
 
@@ -1473,5 +1514,57 @@ nginx_restore_config() {
     
     return 0
 }
+
+# ===========================================================================
+# Integration mit manage_firewall.sh
+# ===========================================================================
+
+update_firewall_rules() {
+    # -----------------------------------------------------------------------
+    # update_firewall_rules
+    # -----------------------------------------------------------------------
+    # Funktion: Aktualisiert die Firewall-Regeln entsprechend der NGINX-Konfiguration
+    # Parameter: $1 = Modus (text|json), optional (Default: text)
+    # Rückgabe: 0 = Erfolg, 1 = Fehler
+    # Seiteneffekte: Kann die Firewall-Konfiguration ändern
+    # -----------------------------------------------------------------------
+    local mode="${1:-text}"
+    local current_port
+    current_port=$(get_nginx_port text)
+    local firewall_script="$SCRIPT_DIR/manage_firewall.sh"
+    
+    # Prüfen, ob manage_firewall.sh existiert
+    if [ ! -f "$firewall_script" ]; then
+        log_or_json "$mode" "warning" "Firewall-Management-Skript nicht gefunden: $firewall_script" 1
+        return 1
+    fi
+    
+    # Firewall-Modul laden, falls noch nicht geladen
+    if [ -z "$MANAGE_FIREWALL_LOADED" ] || [ "$MANAGE_FIREWALL_LOADED" -ne 1 ]; then
+        log_or_json "$mode" "info" "Lade Firewall-Management-Modul..." 0
+        load_module "manage_firewall" || {
+            log_or_json "$mode" "error" "Firewall-Management-Modul konnte nicht geladen werden" 2
+            return 2
+        }
+    fi
+    
+    # Die für NGINX benötigten Ports setzen
+    export HTTP_PORT="$current_port"
+    export HTTPS_PORT="443"  # Standard HTTPS-Port
+    
+    log_or_json "$mode" "info" "Aktualisiere Firewall-Regeln für HTTP-Port $current_port und HTTPS-Port 443" 0
+    
+    # Firewall konfigurieren
+    if setup_firewall; then
+        log_or_json "$mode" "success" "Firewall-Regeln für NGINX-Ports erfolgreich aktualisiert" 0
+        return 0
+    else
+        log_or_json "$mode" "warning" "Fehler beim Aktualisieren der Firewall-Regeln" 3
+        return 3
+    fi
+}
+
+# ===========================================================================
 # Markiere dieses Modul als geladen
+# ===========================================================================
 MANAGE_NGINX_LOADED=1

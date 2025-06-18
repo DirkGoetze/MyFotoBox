@@ -1758,13 +1758,14 @@ Die Fotobox unterstützt verschiedene Netzwerkkonfigurationen, die es ermöglich
 
 ### 11.1 Netzwerkarchitektur
 
-Die Netzwerkarchitektur der Fotobox basiert auf einem eingebetteten Webserver (NGINX), der die Weboberfläche bereitstellt und als Reverse-Proxy für die Backend-API fungiert. Die Konfiguration des Webservers wird dynamisch durch die Module `manage_network.py` und `manage_nginx.sh` verwaltet.
+Die Netzwerkarchitektur der Fotobox basiert auf einem eingebetteten Webserver (NGINX), der die Weboberfläche bereitstellt und als Reverse-Proxy für die Backend-API fungiert. Die Konfiguration des Webservers wird dynamisch durch die Module `manage_network.py` und `manage_nginx.sh` verwaltet. Die Firewall-Konfiguration wird über das Modul `manage_firewall.sh` gesteuert, das automatisch mit den NGINX-Konfigurationsänderungen synchronisiert wird.
 
 #### 11.1.1 NGINX-Verwaltungsmodul (`manage_nginx.sh`)
 
 Das Shell-Modul `manage_nginx.sh` stellt wesentliche Funktionen zur Verwaltung des NGINX-Webservers bereit. Es ist zuständig für die Installation, Konfiguration, Prüfung und Steuerung des NGINX-Dienstes.
 
 **Rechteverwaltung:**
+
 - Konfigurationsverzeichnis (`conf/nginx`): Standardrechte (755, Eigentümer: fotobox:fotobox)
 - Backup-Verzeichnis (`backup/nginx`): Restriktive Rechte (750, Eigentümer: fotobox:fotobox)
   - Dies sichert sensible Konfigurationsbackups vor unbefugtem Zugriff
@@ -1802,6 +1803,21 @@ Das Shell-Modul `manage_nginx.sh` stellt wesentliche Funktionen zur Verwaltung d
     - Prüft die wiederhergestellte Konfiguration auf Syntaxfehler
     - Behält den vorherigen NGINX-Laufzeitstatus bei (gestartet/gestoppt)
 
+- **URL-Verwaltung und Konfigurationszugriff:**
+  - `get_nginx_configs()`: Listet alle aktiven NGINX-Konfigurationen auf
+    - Sammelt Informationen über verfügbare und aktivierte Konfigurationen
+    - Erkennt Fotobox-spezifische Konfigurationen
+    - Extrahiert wichtige Details wie Servernamen, Ports und Root-Verzeichnisse
+    - Gibt strukturierte Ausgabe im JSON- oder Textformat zurück
+
+  - `get_nginx_url()`: Zentrale Funktion zum Abrufen der NGINX-URL
+    - Rückgabe: Formatierte URL (`http://host:port/path`) in CLI oder JSON
+    - Intelligente Formatierung der URL basierend auf aktueller Konfiguration
+    - Automatische IP-/Hostname-Auflösung bei Standardkonfiguration
+    - Berücksichtigung von HTTP/HTTPS (Port 80/443) mit korrekter URL-Formatierung
+    - Prüfung der tatsächlichen Erreichbarkeit der generierten URL
+    - Erweiterte JSON-Ausgabe mit allen relevanten URL-Komponenten und Status-Informationen
+
 **Verwendungsbeispiel:**
 
 ```bash
@@ -1818,14 +1834,86 @@ if is_nginx_available; then
     
     # Konfiguration testen
     if nginx_test_config; then
-        echo "Konfiguration gültig"
-    else
-        echo "Konfiguration fehlerhaft"
+        echo "Konfiguration ist gültig"
     fi
-else
-    echo "NGINX ist nicht installiert"
-fi
+    
+    # Fotobox-URL ermitteln und ausgeben
+    nginx_url=$(get_nginx_url)
+    echo "Fotobox ist erreichbar unter: $nginx_url"
+    
+    # Erweiterte Informationen im JSON-Format erhalten
+    nginx_url_details=$(get_nginx_url json)
+    echo "URL-Details: $nginx_url_details"
+    
+    # Übersicht über alle vorhandenen Konfigurationen
+    echo "Aktive NGINX-Konfigurationen:"
+    get_nginx_configs
+    
+    # Sicherung der aktuellen Konfiguration erstellen
+    backup_nginx_config_json "/etc/nginx" "Vor Änderungen"
 ```
+
+#### 11.1.2 Firewall-Verwaltungsmodul (`manage_firewall.sh`) und Integration
+
+Das Modul `manage_firewall.sh` verwaltet die Firewall-Konfiguration des Systems und arbeitet eng mit dem NGINX-Verwaltungsmodul zusammen. Es erkennt automatisch die installierte Firewall (ufw, firewalld, iptables) und konfiguriert diese entsprechend den NGINX-Porteinstellungen.
+
+**Zentrale Funktionen:**
+
+- **Erkennung und Basiskonfiguration:**
+  - `detect_firewall()`: Erkennt das aktive Firewall-System (ufw, firewalld, iptables)
+  - `setup_firewall()`: Konfiguriert das erkannte Firewall-System mit den benötigten Ports
+  - `status_firewall()`: Zeigt den Status der Firewall und die offenen Ports an
+
+- **Integration mit NGINX:**
+  - `update_firewall_rules()`: Automatisiert die Firewall-Anpassung bei NGINX-Konfigurationsänderungen
+    - Wird automatisch nach Änderungen der NGINX-Portkonfiguration aufgerufen
+    - Extrahiert die benötigten Ports aus der aktuellen NGINX-Konfiguration
+    - Konfiguriert die Firewall entsprechend dem erkannten Firewall-System
+
+**Automatische Integration:**
+
+Die Integration zwischen den Modulen `manage_nginx.sh` und `manage_firewall.sh` erfolgt über die Funktion `update_firewall_rules()`, die in folgenden Szenarien automatisch aufgerufen wird:
+
+1. Nach dem Ändern des NGINX-Ports über die Funktion `set_nginx_port()`
+2. Nach der Integration der Fotobox in die Default-NGINX-Konfiguration (`set_nginx_cnf_internal()`)
+3. Nach dem Erstellen einer externen Fotobox-NGINX-Konfiguration (`set_nginx_cnf_external()`)
+
+Diese automatische Integration stellt sicher, dass die Firewall-Regeln immer mit den aktuellen NGINX-Porteinstellungen synchronisiert sind und der Webserver von außen erreichbar ist.
+
+**Implementierungsbeispiel:**
+
+```bash
+# Funktion zur automatischen Firewall-Aktualisierung in manage_nginx.sh
+update_firewall_rules() {
+    local mode="${1:-text}"
+    local current_port=$(get_nginx_port text)
+    
+    # Firewall-Modul laden, falls noch nicht geladen
+    if [ -z "$MANAGE_FIREWALL_LOADED" ] || [ "$MANAGE_FIREWALL_LOADED" -ne 1 ]; then
+        load_module "manage_firewall" || return 2
+    fi
+    
+    # Die für NGINX benötigten Ports setzen
+    export HTTP_PORT="$current_port"
+    export HTTPS_PORT="443"  # Standard HTTPS-Port
+    
+    # Firewall konfigurieren
+    if setup_firewall; then
+        log_or_json "$mode" "success" "Firewall-Regeln für NGINX-Ports erfolgreich aktualisiert" 0
+        return 0
+    else
+        log_or_json "$mode" "warning" "Fehler beim Aktualisieren der Firewall-Regeln" 3
+        return 3
+    fi
+}
+```
+
+**Vorteile der Integration:**
+
+- Automatische Synchronisierung von Webserver- und Firewall-Konfiguration
+- Vermeidung von Konfigurationsfehlern und unzugänglichen Webseiten
+- Reduzierte Komplexität für den Benutzer, keine manuellen Firewall-Anpassungen notwendig
+- Dynamische Anpassung an verschiedene Firewall-Systeme durch intelligente Erkennung
 
 ### 11.2 Unterstützte Einsatzszenarien
 
@@ -2010,6 +2098,7 @@ def setup_letsencrypt_cert(domain):
 | Konfigurationstyp  | intern                 | extern/optional      | extern/optional      |
 | Status/Validierung | wichtig                | wichtig              | wichtig              |
 | HTTPS/SSL          | unwichtig              | optional             | wichtig              |
+| Firewall           | unwichtig              | wichtig              | kritisch             |
 
 ### 11.4 Netzwerk-Verwaltungsmodul (`manage_network.py`)
 
