@@ -42,6 +42,46 @@ def format_bytes(size: int, decimal_places: int = 2) -> str:
     return f"{size:.{decimal_places}f} {size_names[i]}"
 
 
+def normalize_string(text: str) -> str:
+    """
+    Normalisiert einen String für die Verwendung als ID oder technischer Bezeichner
+    
+    Entfernt Sonderzeichen und Umlaute, ersetzt Leerzeichen durch Unterstriche
+    und stellt sicher, dass der String nur aus alphanumerischen Zeichen und Unterstrichen besteht.
+
+    Args:
+        text: Der zu normalisierende Text
+
+    Returns:
+        Normalisierter String, sicher für ID-Verwendung
+    """
+    # Umlaute und spezielle Zeichen ersetzen
+    replacements = {
+        'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'ß': 'ss',
+        'Ä': 'Ae', 'Ö': 'Oe', 'Ü': 'Ue',
+        ' ': '_', '-': '_'
+    }
+    
+    # Ersetze bekannte Zeichen
+    for key, value in replacements.items():
+        text = text.replace(key, value)
+    
+    # Entferne alle nicht-alphanumerischen Zeichen (außer Unterstrich)
+    text = re.sub(r'[^a-zA-Z0-9_]', '', text)
+    
+    # Entferne führende Zahlen oder Unterstriche
+    text = re.sub(r'^[0-9_]+', '', text)
+    
+    # Ersetze mehrere aufeinanderfolgende Unterstriche durch einen einzelnen
+    text = re.sub(r'_+', '_', text)
+    
+    # Stelle sicher, dass der String nicht leer ist
+    if not text:
+        text = f"item_{int(time.time())}"
+    
+    return text
+
+
 def format_date(date: Optional[datetime.datetime] = None,
                include_time: bool = False,
                date_format: Optional[str] = None) -> str:

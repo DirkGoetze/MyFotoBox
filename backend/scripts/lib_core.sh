@@ -29,6 +29,16 @@ debug_output() {
     fi
 }
 
+# Hilfsfunktion für TRACE-Ausgaben (wird nur angezeigt, wenn Debug-Modus aktiv ist)
+trace_output() {
+    # Diese Funktion gibt TRACE-Ausgaben nur aus, wenn Debug aktiviert ist
+    local message="$*"
+    
+    if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ] || [ "${DEBUG_MOD:-0}" = "1" ]; then
+        echo "TRACE: $message" >&2
+    fi
+}
+
 # ===========================================================================
 # Zentrale Konstanten für das gesamte Fotobox-System
 # ===========================================================================
@@ -157,13 +167,13 @@ bind_resource() {
     local binding_in_progress_var="BINDING_${safe_resource_name}_IN_PROGRESS"
     
     if [ "${!binding_in_progress_var}" = "1" ]; then
-        echo "TRACE: Rekursiver Aufruf für $resource_name erkannt, überspringe" >&2
+        trace_output "Rekursiver Aufruf für $resource_name erkannt, überspringe"
         debug_output "bind_resource: Erkenne rekursiven Aufruf für '$resource_name', überspringe Laden"
         
         # Setze die Guard-Variable auf 1, auch bei rekursiven Aufrufen
         # Dies behebt das Problem, dass die Variablen bei rekursiven Aufrufen nicht gesetzt werden
         eval "$guard_var_name=1"
-        echo "TRACE: Setze Guard-Variable $guard_var_name auf 1 trotz rekursivem Aufruf" >&2
+        trace_output "Setze Guard-Variable $guard_var_name auf 1 trotz rekursivem Aufruf"
         debug_output "bind_resource: Setze Guard-Variable $guard_var_name auf 1 (geladen) trotz rekursivem Aufruf"
         
         return 0  # Überspringe und kehre zurück, um Endlosschleife zu vermeiden
@@ -175,14 +185,14 @@ bind_resource() {
     local lock_file="/tmp/fotobox_${safe_resource_name}.lock"
     touch "$lock_file" 2>/dev/null || true  # Erzeuge Sperre falls möglich
     
-    # Direkte Ausgabe für Debugging-Zwecke (auch ohne Debug-Flag)
-    echo "TRACE: bind_resource für $guard_var_name ($resource_name) gestartet" >&2
+    # Ausgabe für Debugging-Zwecke
+    trace_output "bind_resource für $guard_var_name ($resource_name) gestartet"
     
     debug_output "bind_resource: Versuche Ressource zu laden - Guard: $guard_var_name, Pfad: $resource_path, Name: $resource_name"
     
     # Prüfen, ob die Ressource bereits geladen ist
     if [ "$(eval echo \$$guard_var_name)" -ne 0 ]; then
-        echo "TRACE: Ressource $resource_name bereits geladen" >&2
+        trace_output "Ressource $resource_name bereits geladen"
         debug_output "bind_resource: Ressource '$resource_name' bereits geladen (Guard: $guard_var_name = $(eval echo \$$guard_var_name))"
         # Definiere lock_file, wenn es nicht existiert
         local lock_file="${lock_file:-/tmp/fotobox_${safe_resource_name}.lock}"
@@ -192,7 +202,7 @@ bind_resource() {
     
     # Prüfung des Ressourcen-Verzeichnisses
     if [ ! -d "$resource_path" ]; then
-        echo "TRACE: Verzeichnis $resource_path nicht gefunden" >&2
+        trace_output "Verzeichnis $resource_path nicht gefunden"
         debug_output "bind_resource: Fehler - Verzeichnis '$resource_path' nicht gefunden"
         echo "Fehler: Verzeichnis '$resource_path' nicht gefunden."
         rm -f "$lock_file" 2>/dev/null || true  # Sperre entfernen falls möglich
@@ -200,7 +210,7 @@ bind_resource() {
     fi
     
     if [ ! -r "$resource_path" ]; then
-        echo "TRACE: Verzeichnis $resource_path nicht lesbar" >&2
+        trace_output "Verzeichnis $resource_path nicht lesbar"
         debug_output "bind_resource: Fehler - Verzeichnis '$resource_path' nicht lesbar"
         echo "Fehler: Verzeichnis '$resource_path' nicht lesbar."
         rm -f "$lock_file" 2>/dev/null || true  # Sperre entfernen falls möglich
@@ -209,12 +219,12 @@ bind_resource() {
     
     # Pfad zur Ressource zusammensetzen
     local resource_file="$resource_path/$resource_name"
-    echo "TRACE: Versuche Datei zu laden: $resource_file" >&2
+    trace_output "Versuche Datei zu laden: $resource_file"
     debug_output "bind_resource: Vollständiger Ressourcen-Pfad: $resource_file"
     
     # Prüfen, ob die Ressource existiert und ausführbar ist
     if [ ! -f "$resource_file" ]; then
-        echo "TRACE: Datei $resource_file existiert nicht" >&2
+        trace_output "Datei $resource_file existiert nicht"
         debug_output "bind_resource: Fehler - Die Datei '$resource_file' existiert nicht"
         echo "Fehler: Die Datei '$resource_file' existiert nicht."
         rm -f "$lock_file" 2>/dev/null || true  # Sperre entfernen falls möglich
@@ -222,7 +232,7 @@ bind_resource() {
     fi
     
     if [ ! -r "$resource_file" ]; then
-        echo "TRACE: Datei $resource_file ist nicht lesbar" >&2
+        trace_output "Datei $resource_file ist nicht lesbar"
         debug_output "bind_resource: Fehler - Die Datei '$resource_file' ist nicht lesbar"
         echo "Fehler: Die Datei '$resource_file' ist nicht lesbar."
         rm -f "$lock_file" 2>/dev/null || true  # Sperre entfernen falls möglich
@@ -230,16 +240,16 @@ bind_resource() {
     fi
     
     # Ressource laden
-    echo "TRACE: Lade Ressource $resource_file" >&2
+    trace_output "Lade Ressource $resource_file"
     debug_output "bind_resource: Lade Ressource '$resource_file'"
     source "$resource_file"
     local source_result=$?
-    echo "TRACE: Laden von $resource_file abgeschlossen mit Status $source_result" >&2
+    trace_output "Laden von $resource_file abgeschlossen mit Status $source_result"
     debug_output "bind_resource: Laden von '$resource_file' abgeschlossen mit Status: $source_result"
     
     # Guard-Variable auf "geladen" setzen (1)
     eval "$guard_var_name=1"
-    echo "TRACE: Guard-Variable $guard_var_name auf 1 gesetzt" >&2
+    trace_output "Guard-Variable $guard_var_name auf 1 gesetzt"
     debug_output "bind_resource: Guard-Variable $guard_var_name auf 1 (geladen) gesetzt"
     
     # Markierung zurücksetzen
@@ -522,15 +532,15 @@ load_core_resources() {
     # Markiere, dass wir gerade laden
     CORE_RESOURCES_LOADING=1
     
-    echo "TRACE: load_core_resources wird ausgeführt" >&2
+    trace_output "load_core_resources wird ausgeführt"
     debug_output "load_core_resources: Starte das Laden aller Kernressourcen"
     
     # Direkt chk_resources aufrufen ohne Zuweisung (könnte Probleme verursachen)
-    echo "TRACE: Rufe chk_resources direkt auf" >&2
+    trace_output "Rufe chk_resources direkt auf"
     chk_resources
     local status=$?
     
-    echo "TRACE: chk_resources abgeschlossen mit Status $status" >&2
+    trace_output "chk_resources abgeschlossen mit Status $status"
     debug_output "load_core_resources: Laden aller Kernressourcen abgeschlossen mit Status: $status"
     
     # Zurücksetzen der statischen Variable

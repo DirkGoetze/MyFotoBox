@@ -39,8 +39,10 @@ if [ -f "$BASH_DIR/lib_core.sh" ]; then
     # Jetzt alle Ressourcen explizit laden - vermeidet rekursives Laden
     # durch direkten Aufruf von chk_resources statt load_core_resources
     if type chk_resources &>/dev/null; then
-        # Direkte Ausgabe für Debugging
-        echo "TRACE: Direkte Ausführung von chk_resources aus install.sh" >&2
+        # Direkte Ausgabe für Debugging nur wenn Debug-Modus aktiv
+        if [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ]; then
+            echo "TRACE: Direkte Ausführung von chk_resources aus install.sh" >&2
+        fi
         # Setze Variable, um rekursive Aufrufe zu verhindern
         CORE_RESOURCES_LOADING=1
         # Führe Ressourcenprüfung aus
@@ -1651,17 +1653,13 @@ dlg_show_summary() {
 # ------------------------------------------------------------------------------
 # Funktion: Hauptablauf der Erstinstallation
 # ------------------------------------------------------------------------------
-main() {
-    echo "Main-Funktion wird initialisiert..."
-    
+main() {    
     # Initialisierung der Schrittzähler
     STEP_COUNTER=0
     
     # Dynamische Erkennung der Anzahl der Dialog-Funktionen, mit Fallback auf 10
     # Wir verwenden eine robustere Methode zur Zählung
-    echo "Ermittle Anzahl der Dialog-Funktionen..."
     TOTAL_STEPS=$(grep -c "^dlg_" "$0" 2>/dev/null || echo 10)
-    echo "Gefundene Dialog-Funktionen: $TOTAL_STEPS"
     
     # Zur Sicherheit prüfen wir, ob die gefundene Anzahl plausibel ist
     if [ $TOTAL_STEPS -lt 5 ] || [ $TOTAL_STEPS -gt 20 ]; then
@@ -1673,25 +1671,19 @@ main() {
     run_step() {
         local func="$1"
         shift
-        echo "Führe $func aus..."
         if type "$func" &>/dev/null; then
             "$func" "$@"
             local result=$?
             if [ $result -ne 0 ]; then
                 echo "WARNUNG: $func beendet mit Fehler $result"
                 # Fehler werden geloggt, aber die Installation wird fortgesetzt
-            else
-                echo "$func erfolgreich abgeschlossen."
             fi
         else
             echo "FEHLER: Funktion $func nicht gefunden!"
             # Wir brechen nicht ab, sondern versuchen den nächsten Schritt
         fi
     }
-    
-    # Führe jeden Installationsschritt aus und fange Fehler ab
-    echo "Starte Installationsschritte..."
-    
+        
     # Ausführung der einzelnen Dialogschritte, robuste Fehlerbehandlung
     run_step dlg_check_system_requirements "$@"  # Prüfe Systemvoraussetzungen 
     run_step dlg_check_root               # Prüfe Root-Rechte
@@ -1704,7 +1696,6 @@ main() {
     run_step dlg_backend_integration      # Python-Backend, venv, systemd-Service, Start
     run_step dlg_show_summary             # Zeige Zusammenfassung der Installation an
     
-    echo "Installation abgeschlossen."
 }
 
 # ------------------------------------------------------------------------------
@@ -1728,10 +1719,7 @@ Optionen:
 EOF
 }
 
-# Hauptfunktion starten
-echo "Starte Hauptfunktion..."
 # Wir setzen vor dem Aufruf der Hauptfunktion noch einmal das set +e, um mehr Fehlertoleranz zu erreichen
 set +e
 # Befehlszeilenargumente an die Hauptfunktion weiterleiten
 main "$@"
-echo "Hauptfunktion beendet."
