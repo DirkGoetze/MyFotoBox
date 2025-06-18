@@ -308,7 +308,7 @@ get_log_dir() {
     
     # Prüfen, ob LOG_DIR bereits gesetzt ist (z.B. vom install.sh)
     if [ -n "$LOG_DIR" ] && [ -d "$LOG_DIR" ]; then
-        debug "Verwende bereits definiertes LOG_DIR: $LOG_DIR" "CLI" "get_log_dir"
+        debug "Verwende bereits definiertes LOG_DIR: $LOG_DIR" "CLI" "get_log_dir" >/dev/null 2>&1
         create_directory "$LOG_DIR" || true
         echo "$LOG_DIR"
         return 0
@@ -316,30 +316,30 @@ get_log_dir() {
     
     # Exakt die gleiche Logik wie in get_log_path aus manage_logging.sh
     logdir="$DEFAULT_LOG_DIR"
-    debug "Prüfe Standard-Logverzeichnis: $logdir" "CLI" "get_log_dir"
+    debug "Prüfe Standard-Logverzeichnis: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
     if [ -d "$logdir" ]; then
         # Symlink nach /var/log/fotobox anlegen, falls root und möglich
         if [ "$(id -u)" = "0" ] && [ -w "/var/log" ]; then
-            debug "Erstelle Symlink in /var/log/fotobox" "CLI" "get_log_dir"
+            debug "Erstelle Symlink in /var/log/fotobox" "CLI" "get_log_dir" >/dev/null 2>&1
             ln -sf "$logdir" /var/log/fotobox
         fi
         create_directory "$logdir" || true
-        debug "Verwende Standard-Logverzeichnis: $logdir" "CLI" "get_log_dir"
+        debug "Verwende Standard-Logverzeichnis: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
         echo "$logdir"
         return 0
     fi
     
     # Fallback-Kette wie in get_log_path
-    debug "Standard-Logverzeichnis nicht verfügbar, prüfe Fallback-Optionen" "CLI" "get_log_dir"
+    debug "Standard-Logverzeichnis nicht verfügbar, prüfe Fallback-Optionen" "CLI" "get_log_dir" >/dev/null 2>&1
     if [ -w "/var/log" ]; then
         logdir="$FALLBACK_LOG_DIR"
-        debug "Verwende Fallback 1: $logdir" "CLI" "get_log_dir"
+        debug "Verwende Fallback 1: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
     elif [ -w "/tmp" ]; then
         logdir="$FALLBACK_LOG_DIR_2"
-        debug "Verwende Fallback 2: $logdir" "CLI" "get_log_dir"
+        debug "Verwende Fallback 2: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
     else
         logdir="$FALLBACK_LOG_DIR_3"
-        debug "Verwende Fallback 3: $logdir" "CLI" "get_log_dir"
+        debug "Verwende Fallback 3: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
     fi
     
     create_directory "$logdir" || true
