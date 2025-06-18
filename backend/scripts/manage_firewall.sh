@@ -473,44 +473,5 @@ reset_firewall() {
     return 0
 }
 
-# Command-Line-Interface für Rückwärtskompatibilität
-# Warnung: Diese Funktion ist veraltet und sollte nicht mehr direkt verwendet werden
-# Sie ist nur für die Rückwärtskompatibilität vorhanden und wird bei einem Update entfernt
-handle_cli_args() {
-    # Wenn dieses Skript direkt mit Argumenten aufgerufen wird
-    # Zeige die Warnung im Entwicklermodus
-    if [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ]; then
-        print_warning "VERALTET: Direkter Aufruf von manage_firewall.sh mit Parametern ist veraltet."
-        print_warning "Bitte verwende stattdessen: source manage_firewall.sh; setup_firewall | status_firewall | reset_firewall"
-    fi
-
-    # Parameter auswerten
-    local command="$1"
-    case "$command" in
-        "--setup")
-            setup_firewall
-            exit $?
-            ;;
-        "--status")
-            status_firewall
-            exit $?
-            ;;
-        "--reset")
-            reset_firewall
-            exit $?
-            ;;
-        *)
-            print_error "Unbekannter Parameter: $command"
-            print_info "Gültige Parameter: --setup, --status, --reset"
-            exit 1
-            ;;
-    esac
-}
-
-# Prüfe auf direkten Aufruf (nur für Rückwärtskompatibilität)
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]] && [ $# -gt 0 ]; then
-    handle_cli_args "$@"
-fi
-
 # Markiere dieses Modul als geladen
 MANAGE_FIREWALL_LOADED=1
