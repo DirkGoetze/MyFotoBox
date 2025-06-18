@@ -344,22 +344,40 @@ get_log_dir() {
     
     create_directory "$logdir" || true
     
-    # Teste Schreibrecht für das Logverzeichnis
-    if ! touch "$logdir/test_log.tmp" 2>/dev/null; then
-        echo "Fehler: Keine Schreibrechte im Logverzeichnis $logdir" >&2
-        # Versuche Fallback zu /tmp
-        if [ -w "/tmp" ] && [ "$logdir" != "$FALLBACK_LOG_DIR_2" ]; then
-            logdir="$FALLBACK_LOG_DIR_2"
-            create_directory "$logdir" || true
-            if ! touch "$logdir/test_log.tmp" 2>/dev/null; then
-                echo "Fehler: Auch Fallback-Logverzeichnis $logdir nicht schreibbar" >&2
-                return 1
+    # Teste Schreibrecht für das Logverzeichnis - stellen wir sicher, dass es existiert
+    if [ ! -d "$logdir" ]; then
+        mkdir -p "$logdir" 2>/dev/null || true
+    fi
+    
+    # Prüfe explizit, ob das Verzeichnis existiert, bevor wir die Datei erstellen
+    if [ -d "$logdir" ]; then
+        if ! touch "$logdir/test_log.tmp" 2>/dev/null; then
+            echo "Fehler: Keine Schreibrechte im Logverzeichnis $logdir" >&2
+            # Versuche Fallback zu /tmp
+            if [ -w "/tmp" ] && [ "$logdir" != "$FALLBACK_LOG_DIR_2" ]; then
+                logdir="$FALLBACK_LOG_DIR_2"
+                mkdir -p "$logdir" 2>/dev/null || true
+                if [ -d "$logdir" ] && ! touch "$logdir/test_log.tmp" 2>/dev/null; then
+                    echo "Fehler: Auch Fallback-Logverzeichnis $logdir nicht schreibbar" >&2
+                    return 1
+                fi
+            else
+                # Als letztes Mittel das aktuelle Verzeichnis verwenden
+                logdir="."
+                if ! touch "./test_log.tmp" 2>/dev/null; then
+                    echo "Fehler: Kein schreibbares Logverzeichnis gefunden" >&2
+                    return 1
+                fi
+                rm -f "./test_log.tmp" 2>/dev/null || true
             fi
         else
-            return 1
+            rm -f "$logdir/test_log.tmp" 2>/dev/null || true
         fi
+    else
+        # Verzeichnis konnte nicht erstellt werden, verwende aktuelles Verzeichnis
+        echo "Warnung: Logverzeichnis konnte nicht erstellt werden, verwende aktuelles Verzeichnis" >&2
+        logdir="."
     fi
-    rm -f "$logdir/test_log.tmp" 2>/dev/null
     
     echo "$logdir"
     return 0

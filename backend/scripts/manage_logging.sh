@@ -116,11 +116,30 @@ chk_log_file() {
     if [ -f "${LOG_FILE}" ]; then
         mv "${LOG_FILE}" "${LOG_FILE}.1"
     fi
+    # Sicherstellen, dass das Logfile-Verzeichnis existiert
+    local log_dir
+    log_dir=$(dirname "${LOG_FILE}")
+    if [ ! -d "$log_dir" ]; then
+        mkdir -p "$log_dir" 2>/dev/null || true
+        # Wenn das Verzeichnis nicht erstellt werden konnte, verwende /tmp
+        if [ ! -d "$log_dir" ] && [ -w "/tmp" ]; then
+            LOG_FILE="/tmp/fotobox/$(date '+%Y-%m-%d')_fotobox.log"
+            mkdir -p "/tmp/fotobox" 2>/dev/null || true
+        fi
+        # Wenn auch das nicht funktioniert, verwende das aktuelle Verzeichnis
+        if [ ! -d "$(dirname "${LOG_FILE}")" ]; then
+            LOG_FILE="./$(date '+%Y-%m-%d')_fotobox.log"
+        fi
+    fi
+    
     # Sicherstellen, dass das Logfile existiert
     if [ ! -f "${LOG_FILE}" ]; then
-        touch "${LOG_FILE}" || return 1
+        touch "${LOG_FILE}" 2>/dev/null || echo "Warnung: Log-Datei ${LOG_FILE} konnte nicht erstellt werden" >&2
     fi
-    echo "" >> "${LOG_FILE}"
+    # Nur wenn die Datei existiert und schreibbar ist, schreiben wir etwas hinein
+    if [ -f "${LOG_FILE}" ] && [ -w "${LOG_FILE}" ]; then
+        echo "" >> "${LOG_FILE}" 2>/dev/null || true
+    fi
 }
 
 log() {
@@ -146,8 +165,30 @@ log() {
     if [ -z "$msg" ]; then
         chk_log_file
     else
+        # Prüfen und gegebenenfalls erstellen des Verzeichnisses
+        local log_dir
+        log_dir=$(dirname "$LOG_FILE")
+        if [ ! -d "$log_dir" ]; then
+            mkdir -p "$log_dir" 2>/dev/null || true
+            
+            # Wenn das Verzeichnis nicht erstellt werden konnte, Fallbacks verwenden
+            if [ ! -d "$log_dir" ]; then
+                if [ -w "/tmp" ]; then
+                    LOG_FILE="/tmp/fotobox/$(date '+%Y-%m-%d')_fotobox.log"
+                    mkdir -p "/tmp/fotobox" 2>/dev/null || true
+                else
+                    LOG_FILE="./$(date '+%Y-%m-%d')_fotobox.log"
+                fi
+            fi
+        fi
+        
+        # Versuche die Logdatei zu erstellen
         if [ ! -f "$LOG_FILE" ]; then
-            touch "$LOG_FILE" || return 1
+            touch "$LOG_FILE" 2>/dev/null || {
+                # Wenn das nicht klappt, verwende das aktuelle Verzeichnis
+                LOG_FILE="./$(date '+%Y-%m-%d')_fotobox.log"
+                touch "$LOG_FILE" 2>/dev/null || true
+            }
         fi
         # Fehlerfall: Funktionsname und ggf. Dateiname erzwingen
         if [[ "$msg" == ERROR:* ]]; then
