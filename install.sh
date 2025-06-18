@@ -220,16 +220,40 @@ show_spinner() {
     # -----------------------------------------------------------------------
     # Funktion: Zeigt eine Animation, solange der übergebene Prozess läuft
     # Parameter: $1 = PID des zu überwachenden Prozesses
+    #            $2 = Typ des Spinners (optional, default: standard)
     # Rückgabe: keine
     local pid="$1"
+    local spinner_type="${2:-standard}"
     local delay=0.1
-    local spinstr='|/-\\'
+    local spinstr=''
+    
+    # Verschiedene Spinner-Typen
+    case "$spinner_type" in
+        "dots")
+            spinstr="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+            ;;
+        "slash")
+            spinstr='|/-\'
+            ;;
+        *)  # Standard-Spinner
+            spinstr='|/-\'
+            ;;
+    esac
+    
+    local len=${#spinstr}
     local i=0
+    
+    # Verschiebe Cursor zurück zum Anfang der Zeile
+    printf "\r"
+    
+    # Zeige Spinner, solange der Prozess läuft
     while kill -0 "$pid" 2>/dev/null; do
-        i=$(( (i+1) %4 ))
-        printf " [${spinstr:$i:1}]\r"
+        i=$(( (i+1) % len ))
+        printf "[%s]\r" "${spinstr:$i:1}"
         sleep $delay
     done
+    
+    # Lösche den Spinner, wenn der Prozess beendet ist
     printf "    \r"
 }
 
@@ -304,30 +328,52 @@ install_package() {
         installed_version=$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null)
         debug "installierte Version von $pkg: $installed_version" "CLI" "install_package"
         if [ "$installed_version" = "$version" ]; then
+            echo "  → [OK] Paket $pkg ($version) erfolgreich installiert."
             return 0
         elif [ -n "$installed_version" ]; then
             return 2
         fi
-        apt-get install -y -qq "$pkg=$version" >/dev/null 2>&1
+        
+        # Ausgabe mit Spinner während der Installation
+        echo -n "[/] Installiere Paket: $pkg=$version..."
+        apt-get install -y -qq "$pkg=$version" >/dev/null 2>&1 &
+        local install_pid=$!
+        show_spinner "$install_pid"
+        wait "$install_pid"
+        local install_result=$?
     else
         if dpkg -l | grep -q "^ii  $pkg "; then
+            echo "  → [OK] Paket $pkg erfolgreich installiert."
             return 0
         fi
-        apt-get install -y -qq "$pkg" >/dev/null 2>&1
+        
+        # Ausgabe mit Spinner während der Installation
+        echo -n "[/] Installiere Paket: $pkg..."
+        apt-get install -y -qq "$pkg" >/dev/null 2>&1 &
+        local install_pid=$!
+        show_spinner "$install_pid"
+        wait "$install_pid"
+        local install_result=$?
     fi
+    
+    # Nach der Installation prüfen
     if [ -n "$version" ]; then
         local new_version
         new_version=$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null)
         debug "neue Version von $pkg: $new_version" "CLI" "install_package"
         if [ "$new_version" = "$version" ]; then
+            echo "  → [OK] Paket $pkg ($version) erfolgreich installiert."
             return 0
         else
+            echo "  → [FEHLER] Installation von $pkg ($version) fehlgeschlagen."
             return 1
         fi
     else
         if dpkg -l | grep -q "^ii  $pkg "; then
+            echo "  → [OK] Paket $pkg erfolgreich installiert."
             return 0
         else
+            echo "  → [FEHLER] Installation von $pkg fehlgeschlagen."
             return 1
         fi
     fi
@@ -359,9 +405,7 @@ install_package_group() {
         install_package "$pkg" "$version"
         result=$?
         debug "Ergebnis für $pkg: $result" "CLI" "install_package_group"
-        if [ $result -eq 0 ]; then
-            print_success "$pkg${version:+ ($version)} ist bereits installiert."
-        elif [ $result -eq 2 ]; then
+        if [ $result -eq 2 ]; then
             local installed_version
             installed_version=$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null)
             print_error "$pkg ist in Version $installed_version installiert, benötigt wird $version."
@@ -563,13 +607,19 @@ install_system_requirements() {
         print_warning "Konnte Log-Datei nicht erstellen. Log-Ausgaben werden möglicherweise nicht gespeichert."
     
     # Paketlisten aktualisieren
-    print_info "Update der Paketquellen ..."
+    echo -n "[/] Update der Paketquellen ..."
     (apt-get update -qq) &> "$LOG_DIR/apt_update.log" &
-    show_spinner $!
-    if [ $? -ne 0 ]; then
+    show_spinner $! "dots"
+    wait $!
+    update_result=$?
+    
+    if [ $update_result -ne 0 ]; then
+        echo -e "\r  → [FEHLER] Update der Paketquellen fehlgeschlagen."
         print_error "Fehler bei apt-get update. Log-Auszug:"
         tail -n 10 "$LOG_DIR/apt_update.log"
         return 2
+    else
+        echo -e "\r  → [OK] Update der Paketquellen erfolgreich abgeschlossen."
     fi
     
     # Pakete einzeln installieren für bessere Fehlerbehandlung
@@ -577,11 +627,19 @@ install_system_requirements() {
     local successful_packages=0
     
     for pkg in "${packages[@]}"; do
-        print_info "Installiere Paket: $pkg..."
-        if apt-get install -y "$pkg" >> "$LOG_DIR/system_requirements.log" 2>&1; then
-            print_success "Paket $pkg erfolgreich installiert."
+        # Spinner während der Installation anzeigen
+        echo -n "[/] Installiere Paket: $pkg..."
+        apt-get install -y "$pkg" >> "$LOG_DIR/system_requirements.log" 2>&1 &
+        local install_pid=$!
+        show_spinner "$install_pid" "slash"
+        wait "$install_pid"
+        local install_result=$?
+        
+        if [ $install_result -eq 0 ]; then
+            echo -e "\r  → [OK] Paket $pkg erfolgreich installiert."
             ((successful_packages++))
         else
+            echo -e "\r  → [FEHLER] Installation von $pkg fehlgeschlagen."
             print_warning "Paket $pkg konnte nicht installiert werden. Das Skript wird versuchen, fortzufahren."
             failed_packages+=("$pkg")
             # In die Logdatei schreiben, dass das Paket nicht installiert werden konnte
@@ -640,13 +698,46 @@ set_systemd_install() {
     local backup="$BACKUP_DIR/fotobox-backend.service.bak.$(date +%Y%m%d%H%M%S)"
     if [ -f "$SYSTEMD_DST" ]; then
         cp "$SYSTEMD_DST" "$backup"
-        print_success "Backup der bestehenden systemd-Unit nach $backup"
+        echo "  → [OK] Backup der bestehenden systemd-Unit nach $backup erstellt."
     fi
-    cp "$SYSTEMD_SERVICE" "$SYSTEMD_DST"
-    systemctl daemon-reload
-    systemctl enable fotobox-backend
-    systemctl restart fotobox-backend
-    print_success "systemd-Service installiert und gestartet."
+    
+    echo -n "[/] Installiere systemd-Service..."
+    cp "$SYSTEMD_SERVICE" "$SYSTEMD_DST" &>/dev/null &
+    local cp_pid=$!
+    show_spinner "$cp_pid" "slash"
+    wait $cp_pid
+    if [ $? -ne 0 ]; then
+        echo -e "\r  → [FEHLER] Kopieren der Service-Datei fehlgeschlagen."
+        return 1
+    fi
+    
+    echo -e "\r  → [OK] Service-Datei erfolgreich kopiert."
+    echo -n "[/] Aktualisiere systemd..." 
+    systemctl daemon-reload &>/dev/null &
+    local reload_pid=$!
+    show_spinner "$reload_pid" "slash"
+    wait $reload_pid
+    
+    echo -e "\r  → [OK] Systemd-Daemon neu geladen."
+    echo -n "[/] Aktiviere Service..."
+    systemctl enable fotobox-backend &>/dev/null &
+    local enable_pid=$!
+    show_spinner "$enable_pid" "slash"
+    wait $enable_pid
+    
+    echo -e "\r  → [OK] Service aktiviert."
+    echo -n "[/] Starte Backend-Service..."
+    systemctl restart fotobox-backend &>/dev/null &
+    local restart_pid=$!
+    show_spinner "$restart_pid" "slash"
+    wait $restart_pid
+    
+    if systemctl is-active --quiet fotobox-backend; then
+        echo -e "\r  → [OK] Backend-Service erfolgreich gestartet."
+    else
+        echo -e "\r  → [WARNUNG] Backend-Service konnte nicht gestartet werden oder läuft nicht."
+        echo "    Der Status kann mit 'systemctl status fotobox-backend' überprüft werden."
+    fi
 }
 
 # ===========================================================================
@@ -1058,29 +1149,68 @@ dlg_backend_integration() {
     
     # Python venv anlegen, falls nicht vorhanden
     if [ ! -d "$INSTALL_DIR/backend/venv" ]; then
-        python3 -m venv "$INSTALL_DIR/backend/venv" || { print_error "Konnte venv nicht anlegen!"; exit 1; }
+        echo -n "[/] Erstelle Python-Virtualenv..."
+        python3 -m venv "$INSTALL_DIR/backend/venv" &> "$LOG_DIR/venv_create.log" &
+        local venv_pid=$!
+        show_spinner "$venv_pid" "dots"
+        wait $venv_pid
+        if [ $? -ne 0 ]; then
+            echo -e "\r  → [FEHLER] Virtualenv-Erstellung fehlgeschlagen."
+            print_error "Konnte venv nicht anlegen! Log-Auszug:"
+            tail -n 10 "$LOG_DIR/venv_create.log"
+            return 1
+        else
+            echo -e "\r  → [OK] Python-Virtualenv erfolgreich erstellt."
+        fi
+    else
+        echo "  → [OK] Python-Virtualenv existiert bereits."
     fi
+    
     # Abhängigkeiten installieren
-    print_step "Installiere/aktualisiere pip ..."
+    echo -n "[/] Installiere/aktualisiere pip ..."
     ("$INSTALL_DIR/backend/venv/bin/pip" install --upgrade pip) &> "$LOG_DIR/pip_upgrade.log" &
-    show_spinner $!
-    if [ $? -ne 0 ]; then
+    local pip_pid=$!
+    show_spinner "$pip_pid" "dots"
+    wait $pip_pid
+    local pip_result=$?
+    
+    if [ $pip_result -ne 0 ]; then
+        echo -e "\r  → [FEHLER] Pip-Upgrade fehlgeschlagen."
         print_error "Fehler beim Upgrade von pip. Log-Auszug:"
         tail -n 10 "$LOG_DIR/pip_upgrade.log"
-        exit 1
+        return 1
+    else
+        echo -e "\r  → [OK] Pip erfolgreich aktualisiert."
     fi
-    print_step "Installiere Python-Abhängigkeiten ... (inkl. bcrypt für sichere Passwörter)"
+    
+    echo -n "[/] Installiere Python-Abhängigkeiten ..."
     ("$INSTALL_DIR/backend/venv/bin/pip" install -r "$INSTALL_DIR/conf/requirements_python.inf") &> "$LOG_DIR/pip_requirements.log" &
-    show_spinner $!
-    if [ $? -ne 0 ]; then
+    local req_pid=$!
+    show_spinner "$req_pid" "dots"
+    wait $req_pid
+    local req_result=$?
+    
+    if [ $req_result -ne 0 ]; then
+        echo -e "\r  → [FEHLER] Installation der Python-Abhängigkeiten fehlgeschlagen."
         print_error "Konnte Python-Abhängigkeiten nicht installieren! Log-Auszug:"
         tail -n 10 "$LOG_DIR/pip_requirements.log"
-        exit 1
+        return 1
+    else
+        echo -e "\r  → [OK] Python-Abhängigkeiten erfolgreich installiert (inkl. bcrypt für sichere Passwörter)."
+    fi
     fi
     # systemd-Service anlegen und starten
-    set_systemd_service
+    echo -n "[/] Erstelle systemd-Service-Datei..."
+    set_systemd_service &>/dev/null &
+    local service_pid=$!
+    show_spinner "$service_pid" "dots"
+    wait $service_pid
+    echo -e "\r  → [OK] Systemd-Service-Datei wurde erstellt."
+    
+    # Service installieren und starten
     set_systemd_install
-    print_success "Backend-Service wurde eingerichtet und gestartet."
+    
+    print_success "Backend-Service wurde erfolgreich eingerichtet und gestartet."
     return 0
 }
 
