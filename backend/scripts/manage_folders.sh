@@ -728,11 +728,11 @@ get_nginx_backup_dir() {
 }
 
 # get_https_backup_dir
-get_https_backup_dir_txt_0001="Ermittle HTTPS-Backup-Verzeichnis"
-get_https_backup_dir_txt_0002="Verwende bereits definiertes BACKUP_DIR_HTTPS: %s"
-get_https_backup_dir_txt_0003="Prüfe Standard- und Fallback-Pfade für HTTPS-Backup-Verzeichnis"
-get_https_backup_dir_txt_0004="Verwende Pfad für HTTPS-Backup-Verzeichnis: %s"
-get_https_backup_dir_txt_0005="Fallback für HTTPS-Backup-Verzeichnis: %s"
+get_https_backup_dir_debug_0001="Ermittle HTTPS-Backup-Verzeichnis"
+get_https_backup_dir_debug_0002="Verwende bereits definiertes BACKUP_DIR_HTTPS: %s"
+get_https_backup_dir_debug_0003="Prüfe Standard- und Fallback-Pfade für HTTPS-Backup-Verzeichnis"
+get_https_backup_dir_debug_0004="Verwende Pfad für HTTPS-Backup-Verzeichnis: %s"
+get_https_backup_dir_debug_0005="Fallback für HTTPS-Backup-Verzeichnis: %s"
 
 get_https_backup_dir() {
     # -----------------------------------------------------------------------
@@ -749,19 +749,19 @@ get_https_backup_dir() {
     backup_dir=$(get_backup_dir)
 
     # Prüfen, ob BACKUP_DIR_HTTPS bereits gesetzt ist
-    debug "$get_https_backup_dir_txt_0001" "CLI" "get_https_backup_dir"
+    debug "$get_https_backup_dir_debug_0001" "CLI" "get_https_backup_dir"
     if [ -n "$BACKUP_DIR_HTTPS" ] && [ -d "$BACKUP_DIR_HTTPS" ]; then
-        debug "$(printf "$get_https_backup_dir_txt_0002" "$BACKUP_DIR_HTTPS")" "CLI" "get_https_backup_dir"
+        debug "$(printf "$get_https_backup_dir_debug_0002" "$BACKUP_DIR_HTTPS")" "CLI" "get_https_backup_dir"
         create_directory "$BACKUP_DIR_HTTPS" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
         echo "$BACKUP_DIR_HTTPS"
         return 0
     fi
     
     # Verwende die in lib_core definierten Pfade
-    debug "$get_https_backup_dir_txt_0003" "CLI" "get_https_backup_dir"
+    debug "$get_https_backup_dir_debug_0003" "CLI" "get_https_backup_dir"
     dir=$(get_folder_path "$DEFAULT_DIR_BACKUP_HTTPS" "$FALLBACK_DIR_BACKUP_HTTPS" 1)
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_https_backup_dir_txt_0004" "$dir")" "CLI" "get_https_backup_dir"
+        debug "$(printf "$get_https_backup_dir_debug_0004" "$dir")" "CLI" "get_https_backup_dir"
         # Setze restriktivere Berechtigungen für das Backup-Verzeichnis (nur Besitzer und Gruppe haben Zugriff)
         create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
         echo "$dir"
@@ -770,7 +770,7 @@ get_https_backup_dir() {
     
     # Als Fallback ein Unterverzeichnis im allgemeinen Backup-Verzeichnis verwenden
     dir="$backup_dir/https"
-    debug "$(printf "$get_https_backup_dir_txt_0005" "$dir")" "CLI" "get_https_backup_dir"
+    debug "$(printf "$get_https_backup_dir_debug_0005" "$dir")" "CLI" "get_https_backup_dir"
     # Setze restriktivere Berechtigungen für das Backup-Verzeichnis (nur Besitzer und Gruppe haben Zugriff)
     create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
     echo "$dir"
@@ -782,11 +782,11 @@ get_https_backup_dir() {
 # ---------------------------------------------------------------------------
 
 # get_config_dir
-get_config_dir_txt_0001="Ermittle Konfigurations-Verzeichnis"
-get_config_dir_txt_0002="Verwende bereits definiertes CONF_DIR: %s"
-get_config_dir_txt_0003="Prüfe Standard- und Fallback-Pfade für Konfigurations-Verzeichnis" 
-get_config_dir_txt_0004="Verwende Pfad für Konfigurations-Verzeichnis: %s"
-get_config_dir_txt_0005="Alle Pfade für Konfigurations-Verzeichnis fehlgeschlagen, verwende %s/conf"
+get_config_dir_debug_0001="Ermittle Konfigurations-Verzeichnis"
+get_config_dir_debug_0002="Verwende bereits definiertes CONF_DIR: %s"
+get_config_dir_debug_0003="Prüfe Standard- und Fallback-Pfade für Konfigurations-Verzeichnis" 
+get_config_dir_debug_0004="Verwende Pfad für Konfigurations-Verzeichnis: %s"
+get_config_dir_debug_0005="Alle Pfade für Konfigurations-Verzeichnis fehlgeschlagen, verwende %s/conf"
 
 get_config_dir() {
     # -----------------------------------------------------------------------
@@ -799,19 +799,19 @@ get_config_dir() {
     local dir
         
     # Prüfen, ob CONF_DIR bereits gesetzt ist (z.B. vom install.sh)
-    debug "$get_config_dir_txt_0001" "CLI" "get_config_dir"
+    debug "$get_config_dir_debug_0001" "CLI" "get_config_dir"
     if [ -n "$CONF_DIR" ] && [ -d "$CONF_DIR" ]; then
-        debug "$(printf "$get_config_dir_txt_0002" "$CONF_DIR")" "CLI" "get_config_dir"
+        debug "$(printf "$get_config_dir_debug_0002" "$CONF_DIR")" "CLI" "get_config_dir"
         create_directory "$CONF_DIR" || true
         echo "$CONF_DIR"
         return 0
     fi
     
     # Verwende die in dieser Datei definierten Pfade
-    debug "$get_config_dir_txt_0003" "CLI" "get_config_dir"
+    debug "$get_config_dir_debug_0003" "CLI" "get_config_dir"
     dir=$(get_folder_path "$DEFAULT_DIR_CONF" "$FALLBACK_DIR_CONF" 1)
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_config_dir_txt_0004" "$dir")" "CLI" "get_config_dir"
+        debug "$(printf "$get_config_dir_debug_0004" "$dir")" "CLI" "get_config_dir"
         echo "$dir"
         return 0
     fi
@@ -819,17 +819,17 @@ get_config_dir() {
     # Als absoluten Notfall ein Unterverzeichnis des Installationsverzeichnisses verwenden
     local install_dir
     install_dir=$(get_install_dir)
-    debug "$(printf "$get_config_dir_txt_0005" "$install_dir")" "CLI" "get_config_dir"
+    debug "$(printf "$get_config_dir_debug_0005" "$install_dir")" "CLI" "get_config_dir"
     echo "$install_dir/conf"
     return 0
 }
 
 # get_nginx_conf_dir
-get_nginx_conf_dir_txt_0001="Ermittle NGINX-Konfigurations-Verzeichnis"
-get_nginx_conf_dir_txt_0002="Verwende bereits definiertes CONF_DIR_NGINX: %s" 
-get_nginx_conf_dir_txt_0003="Prüfe Standard- und Fallback-Pfade für NGINX-Konfigurations-Verzeichnis"
-get_nginx_conf_dir_txt_0004="Verwende Pfad für NGINX-Konfigurations-Verzeichnis: %s"
-get_nginx_conf_dir_txt_0005="Fallback für NGINX-Konfigurations-Verzeichnis: %s"
+get_nginx_conf_dir_debug_0001="Ermittle NGINX-Konfigurations-Verzeichnis"
+get_nginx_conf_dir_debug_0002="Verwende bereits definiertes CONF_DIR_NGINX: %s" 
+get_nginx_conf_dir_debug_0003="Prüfe Standard- und Fallback-Pfade für NGINX-Konfigurations-Verzeichnis"
+get_nginx_conf_dir_debug_0004="Verwende Pfad für NGINX-Konfigurations-Verzeichnis: %s"
+get_nginx_conf_dir_debug_0005="Fallback für NGINX-Konfigurations-Verzeichnis: %s"
 
 get_nginx_conf_dir() {
     # -----------------------------------------------------------------------
