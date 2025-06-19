@@ -821,52 +821,22 @@ set_systemd_install() {
     # -----------------------------------------------------------------------
     # set_systemd_install
     # -----------------------------------------------------------------------
-    # Funktion: Kopiert systemd-Service-Datei und startet Service
-    # Rückgabe: keine (Seitenwirkung: kopiert, startet und aktiviert Service)
-
-    local backup="$BACKUP_DIR/fotobox-backend.service.bak.$(date +%Y%m%d%H%M%S)"
-    if [ -f "$SYSTEMD_DST" ]; then
-        cp "$SYSTEMD_DST" "$backup"
-        echo "  → [OK] Backup der bestehenden systemd-Unit nach $backup erstellt."
-    fi
+    # Funktion: Nutzt manage_backend_service.sh um den systemd-Service zu installieren
+    # Rückgabe: 0 bei Erfolg, 1 bei Fehler
     
-    echo -n "[/] Installiere systemd-Service..."
-    cp "$SYSTEMD_SERVICE" "$SYSTEMD_DST" &>/dev/null &
-    local cp_pid=$!
-    show_spinner "$cp_pid" "slash"
-    wait $cp_pid
-    if [ $? -ne 0 ]; then
-        echo -e "\r  → [FEHLER] Kopieren der Service-Datei fehlgeschlagen."
+    # Stelle sicher, dass das Modul geladen ist
+    if ! source "$BASH_DIR/manage_backend_service.sh" 2>/dev/null; then
+        echo "  → [FEHLER] Backend-Service-Modul konnte nicht geladen werden."
         return 1
     fi
     
-    echo -e "\r  → [OK] Service-Datei erfolgreich kopiert."
-    echo -n "[/] Aktualisiere systemd..." 
-    systemctl daemon-reload &>/dev/null &
-    local reload_pid=$!
-    show_spinner "$reload_pid" "slash"
-    wait $reload_pid
-    
-    echo -e "\r  → [OK] Systemd-Daemon neu geladen."
-    echo -n "[/] Aktiviere Service..."
-    systemctl enable fotobox-backend &>/dev/null &
-    local enable_pid=$!
-    show_spinner "$enable_pid" "slash"
-    wait $enable_pid
-    
-    echo -e "\r  → [OK] Service aktiviert."
-    echo -n "[/] Starte Backend-Service..."
-    systemctl restart fotobox-backend &>/dev/null &
-    local restart_pid=$!
-    show_spinner "$restart_pid" "slash"
-    wait $restart_pid
-    
-    if systemctl is-active --quiet fotobox-backend; then
-        echo -e "\r  → [OK] Backend-Service erfolgreich gestartet."
-    else
-        echo -e "\r  → [WARNUNG] Backend-Service konnte nicht gestartet werden oder läuft nicht."
-        echo "    Der Status kann mit 'systemctl status fotobox-backend' überprüft werden."
+    # Führe die Einrichtung des Backend-Services durch
+    if ! setup_backend_service; then
+        echo "  → [FEHLER] Backend-Service konnte nicht eingerichtet werden."
+        return 1
     fi
+    
+    return 0
 }
 
 # ===========================================================================

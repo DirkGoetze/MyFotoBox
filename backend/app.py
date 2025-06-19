@@ -13,6 +13,7 @@ import manage_database
 import manage_files
 import manage_api
 import manage_camera  # Neu importiert für Kamerafunktionalität
+import manage_backend_service  # Neu importiert für Backend-Service-Verwaltung
 
 # Importiere die API-Module
 import api_auth
@@ -24,6 +25,7 @@ import api_logging
 import api_settings
 import api_uninstall
 import api_update
+import api_backend_service  # Neu importiert für Backend-Service API
 
 # -------------------------------------------------------------------------------
 # DB_PATH und Datenverzeichnis sicherstellen
@@ -45,6 +47,7 @@ app.register_blueprint(api_logging.api_logging)
 app.register_blueprint(api_settings.api_settings)
 app.register_blueprint(api_uninstall.api_uninstall)
 app.register_blueprint(api_update.api_update)
+app.register_blueprint(api_backend_service.api_backend_service, url_prefix='/api/backend_service')
 
 # Cache-Kontrolle für die Testphase
 @app.after_request
