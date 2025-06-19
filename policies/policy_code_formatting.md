@@ -101,4 +101,6 @@ Diese Policy definiert verbindliche Regeln für die Formatierung von Quellcode i
 
 3. **Ausnahmen**: Begründete Ausnahmen müssen dokumentiert werden, sollten aber vermieden werden.
 
-**Stand**: 10. Juni 2025
+4. **Sprachspezifische Standards**: Für Python-spezifische Formatierungsregeln und Coding-Standards siehe [Python Coding Style Policy](policy_python_coding.md).
+
+**Stand**: 20. Juni 2025

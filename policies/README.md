@@ -37,6 +37,7 @@ Alle Policy-Dateien folgen dem Namensschema `policy_[bereich]_[unterbereich].md`
 * [Code Formatting](policy_code_formatting.md) - Verbindliche Formatierungsregeln für alle Dateitypen
 * [Code Error Handling](policy_code_errorhandling.md) - Standards für Fehlerbehandlung
 * [Code Review](policy_code_review.md) - Standards für Code-Reviews
+* [Python Coding](policy_python_coding.md) - Python-spezifische Coding-Standards
 
 ### System-Policies
 
@@ -72,4 +73,4 @@ Im Gegensatz zur Endbenutzer-Dokumentation im Ordner "documentation" richten sic
 
 ## Stand
 
-Stand: 11. Juni 2025
+Stand: 20. Juni 2025

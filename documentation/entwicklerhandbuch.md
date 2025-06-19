@@ -1255,7 +1255,22 @@ Beim Migrieren von Legacy-Code in die neue modulare Struktur:
 - **UI-Tests**: Testen der Benutzeroberfläche
 - **End-to-End-Tests**: Testen des Gesamtsystems
 
-### 7.2 Test-Implementierung
+### 7.2 Coding-Standards
+
+Die Fotobox2-Codebasis folgt strengen Qualitätsrichtlinien, die in den jeweiligen Policy-Dokumenten detailliert beschrieben sind:
+
+- **Frontend/JavaScript**: ESLint-Regeln für konsistenten JavaScript-Code
+- **Python**: Es gelten die Standards der [Python Coding Style Policy](../policies/policy_python_coding.md) mit folgenden Kernprinzipien:
+  - PEP 8-Grundsätze mit einem Pylint-Score von 10/10
+  - Lazy %-Formatierung für Logging (`logger.info("Value: %s", value)`) statt f-Strings
+  - Spezifische Exception-Typen statt generischer Exception-Handler
+  - Ausführliche Docstrings für alle Module, Klassen und Funktionen
+  - Typisierung mit Type-Hints aus dem `typing`-Modul
+  - Konsistente Namenskonventionen (snake_case für Variablen/Funktionen, UPPER_CASE für Konstanten)
+
+Detaillierte Standards und Best Practices sind in den jeweiligen Policy-Dokumenten unter `policies/` hinterlegt.
+
+### 7.3 Test-Implementierung
 
 Frontend-Tests werden in den jeweiligen `tests/`-Verzeichnissen implementiert und verwenden Jest für JavaScript-Tests.
 
@@ -1280,7 +1295,7 @@ Alle Änderungen sollten:
 
 1. Die bestehenden Tests bestehen
 2. Neue Tests für die Änderungen enthalten
-3. Den Coding-Richtlinien entsprechen (ESLint für JS, PEP 8 für Python)
+3. Den Coding-Richtlinien entsprechen (ESLint für JS, für Python siehe die Python-Coding-Style-Policy)
 
 ## 8. Versionierung und Deployment
 
