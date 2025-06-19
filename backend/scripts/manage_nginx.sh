@@ -66,7 +66,8 @@ fi
 # bereitgestellt. Hier definieren wir nur Konstanten, die noch nicht durch 
 # lib_core.sh gesetzt wurden oder die speziell für die Installation 
 # überschrieben werden müssen.
-# ---------------------------------------------------------------------------
+
+# ===========================================================================
 
 # ===========================================================================
 # Lokale Konstanten (Vorgaben und Defaults nur für die Installation)
@@ -77,114 +78,6 @@ fi
 DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
 
-# ===========================================================================
-# Funktionstexte (für spätere Mehrsprachigkeit als Konstanten ausgelagert)
-# ===========================================================================
-
-# chk_nginx_installation
-chk_nginx_installation_txt_0001="NGINX nicht installiert, Installation wird gestartet."
-chk_nginx_installation_txt_0002="NGINX ist nicht installiert. Jetzt installieren? [J/n]"
-chk_nginx_installation_txt_0003="NGINX-Installation abgebrochen."
-chk_nginx_installation_txt_0004="NGINX konnte nicht installiert werden!"
-chk_nginx_installation_txt_0005="NGINX wurde erfolgreich installiert."
-chk_nginx_installation_txt_0006="NGINX ist bereits installiert."
-
-# chk_nginx_reload
-chk_nginx_reload_txt_0001="NGINX-Konfiguration wird getestet ..."
-chk_nginx_reload_txt_0002="NGINX-Konfiguration erfolgreich neu geladen."
-chk_nginx_reload_txt_0003="NGINX konnte nicht neu geladen werden! Statusauszug:"
-chk_nginx_reload_txt_0004="Fehler in der NGINX-Konfiguration!"
-chk_nginx_reload_txt_0005="Fehler in der NGINX-Konfiguration! Bitte prüfen."
-chk_nginx_reload_txt_0006="NGINX konnte nicht neu geladen werden!"
-
-# is_nginx_available
-is_nginx_available_txt_0001="NGINX ist installiert."
-is_nginx_available_txt_0002="NGINX ist nicht installiert."
-is_nginx_available_txt_0003="Prüfe NGINX-Installation..."
-
-# is_nginx_running
-is_nginx_running_txt_0001="NGINX-Dienst läuft."
-is_nginx_running_txt_0002="NGINX-Dienst ist gestoppt."
-is_nginx_running_txt_0003="Prüfe NGINX-Status..."
-
-# is_nginx_default
-is_nginx_default_txt_0001="NGINX verwendet Default-Konfiguration."
-is_nginx_default_txt_0002="NGINX verwendet angepasste Konfiguration."
-is_nginx_default_txt_0003="NGINX-Konfigurationsstatus unklar."
-is_nginx_default_txt_0004="Prüfe NGINX-Konfigurationsstatus..."
-
-# nginx_start
-nginx_start_txt_0001="Starte NGINX-Dienst..."
-nginx_start_txt_0002="NGINX-Dienst erfolgreich gestartet."
-nginx_start_txt_0003="NGINX-Dienst konnte nicht gestartet werden!"
-nginx_start_txt_0004="NGINX ist nicht installiert."
-
-# nginx_stop
-nginx_stop_txt_0001="Stoppe NGINX-Dienst..."
-nginx_stop_txt_0002="NGINX-Dienst erfolgreich gestoppt."
-nginx_stop_txt_0003="NGINX-Dienst konnte nicht gestoppt werden!"
-nginx_stop_txt_0004="NGINX ist nicht installiert."
-
-# nginx_test_config
-nginx_test_config_txt_0001="Prüfe NGINX-Konfiguration..."
-nginx_test_config_txt_0002="NGINX-Konfiguration ist fehlerfrei."
-nginx_test_config_txt_0003="Fehler in der NGINX-Konfiguration gefunden!"
-nginx_test_config_txt_0004="NGINX ist nicht installiert."
-
-# chk_nginx_port
-chk_nginx_port_txt_0001="Port-Prüfung starten ..."
-chk_nginx_port_txt_0002="lsof ist nicht verfügbar. Portprüfung nicht möglich."
-chk_nginx_port_txt_0003="Port %s ist belegt."
-chk_nginx_port_txt_0004="Port %s ist frei."
-chk_nginx_port_txt_0005="Portprüfung abgeschlossen."
-chk_nginx_port_txt_0006="Fehler bei der Portprüfung."
-
-# chk_nginx_activ
-chk_nginx_activ_txt_0001="Nur Default-Site ist aktiv."
-chk_nginx_activ_txt_0002="Weitere Sites sind aktiv."
-chk_nginx_activ_txt_0003="Konnte aktive NGINX-Sites nicht eindeutig ermitteln."
-chk_nginx_activ_txt_0004="NGINX-Status: Nur Default-Site aktiv."
-chk_nginx_activ_txt_0005="NGINX-Status: Mehrere Sites aktiv."
-chk_nginx_activ_txt_0006="Fehler: NGINX-Site-Status unklar."
-chk_nginx_activ_txt_0007="Statusabfrage abgeschlossen."
-chk_nginx_activ_txt_0008="Fehler bei der Statusabfrage."
-
-# get_nginx_url
-get_nginx_url_txt_0001="Konnte IP-Adresse nicht ermitteln."
-get_nginx_url_txt_0002="Ermittelte Fotobox-URL: %s"
-get_nginx_url_txt_0003="URL-Ermittlung abgeschlossen."
-get_nginx_url_txt_0004="Fehler bei der URL-Ermittlung."
-get_nginx_url_txt_0005="Verwende IP-Adresse: %s"
-get_nginx_url_txt_0006="Verwende Hostname: %s"
-
-# set_nginx_port
-set_nginx_port_txt_0001="Portauswahl für Fotobox-Weboberfläche gestartet."
-set_nginx_port_txt_0002="Bitte gewünschten Port für die Fotobox-Weboberfläche angeben [Default: 80]:"
-set_nginx_port_txt_0003="Ungültige Eingabe: '%s'. Bitte eine gültige Portnummer angeben."
-set_nginx_port_txt_0004="Fehler beim Schreiben des Ports in die Konfiguration."
-set_nginx_port_txt_0005="Port %s wird verwendet."
-set_nginx_port_txt_0006="Keine passende NGINX-Konfiguration gefunden. Port kann nicht gesetzt werden."
-set_nginx_port_txt_0007="Abbrechen? [j/N]"
-set_nginx_port_txt_0008="Portauswahl abgebrochen."
-
-# set_nginx_cnf_internal
-set_nginx_cnf_internal_txt_0001="Integration der Fotobox in Default-NGINX-Konfiguration gestartet."
-set_nginx_cnf_internal_txt_0002="Default-Konfiguration nicht gefunden: %s"
-set_nginx_cnf_internal_txt_0003="Backup der Default-Konfiguration fehlgeschlagen!"
-set_nginx_cnf_internal_txt_0004="Backup der Default-Konfiguration nach %s"
-set_nginx_cnf_internal_txt_0005="Fotobox-Block in Default-Konfiguration eingefügt."
-set_nginx_cnf_internal_txt_0006="Fotobox-Block bereits in Default-Konfiguration vorhanden."
-set_nginx_cnf_internal_txt_0007="NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
-
-# set_nginx_cnf_external
-set_nginx_cnf_external_txt_0001="Externe Fotobox-NGINX-Konfiguration wird eingerichtet."
-set_nginx_cnf_external_txt_0002="Backup der bestehenden Fotobox-Konfiguration fehlgeschlagen!"
-set_nginx_cnf_external_txt_0003="Backup der bestehenden Fotobox-Konfiguration nach %s"
-set_nginx_cnf_external_txt_0004="Kopieren der Fotobox-Konfiguration fehlgeschlagen!"
-set_nginx_cnf_external_txt_0005="Fotobox-Konfiguration nach %s kopiert."
-set_nginx_cnf_external_txt_0006="Symlink für Fotobox-Konfiguration konnte nicht erstellt werden!"
-set_nginx_cnf_external_txt_0007="Symlink für Fotobox-Konfiguration erstellt."
-set_nginx_cnf_external_txt_0008="NGINX-Konfiguration konnte nach externer Integration nicht neu geladen werden!"
 # ===========================================================================
 
 # ===========================================================================
@@ -396,6 +289,14 @@ EOF
     fi
 }
 
+# chk_nginx_installation
+chk_nginx_installation_txt_0001="NGINX nicht installiert, Installation wird gestartet."
+chk_nginx_installation_txt_0002="NGINX ist nicht installiert. Jetzt installieren? [J/n]"
+chk_nginx_installation_txt_0003="NGINX-Installation abgebrochen."
+chk_nginx_installation_txt_0004="NGINX konnte nicht installiert werden!"
+chk_nginx_installation_txt_0005="NGINX wurde erfolgreich installiert."
+chk_nginx_installation_txt_0006="NGINX ist bereits installiert."
+
 chk_nginx_installation() {
     # -----------------------------------------------------------------------
     # chk_nginx_installation
@@ -430,6 +331,14 @@ chk_nginx_installation() {
     return 0
 }
 
+# chk_nginx_reload
+chk_nginx_reload_txt_0001="NGINX-Konfiguration wird getestet ..."
+chk_nginx_reload_txt_0002="NGINX-Konfiguration erfolgreich neu geladen."
+chk_nginx_reload_txt_0003="NGINX konnte nicht neu geladen werden! Statusauszug:"
+chk_nginx_reload_txt_0004="Fehler in der NGINX-Konfiguration!"
+chk_nginx_reload_txt_0005="Fehler in der NGINX-Konfiguration! Bitte prüfen."
+chk_nginx_reload_txt_0006="NGINX konnte nicht neu geladen werden!"
+
 chk_nginx_reload() {
     # -----------------------------------------------------------------------
     # chk_nginx_reload
@@ -460,6 +369,15 @@ chk_nginx_reload() {
         return 1
     fi
 }
+
+# chk_nginx_port
+chk_nginx_port_txt_0001="Port-Prüfung starten ..."
+chk_nginx_port_txt_0002="lsof ist nicht verfügbar. Portprüfung nicht möglich."
+chk_nginx_port_txt_0003="Port %s ist belegt."
+chk_nginx_port_txt_0004="Port %s ist frei."
+chk_nginx_port_txt_0005="Portprüfung abgeschlossen."
+chk_nginx_port_txt_0006="Fehler bei der Portprüfung."
+
 
 chk_nginx_port() {
     # -----------------------------------------------------------------------
@@ -508,6 +426,16 @@ chk_nginx_port() {
     # log "${chk_nginx_port_txt_0005}"  # ENTFERNT
 }
 
+# chk_nginx_activ
+chk_nginx_activ_txt_0001="Nur Default-Site ist aktiv."
+chk_nginx_activ_txt_0002="Weitere Sites sind aktiv."
+chk_nginx_activ_txt_0003="Konnte aktive NGINX-Sites nicht eindeutig ermitteln."
+chk_nginx_activ_txt_0004="NGINX-Status: Nur Default-Site aktiv."
+chk_nginx_activ_txt_0005="NGINX-Status: Mehrere Sites aktiv."
+chk_nginx_activ_txt_0006="Fehler: NGINX-Site-Status unklar."
+chk_nginx_activ_txt_0007="Statusabfrage abgeschlossen."
+chk_nginx_activ_txt_0008="Fehler bei der Statusabfrage."
+
 chk_nginx_activ() {
     # -----------------------------------------------------------------------
     # chk_nginx_activ
@@ -544,6 +472,14 @@ chk_nginx_activ() {
 # ===========================================================================
 # Hilfsfunktionen zum lesen und setzen von einzelnen NGINX-Konfigurationen
 # ===========================================================================
+
+# get_nginx_url
+get_nginx_url_txt_0001="Konnte IP-Adresse nicht ermitteln."
+get_nginx_url_txt_0002="Ermittelte Fotobox-URL: %s"
+get_nginx_url_txt_0003="URL-Ermittlung abgeschlossen."
+get_nginx_url_txt_0004="Fehler bei der URL-Ermittlung."
+get_nginx_url_txt_0005="Verwende IP-Adresse: %s"
+get_nginx_url_txt_0006="Verwende Hostname: %s"
 
 get_nginx_url() {
     # -----------------------------------------------------------------------
@@ -656,6 +592,16 @@ get_nginx_port() {
         return 1
     fi
 }
+
+# set_nginx_port
+set_nginx_port_txt_0001="Portauswahl für Fotobox-Weboberfläche gestartet."
+set_nginx_port_txt_0002="Bitte gewünschten Port für die Fotobox-Weboberfläche angeben [Default: 80]:"
+set_nginx_port_txt_0003="Ungültige Eingabe: '%s'. Bitte eine gültige Portnummer angeben."
+set_nginx_port_txt_0004="Fehler beim Schreiben des Ports in die Konfiguration."
+set_nginx_port_txt_0005="Port %s wird verwendet."
+set_nginx_port_txt_0006="Keine passende NGINX-Konfiguration gefunden. Port kann nicht gesetzt werden."
+set_nginx_port_txt_0007="Abbrechen? [j/N]"
+set_nginx_port_txt_0008="Portauswahl abgebrochen."
 
 set_nginx_port() {
     # -----------------------------------------------------------------------
@@ -986,6 +932,15 @@ conf_nginx_port() {
     return 1
 }
 
+# set_nginx_cnf_internal
+set_nginx_cnf_internal_txt_0001="Integration der Fotobox in Default-NGINX-Konfiguration gestartet."
+set_nginx_cnf_internal_txt_0002="Default-Konfiguration nicht gefunden: %s"
+set_nginx_cnf_internal_txt_0003="Backup der Default-Konfiguration fehlgeschlagen!"
+set_nginx_cnf_internal_txt_0004="Backup der Default-Konfiguration nach %s"
+set_nginx_cnf_internal_txt_0005="Fotobox-Block in Default-Konfiguration eingefügt."
+set_nginx_cnf_internal_txt_0006="Fotobox-Block bereits in Default-Konfiguration vorhanden."
+set_nginx_cnf_internal_txt_0007="NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
+
 set_nginx_cnf_internal() {
     # -----------------------------------------------------------------------
     # set_nginx_cnf_internal
@@ -1034,6 +989,16 @@ set_nginx_cnf_internal() {
     
     return 0
 }
+
+# set_nginx_cnf_external
+set_nginx_cnf_external_txt_0001="Externe Fotobox-NGINX-Konfiguration wird eingerichtet."
+set_nginx_cnf_external_txt_0002="Backup der bestehenden Fotobox-Konfiguration fehlgeschlagen!"
+set_nginx_cnf_external_txt_0003="Backup der bestehenden Fotobox-Konfiguration nach %s"
+set_nginx_cnf_external_txt_0004="Kopieren der Fotobox-Konfiguration fehlgeschlagen!"
+set_nginx_cnf_external_txt_0005="Fotobox-Konfiguration nach %s kopiert."
+set_nginx_cnf_external_txt_0006="Symlink für Fotobox-Konfiguration konnte nicht erstellt werden!"
+set_nginx_cnf_external_txt_0007="Symlink für Fotobox-Konfiguration erstellt."
+set_nginx_cnf_external_txt_0008="NGINX-Konfiguration konnte nach externer Integration nicht neu geladen werden!"
 
 set_nginx_cnf_external() {
     # -----------------------------------------------------------------------
@@ -1118,6 +1083,11 @@ get_nginx_template_file() {
     return 0
 }
 
+# is_nginx_available
+is_nginx_available_txt_0001="NGINX ist installiert."
+is_nginx_available_txt_0002="NGINX ist nicht installiert."
+is_nginx_available_txt_0003="Prüfe NGINX-Installation..."
+
 is_nginx_available() {
     # -----------------------------------------------------------------------
     # is_nginx_available
@@ -1141,6 +1111,11 @@ is_nginx_available() {
         return 1
     fi
 }
+
+# is_nginx_running
+is_nginx_running_txt_0001="NGINX-Dienst läuft."
+is_nginx_running_txt_0002="NGINX-Dienst ist gestoppt."
+is_nginx_running_txt_0003="Prüfe NGINX-Status..."
 
 is_nginx_running() {
     # -----------------------------------------------------------------------
@@ -1173,6 +1148,12 @@ is_nginx_running() {
         return 1
     fi
 }
+
+# is_nginx_default
+is_nginx_default_txt_0001="NGINX verwendet Default-Konfiguration."
+is_nginx_default_txt_0002="NGINX verwendet angepasste Konfiguration."
+is_nginx_default_txt_0003="NGINX-Konfigurationsstatus unklar."
+is_nginx_default_txt_0004="Prüfe NGINX-Konfigurationsstatus..."
 
 is_nginx_default() {
     # -----------------------------------------------------------------------
@@ -1212,6 +1193,12 @@ is_nginx_default() {
     fi
 }
 
+# nginx_start
+nginx_start_txt_0001="Starte NGINX-Dienst..."
+nginx_start_txt_0002="NGINX-Dienst erfolgreich gestartet."
+nginx_start_txt_0003="NGINX-Dienst konnte nicht gestartet werden!"
+nginx_start_txt_0004="NGINX ist nicht installiert."
+
 nginx_start() {
     # -----------------------------------------------------------------------
     # nginx_start
@@ -1246,6 +1233,12 @@ nginx_start() {
     fi
 }
 
+# nginx_stop
+nginx_stop_txt_0001="Stoppe NGINX-Dienst..."
+nginx_stop_txt_0002="NGINX-Dienst erfolgreich gestoppt."
+nginx_stop_txt_0003="NGINX-Dienst konnte nicht gestoppt werden!"
+nginx_stop_txt_0004="NGINX ist nicht installiert."
+
 nginx_stop() {
     # -----------------------------------------------------------------------
     # nginx_stop
@@ -1279,6 +1272,12 @@ nginx_stop() {
         return 1
     fi
 }
+
+# nginx_test_config
+nginx_test_config_txt_0001="Prüfe NGINX-Konfiguration..."
+nginx_test_config_txt_0002="NGINX-Konfiguration ist fehlerfrei."
+nginx_test_config_txt_0003="Fehler in der NGINX-Konfiguration gefunden!"
+nginx_test_config_txt_0004="NGINX ist nicht installiert."
 
 nginx_test_config() {
     # -----------------------------------------------------------------------
@@ -1315,9 +1314,10 @@ nginx_test_config() {
 }
 
 # ===========================================================================
-# Konstanten für nginx_add_config
+# Erweiterte NGINX-Konfigurationsverwaltung
 # ===========================================================================
-# Textmeldungen zur Lokalisierung und zentralen Verwaltung
+
+#nginx_add_config
 nginx_add_config_txt_0001="Füge neue NGINX-Konfiguration hinzu: %s"
 nginx_add_config_txt_0002="Konfigurationsdatei %s erfolgreich erstellt."
 nginx_add_config_txt_0003="Fehler beim Erstellen der Konfigurationsdatei %s"
@@ -1329,10 +1329,6 @@ nginx_add_config_txt_0008="Konfigurationsname darf nur alphanumerische Zeichen u
 nginx_add_config_txt_0009="Konfigurationsinhalt darf nicht leer sein"
 nginx_add_config_txt_0010="NGINX-Konfiguration %s wurde erfolgreich hinzugefügt und aktiviert."
 nginx_add_config_txt_0011="NGINX ist nicht installiert. Installation erforderlich."
-
-# ===========================================================================
-# Erweiterte NGINX-Konfigurationsverwaltung
-# ===========================================================================
 
 nginx_add_config() {
     # -----------------------------------------------------------------------
