@@ -18,11 +18,10 @@ Diese Policy regelt die Ablage und Trennung von Skripttypen und Ressourcen im Pr
 ### `conf`-Verzeichnis
 
 - Das `conf`-Verzeichnis dient als zentrale Ablage für alle Konfigurationsdateien und Abhängigkeitsdefinitionen.
-- Folgende Dateien müssen im `conf`-Verzeichnis abgelegt werden:
-  - `requirements_system.inf`: Definition aller Systemabhängigkeiten
+- Folgende Dateien müssen im `conf`-Verzeichnis abgelegt werden:  - `requirements_system.inf`: Definition aller Systemabhängigkeiten
   - `requirements_python.inf`: Definition aller Python-Abhängigkeiten
   - `fotobox-backend.service`: Systemd-Service-Konfiguration
-  - `nginx-fotobox.conf`: NGINX-Konfiguration
+  - `nginx/template_fotobox.conf`: NGINX-Konfigurationstemplate
   - `version.inf`: Versionsinformationen der Software
 
 - Neue Abhängigkeiten dürfen nicht direkt installiert werden, sondern müssen in den entsprechenden Requirements-Dateien definiert werden.

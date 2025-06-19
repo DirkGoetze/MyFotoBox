@@ -12,9 +12,16 @@ import sqlite3
 from datetime import datetime
 import traceback
 
-# Konfiguration für das Logging
-LOG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'log'))
-DB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
+# Pfadkonfiguration über das zentrale Verzeichnismanagement
+try:
+    from manage_folders import get_log_dir, get_data_dir
+    LOG_DIR = get_log_dir()
+    DB_DIR = get_data_dir()
+except ImportError:
+    # Fallback falls manage_folders nicht verfügbar ist
+    LOG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'log'))
+    DB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
+
 DB_PATH = os.path.join(DB_DIR, 'fotobox_logs.db')
 LOG_FILE = os.path.join(LOG_DIR, 'fotobox.log')
 DEBUG_LOG_FILE = os.path.join(LOG_DIR, 'fotobox_debug.log')

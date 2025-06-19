@@ -1,11 +1,22 @@
 import os
 import subprocess
 import sys
+import os
 from datetime import datetime
 
-BACKUP_DIR = os.path.join(os.path.dirname(__file__), '../backup')
+# Pfadkonfiguration über das zentrale Verzeichnismanagement
+try:
+    from manage_folders import get_backup_dir, get_data_dir, get_install_dir
+    BACKUP_DIR = get_backup_dir()
+    DATA_DIR = get_data_dir()
+    INSTALL_DIR = get_install_dir()
+except ImportError:
+    # Fallback falls manage_folders nicht verfügbar ist
+    BACKUP_DIR = os.path.join(os.path.dirname(__file__), '../backup')
+    DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
+    INSTALL_DIR = '/opt/fotobox'  # Fallback für hardcodierten Pfad
+
 LOGFILE = os.path.join(BACKUP_DIR, 'uninstall.log')
-DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
 DB_PATH = os.path.join(DATA_DIR, 'fotobox_settings.db')
 
 os.makedirs(BACKUP_DIR, exist_ok=True)
@@ -45,10 +56,9 @@ def run(cmd, sudo=False):
 # -------------------------------------------------------------------------------
 def backup_configs():
     os.makedirs(BACKUP_DIR, exist_ok=True)
-    ts = datetime.now().strftime('%Y%m%d%H%M%S')
-    # Beispiel: NGINX-Konfig sichern
+    ts = datetime.now().strftime('%Y%m%d%H%M%S')    # Beispiel: NGINX-Konfig sichern
     if os.path.exists('/etc/nginx/sites-available/fotobox'):
-        run(['cp', '/etc/nginx/sites-available/fotobox', f'{BACKUP_DIR}/nginx-fotobox.conf.bak.{ts}'], sudo=True)
+        run(['cp', '/etc/nginx/sites-available/fotobox', f'{BACKUP_DIR}/template_fotobox.conf.bak.{ts}'], sudo=True)
     # Weitere Backups nach Bedarf ...
     log('Backup abgeschlossen.')
 
@@ -78,13 +88,13 @@ def remove_nginx():
 # -------------------------------------------------------------------------------
 # remove_project
 # -------------------------------------------------------------------------------
-# Funktion: Entfernt das Projektverzeichnis /opt/fotobox
+# Funktion: Entfernt das Projektverzeichnis (aus manage_folders oder Fallback)
 # -------------------------------------------------------------------------------
 def remove_project():
-    project_dir = '/opt/fotobox'
+    project_dir = INSTALL_DIR  # Verwendet die oben definierte Variable aus manage_folders
     if os.path.exists(project_dir):
         run(['rm', '-rf', project_dir], sudo=True)
-        log('Projektverzeichnis entfernt.')
+        log(f'Projektverzeichnis {project_dir} entfernt.')
 
 # -------------------------------------------------------------------------------
 # backup_and_remove_systemd
@@ -110,7 +120,7 @@ def backup_and_remove_systemd():
 def backup_and_remove_nginx():
     import shutil, datetime, os
     dst = '/etc/nginx/sites-available/fotobox'
-    backup = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backup', f'nginx-fotobox.conf.bak.{datetime.datetime.now():%Y%m%d%H%M%S}'))
+    backup = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backup', f'template_fotobox.conf.bak.{datetime.datetime.now():%Y%m%d%H%M%S}'))
     if os.path.exists(dst):
         shutil.copy(dst, backup)
         log(f"Backup NGINX-Konfiguration vor Entfernung: {backup}")

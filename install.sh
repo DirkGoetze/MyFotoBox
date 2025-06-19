@@ -137,8 +137,8 @@ create_temp_file() {
         tmpdir="$(get_tmp_dir)"
     elif [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ]; then
         tmpdir="$TMP_DIR"
-    elif [ -d "$DEFAULT_TMP_DIR" ] || mkdir -p "$DEFAULT_TMP_DIR" 2>/dev/null; then
-        tmpdir="$DEFAULT_TMP_DIR"
+    elif [ -d "$DEFAULT_DIR_TMP" ] || mkdir -p "$DEFAULT_DIR_TMP" 2>/dev/null; then
+        tmpdir="$DEFAULT_DIR_TMP"
     else
         # Fallback auf System-temp, wenn Projektverzeichnis nicht verfügbar
         tmpdir="/tmp"

@@ -18,8 +18,14 @@ import logging
 from datetime import datetime
 import traceback
 
-# Pfadkonfiguration
-DB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
+# Pfadkonfiguration über das zentrale Verzeichnismanagement
+try:
+    from manage_folders import get_data_dir
+    DB_DIR = get_data_dir()
+except ImportError:
+    # Fallback falls manage_folders nicht verfügbar ist
+    DB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
+
 DB_PATH = os.path.join(DB_DIR, 'fotobox_settings.db')
 OLD_DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'fotobox_settings.db'))
 

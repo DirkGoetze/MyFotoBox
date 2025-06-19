@@ -14,10 +14,11 @@ from typing import Dict, List, Optional, Any
 
 import manage_logging
 import manage_database
+import manage_folders
 import utils
 
 # Pfad zum Konfigurationsordner
-CONFIG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'conf', 'cameras'))
+CONFIG_DIR = manage_folders.get_camera_conf_dir()
 
 # Globale Variablen
 _configs = {}  # Cache für geladene Konfigurationen

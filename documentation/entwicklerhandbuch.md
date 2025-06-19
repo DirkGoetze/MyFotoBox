@@ -79,7 +79,7 @@ Der Ressourcenladungsmechanismus bietet:
 
 In `lib_core.sh` werden systemweite Konfigurationsparameter als Single Source of Truth definiert:
 
-- **Pfade**: `DEFAULT_INSTALL_DIR`, `DEFAULT_BASH_DIR`, etc.
+- **Pfade**: `DEFAULT_DIR_INSTALL`, `DEFAULT_DIR_BACKEND_SCRIPTS`, etc.
 - **Farbkonstanten**: `COLOR_RED`, `COLOR_GREEN`, etc.
 - **Debug-Flags**: `DEBUG_MOD_LOCAL`, `DEBUG_MOD_GLOBAL`
 - **Benutzer/Gruppen**: `DEFAULT_USER`, `DEFAULT_GROUP`, `DEFAULT_MODE`
@@ -101,6 +101,109 @@ fi
 ```
 
 Weitere Details zur Debug-Implementierung finden Sie in `/policies/debug_implementation.md`.
+
+## 1.2 Ordnerstruktur und Pfad-Benennungskonvention
+
+Die Fotobox2-Anwendung nutzt ein hierarchisches System von Ordnern, die entweder im Repository enthalten sind oder während der Installation/Nutzung angelegt werden. Die Ordnerpfade werden zentral in `lib_core.sh` definiert und über Getter-Funktionen zugänglich gemacht.
+
+### Pfad-Benennungskonvention
+
+Um die Pfadverwaltung konsistenter und intuitiver zu gestalten, folgen die Pfadvariablen ab Juni 2025 einem systematischen Benennungsmuster:
+
+```bash
+[PREFIX]_DIR_[PFADKOMPONENTEN]
+```
+
+Dabei gilt:
+
+- **PREFIX**: Bestimmt die Priorität in den Getter-Funktionen
+  - `DEFAULT`: Primäre, bevorzugte Pfade
+  - `FALLBACK`: Alternative Pfade, wenn die Standardpfade nicht verfügbar sind
+
+- **DIR**: Kennzeichnet die Variable als Pfad/Ordner
+
+- **PFADKOMPONENTEN**: Spiegeln die hierarchische Position im Dateisystem wider
+
+### Ordnerstrukturtabellen
+
+#### Standardpfade (DEFAULT)
+
+| Variablenname | Pfad | Repository/Laufzeit |
+|---------------|------|---------------------|
+| DEFAULT_DIR_INSTALL | /opt/fotobox | Laufzeit |
+| DEFAULT_DIR_BACKEND | /opt/fotobox/backend | Repository |
+| DEFAULT_DIR_BACKEND_SCRIPTS | /opt/fotobox/backend/scripts | Repository |
+| DEFAULT_DIR_BACKEND_VENV | /opt/fotobox/backend/venv | Laufzeit |
+| DEFAULT_DIR_FRONTEND | /opt/fotobox/frontend | Repository |
+| DEFAULT_DIR_DATA | /opt/fotobox/data | Repository (leer) |
+| DEFAULT_DIR_LOG | /opt/fotobox/log | Laufzeit |
+| DEFAULT_DIR_TMP | /opt/fotobox/tmp | Laufzeit |
+| DEFAULT_DIR_CONF | /opt/fotobox/conf | Repository (teilweise) |
+| DEFAULT_DIR_CONF_NGINX | /opt/fotobox/conf/nginx | Repository (teilweise) |
+| DEFAULT_DIR_CONF_HTTPS | /opt/fotobox/conf/https | Laufzeit |
+| DEFAULT_DIR_BACKUP | /opt/fotobox/backup | Laufzeit |
+| DEFAULT_DIR_BACKUP_NGINX | /opt/fotobox/backup/nginx | Laufzeit |
+| DEFAULT_DIR_BACKUP_HTTPS | /opt/fotobox/backup/https | Laufzeit |
+
+#### Alternativpfade (FALLBACK)
+
+| Variablenname | Pfad | Repository/Laufzeit |
+|---------------|------|---------------------|
+| FALLBACK_DIR_INSTALL | /var/lib/fotobox | Laufzeit |
+| FALLBACK_DIR_BACKEND | /var/lib/fotobox/backend | Laufzeit |
+| FALLBACK_DIR_BACKEND_SCRIPTS | /var/lib/fotobox/backend/scripts | Laufzeit |
+| FALLBACK_DIR_BACKEND_VENV | /var/lib/fotobox/backend/venv | Laufzeit |
+| FALLBACK_DIR_FRONTEND | /var/www/html/fotobox | Laufzeit |
+| FALLBACK_DIR_DATA | /var/lib/fotobox/data | Laufzeit |
+| FALLBACK_DIR_LOG | /var/log/fotobox | Laufzeit |
+| FALLBACK_DIR_LOG_2 | /tmp/fotobox | Laufzeit |
+| FALLBACK_DIR_LOG_3 | . (aktuelles Verzeichnis) | Laufzeit |
+| FALLBACK_DIR_TMP | /tmp/fotobox_tmp | Laufzeit |
+| FALLBACK_DIR_CONF | /etc/fotobox | Laufzeit |
+| FALLBACK_DIR_CONF_NGINX | /etc/fotobox/nginx | Laufzeit |
+| FALLBACK_DIR_BACKUP | /var/backups/fotobox | Laufzeit |
+| FALLBACK_DIR_BACKUP_NGINX | /var/backups/fotobox/nginx | Laufzeit |
+
+### Pfadvariablen und Getter-Funktionen
+
+Die Getter-Funktionen (z.B. `get_log_dir()`, `get_nginx_conf_dir()`) versuchen zuerst die DEFAULT-Pfade zu nutzen und greifen bei Fehlern auf die FALLBACK-Pfade zurück. Variablen folgen dem Schema `CONF_DIR_NGINX` statt `NGINX_CONF_DIR` zur Einhaltung der hierarchischen Namenskonvention. Diese Funktionen sind Teil des `manage_folders.sh` Moduls.
+
+#### Verfügbare Getter-Funktionen
+
+Die folgenden Getter-Funktionen sind im `manage_folders.sh` Modul implementiert:
+
+**Hauptverzeichnisse:**
+
+- `get_install_dir()` - Installationsverzeichnis
+- `get_data_dir()` - Datenverzeichnis
+- `get_backup_dir()` - Backup-Verzeichnis
+- `get_config_dir()` - Konfigurationsverzeichnis
+- `get_log_dir()` - Log-Verzeichnis
+- `get_frontend_dir()` - Frontend-Verzeichnis
+- `get_script_dir()` - Backend-Skript-Verzeichnis
+
+**Frontend-Unterverzeichnisse:**
+
+- `get_frontend_css_dir()` - CSS-Verzeichnis
+- `get_frontend_js_dir()` - JavaScript-Verzeichnis
+- `get_frontend_fonts_dir()` - Fonts-Verzeichnis
+- `get_frontend_picture_dir()` - Bilder-Verzeichnis
+
+**Fotoverzeichnisse:**
+
+- `get_photos_dir()` - Foto-Hauptverzeichnis
+- `get_photos_originals_dir()` - Originalfotos
+- `get_photos_gallery_dir()` - Galerie-Fotos
+
+**Konfigurationsunterverzeichnisse:**
+
+- `get_nginx_conf_dir()` - NGINX-Konfiguration
+- `get_nginx_backup_dir()` - NGINX-Backup
+- `get_https_conf_dir()` - HTTPS-Konfiguration
+- `get_https_backup_dir()` - HTTPS-Backup
+- `get_camera_conf_dir()` - Kamera-Konfiguration
+
+Alle diese Funktionen sind auch im Python-Modul `manage_folders.py` als gleichnamige Funktionen verfügbar und können in Python-Code über den entsprechenden Import verwendet werden.
 
 ## 2. Modulare Architektur
 
@@ -1785,8 +1888,8 @@ Das Shell-Modul `manage_nginx.sh` stellt wesentliche Funktionen zur Verwaltung d
   - `chk_nginx_reload()`: Testet die Konfiguration und lädt sie neu (0 = OK, 1 = Fehler)
 
 - **Konfigurationsfunktionen:**
-  - `get_nginx_conf_dir()`: Gibt den Pfad zum NGINX-Konfigurationsverzeichnis zurück (Berechtigungen: 755)
-  - `get_nginx_backup_dir()`: Gibt den Pfad zum NGINX-Backup-Verzeichnis zurück (Berechtigungen: 750)
+  - `get_nginx_conf_dir()`: Gibt den Pfad zum NGINX-Konfigurationsverzeichnis (`CONF_DIR_NGINX`) zurück (Berechtigungen: 755)
+  - `get_nginx_backup_dir()`: Gibt den Pfad zum NGINX-Backup-Verzeichnis (`BACKUP_DIR_NGINX`) zurück (Berechtigungen: 750)
   - `get_nginx_template_file()`: Ermittelt den Pfad zur benötigten Template-Konfigurationsdatei
   - `backup_nginx_config()`: Sichert eine NGINX-Konfigurationsdatei mit einfachen Metadaten
   - `nginx_add_config()`: Fügt eine neue NGINX-Konfiguration hinzu und aktiviert sie
@@ -2525,6 +2628,7 @@ def update_documentation(feature):
     if approved:
         merge_documentation_changes();
         update_version_date(documents);
+}
 ```
 
 ### 13.4 Best Practices für die Dokumentation

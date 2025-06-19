@@ -149,7 +149,7 @@ systemctl start fotobox-backend.service
 
 ### NGINX-Konfiguration
 
-Die Webserver-Konfiguration erfolgt über das Skript `backend/scripts/manage_nginx.sh`. Die Standardkonfiguration wird aus `conf/nginx-fotobox.conf` geladen.
+Die Webserver-Konfiguration erfolgt über das Skript `backend/scripts/manage_nginx.sh`. Die Standardkonfiguration wird aus `conf/nginx/template_fotobox.conf` geladen.
 
 ```bash
 bash backend/scripts/manage_nginx.sh setup

@@ -345,10 +345,9 @@ def run(cmd, sudo=False):
 # -------------------------------------------------------------------------------
 def backup_configs():
     os.makedirs(BACKUP_DIR, exist_ok=True)
-    ts = datetime.now().strftime('%Y%m%d%H%M%S')
-    # Beispiel: NGINX-Konfig sichern
+    ts = datetime.now().strftime('%Y%m%d%H%M%S')    # Beispiel: NGINX-Konfig sichern
     if os.path.exists('/etc/nginx/sites-available/fotobox'):
-        run(['cp', '/etc/nginx/sites-available/fotobox', f'{BACKUP_DIR}/nginx-fotobox.conf.bak.{ts}'], sudo=True)
+        run(['cp', '/etc/nginx/sites-available/fotobox', f'{BACKUP_DIR}/template_fotobox.conf.bak.{ts}'], sudo=True)
     # Weitere Backups nach Bedarf ...
     log('Backup abgeschlossen.')
 
@@ -471,9 +470,9 @@ def backup_and_install_systemd():
 def backup_and_install_nginx():
     import shutil, datetime, os
     # Verwende CONFIG_DIR und BACKUP_DIR aus der zentralen Verzeichnisverwaltung
-    src = os.path.join(CONFIG_DIR, 'nginx-fotobox.conf')
+    src = os.path.join(CONFIG_DIR, 'nginx', 'template_fotobox.conf')
     dst = '/etc/nginx/sites-available/fotobox'
-    backup = os.path.join(BACKUP_DIR, f'nginx-fotobox.conf.bak.{datetime.datetime.now():%Y%m%d%H%M%S}')
+    backup = os.path.join(BACKUP_DIR, f'template_fotobox.conf.bak.{datetime.datetime.now():%Y%m%d%H%M%S}')
     if os.path.exists(dst):
         shutil.copy(dst, backup)
         log(f"Backup NGINX-Konfiguration: {backup}")

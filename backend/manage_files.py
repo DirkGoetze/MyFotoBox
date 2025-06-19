@@ -22,10 +22,17 @@ from werkzeug.utils import secure_filename
 # Logger einrichten
 logger = logging.getLogger(__name__)
 
-# Pfad zum Datenverzeichnis (relativ zum Root-Verzeichnis der Anwendung)
-DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data'))
-PHOTOS_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend', 'photos'))
-DEFAULT_GALLERY_DIR = os.path.join(PHOTOS_DIR, 'gallery')
+# Pfadkonfiguration über das zentrale Verzeichnismanagement
+try:
+    from manage_folders import get_data_dir, get_photos_dir, get_photos_gallery_dir
+    DATA_DIR = get_data_dir()
+    PHOTOS_DIR = get_photos_dir()
+    DEFAULT_GALLERY_DIR = get_photos_gallery_dir()
+except ImportError:
+    # Fallback falls manage_folders nicht verfügbar ist
+    DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data'))
+    PHOTOS_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend', 'photos'))
+    DEFAULT_GALLERY_DIR = os.path.join(PHOTOS_DIR, 'gallery')
 
 # Standard-Bildgrößen für Thumbnail-Generierung
 THUMBNAIL_SIZE = (200, 200)

@@ -52,8 +52,9 @@ load_core_resources || {
 # lib_core.sh gesetzt wurden oder die speziell für die Installation 
 # überschrieben werden müssen.
 # ---------------------------------------------------------------------------
-DEFAULT_HTTPS_CONF_DIR="${CONF_DIR}/https"
-DEFAULT_HTTPS_BACKUP_DIR="${BACKUP_DIR}/https"
+# Verwende manage_folders.sh für konsistente Pfadverwaltung
+DEFAULT_DIR_CONF_HTTPS="$(get_https_conf_dir 2>/dev/null || echo "${CONF_DIR}/https")"
+DEFAULT_DIR_BACKUP_HTTPS="$(get_https_backup_dir 2>/dev/null || echo "${BACKUP_DIR}/https")"
 
 # SSL-Konfigurationsstandards
 DEFAULT_SSL_PROTOCOLS="TLSv1.2 TLSv1.3"
@@ -64,9 +65,9 @@ DEFAULT_SSL_SESSION_CACHE="shared:SSL:10m"
 DEFAULT_SSL_DHPARAM_BITS=2048
 
 # Zertifikatspfade
-SSL_CERT_DIR="${DEFAULT_HTTPS_CONF_DIR}/certs"
-SSL_KEY_DIR="${DEFAULT_HTTPS_CONF_DIR}/private"
-SSL_DHPARAM_FILE="${DEFAULT_HTTPS_CONF_DIR}/dhparam.pem"
+SSL_CERT_DIR="${DEFAULT_DIR_CONF_HTTPS}/certs"
+SSL_KEY_DIR="${DEFAULT_DIR_CONF_HTTPS}/private"
+SSL_DHPARAM_FILE="${DEFAULT_DIR_CONF_HTTPS}/dhparam.pem"
 
 # Let's Encrypt Konfiguration
 LETSENCRYPT_CONFIG_DIR="/etc/letsencrypt"
@@ -210,25 +211,25 @@ function create_https_dirs() {
     log_debug "Erstelle SSL-Verzeichnisse..."
     
     # Erstelle Konfigurationsverzeichnisse
-    mkdir -p "$SSL_CERT_DIR" "$SSL_KEY_DIR" "$DEFAULT_HTTPS_CONF_DIR" || {
+    mkdir -p "$SSL_CERT_DIR" "$SSL_KEY_DIR" "$DEFAULT_DIR_CONF_HTTPS" || {
         log_error "Konnte SSL-Konfigurationsverzeichnisse nicht erstellen."
         return 1
     }
     
     # Erstelle Backup-Verzeichnisse
-    mkdir -p "$DEFAULT_HTTPS_BACKUP_DIR/certs" "$DEFAULT_HTTPS_BACKUP_DIR/private" || {
+    mkdir -p "$DEFAULT_DIR_BACKUP_HTTPS/certs" "$DEFAULT_DIR_BACKUP_HTTPS/private" || {
         log_error "Konnte SSL-Backup-Verzeichnisse nicht erstellen."
         return 1
     }
     
     # Setze Berechtigungen
-    chmod -R 755 "$DEFAULT_HTTPS_CONF_DIR" "$DEFAULT_HTTPS_BACKUP_DIR" || {
+    chmod -R 755 "$DEFAULT_DIR_CONF_HTTPS" "$DEFAULT_DIR_BACKUP_HTTPS" || {
         log_error "Konnte Berechtigungen für SSL-Verzeichnisse nicht setzen."
         return 1
     }
     
     # Private Keys besonders schützen
-    chmod 700 "$SSL_KEY_DIR" "$DEFAULT_HTTPS_BACKUP_DIR/private" || {
+    chmod 700 "$SSL_KEY_DIR" "$DEFAULT_DIR_BACKUP_HTTPS/private" || {
         log_error "Konnte Berechtigungen für private Schlüssel-Verzeichnisse nicht setzen."
         return 1
     }
@@ -259,7 +260,7 @@ function generate_self_signed_certificate() {
     
     local key_file="${SSL_KEY_DIR}/${out_prefix}.key"
     local cert_file="${SSL_CERT_DIR}/${out_prefix}.crt"
-    local config_file="${DEFAULT_HTTPS_CONF_DIR}/openssl_${out_prefix}.cnf"
+    local config_file="${DEFAULT_DIR_CONF_HTTPS}/openssl_${out_prefix}.cnf"
     
     # Erstelle OpenSSL-Konfigurationsdatei
     cat > "$config_file" << EOF
@@ -422,7 +423,7 @@ server {
     include $(get_nginx_conf_dir)/ssl_params.conf;
     
     # Root-Verzeichnis und Index-Dateien
-    root /opt/fotobox/frontend;
+    root $(get_frontend_dir);
     index start.html index.html;
     
     # Standard-Location
@@ -567,7 +568,7 @@ EOF
     
     # Extrahiere zusätzliche Optionen, falls vorhanden
     local api_port="5000"
-    local root_dir="/opt/fotobox/frontend"
+    local root_dir="$(get_frontend_dir)"
     local index_files="start.html index.html"
     local http_redirect="yes"
     
@@ -576,7 +577,7 @@ EOF
         if command -v jq &> /dev/null; then
             if echo "$ssl_options" | jq -e . &>/dev/null; then
                 api_port=$(echo "$ssl_options" | jq -r '.api_port // "5000"')
-                root_dir=$(echo "$ssl_options" | jq -r '.root_dir // "/opt/fotobox/frontend"')
+                root_dir=$(echo "$ssl_options" | jq -r ".root_dir // \"$(get_frontend_dir)\"")
                 index_files=$(echo "$ssl_options" | jq -r '.index_files // "start.html index.html"')
                 http_redirect=$(echo "$ssl_options" | jq -r '.http_redirect // "yes"')
             else
@@ -1072,7 +1073,7 @@ function optimize_ssl_configuration() {
     
     # Backup der aktuellen Konfiguration erstellen
     local timestamp=$(date +%Y%m%d%H%M%S)
-    local backup_file="${DEFAULT_HTTPS_BACKUP_DIR}/nginx-ssl-${timestamp}.conf"
+    local backup_file="${DEFAULT_DIR_BACKUP_HTTPS}/nginx-ssl-${timestamp}.conf"
     
     mkdir -p "$(dirname "$backup_file")"
     cp "$nginx_conf_path" "$backup_file"
@@ -1187,7 +1188,7 @@ function optimize_nginx_for_ssl() {
     
     # Backup der aktuellen Konfiguration erstellen
     local timestamp=$(date +%Y%m%d%H%M%S)
-    local backup_file="${DEFAULT_HTTPS_BACKUP_DIR}/nginx-main-${timestamp}.conf"
+    local backup_file="${DEFAULT_DIR_BACKUP_HTTPS}/nginx-main-${timestamp}.conf"
     
     mkdir -p "$(dirname "$backup_file")"
     cp "$nginx_main_conf" "$backup_file"

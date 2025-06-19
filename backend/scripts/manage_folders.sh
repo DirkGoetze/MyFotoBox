@@ -27,10 +27,15 @@ MANAGE_FOLDERS_LOADED=0
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 BASH_DIR="${BASH_DIR:-$SCRIPT_DIR}"
 
+# Textausgaben für das gesamte Skript
+manage_folders_txt_0001="KRITISCHER FEHLER: Zentrale Bibliothek lib_core.sh nicht gefunden!"
+manage_folders_txt_0002="Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch."
+manage_folders_txt_0003="KRITISCHER FEHLER: Die Kernressourcen konnten nicht geladen werden."
+
 # Lade alle Basis-Ressourcen ------------------------------------------------
 if [ ! -f "$BASH_DIR/lib_core.sh" ]; then
-    echo "KRITISCHER FEHLER: Zentrale Bibliothek lib_core.sh nicht gefunden!" >&2
-    echo "Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch." >&2
+    echo "$manage_folders_txt_0001" >&2
+    echo "$manage_folders_txt_0002" >&2
     exit 1
 fi
 
@@ -41,8 +46,8 @@ source "$BASH_DIR/lib_core.sh"
 # Bei MODULE_LOAD_MODE=0 (normaler Betrieb) werden Module individuell geladen
 if [ "${MODULE_LOAD_MODE:-0}" -eq 1 ]; then
     load_core_resources || {
-        echo "KRITISCHER FEHLER: Die Kernressourcen konnten nicht geladen werden." >&2
-        echo "Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch." >&2
+        echo "$manage_folders_txt_0003" >&2
+        echo "$manage_folders_txt_0002" >&2
         exit 1
     }
 fi
@@ -74,199 +79,566 @@ fi
 DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
 
-# ------------------------------------------------------------------------------
+# ===========================================================================
+# Hilfsfunktionen 
+# ===========================================================================
+
+# create_symlink_to_standard_path
+create_symlink_to_standard_path_txt_0001="Standard-Pfad und tatsächlicher Pfad sind identisch"
+create_symlink_to_standard_path_txt_0002="Keine Schreibrechte im übergeordneten Verzeichnis"
+create_symlink_to_standard_path_txt_0003="Entferne vorhandenes Verzeichnis"
+create_symlink_to_standard_path_txt_0004="Verzeichnis konnte nicht entfernt werden, möglicherweise nicht leer"
+create_symlink_to_standard_path_txt_0005="Symlink zeigt auf %s, wird auf %s geändert"
+create_symlink_to_standard_path_txt_0006="Konnte vorhandenen Symlink nicht entfernen"
+create_symlink_to_standard_path_txt_0007="Symlink existiert bereits und zeigt auf das korrekte Ziel"
+create_symlink_to_standard_path_txt_0008="Eine Datei existiert bereits am Standard-Pfad"
+create_symlink_to_standard_path_txt_0009="Erstelle Symlink von %s zu %s"
+create_symlink_to_standard_path_txt_0010="Fehler beim Erstellen des Symlinks"
+create_symlink_to_standard_path_txt_0011="INFO: Symlink erstellt: %s -> %s"
+
+create_symlink_to_standard_path() {
+    # -----------------------------------------------------------------------
+    # create_symlink_to_standard_path
+    # -----------------------------------------------------------------------
+    # Funktion: Erstellt einen Symlink vom Standard-Pfad zum tatsächlich
+    # .........  verwendeten Fallback-Pfad. Dies hilft bei der Navigation und
+    # .........  sorgt für eine konsistente Verzeichnisstruktur.
+    # Parameter: $1 - Standard-Pfad, an dem der Symlink erstellt werden soll
+    # .........  $2 - Tatsächlich verwendeter Pfad, auf den der Symlink zeigen soll
+    # Rückgabe.: 0 - Erfolg (Symlink wurde erstellt oder existiert bereits korrekt)
+    # .........  1 - Fehler (Symlink konnte nicht erstellt werden)
+    # Extras...: Prüft Schreibrechte und aktualisiert vorhandene Symlinks bei Bedarf
+    # -----------------------------------------------------------------------
+    local standard_path="$1"
+    local actual_path="$2"
+    
+    # Wenn die Pfade identisch sind, kein Symlink nötig
+    if [ "$standard_path" = "$actual_path" ]; then
+        debug "$create_symlink_to_standard_path_txt_0001: $standard_path" "CLI" "create_symlink_to_standard_path"
+        return 0
+    fi
+    
+    # Prüfe, ob wir Zugriff auf das übergeordnete Verzeichnis haben
+    local parent_dir
+    parent_dir=$(dirname "$standard_path")
+    if [ ! -w "$parent_dir" ]; then
+        debug "$create_symlink_to_standard_path_txt_0002: $parent_dir" "CLI" "create_symlink_to_standard_path"
+        return 1
+    fi
+    
+    # Prüfen, ob am Standard-Pfad bereits etwas existiert
+    if [ -e "$standard_path" ]; then
+        # Falls es ein reguläres Verzeichnis ist, entfernen (mit Vorsicht)
+        if [ -d "$standard_path" ] && [ ! -L "$standard_path" ]; then
+            debug "$create_symlink_to_standard_path_txt_0003: $standard_path" "CLI" "create_symlink_to_standard_path"
+            # Es ist sicherer, nur leere Verzeichnisse zu entfernen
+            rmdir "$standard_path" 2>/dev/null || {
+                debug "$create_symlink_to_standard_path_txt_0004: $standard_path" "CLI" "create_symlink_to_standard_path"
+                return 1
+            }
+        # Falls es ein Symlink auf einen anderen Pfad ist, aktualisieren
+        elif [ -L "$standard_path" ]; then
+            local current_target
+            current_target=$(readlink -f "$standard_path")
+            if [ "$current_target" != "$actual_path" ]; then
+                debug "$(printf "$create_symlink_to_standard_path_txt_0005" "$current_target" "$actual_path")" "CLI" "create_symlink_to_standard_path"
+                rm -f "$standard_path" 2>/dev/null || {
+                    debug "$create_symlink_to_standard_path_txt_0006: $standard_path" "CLI" "create_symlink_to_standard_path"
+                    return 1
+                }
+            else
+                # Symlink zeigt bereits auf das richtige Ziel
+                debug "$create_symlink_to_standard_path_txt_0007: $actual_path" "CLI" "create_symlink_to_standard_path"
+                return 0
+            fi
+        # Falls es eine reguläre Datei ist, abbrechen
+        elif [ -f "$standard_path" ]; then
+            debug "$create_symlink_to_standard_path_txt_0008: $standard_path" "CLI" "create_symlink_to_standard_path"
+            return 1
+        fi
+    fi
+    
+    # Symlink erstellen
+    debug "$(printf "$create_symlink_to_standard_path_txt_0009" "$standard_path" "$actual_path")" "CLI" "create_symlink_to_standard_path"
+    ln -sf "$actual_path" "$standard_path" || {
+        debug "$create_symlink_to_standard_path_txt_0010" "CLI" "create_symlink_to_standard_path"
+        return 1
+    }
+    
+    log "$(printf "$create_symlink_to_standard_path_txt_0011" "$standard_path" "$actual_path")" "create_symlink_to_standard_path"
+    return 0
+}
+
 # create_directory
-# ------------------------------------------------------------------------------
-# Funktion: Erstellt ein Verzeichnis mit den korrekten Berechtigungen, wenn es noch nicht existiert
-# Parameter:
-#   $1 - Pfad des zu erstellenden Verzeichnisses
-#   $2 - (Optional) Benutzername, Standard: "fotobox"
-#   $3 - (Optional) Gruppe, Standard: "fotobox"
-#   $4 - (Optional) Berechtigungen, Standard: "755"
-# Rückgabe:
-#   0 - Erfolg (Verzeichnis existiert und hat korrekte Berechtigungen)
-#   1 - Fehler (Verzeichnis konnte nicht erstellt werden)
-# ------------------------------------------------------------------------------
+create_directory_txt_0001="ERROR: create_directory: Kein Verzeichnis angegeben"
+create_directory_txt_0002="Kein Verzeichnis angegeben"
+create_directory_txt_0003="Verzeichnis %s existiert nicht, wird erstellt"
+create_directory_txt_0004="ERROR: Fehler beim Erstellen des Verzeichnisses %s"
+create_directory_txt_0005="Fehler beim Erstellen von %s"
+create_directory_txt_0006="INFO: Verzeichnis %s wurde erstellt"
+create_directory_txt_0007="WARN: Fehler beim Setzen der Berechtigungen für %s"
+create_directory_txt_0008="Warnung: chown für %s fehlgeschlagen, fahre fort"
+create_directory_txt_0009="Warnung: chmod für %s fehlgeschlagen, fahre fort"
+create_directory_txt_0010="INFO: Verzeichnis %s erfolgreich vorbereitet"
+create_directory_txt_0011="Verzeichnis %s erfolgreich vorbereitet"
+create_directory_txt_0012="ERROR: Verzeichnis %s konnte nicht korrekt vorbereitet werden"
+
 create_directory() {
+    # -----------------------------------------------------------------------
+    # create_directory
+    # -----------------------------------------------------------------------
+    # Funktion: Erstellt ein Verzeichnis mit den korrekten Berechtigungen, 
+    # .........  wenn es noch nicht existiert
+    # Parameter: $1 - Pfad des zu erstellenden Verzeichnisses
+    # .........  $2 - (Optional) Benutzername, Standard: "fotobox"
+    # .........  $3 - (Optional) Gruppe, Standard: "fotobox"
+    # .........  $4 - (Optional) Berechtigungen, Standard: "755"
+    # Rückgabe.: 0 - Erfolg (Verzeichnis existiert und hat korrekte Berechtigungen)
+    # .........  1 - Fehler (Verzeichnis konnte nicht erstellt werden)
+    # Extras...: Fehler beim chown oder chmod werden als Warnung behandelt
+    # -----------------------------------------------------------------------
     local dir="$1"
     local user="${2:-$DEFAULT_USER}"
     local group="${3:-$DEFAULT_GROUP}"
     local mode="${4:-$DEFAULT_MODE}"
 
+    # Prüfung der Parameter
     if [ -z "$dir" ]; then
-        log "ERROR: create_directory: Kein Verzeichnis angegeben" "create_directory"
-        debug "Kein Verzeichnis angegeben" "CLI" "create_directory"
+        log "$create_directory_txt_0001" "create_directory"
+        debug "$create_directory_txt_0002" "CLI" "create_directory"
         return 1
     fi
 
     # Verzeichnis erstellen, falls es nicht existiert
     if [ ! -d "$dir" ]; then
-        debug "Verzeichnis $dir existiert nicht, wird erstellt" "CLI" "create_directory"
+        debug "$(printf "$create_directory_txt_0003" "$dir")" "CLI" "create_directory"
         mkdir -p "$dir" || {
-            log "ERROR: Fehler beim Erstellen des Verzeichnisses $dir" "create_directory"
-            debug "Fehler beim Erstellen von $dir" "CLI" "create_directory"
+            log "$(printf "$create_directory_txt_0004" "$dir")" "create_directory"
+            debug "$(printf "$create_directory_txt_0005" "$dir")" "CLI" "create_directory"
             return 1
         }
-        log "INFO: Verzeichnis $dir wurde erstellt"
+        log "$(printf "$create_directory_txt_0006" "$dir")"
     fi
 
     # Berechtigungen setzen
     chown "$user:$group" "$dir" 2>/dev/null || {
-        debug "Warnung: chown für $dir fehlgeschlagen, fahre fort" "CLI" "create_directory"
+        log "$(printf "$create_directory_txt_0007" "$dir")" "create_directory"
+        debug "$(printf "$create_directory_txt_0008" "$dir")" "CLI" "create_directory"
         # Fehler beim chown ist kein kritischer Fehler
     }
 
     chmod "$mode" "$dir" 2>/dev/null || {
-        debug "Warnung: chmod für $dir fehlgeschlagen, fahre fort" "CLI" "create_directory"
+        log "$(printf "$create_directory_txt_0007" "$dir")" "create_directory"
+        debug "$(printf "$create_directory_txt_0009" "$dir")" "CLI" "create_directory"
         # Fehler beim chmod ist kein kritischer Fehler
     }
 
     # Überprüfen, ob das Verzeichnis existiert und lesbar ist
     if [ -d "$dir" ] && [ -r "$dir" ]; then
-        debug "Verzeichnis $dir erfolgreich vorbereitet" "CLI" "create_directory"
+        log "$(printf "$create_directory_txt_0010" "$dir")" "create_directory"
+        debug "$(printf "$create_directory_txt_0011" "$dir")" "CLI" "create_directory"
         return 0
     else
-        log "ERROR: Verzeichnis $dir konnte nicht korrekt vorbereitet werden" "create_directory"
+        log "$(printf "$create_directory_txt_0012" "$dir")" "create_directory"
         return 1
     fi
 }
 
-# ------------------------------------------------------------------------------
 # get_folder_path
-# ------------------------------------------------------------------------------
-# Funktion: Hilfsfunktion zum Ermitteln und Erstellen eines Ordners mit Fallback-Logik
-# Parameter:
-#   $1 - Standard-Pfad
-#   $2 - Fallback-Pfad (falls Standard-Pfad nicht verfügbar)
-#   $3 - (Optional) Fallback zum Projekthauptverzeichnis, falls beide vorherigen Pfade fehlschlagen
-# Rückgabe:
-#   - Den Pfad zum verfügbaren Ordner oder leeren String bei Fehler
-# ------------------------------------------------------------------------------
+get_folder_path_txt_0001="Prüfe Pfad: Standardpfad=%s, Fallback=%s"
+get_folder_path_txt_0002="Verwende Standardpfad: %s"
+get_folder_path_txt_0003="Standard-Pfad %s nicht verfügbar, versuche Fallback"
+get_folder_path_txt_0004="Verwende Fallback-Pfad: %s"
+get_folder_path_txt_0005="Versuche Symlink von %s zu %s zu erstellen"
+get_folder_path_txt_0006="Symlink-Erstellung fehlgeschlagen, fahre trotzdem fort"
+get_folder_path_txt_0007="Fallback-Pfad %s nicht verfügbar"
+get_folder_path_txt_0008="Verwende Root-Verzeichnis als letzten Fallback: %s"
+get_folder_path_txt_0009="ERROR: Kein gültiger Pfad für die Ordnererstellung verfügbar"
+
 get_folder_path() {
+    # -----------------------------------------------------------------------
+    # get_folder_path
+    # -----------------------------------------------------------------------
+    # Funktion: Hilfsfunktion zum Ermitteln und Erstellen eines Ordners mit 
+    # .........  Fallback-Logik. Erstellt zusätzlich einen Symlink vom
+    # .........  Standard-Pfad zum tatsächlich verwendeten Pfad, wenn möglich.
+    # Parameter: $1 - Standard-Pfad
+    # .........  $2 - Fallback-Pfad (falls Standard-Pfad nicht verfügbar)
+    # .........  $3 - (Optional) Fallback zum Projekthauptverzeichnis (1=ja, 0=nein, Default: 1)
+    # .........  $4 - (Optional) Symlink erstellen (1=ja, 0=nein, Default: 1)
+    # Rückgabe.: Den Pfad zum verfügbaren Ordner oder leeren String bei Fehler
+    # Extras...: Implementiert eine mehrschichtige Fallback-Strategie
+    # -----------------------------------------------------------------------
     local standard_path="$1"
     local fallback_path="$2"
     local use_root_fallback="${3:-1}" # Standard: Ja, Root-Fallback verwenden
+    local create_symlink="${4:-1}"    # Standard: Ja, Symlink erstellen
+    local actual_path=""
     
-    debug "Prüfe Pfad: Standardpfad=$standard_path, Fallback=$fallback_path" "CLI" "get_folder_path"
-
     # Versuchen, den Standardpfad zu verwenden
+    debug "$(printf "$get_folder_path_txt_0001" "$standard_path" "$fallback_path")" "CLI" "get_folder_path"
     if create_directory "$standard_path"; then
-        debug "Verwende Standardpfad: $standard_path" "CLI" "get_folder_path"
-        echo "$standard_path"
-        return 0
-    fi
-    
-    debug "Standard-Pfad $standard_path nicht verfügbar, versuche Fallback" "CLI" "get_folder_path"
-    
-    # Versuchen, den Fallback-Pfad zu verwenden
-    if create_directory "$fallback_path"; then
-        debug "Verwende Fallback-Pfad: $fallback_path" "CLI" "get_folder_path"
-        echo "$fallback_path"
-        return 0
-    fi
-    
-    debug "Fallback-Pfad $fallback_path nicht verfügbar" "CLI" "get_folder_path"
-    
-    # Als letzte Option das Root-Verzeichnis verwenden
-    if [ "$use_root_fallback" -eq 1 ]; then
-        local root_path
-        root_path=$(get_install_dir)
-        if [ -n "$root_path" ] && create_directory "$root_path"; then
-            debug "Verwende Root-Verzeichnis als letzten Fallback: $root_path" "CLI" "get_folder_path"
-            echo "$root_path"
-            return 0
+        debug "$(printf "$get_folder_path_txt_0002" "$standard_path")" "CLI" "get_folder_path"
+        actual_path="$standard_path"
+    else
+        # Versuchen, den Fallback-Pfad zu verwenden
+        debug "$(printf "$get_folder_path_txt_0003" "$standard_path")" "CLI" "get_folder_path"
+        if create_directory "$fallback_path"; then
+            debug "$(printf "$get_folder_path_txt_0004" "$fallback_path")" "CLI" "get_folder_path"
+            actual_path="$fallback_path"
+            
+            # Wenn gewünscht und möglich, einen Symlink vom Standard-Pfad zum Fallback erstellen
+            if [ "$create_symlink" -eq 1 ]; then
+                debug "$(printf "$get_folder_path_txt_0005" "$standard_path" "$fallback_path")" "CLI" "get_folder_path"
+                create_symlink_to_standard_path "$standard_path" "$fallback_path" || {
+                    debug "$get_folder_path_txt_0006" "CLI" "get_folder_path"
+                    # Fehler beim Symlink ist kein kritischer Fehler
+                }
+            fi
+        else
+            # Als letzte Option das Root-Verzeichnis verwenden
+            debug "$(printf "$get_folder_path_txt_0007" "$fallback_path")" "CLI" "get_folder_path"
+            if [ "$use_root_fallback" -eq 1 ]; then
+                local root_path
+                root_path=$(get_install_dir)
+                if [ -n "$root_path" ] && create_directory "$root_path"; then
+                    debug "$(printf "$get_folder_path_txt_0008" "$root_path")" "CLI" "get_folder_path"
+                    actual_path="$root_path"
+                    # Bei Verwendung des Root-Fallbacks ist kein Symlink nötig, da alle Standardpfade
+                    # bereits im Installationsverzeichnis liegen sollten
+                fi
+            fi
         fi
     fi
     
-    log "ERROR: Kein gültiger Pfad für die Ordnererstellung verfügbar" "get_folder_path"
+    if [ -n "$actual_path" ]; then
+        echo "$actual_path"
+        return 0
+    fi
+
+    # Wenn alle Versuche fehlschlagen, eine Fehlermeldung im Log ausgeben    
+    log "$get_folder_path_txt_0009" "get_folder_path"
     return 1
 }
 
-# ------------------------------------------------------------------------------
+# ===========================================================================
+# Get- und Set-Funktionen für die Ordnerstruktur 
+# ===========================================================================
+
 # get_install_dir
-# ------------------------------------------------------------------------------
-# Funktion: Gibt den Pfad zum Installationsverzeichnis zurück
-# Parameter: keine
-# Rückgabe: Pfad zum Installationsverzeichnis oder leerer String bei Fehler
-# ------------------------------------------------------------------------------
+get_install_dir_txt_0001="Ermittle Installations-Verzeichnis"
+get_install_dir_txt_0002="Verwende bereits definiertes INSTALL_DIR: %s"
+get_install_dir_txt_0003="Prüfe Standard- und Fallback-Pfade für Installations-Verzeichnis"
+get_install_dir_txt_0004="Verwende Pfad für Installations-Verzeichnis: %s"
+get_install_dir_txt_0005="Alle Pfade für Installations-Verzeichnis fehlgeschlagen, verwende aktuelles Verzeichnis"
+
 get_install_dir() {
+    # -----------------------------------------------------------------------
+    # get_install_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Installationsverzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
     local dir
-    
-    debug "Ermittle Installations-Verzeichnis" "CLI" "get_install_dir"
-    
+        
     # Prüfen, ob INSTALL_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_install_dir_txt_0001" "CLI" "get_install_dir"
     if [ -n "$INSTALL_DIR" ] && [ -d "$INSTALL_DIR" ]; then
-        debug "Verwende bereits definiertes INSTALL_DIR: $INSTALL_DIR" "CLI" "get_install_dir"
+        debug "$(printf "$get_install_dir_txt_0002" "$INSTALL_DIR")" "CLI" "get_install_dir"
         create_directory "$INSTALL_DIR" || true
         echo "$INSTALL_DIR"
         return 0
     fi
     
     # Verwende die in dieser Datei definierten Pfade
-    debug "Prüfe Standard- und Fallback-Pfade für Installations-Verzeichnis" "CLI" "get_install_dir"
-    dir=$(get_folder_path "$DEFAULT_INSTALL_DIR" "$FALLBACK_INSTALL_DIR" 0)
+    debug "$get_install_dir_txt_0003" "CLI" "get_install_dir"
+    dir=$(get_folder_path "$DEFAULT_DIR_INSTALL" "$FALLBACK_DIR_INSTALL" 0)
     if [ -n "$dir" ]; then
-        debug "Verwende Pfad für Installations-Verzeichnis: $dir" "CLI" "get_install_dir"
+        debug "$(printf "$get_install_dir_txt_0004" "$dir")" "CLI" "get_install_dir"
         echo "$dir"
         return 0
     fi
     
     # Als absoluten Notfall das aktuelle Verzeichnis verwenden
-    debug "Alle Pfade für Installations-Verzeichnis fehlgeschlagen, verwende aktuelles Verzeichnis" "CLI" "get_install_dir"
+    debug "$get_install_dir_txt_0005" "CLI" "get_install_dir"
     echo "$(pwd)/fotobox"
     return 0
 }
 
-# ------------------------------------------------------------------------------
-# get_data_dir
-# ------------------------------------------------------------------------------
-# Funktion: Gibt den Pfad zum Datenverzeichnis zurück
-# Parameter: keine
-# Rückgabe: Pfad zum Datenverzeichnis oder leerer String bei Fehler
-# ------------------------------------------------------------------------------
-get_data_dir() {
+# ---------------------------------------------------------------------------
+# Backend-Verzeichnis
+# ---------------------------------------------------------------------------
+
+# get_backend_dir
+get_backend_dir_txt_0001="Ermittle Backend-Verzeichnis"
+get_backend_dir_txt_0002="Verwende bereits definiertes BACKEND_DIR: %s"
+get_backend_dir_txt_0003="Prüfe Standard-Backend-Verzeichnis: %s"
+get_backend_dir_txt_0004="Verwende Standard-Backend-Verzeichnis: %s"
+get_backend_dir_txt_0005="Standard-Backend-Verzeichnis nicht verfügbar, verwende Fallback: %s"
+get_backend_dir_txt_0006="Fallback-Backend-Verzeichnis nicht verfügbar, verwende: %s"
+
+get_backend_dir() {
+    # -----------------------------------------------------------------------
+    # get_backend_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Backend-Verzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
     local dir
-    
-    debug "Ermittle Daten-Verzeichnis" "CLI" "get_data_dir"
-    
-    # Prüfen, ob DATA_DIR bereits gesetzt ist (z.B. vom install.sh)
-    if [ -n "$DATA_DIR" ] && [ -d "$DATA_DIR" ]; then
-        debug "Verwende bereits definiertes DATA_DIR: $DATA_DIR" "CLI" "get_data_dir"
-        create_directory "$DATA_DIR" || true
-        echo "$DATA_DIR"
+        
+    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_backend_dir_txt_0001" "CLI" "get_backend_dir"
+    if [ -n "$BACKEND_DIR" ] && [ -d "$BACKEND_DIR" ]; then
+        debug "$(printf "$get_backend_dir_txt_0002" "$BACKEND_DIR")" "CLI" "get_backend_dir"
+        create_directory "$BACKEND_DIR" || true
+        echo "$BACKEND_DIR"
         return 0
     fi
     
-    # Verwende die in dieser Datei definierten Pfade
-    debug "Prüfe Standard- und Fallback-Pfade für Daten-Verzeichnis" "CLI" "get_data_dir"
-    dir=$(get_folder_path "$DEFAULT_DATA_DIR" "$FALLBACK_DATA_DIR" 1)
-    if [ -n "$dir" ]; then
-        debug "Verwende Pfad für Daten-Verzeichnis: $dir" "CLI" "get_data_dir"
+    # Standardpfad verwenden
+    dir="$DEFAULT_DIR_BACKEND"
+    debug "$(printf "$get_backend_dir_txt_0003" "$dir")" "CLI" "get_backend_dir"
+    if [ -d "$dir" ]; then
+        create_directory "$dir" || true
+        debug "$(printf "$get_backend_dir_txt_0004" "$dir")" "CLI" "get_backend_dir"
         echo "$dir"
         return 0
     fi
     
-    # Als absoluten Notfall ein Unterverzeichnis des Installationsverzeichnisses verwenden
-    local install_dir
-    install_dir=$(get_install_dir)
-    debug "Alle Pfade für Daten-Verzeichnis fehlgeschlagen, verwende $install_dir/data" "CLI" "get_data_dir"
-    echo "$install_dir/data"
+    # Fallback auf alternatives Verzeichnis
+    dir="$FALLBACK_DIR_BACKEND"
+    debug "$(printf "$get_backend_dir_txt_0005" "$dir")" "CLI" "get_backend_dir"
+    create_directory "$dir" || true
+    
+    # Als letzten Ausweg, ein Unterverzeichnis des Install-Verzeichnisses verwenden
+    if [ ! -d "$dir" ]; then
+        local install_dir
+        install_dir=$(get_install_dir)
+        dir="$install_dir/backend"
+        debug "$(printf "$get_backend_dir_txt_0006" "$dir")" "CLI" "get_backend_dir"
+        create_directory "$dir" || true
+    fi
+    
+    echo "$dir"
     return 0
 }
 
-# ------------------------------------------------------------------------------
-# get_backup_dir
-# ------------------------------------------------------------------------------
-# Funktion: Gibt den Pfad zum Backup-Verzeichnis zurück
-# Parameter: keine
-# Rückgabe: Pfad zum Backup-Verzeichnis oder leerer String bei Fehler
-# ------------------------------------------------------------------------------
-get_backup_dir() {
+# get_script_dir
+get_script_dir_txt_0001="Ermittle Backend-Skript-Verzeichnis"
+get_script_dir_txt_0002="Verwende bereits definiertes BASH_DIR: %s"
+get_script_dir_txt_0003="Prüfe Standard-Pfad für Backend-Skript-Verzeichnis"
+get_script_dir_txt_0004="Verwende Standard-Pfad für Backend-Skript-Verzeichnis: %s"
+get_script_dir_txt_0005="Versuche Backend-Skript-Verzeichnis über Installationsverzeichnis zu ermitteln: %s"
+
+get_script_dir() {
+    # -----------------------------------------------------------------------
+    # get_script_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Backend-Skript-Verzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local dir
+    local standard_path="$DEFAULT_DIR_BACKEND_SCRIPTS"
+        
+    # Prüfen, ob BASH_DIR bereits gesetzt ist
+    debug "$get_script_dir_txt_0001" "CLI" "get_script_dir"
+    if [ -n "$BASH_DIR" ] && [ -d "$BASH_DIR" ]; then
+        debug "$(printf "$get_script_dir_txt_0002" "$BASH_DIR")" "CLI" "get_script_dir"
+        create_directory "$BASH_DIR" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+        
+        # Wenn das definierte Verzeichnis nicht dem Standard entspricht, erstelle einen Symlink
+        if [ "$BASH_DIR" != "$standard_path" ]; then
+            create_symlink_to_standard_path "$standard_path" "$BASH_DIR" || true
+        fi
+        
+        echo "$BASH_DIR"
+        return 0
+    fi
+    
+    # Verwende die in lib_core definierten Pfade
+    debug "$get_script_dir_txt_0003" "CLI" "get_script_dir"
+    dir="$DEFAULT_DIR_BACKEND_SCRIPTS"
+    if [ -d "$dir" ]; then
+        debug "$(printf "$get_script_dir_txt_0004" "$dir")" "CLI" "get_script_dir"
+        create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+        echo "$dir"
+        return 0
+    fi
+    
+    # Wenn das Verzeichnis nicht existiert, versuchen wir es über das Installationsverzeichnis zu ermitteln
+    local install_dir
+    install_dir=$(get_install_dir)
+    dir="$install_dir/backend/scripts"
+    debug "$(printf "$get_script_dir_txt_0005" "$dir")" "CLI" "get_script_dir"
+    create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+    
+    # Versuche einen Symlink vom Standard-Pfad zu erstellen, wenn der Fallback verwendet wird
+    create_symlink_to_standard_path "$standard_path" "$dir" || true
+    
+    echo "$dir"
+    return 0
+}
+
+# set_script_permissions
+set_script_permissions_txt_0001="Skript-Verzeichnis %s existiert nicht"
+set_script_permissions_txt_0002="Setze Ausführbarkeitsrechte für %s/*.sh"
+set_script_permissions_txt_0003="Ausführbarkeitsrechte erfolgreich gesetzt"
+
+set_script_permissions() {
+    # -----------------------------------------------------------------------
+    # set_script_permissions
+    # -----------------------------------------------------------------------
+    # Funktion: Setzt Ausführbarkeitsrechte für alle Skripte im Script-Verzeichnis
+    # Parameter: keine
+    # Rückgabe: 0 = OK, 1 = Verzeichnis existiert nicht
+    # -----------------------------------------------------------------------
+    local script_dir
+    
+    # Verwende die neue einheitliche get_script_dir Funktion
+    script_dir=$(get_script_dir)
+    
+    if [ ! -d "$script_dir" ]; then
+        debug "$(printf "$set_script_permissions_txt_0001" "$script_dir")" "CLI" "set_script_permissions"
+        return 1
+    fi
+    
+    debug "$(printf "$set_script_permissions_txt_0002" "$script_dir")" "CLI" "set_script_permissions"
+    chmod +x "$script_dir"/*.sh 2>/dev/null || true
+    
+    debug "$set_script_permissions_txt_0003" "CLI" "set_script_permissions"
+    return 0
+}
+
+# get_venv_dir
+get_venv_dir_txt_0001="Ermittle Python Virtual Environment-Verzeichnis"
+get_venv_dir_txt_0002="Verwende bereits definiertes BACKEND_VENV_DIR: %s"
+get_venv_dir_txt_0003="Prüfe Standard-VENV-Verzeichnis: %s"
+get_venv_dir_txt_0004="Verwende Standard-VENV-Verzeichnis: %s"
+get_venv_dir_txt_0005="Standard-VENV-Verzeichnis nicht verfügbar, verwende Fallback: %s"
+get_venv_dir_txt_0006="Fallback-VENV-Verzeichnis nicht verfügbar, verwende: %s"
+
+get_venv_dir() {
+    # -----------------------------------------------------------------------
+    # get_venv_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Python Virtual Environment zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
     local dir
     
-    debug "Ermittle Backup-Verzeichnis" "CLI" "get_backup_dir"
+    debug "$get_venv_dir_txt_0001" "CLI" "get_venv_dir"
     
+    # Prüfen, ob BACKEND_VENV_DIR bereits gesetzt ist (z.B. vom install.sh)
+    if [ -n "$BACKEND_VENV_DIR" ] && [ -d "$BACKEND_VENV_DIR" ]; then
+        debug "$(printf "$get_venv_dir_txt_0002" "$BACKEND_VENV_DIR")" "CLI" "get_venv_dir"
+        create_directory "$BACKEND_VENV_DIR" || true
+        echo "$BACKEND_VENV_DIR"
+        return 0
+    fi
+    
+    # Standardpfad verwenden
+    dir="$DEFAULT_DIR_BACKEND_VENV"
+    debug "$(printf "$get_venv_dir_txt_0003" "$dir")" "CLI" "get_venv_dir"
+    
+    if [ -d "$dir" ]; then
+        create_directory "$dir" || true
+        debug "$(printf "$get_venv_dir_txt_0004" "$dir")" "CLI" "get_venv_dir"
+        echo "$dir"
+        return 0
+    fi
+    
+    # Fallback auf alternatives Verzeichnis
+    dir="$FALLBACK_BACKEND_VENV_DIR"
+    debug "$(printf "$get_venv_dir_txt_0005" "$dir")" "CLI" "get_venv_dir"
+    create_directory "$dir" || true
+    
+    # Als letzten Ausweg, ein Unterverzeichnis im Backend-Verzeichnis verwenden
+    if [ ! -d "$dir" ]; then
+        local backend_dir
+        backend_dir=$(get_backend_dir)
+        dir="$backend_dir/venv"
+        debug "$(printf "$get_venv_dir_txt_0006" "$dir")" "CLI" "get_venv_dir"
+        create_directory "$dir" || true
+    fi
+    
+    echo "$dir"
+    return 0
+}
+
+get_pip_path() {
+    # -----------------------------------------------------------------------
+    # get_pip_path
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zur pip-Binary im Virtual Environment zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zur Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local venv_dir
+    debug "Ermittle Pfad zur pip-Binary" "CLI" "get_pip_path"
+    
+    # Hole das Virtual Environment-Verzeichnis
+    venv_dir=$(get_venv_dir)
+    
+    # Standard-Unix/Linux-Pfad
+    local pip_path="$venv_dir/bin/pip"
+    
+    # Prüfe, ob wir auf Unix/Linux oder Windows sind
+    if [ -f "$pip_path" ]; then
+        debug "Verwende Unix/Linux pip-Pfad: $pip_path" "CLI" "get_pip_path"
+        echo "$pip_path"
+        return 0
+    fi
+    
+    # Windows-Pfad prüfen
+    pip_path="$venv_dir/Scripts/pip.exe"
+    if [ -f "$pip_path" ]; then
+        debug "Verwende Windows pip-Pfad: $pip_path" "CLI" "get_pip_path"
+        echo "$pip_path"
+        return 0
+    fi
+    
+    # Python-Pfade ermitteln für python -m pip Fallback
+    local python_path="$venv_dir/bin/python3"
+    if [ ! -f "$python_path" ]; then
+        python_path="$venv_dir/bin/python"
+    fi
+    if [ ! -f "$python_path" ]; then
+        python_path="$venv_dir/Scripts/python.exe"
+    fi
+    
+    # Wenn Python existiert, können wir python -m pip verwenden
+    if [ -f "$python_path" ]; then
+        debug "Verwende Python-Modul für pip: $python_path -m pip" "CLI" "get_pip_path"
+        echo "$python_path -m pip"
+        return 0
+    fi
+    
+    # Als Fallback geben wir einfach "pip" zurück und hoffen, dass es im PATH ist
+    debug "Kein pip im venv gefunden, fallback auf System-pip" "CLI" "get_pip_path"
+    echo "pip"
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# Backup-Verzeichnisse
+# ---------------------------------------------------------------------------
+
+get_backup_dir() {
+    # -----------------------------------------------------------------------
+    # get_backup_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Backup-Verzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local dir
+        
     # Prüfen, ob BACKUP_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "Ermittle Backup-Verzeichnis" "CLI" "get_backup_dir"
     if [ -n "$BACKUP_DIR" ] && [ -d "$BACKUP_DIR" ]; then
         debug "Verwende bereits definiertes BACKUP_DIR: $BACKUP_DIR" "CLI" "get_backup_dir"
         create_directory "$BACKUP_DIR" || true
@@ -276,7 +648,7 @@ get_backup_dir() {
     
     # Verwende die in dieser Datei definierten Pfade
     debug "Prüfe Standard- und Fallback-Pfade für Backup-Verzeichnis" "CLI" "get_backup_dir"
-    dir=$(get_folder_path "$DEFAULT_BACKUP_DIR" "$FALLBACK_BACKUP_DIR" 1)
+    dir=$(get_folder_path "$DEFAULT_DIR_BACKUP" "$FALLBACK_DIR_BACKUP" 1)
     if [ -n "$dir" ]; then
         debug "Verwende Pfad für Backup-Verzeichnis: $dir" "CLI" "get_backup_dir"
         echo "$dir"
@@ -291,23 +663,596 @@ get_backup_dir() {
     return 0
 }
 
-# ------------------------------------------------------------------------------
-# get_log_dir
-# ------------------------------------------------------------------------------
-# Funktion: Gibt den Pfad zum Log-Verzeichnis zurück
-# Parameter: keine
-# Rückgabe: Pfad zum Log-Verzeichnis oder leerer String bei Fehler
-# 
-# Diese Funktion implementiert dieselbe Logik wie get_log_path aus manage_logging.sh,
-# um Kompatibilität und Konsistenz zu gewährleisten.
-# ------------------------------------------------------------------------------
+get_nginx_backup_dir() {
+    # -----------------------------------------------------------------------
+    # get_nginx_backup_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum NGINX-Backup-Verzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local dir
+    local backup_dir
+    
+    # Zuerst das generelle Backup-Verzeichnis ermitteln
+    backup_dir=$(get_backup_dir)
+    
+    # Prüfen, ob BACKUP_DIR_NGINX bereits gesetzt ist
+    debug "Ermittle NGINX-Backup-Verzeichnis" "CLI" "get_nginx_backup_dir"
+    if [ -n "$BACKUP_DIR_NGINX" ] && [ -d "$BACKUP_DIR_NGINX" ]; then
+        debug "Verwende bereits definiertes BACKUP_DIR_NGINX: $BACKUP_DIR_NGINX" "CLI" "get_nginx_backup_dir"
+        create_directory "$BACKUP_DIR_NGINX" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
+        echo "$BACKUP_DIR_NGINX"
+        return 0
+    fi
+    
+    # Verwende die in lib_core definierten Pfade
+    debug "Prüfe Standard- und Fallback-Pfade für NGINX-Backup-Verzeichnis" "CLI" "get_nginx_backup_dir"
+    dir=$(get_folder_path "$DEFAULT_DIR_BACKUP_NGINX" "$FALLBACK_DIR_BACKUP_NGINX" 1)
+    if [ -n "$dir" ]; then
+        debug "Verwende Pfad für NGINX-Backup-Verzeichnis: $dir" "CLI" "get_nginx_backup_dir"
+        # Setze restriktivere Berechtigungen für das Backup-Verzeichnis (nur Besitzer und Gruppe haben Zugriff)
+        create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
+        echo "$dir"
+        return 0
+    fi
+    
+    # Als Fallback ein Unterverzeichnis im allgemeinen Backup-Verzeichnis verwenden
+    dir="$backup_dir/nginx"
+    debug "Fallback für NGINX-Backup-Verzeichnis: $dir" "CLI" "get_nginx_backup_dir"
+    # Setze restriktivere Berechtigungen für das Backup-Verzeichnis (nur Besitzer und Gruppe haben Zugriff)
+    create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
+    echo "$dir"
+    return 0
+}
+
+get_https_backup_dir() {
+    # -----------------------------------------------------------------------
+    # get_https_backup_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum HTTPS-Backup-Verzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local dir
+    local backup_dir
+    
+    # Zuerst das generelle Backup-Verzeichnis ermitteln
+    backup_dir=$(get_backup_dir)
+
+    # Prüfen, ob BACKUP_DIR_HTTPS bereits gesetzt ist
+    debug "Ermittle HTTPS-Backup-Verzeichnis" "CLI" "get_https_backup_dir"
+    if [ -n "$BACKUP_DIR_HTTPS" ] && [ -d "$BACKUP_DIR_HTTPS" ]; then
+        debug "Verwende bereits definiertes BACKUP_DIR_HTTPS: $BACKUP_DIR_HTTPS" "CLI" "get_https_backup_dir"
+        create_directory "$BACKUP_DIR_HTTPS" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
+        echo "$BACKUP_DIR_HTTPS"
+        return 0
+    fi
+    
+    # Verwende die in lib_core definierten Pfade
+    debug "Prüfe Standard- und Fallback-Pfade für HTTPS-Backup-Verzeichnis" "CLI" "get_https_backup_dir"
+    dir=$(get_folder_path "$DEFAULT_DIR_BACKUP_HTTPS" "$FALLBACK_DIR_BACKUP_HTTPS" 1)
+    if [ -n "$dir" ]; then
+        debug "Verwende Pfad für HTTPS-Backup-Verzeichnis: $dir" "CLI" "get_https_backup_dir"
+        # Setze restriktivere Berechtigungen für das Backup-Verzeichnis (nur Besitzer und Gruppe haben Zugriff)
+        create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
+        echo "$dir"
+        return 0
+    fi
+    
+    # Als Fallback ein Unterverzeichnis im allgemeinen Backup-Verzeichnis verwenden
+    dir="$backup_dir/https"
+    debug "Fallback für HTTPS-Backup-Verzeichnis: $dir" "CLI" "get_https_backup_dir"
+    # Setze restriktivere Berechtigungen für das Backup-Verzeichnis (nur Besitzer und Gruppe haben Zugriff)
+    create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
+    echo "$dir"
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# Konfigurations-Verzeichnis
+# ---------------------------------------------------------------------------
+
+get_config_dir() {
+    # -----------------------------------------------------------------------
+    # get_config_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Konfigurationsverzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local dir
+        
+    # Prüfen, ob CONF_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "Ermittle Konfigurations-Verzeichnis" "CLI" "get_config_dir"
+    if [ -n "$CONF_DIR" ] && [ -d "$CONF_DIR" ]; then
+        debug "Verwende bereits definiertes CONF_DIR: $CONF_DIR" "CLI" "get_config_dir"
+        create_directory "$CONF_DIR" || true
+        echo "$CONF_DIR"
+        return 0
+    fi
+    
+    # Verwende die in dieser Datei definierten Pfade
+    debug "Prüfe Standard- und Fallback-Pfade für Konfigurations-Verzeichnis" "CLI" "get_config_dir"
+    dir=$(get_folder_path "$DEFAULT_DIR_CONF" "$FALLBACK_DIR_CONF" 1)
+    if [ -n "$dir" ]; then
+        debug "Verwende Pfad für Konfigurations-Verzeichnis: $dir" "CLI" "get_config_dir"
+        echo "$dir"
+        return 0
+    fi
+    
+    # Als absoluten Notfall ein Unterverzeichnis des Installationsverzeichnisses verwenden
+    local install_dir
+    install_dir=$(get_install_dir)
+    debug "Alle Pfade für Konfigurations-Verzeichnis fehlgeschlagen, verwende $install_dir/conf" "CLI" "get_config_dir"
+    echo "$install_dir/conf"
+    return 0
+}
+
+get_nginx_conf_dir() {
+    # -----------------------------------------------------------------------
+    # get_nginx_conf_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum NGINX-Konfigurationsverzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local dir
+    local config_dir
+        
+    # Zuerst den übergeordneten Konfigurationsordner ermitteln
+    config_dir=$(get_config_dir)
+    
+    # Prüfen, ob CONF_DIR_NGINX bereits gesetzt ist
+    debug "Ermittle NGINX-Konfigurations-Verzeichnis" "CLI" "get_nginx_conf_dir"
+    if [ -n "$CONF_DIR_NGINX" ] && [ -d "$CONF_DIR_NGINX" ]; then
+        debug "Verwende bereits definiertes CONF_DIR_NGINX: $CONF_DIR_NGINX" "CLI" "get_nginx_conf_dir"
+        # Setze explizit die Standard-Berechtigungen (755)
+        create_directory "$CONF_DIR_NGINX" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+        echo "$CONF_DIR_NGINX"
+        return 0
+    fi
+    
+    # Verwende die in lib_core definierten Pfade
+    debug "Prüfe Standard- und Fallback-Pfade für NGINX-Konfigurations-Verzeichnis" "CLI" "get_nginx_conf_dir"
+    dir=$(get_folder_path "$DEFAULT_DIR_CONF_NGINX" "$FALLBACK_DIR_CONF_NGINX" 1)
+    if [ -n "$dir" ]; then
+        debug "Verwende Pfad für NGINX-Konfigurations-Verzeichnis: $dir" "CLI" "get_nginx_conf_dir"
+        # Setze explizit die Standard-Berechtigungen (755)
+        create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+        echo "$dir"
+        return 0
+    fi
+    
+    # Als Fallback ein Unterverzeichnis im Konfigurations-Verzeichnis verwenden
+    dir="$config_dir/nginx"
+    debug "Fallback für NGINX-Konfigurations-Verzeichnis: $dir" "CLI" "get_nginx_conf_dir"
+    # Setze explizit die Standard-Berechtigungen (755)
+    create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+    echo "$dir"
+    return 0
+}
+
+get_https_conf_dir() {
+    # -----------------------------------------------------------------------
+    # get_https_conf_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum HTTPS-Konfigurationsverzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local dir
+    local config_dir
+        
+    # Zuerst den übergeordneten Konfigurationsordner ermitteln
+    config_dir=$(get_config_dir)
+
+    # Prüfen, ob CONF_DIR_HTTPS bereits gesetzt ist
+    debug "Ermittle HTTPS-Konfigurations-Verzeichnis" "CLI" "get_https_conf_dir"
+    if [ -n "$CONF_DIR_HTTPS" ] && [ -d "$CONF_DIR_HTTPS" ]; then
+        debug "Verwende bereits definiertes CONF_DIR_HTTPS: $CONF_DIR_HTTPS" "CLI" "get_https_conf_dir"
+        # Setze explizit die Standard-Berechtigungen (755)
+        create_directory "$CONF_DIR_HTTPS" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+        echo "$CONF_DIR_HTTPS"
+        return 0
+    fi
+    
+    # Verwende die in lib_core definierten Pfade
+    debug "Prüfe Standard- und Fallback-Pfade für HTTPS-Konfigurations-Verzeichnis" "CLI" "get_https_conf_dir"
+    dir=$(get_folder_path "$DEFAULT_DIR_CONF_HTTPS" "$FALLBACK_DIR_CONF_HTTPS" 1)
+    if [ -n "$dir" ]; then
+        debug "Verwende Pfad für HTTPS-Konfigurations-Verzeichnis: $dir" "CLI" "get_https_conf_dir"
+        # Setze explizit die Standard-Berechtigungen (755)
+        create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+        echo "$dir"
+        return 0
+    fi
+    
+    # Als Fallback ein Unterverzeichnis im Konfigurations-Verzeichnis verwenden
+    dir="$config_dir/https"
+    debug "Fallback für HTTPS-Konfigurations-Verzeichnis: $dir" "CLI" "get_https_conf_dir"
+    # Setze explizit die Standard-Berechtigungen (755)
+    create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+    echo "$dir"
+    return 0
+}
+
+get_camera_conf_dir() {
+    # -----------------------------------------------------------------------
+    # get_camera_conf_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Kamera-Konfigurationsverzeichnis zurück
+    # .........  und stellt sicher, dass es existiert
+    # Parameter: keine
+    # Rückgabe.: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # Extras...: Erstellt bei Bedarf einen Symlink vom Standardpfad
+    # -----------------------------------------------------------------------
+    local dir
+    local config_dir
+    local standard_path="$DEFAULT_DIR_CONF_CAMERA"
+        
+    # Zuerst den übergeordneten Konfigurationsordner ermitteln
+    config_dir=$(get_config_dir)
+
+    # Prüfen, ob CONF_DIR_CAMERA bereits gesetzt ist
+    debug "Ermittle Kamera-Konfigurations-Verzeichnis" "CLI" "get_camera_conf_dir"
+    if [ -n "$CONF_DIR_CAMERA" ] && [ -d "$CONF_DIR_CAMERA" ]; then
+        debug "Verwende bereits definiertes CONF_DIR_CAMERA: $CONF_DIR_CAMERA" "CLI" "get_camera_conf_dir"
+        # Setze explizit die Standard-Berechtigungen (755)
+        create_directory "$CONF_DIR_CAMERA" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+        
+        # Wenn das definierte Verzeichnis nicht dem Standard entspricht, erstelle einen Symlink
+        if [ "$CONF_DIR_CAMERA" != "$standard_path" ]; then
+            create_symlink_to_standard_path "$standard_path" "$CONF_DIR_CAMERA" || true
+        fi
+        
+        echo "$CONF_DIR_CAMERA"
+        return 0
+    fi
+    
+    # Verwende die in lib_core definierten Pfade
+    debug "Prüfe Standard- und Fallback-Pfade für Kamera-Konfigurations-Verzeichnis" "CLI" "get_camera_conf_dir"
+    # Symlink-Erstellung ist jetzt in get_folder_path integriert
+    dir=$(get_folder_path "$DEFAULT_DIR_CONF_CAMERA" "$FALLBACK_DIR_CONF_CAMERA" 1 1)
+    if [ -n "$dir" ]; then
+        debug "Verwende Pfad für Kamera-Konfigurations-Verzeichnis: $dir" "CLI" "get_camera_conf_dir"
+        # Setze explizit die Standard-Berechtigungen (755)
+        create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+        echo "$dir"
+        return 0
+    fi
+    
+    # Als Fallback ein Unterverzeichnis im Konfigurations-Verzeichnis verwenden
+    dir="$config_dir/cameras"
+    debug "Fallback für Kamera-Konfigurations-Verzeichnis: $dir" "CLI" "get_camera_conf_dir"
+    # Setze explizit die Standard-Berechtigungen (755)
+    create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+    
+    # Versuche einen Symlink vom Standard-Pfad zu erstellen, wenn der Fallback verwendet wird
+    create_symlink_to_standard_path "$standard_path" "$dir" || true
+    
+    echo "$dir"
+    return 0
+    
+    echo "$dir"
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# Daten-Verzeichnis
+# ---------------------------------------------------------------------------
+
+get_data_dir() {
+    # -----------------------------------------------------------------------
+    # get_data_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Datenverzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Datenverzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local dir
+        
+    # Prüfen, ob DATA_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "Ermittle Daten-Verzeichnis" "CLI" "get_data_dir"
+    if [ -n "$DATA_DIR" ] && [ -d "$DATA_DIR" ]; then
+        debug "Verwende bereits definiertes DATA_DIR: $DATA_DIR" "CLI" "get_data_dir"
+        create_directory "$DATA_DIR" || true
+        echo "$DATA_DIR"
+        return 0
+    fi
+    
+    # Verwende die in dieser Datei definierten Pfade
+    debug "Prüfe Standard- und Fallback-Pfade für Daten-Verzeichnis" "CLI" "get_data_dir"
+    dir=$(get_folder_path "$DEFAULT_DIR_DATA" "$FALLBACK_DIR_DATA" 1)
+    if [ -n "$dir" ]; then
+        debug "Verwende Pfad für Daten-Verzeichnis: $dir" "CLI" "get_data_dir"
+        echo "$dir"
+        return 0
+    fi
+    
+    # Als absoluten Notfall ein Unterverzeichnis des Installationsverzeichnisses verwenden
+    local install_dir
+    install_dir=$(get_install_dir)
+    debug "Alle Pfade für Daten-Verzeichnis fehlgeschlagen, verwende $install_dir/data" "CLI" "get_data_dir"
+    echo "$install_dir/data"
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# Frontend-Verzeichnis
+# ---------------------------------------------------------------------------
+
+get_frontend_dir() {
+    # -----------------------------------------------------------------------
+    # get_frontend_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Frontend-Verzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local dir
+        
+    # Prüfen, ob FRONTEND_DIR bereits gesetzt ist
+    debug "Ermittle Frontend-Verzeichnis" "CLI" "get_frontend_dir"
+    if [ -n "$FRONTEND_DIR" ] && [ -d "$FRONTEND_DIR" ]; then
+        debug "Verwende bereits definiertes FRONTEND_DIR: $FRONTEND_DIR" "CLI" "get_frontend_dir"
+        create_directory "$FRONTEND_DIR" || true
+        echo "$FRONTEND_DIR"
+        return 0
+    fi
+    
+    # Standardpfad verwenden
+    dir="$DEFAULT_DIR_FRONTEND"
+    debug "Prüfe Standard-Frontend-Verzeichnis: $dir" "CLI" "get_frontend_dir"
+    if [ -d "$dir" ]; then
+        create_directory "$dir" || true
+        echo "$dir"
+        return 0
+    fi
+    
+    # Fallback auf Systemweb-Verzeichnis
+    dir="$FALLBACK_DIR_FRONTEND"
+    debug "Standard-Frontend-Verzeichnis nicht verfügbar, verwende Fallback: $dir" "CLI" "get_frontend_dir"
+    create_directory "$dir" || true
+    
+    echo "$dir"
+    return 0
+}
+
+get_frontend_css_dir() {
+    # -----------------------------------------------------------------------
+    # get_frontend_css_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum CSS-Verzeichnis im Frontend zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local frontend_dir
+    debug "Ermittle Frontend-CSS-Verzeichnis" "CLI" "get_frontend_css_dir"
+    
+    # Hole das Frontend-Hauptverzeichnis
+    frontend_dir=$(get_frontend_dir)
+    local css_dir="$frontend_dir/css"
+    
+    debug "Prüfe CSS-Verzeichnis: $css_dir" "CLI" "get_frontend_css_dir"
+    if create_directory "$css_dir"; then
+        debug "Verwende CSS-Verzeichnis: $css_dir" "CLI" "get_frontend_css_dir"
+        echo "$css_dir"
+        return 0
+    fi
+    
+    # Fallback direkt zum Frontend-Verzeichnis
+    debug "CSS-Verzeichnis nicht verfügbar, verwende Fallback: $frontend_dir" "CLI" "get_frontend_css_dir"
+    echo "$frontend_dir"
+    return 1
+}
+
+get_frontend_fonts_dir() {
+    # -----------------------------------------------------------------------
+    # get_frontend_fonts_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Fonts-Verzeichnis im Frontend zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local frontend_dir
+    debug "Ermittle Frontend-Fonts-Verzeichnis" "CLI" "get_frontend_fonts_dir"
+    
+    # Hole das Frontend-Hauptverzeichnis
+    frontend_dir=$(get_frontend_dir)
+    local fonts_dir="$frontend_dir/fonts"
+    
+    debug "Prüfe Fonts-Verzeichnis: $fonts_dir" "CLI" "get_frontend_fonts_dir"
+    if create_directory "$fonts_dir"; then
+        debug "Verwende Fonts-Verzeichnis: $fonts_dir" "CLI" "get_frontend_fonts_dir"
+        echo "$fonts_dir"
+        return 0
+    fi
+    
+    # Fallback direkt zum Frontend-Verzeichnis
+    debug "Fonts-Verzeichnis nicht verfügbar, verwende Fallback: $frontend_dir" "CLI" "get_frontend_fonts_dir"
+    echo "$frontend_dir"
+    return 1
+}
+
+get_frontend_js_dir() {
+    # -----------------------------------------------------------------------
+    # get_frontend_js_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum JavaScript-Verzeichnis im Frontend zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local frontend_dir
+    debug "Ermittle Frontend-JavaScript-Verzeichnis" "CLI" "get_frontend_js_dir"
+    
+    # Hole das Frontend-Hauptverzeichnis
+    frontend_dir=$(get_frontend_dir)
+    local js_dir="$frontend_dir/js"
+    
+    debug "Prüfe JavaScript-Verzeichnis: $js_dir" "CLI" "get_frontend_js_dir"
+    if create_directory "$js_dir"; then
+        debug "Verwende JavaScript-Verzeichnis: $js_dir" "CLI" "get_frontend_js_dir"
+        echo "$js_dir"
+        return 0
+    fi
+    
+    # Fallback direkt zum Frontend-Verzeichnis
+    debug "JavaScript-Verzeichnis nicht verfügbar, verwende Fallback: $frontend_dir" "CLI" "get_frontend_js_dir"
+    echo "$frontend_dir"
+    return 1
+}
+
+get_photos_dir() {
+    # -----------------------------------------------------------------------
+    # get_photos_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Fotos-Verzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    debug "Ermittle Fotos-Verzeichnis" "CLI" "get_photos_dir"
+    
+    local frontend_dir
+    frontend_dir=$(get_frontend_dir)
+    
+    local photos_dir="$frontend_dir/photos"
+    debug "Prüfe Standard-Fotos-Verzeichnis: $photos_dir" "CLI" "get_photos_dir"
+    if create_directory "$photos_dir"; then
+        debug "Verwende Standard-Fotos-Verzeichnis: $photos_dir" "CLI" "get_photos_dir"
+        echo "$photos_dir"
+        return 0
+    fi
+    
+    # Fallback zum Datenverzeichnis
+    local data_dir
+    data_dir=$(get_data_dir)
+    debug "Standard-Fotos-Verzeichnis nicht verfügbar, verwende Fallback: $data_dir/photos" "CLI" "get_photos_dir"
+    echo "$data_dir/photos"
+    return 0
+}
+
+get_photos_originals_dir() {
+    # -----------------------------------------------------------------------
+    # get_photos_originals_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Originalfotos-Verzeichnis zurück
+    # Parameter: $1 - (Optional) Name des Events
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local event_name="$1"
+    debug "Ermittle Original-Fotos-Verzeichnis" "CLI" "get_photos_originals_dir"
+    
+    local photos_dir
+    photos_dir=$(get_photos_dir)
+    local originals_dir="$photos_dir/originals"
+    
+    debug "Prüfe Originals-Verzeichnis: $originals_dir" "CLI" "get_photos_originals_dir"
+    if create_directory "$originals_dir"; then
+        if [ -n "$event_name" ]; then
+            local event_dir="$originals_dir/$event_name"
+            debug "Event-Name angegeben, prüfe Verzeichnis: $event_dir" "CLI" "get_photos_originals_dir"
+            if create_directory "$event_dir"; then
+                debug "Verwende Event-spezifisches Original-Fotos-Verzeichnis: $event_dir" "CLI" "get_photos_originals_dir"
+                echo "$event_dir"
+                return 0
+            fi
+        else
+            debug "Verwende Standard Original-Fotos-Verzeichnis: $originals_dir" "CLI" "get_photos_originals_dir"
+            echo "$originals_dir"
+            return 0
+        fi
+    fi
+    
+    # Fallback, wenn Event-Verzeichnis nicht erstellt werden konnte
+    debug "Originals-Verzeichnis nicht verfügbar, verwende Fallback: $photos_dir" "CLI" "get_photos_originals_dir"
+    echo "$photos_dir"
+    return 0
+}
+
+get_photos_gallery_dir() {
+    # -----------------------------------------------------------------------
+    # get_photos_gallery_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Galerie-Verzeichnis zurück
+    # Parameter: $1 - (Optional) Name des Events
+    # Rückgabe: Pfad zum Galerie-Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local event_name="$1"
+    debug "Ermittle Galerie-Verzeichnis" "CLI" "get_photos_gallery_dir"
+    
+    local photos_dir
+    photos_dir=$(get_photos_dir)
+    local gallery_dir="$photos_dir/gallery"
+    
+    debug "Prüfe Galerie-Verzeichnis: $gallery_dir" "CLI" "get_photos_gallery_dir"
+    if create_directory "$gallery_dir"; then
+        if [ -n "$event_name" ]; then
+            local event_dir="$gallery_dir/$event_name"
+            debug "Event-Name angegeben, prüfe Verzeichnis: $event_dir" "CLI" "get_photos_gallery_dir"
+            if create_directory "$event_dir"; then
+                debug "Verwende Event-spezifisches Galerie-Verzeichnis: $event_dir" "CLI" "get_photos_gallery_dir"
+                echo "$event_dir"
+                return 0
+            fi
+        else
+            debug "Verwende Standard Galerie-Verzeichnis: $gallery_dir" "CLI" "get_photos_gallery_dir"
+            echo "$gallery_dir"
+            return 0
+        fi
+    fi
+    
+    # Fallback, wenn Event-Verzeichnis nicht erstellt werden konnte
+    debug "Galerie-Verzeichnis nicht verfügbar, verwende Fallback: $photos_dir" "CLI" "get_photos_gallery_dir"
+    echo "$photos_dir"
+    return 0
+}
+
+get_frontend_picture_dir() {
+    # -----------------------------------------------------------------------
+    # get_frontend_picture_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Picture-Verzeichnis im Frontend zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local frontend_dir
+    debug "Ermittle Frontend-Picture-Verzeichnis" "CLI" "get_frontend_picture_dir"
+    
+    # Hole das Frontend-Hauptverzeichnis
+    frontend_dir=$(get_frontend_dir)
+    local picture_dir="$frontend_dir/picture"
+    
+    debug "Prüfe Picture-Verzeichnis: $picture_dir" "CLI" "get_frontend_picture_dir"
+    if create_directory "$picture_dir"; then
+        debug "Verwende Picture-Verzeichnis: $picture_dir" "CLI" "get_frontend_picture_dir"
+        echo "$picture_dir"
+        return 0
+    fi
+    
+    # Fallback direkt zum Frontend-Verzeichnis
+    debug "Picture-Verzeichnis nicht verfügbar, verwende Fallback: $frontend_dir" "CLI" "get_frontend_picture_dir"
+    echo "$frontend_dir"
+    return 1
+}
+
+# ---------------------------------------------------------------------------
+# Log-Verzeichnis
+# ---------------------------------------------------------------------------
+
 get_log_dir() {
+    # ------------------------------------------------------------------------------
+    # get_log_dir
+    # ------------------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Log-Verzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # ------------------------------------------------------------------------------
     local logdir
     local found_dir=0
-    
-    debug "Ermittle Log-Verzeichnis" "CLI" "get_log_dir"
-    
+        
     # Prüfen, ob LOG_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "Ermittle Log-Verzeichnis" "CLI" "get_log_dir"
     if [ -n "$LOG_DIR" ] && [ -d "$LOG_DIR" ]; then
         debug "Verwende bereits definiertes LOG_DIR: $LOG_DIR" "CLI" "get_log_dir" >/dev/null 2>&1
         create_directory "$LOG_DIR" || true
@@ -317,7 +1262,7 @@ get_log_dir() {
     
     # Wenn kein Verzeichnis gefunden wurde, exakt die gleiche Logik wie in get_log_path
     if [ $found_dir -eq 0 ]; then
-        logdir="$DEFAULT_LOG_DIR"
+        logdir="$DEFAULT_DIR_LOG"
         debug "Prüfe Standard-Logverzeichnis: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
         if [ -d "$logdir" ] || mkdir -p "$logdir" 2>/dev/null; then
             create_directory "$logdir" || true
@@ -330,17 +1275,17 @@ get_log_dir() {
     if [ $found_dir -eq 0 ]; then
         debug "Standard-Logverzeichnis nicht verfügbar, prüfe Fallback-Optionen" "CLI" "get_log_dir" >/dev/null 2>&1
         if [ -w "/var/log" ]; then
-            logdir="$FALLBACK_LOG_DIR"
+            logdir="$FALLBACK_DIR_LOG"
             debug "Verwende Fallback 1: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
             create_directory "$logdir" || true
             found_dir=1
         elif [ -w "/tmp" ]; then
-            logdir="$FALLBACK_LOG_DIR_2"
+            logdir="$FALLBACK_DIR_LOG_2"
             debug "Verwende Fallback 2: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
             create_directory "$logdir" || true
             found_dir=1
         else
-            logdir="$FALLBACK_LOG_DIR_3"
+            logdir="$FALLBACK_DIR_LOG_3"
             debug "Verwende Fallback 3: $logdir" "CLI" "get_log_dir" >/dev/null 2>&1
             create_directory "$logdir" || true
             found_dir=1
@@ -357,8 +1302,8 @@ get_log_dir() {
         if ! touch "$logdir/test_log.tmp" 2>/dev/null; then
             echo "Fehler: Keine Schreibrechte im Logverzeichnis $logdir" >&2
             # Versuche Fallback zu /tmp
-            if [ -w "/tmp" ] && [ "$logdir" != "$FALLBACK_LOG_DIR_2" ]; then
-                logdir="$FALLBACK_LOG_DIR_2"
+            if [ -w "/tmp" ] && [ "$logdir" != "$FALLBACK_DIR_LOG_2" ]; then
+                logdir="$FALLBACK_DIR_LOG_2"
                 mkdir -p "$logdir" 2>/dev/null || true
                 if [ -d "$logdir" ] && ! touch "$logdir/test_log.tmp" 2>/dev/null; then
                     echo "Fehler: Auch Fallback-Logverzeichnis $logdir nicht schreibbar" >&2
@@ -414,53 +1359,18 @@ get_log_dir() {
     return 0
 }
 
-# ------------------------------------------------------------------------------
-# get_frontend_dir
-# ------------------------------------------------------------------------------
-# Funktion: Gibt den Pfad zum Frontend-Verzeichnis zurück
-# Parameter: keine
-# Rückgabe: Pfad zum Frontend-Verzeichnis oder leerer String bei Fehler
-# ------------------------------------------------------------------------------
-get_frontend_dir() {
-    local dir
-    
-    debug "Ermittle Frontend-Verzeichnis" "CLI" "get_frontend_dir"
-    
-    # Prüfen, ob FRONTEND_DIR bereits gesetzt ist
-    if [ -n "$FRONTEND_DIR" ] && [ -d "$FRONTEND_DIR" ]; then
-        debug "Verwende bereits definiertes FRONTEND_DIR: $FRONTEND_DIR" "CLI" "get_frontend_dir"
-        create_directory "$FRONTEND_DIR" || true
-        echo "$FRONTEND_DIR"
-        return 0
-    fi
-    
-    # Standardpfad verwenden
-    dir="$DEFAULT_FRONTEND_DIR"
-    debug "Prüfe Standard-Frontend-Verzeichnis: $dir" "CLI" "get_frontend_dir"
-    
-    if [ -d "$dir" ]; then
-        create_directory "$dir" || true
-        echo "$dir"
-        return 0
-    fi
-    
-    # Fallback auf Systemweb-Verzeichnis
-    dir="$FALLBACK_FRONTEND_DIR"
-    debug "Standard-Frontend-Verzeichnis nicht verfügbar, verwende Fallback: $dir" "CLI" "get_frontend_dir"
-    create_directory "$dir" || true
-    
-    echo "$dir"
-    return 0
-}
+# ---------------------------------------------------------------------------
+# Temp-Verzeichnis
+# ---------------------------------------------------------------------------
 
-# ------------------------------------------------------------------------------
-# get_tmp_dir
-# ------------------------------------------------------------------------------
-# Funktion: Gibt den Pfad zum temporären Verzeichnis zurück
-# Parameter: keine
-# Rückgabe: Pfad zum temporären Verzeichnis oder leerer String bei Fehler
-# ------------------------------------------------------------------------------
 get_tmp_dir() {
+    # -----------------------------------------------------------------------
+    # get_tmp_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum temporären Verzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
     local tmpdir
     local found_dir=0
     
@@ -476,7 +1386,7 @@ get_tmp_dir() {
     
     # Wenn kein Verzeichnis gefunden wurde, den Standardpfad verwenden
     if [ $found_dir -eq 0 ]; then
-        tmpdir="$DEFAULT_TMP_DIR"
+        tmpdir="$DEFAULT_DIR_TMP"
         debug "Prüfe Standard-Temp-Verzeichnis: $tmpdir" "CLI" "get_tmp_dir" >/dev/null 2>&1
         
         if [ -d "$tmpdir" ] || mkdir -p "$tmpdir" 2>/dev/null; then
@@ -501,7 +1411,7 @@ get_tmp_dir() {
     
     if [ $found_dir -eq 0 ]; then
         # Fallback auf System-temp
-        tmpdir="$FALLBACK_TMP_DIR" # /tmp/fotobox_tmp
+        tmpdir="$FALLBACK_DIR_TMP" # /tmp/fotobox_tmp
         if mkdir -p "$tmpdir" 2>/dev/null; then
             debug "Verwende Fallback-System-Temp: $tmpdir" "CLI" "get_tmp_dir" >/dev/null 2>&1
             create_directory "$tmpdir" || true
@@ -547,162 +1457,36 @@ get_tmp_dir() {
     return 0
 }
 
-# ------------------------------------------------------------------------------
-# get_photos_dir
-# ------------------------------------------------------------------------------
-# Funktion: Gibt den Pfad zum Fotos-Verzeichnis zurück
-# Parameter: keine
-# Rückgabe: Pfad zum Fotos-Verzeichnis oder leerer String bei Fehler
-# ------------------------------------------------------------------------------
-get_photos_dir() {
-    debug "Ermittle Fotos-Verzeichnis" "CLI" "get_photos_dir"
-    
-    local frontend_dir
-    frontend_dir=$(get_frontend_dir)
-    
-    local photos_dir="$frontend_dir/photos"
-    debug "Prüfe Standard-Fotos-Verzeichnis: $photos_dir" "CLI" "get_photos_dir"
-    if create_directory "$photos_dir"; then
-        debug "Verwende Standard-Fotos-Verzeichnis: $photos_dir" "CLI" "get_photos_dir"
-        echo "$photos_dir"
-        return 0
-    fi
-    
-    # Fallback zum Datenverzeichnis
-    local data_dir
-    data_dir=$(get_data_dir)
-    debug "Standard-Fotos-Verzeichnis nicht verfügbar, verwende Fallback: $data_dir/photos" "CLI" "get_photos_dir"
-    echo "$data_dir/photos"
-    return 0
-}
-
-# ------------------------------------------------------------------------------
-# get_photos_originals_dir
-# ------------------------------------------------------------------------------
-# Funktion: Gibt den Pfad zum Originalfotos-Verzeichnis zurück
-# Parameter: $1 - (Optional) Name des Events
-# Rückgabe: Pfad zum Originalfotos-Verzeichnis oder leerer String bei Fehler
-# ------------------------------------------------------------------------------
-get_photos_originals_dir() {
-    local event_name="$1"
-    debug "Ermittle Original-Fotos-Verzeichnis" "CLI" "get_photos_originals_dir"
-    
-    local photos_dir
-    photos_dir=$(get_photos_dir)
-    local originals_dir="$photos_dir/originals"
-    
-    debug "Prüfe Originals-Verzeichnis: $originals_dir" "CLI" "get_photos_originals_dir"
-    if create_directory "$originals_dir"; then
-        if [ -n "$event_name" ]; then
-            local event_dir="$originals_dir/$event_name"
-            debug "Event-Name angegeben, prüfe Verzeichnis: $event_dir" "CLI" "get_photos_originals_dir"
-            if create_directory "$event_dir"; then
-                debug "Verwende Event-spezifisches Original-Fotos-Verzeichnis: $event_dir" "CLI" "get_photos_originals_dir"
-                echo "$event_dir"
-                return 0
-            fi
-        else
-            debug "Verwende Standard Original-Fotos-Verzeichnis: $originals_dir" "CLI" "get_photos_originals_dir"
-            echo "$originals_dir"
-            return 0
-        fi
-    fi
-    
-    # Fallback, wenn Event-Verzeichnis nicht erstellt werden konnte
-    debug "Originals-Verzeichnis nicht verfügbar, verwende Fallback: $photos_dir" "CLI" "get_photos_originals_dir"
-    echo "$photos_dir"
-    return 0
-}
-
-# ------------------------------------------------------------------------------
-# get_photos_gallery_dir
-# ------------------------------------------------------------------------------
-# Funktion: Gibt den Pfad zum Galerie-Verzeichnis zurück
-# Parameter: $1 - (Optional) Name des Events
-# Rückgabe: Pfad zum Galerie-Verzeichnis oder leerer String bei Fehler
-# ------------------------------------------------------------------------------
-get_photos_gallery_dir() {
-    local event_name="$1"
-    debug "Ermittle Galerie-Verzeichnis" "CLI" "get_photos_gallery_dir"
-    
-    local photos_dir
-    photos_dir=$(get_photos_dir)
-    local gallery_dir="$photos_dir/gallery"
-    
-    debug "Prüfe Galerie-Verzeichnis: $gallery_dir" "CLI" "get_photos_gallery_dir"
-    if create_directory "$gallery_dir"; then
-        if [ -n "$event_name" ]; then
-            local event_dir="$gallery_dir/$event_name"
-            debug "Event-Name angegeben, prüfe Verzeichnis: $event_dir" "CLI" "get_photos_gallery_dir"
-            if create_directory "$event_dir"; then
-                debug "Verwende Event-spezifisches Galerie-Verzeichnis: $event_dir" "CLI" "get_photos_gallery_dir"
-                echo "$event_dir"
-                return 0
-            fi
-        else
-            debug "Verwende Standard Galerie-Verzeichnis: $gallery_dir" "CLI" "get_photos_gallery_dir"
-            echo "$gallery_dir"
-            return 0
-        fi
-    fi
-    
-    # Fallback, wenn Event-Verzeichnis nicht erstellt werden konnte
-    debug "Galerie-Verzeichnis nicht verfügbar, verwende Fallback: $photos_dir" "CLI" "get_photos_gallery_dir"
-    echo "$photos_dir"
-    return 0
-}
-
-set_script_permissions() {
-    # -----------------------------------------------------------------------
-    # set_script_permissions
-    # -----------------------------------------------------------------------
-    # Funktion: Setzt Ausführbarkeitsrechte für alle Skripte im BASH_DIR
-    # Parameter: keine
-    # Rückgabe: 0 = OK, 1 = Verzeichnis existiert nicht
-    # -----------------------------------------------------------------------
-    local bash_dir="$DEFAULT_BASH_DIR"
-    
-    if [ -n "$BASH_DIR" ]; then
-        bash_dir="$BASH_DIR"
-    fi
-    
-    if [ ! -d "$bash_dir" ]; then
-        debug "BASH_DIR $bash_dir existiert nicht" "CLI" "set_script_permissions"
-        return 1
-    fi
-    
-    debug "Setze Ausführbarkeitsrechte für $bash_dir/*.sh" "CLI" "set_script_permissions"
-    chmod +x "$bash_dir"/*.sh 2>/dev/null || true
-    
-    debug "Ausführbarkeitsrechte erfolgreich gesetzt" "CLI" "set_script_permissions"
-    return 0
-}
+# ---------------------------------------------------------------------------
+# Verzeichnis Struktur sicherstellen
+# ---------------------------------------------------------------------------
 
 ensure_folder_structure() {
     # -----------------------------------------------------------------------
     # ensure_folder_structure
     # -----------------------------------------------------------------------
     # Funktion: Stellt sicher, dass die gesamte Ordnerstruktur existiert
+    # .........  und alle erforderlichen Verzeichnisse angelegt sind
     # Parameter: keine
-    # Rückgabe: 0 bei Erfolg, 1 bei Fehler
+    # Rückgabe.: 0 = Erfolg
+    # .........  1 = Fehler bei einem kritischen Verzeichnis
+    # Extras...: Erstellt Hauptverzeichnisse, Unterverzeichnisse und setzt Berechtigungen
     # -----------------------------------------------------------------------
     debug "Stelle sicher, dass alle notwendigen Verzeichnisse existieren" "CLI" "ensure_folder_structure"
     
     # Hauptverzeichnisse erstellen
     get_install_dir >/dev/null || return 1
-    get_data_dir >/dev/null || return 1
     get_backup_dir >/dev/null || return 1
-    get_log_dir >/dev/null || return 1
-    get_frontend_dir >/dev/null || return 1
     get_config_dir >/dev/null || return 1
+    get_data_dir >/dev/null || return 1
+    get_frontend_dir >/dev/null || return 1
+    get_log_dir >/dev/null || return 1
     
     # Frontend-Unterverzeichnisse erstellen
-    local frontend_dir
-    frontend_dir=$(get_frontend_dir)
-    create_directory "$frontend_dir/css" || true
-    create_directory "$frontend_dir/js" || true
-    create_directory "$frontend_dir/fonts" || true
-    create_directory "$frontend_dir/picture" || true
+    get_frontend_css_dir >/dev/null || true
+    get_frontend_js_dir >/dev/null || true
+    get_frontend_fonts_dir >/dev/null || true
+    get_frontend_picture_dir >/dev/null || true
     
     # Fotos-Verzeichnisstruktur
     get_photos_dir >/dev/null || return 1
@@ -712,7 +1496,15 @@ ensure_folder_structure() {
     # NGINX-Verzeichnisstruktur
     get_nginx_conf_dir >/dev/null || return 1
     get_nginx_backup_dir >/dev/null || return 1
-    
+
+    # HTTPS-Verzeichnisstruktur
+    get_https_conf_dir >/dev/null || return 1
+    get_https_backup_dir >/dev/null || return 1
+
+    # Kamera-Verzeichnisstruktur
+    get_camera_conf_dir >/dev/null || return 1
+    get_script_dir >/dev/null || return 1
+
     # Setze Ausführbarkeitsrechte für Skripte
     set_script_permissions || true
     
@@ -720,283 +1512,8 @@ ensure_folder_structure() {
     return 0
 }
 
-# ------------------------------------------------------------------------------
-# get_config_dir
-# ------------------------------------------------------------------------------
-# Funktion: Gibt den Pfad zum Konfigurationsverzeichnis zurück
-# Parameter: keine
-# Rückgabe: Pfad zum Konfigurationsverzeichnis oder leerer String bei Fehler
-# ------------------------------------------------------------------------------
-get_config_dir() {
-    local dir
-    
-    debug "Ermittle Konfigurations-Verzeichnis" "CLI" "get_config_dir"
-    
-    # Prüfen, ob CONF_DIR bereits gesetzt ist (z.B. vom install.sh)
-    if [ -n "$CONF_DIR" ] && [ -d "$CONF_DIR" ]; then
-        debug "Verwende bereits definiertes CONF_DIR: $CONF_DIR" "CLI" "get_config_dir"
-        create_directory "$CONF_DIR" || true
-        echo "$CONF_DIR"
-        return 0
-    fi
-    
-    # Verwende die in dieser Datei definierten Pfade
-    debug "Prüfe Standard- und Fallback-Pfade für Konfigurations-Verzeichnis" "CLI" "get_config_dir"
-    dir=$(get_folder_path "$DEFAULT_CONF_DIR" "$FALLBACK_CONF_DIR" 1)
-    if [ -n "$dir" ]; then
-        debug "Verwende Pfad für Konfigurations-Verzeichnis: $dir" "CLI" "get_config_dir"
-        echo "$dir"
-        return 0
-    fi
-    
-    # Als absoluten Notfall ein Unterverzeichnis des Installationsverzeichnisses verwenden
-    local install_dir
-    install_dir=$(get_install_dir)
-    debug "Alle Pfade für Konfigurations-Verzeichnis fehlgeschlagen, verwende $install_dir/conf" "CLI" "get_config_dir"
-    echo "$install_dir/conf"
-    return 0
-}
-
-# ------------------------------------------------------------------------------
-# get_backend_dir
-# ------------------------------------------------------------------------------
-# Funktion: Gibt den Pfad zum Backend-Verzeichnis zurück
-# Parameter: keine
-# Rückgabe: Pfad zum Backend-Verzeichnis oder leerer String bei Fehler
-# ------------------------------------------------------------------------------
-get_backend_dir() {
-    local dir
-    
-    debug "Ermittle Backend-Verzeichnis" "CLI" "get_backend_dir"
-    
-    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
-    if [ -n "$BACKEND_DIR" ] && [ -d "$BACKEND_DIR" ]; then
-        debug "Verwende bereits definiertes BACKEND_DIR: $BACKEND_DIR" "CLI" "get_backend_dir"
-        create_directory "$BACKEND_DIR" || true
-        echo "$BACKEND_DIR"
-        return 0
-    fi
-    
-    # Standardpfad verwenden
-    dir="$DEFAULT_BACKEND_DIR"
-    debug "Prüfe Standard-Backend-Verzeichnis: $dir" "CLI" "get_backend_dir"
-    
-    if [ -d "$dir" ]; then
-        create_directory "$dir" || true
-        debug "Verwende Standard-Backend-Verzeichnis: $dir" "CLI" "get_backend_dir"
-        echo "$dir"
-        return 0
-    fi
-    
-    # Fallback auf alternatives Verzeichnis
-    dir="$FALLBACK_BACKEND_DIR"
-    debug "Standard-Backend-Verzeichnis nicht verfügbar, verwende Fallback: $dir" "CLI" "get_backend_dir"
-    create_directory "$dir" || true
-    
-    # Als letzten Ausweg, ein Unterverzeichnis des Install-Verzeichnisses verwenden
-    if [ ! -d "$dir" ]; then
-        local install_dir
-        install_dir=$(get_install_dir)
-        dir="$install_dir/backend"
-        debug "Fallback-Backend-Verzeichnis nicht verfügbar, verwende: $dir" "CLI" "get_backend_dir"
-        create_directory "$dir" || true
-    fi
-    
-    echo "$dir"
-    return 0
-}
-
-# ------------------------------------------------------------------------------
-# get_venv_dir
-# ------------------------------------------------------------------------------
-# Funktion: Gibt den Pfad zum Python Virtual Environment zurück
-# Parameter: keine
-# Rückgabe: Pfad zum Python Virtual Environment oder leerer String bei Fehler
-# ------------------------------------------------------------------------------
-get_venv_dir() {
-    local dir
-    
-    debug "Ermittle Python Virtual Environment-Verzeichnis" "CLI" "get_venv_dir"
-    
-    # Prüfen, ob BACKEND_VENV_DIR bereits gesetzt ist (z.B. vom install.sh)
-    if [ -n "$BACKEND_VENV_DIR" ] && [ -d "$BACKEND_VENV_DIR" ]; then
-        debug "Verwende bereits definiertes BACKEND_VENV_DIR: $BACKEND_VENV_DIR" "CLI" "get_venv_dir"
-        create_directory "$BACKEND_VENV_DIR" || true
-        echo "$BACKEND_VENV_DIR"
-        return 0
-    fi
-    
-    # Standardpfad verwenden
-    dir="$DEFAULT_BACKEND_VENV_DIR"
-    debug "Prüfe Standard-VENV-Verzeichnis: $dir" "CLI" "get_venv_dir"
-    
-    if [ -d "$dir" ]; then
-        create_directory "$dir" || true
-        debug "Verwende Standard-VENV-Verzeichnis: $dir" "CLI" "get_venv_dir"
-        echo "$dir"
-        return 0
-    fi
-    
-    # Fallback auf alternatives Verzeichnis
-    dir="$FALLBACK_BACKEND_VENV_DIR"
-    debug "Standard-VENV-Verzeichnis nicht verfügbar, verwende Fallback: $dir" "CLI" "get_venv_dir"
-    create_directory "$dir" || true
-    
-    # Als letzten Ausweg, ein Unterverzeichnis im Backend-Verzeichnis verwenden
-    if [ ! -d "$dir" ]; then
-        local backend_dir
-        backend_dir=$(get_backend_dir)
-        dir="$backend_dir/venv"
-        debug "Fallback-VENV-Verzeichnis nicht verfügbar, verwende: $dir" "CLI" "get_venv_dir"
-        create_directory "$dir" || true
-    fi
-    
-    echo "$dir"
-    return 0
-}
-
-# ------------------------------------------------------------------------------
-# get_pip_path
-# ------------------------------------------------------------------------------
-# Funktion: Gibt den Pfad zur pip-Binary im Virtual Environment zurück
-# Parameter: keine
-# Rückgabe: Pfad zur pip-Binary oder leerer String bei Fehler
-# ------------------------------------------------------------------------------
-get_pip_path() {
-    local venv_dir
-    debug "Ermittle Pfad zur pip-Binary" "CLI" "get_pip_path"
-    
-    # Hole das Virtual Environment-Verzeichnis
-    venv_dir=$(get_venv_dir)
-    
-    # Standard-Unix/Linux-Pfad
-    local pip_path="$venv_dir/bin/pip"
-    
-    # Prüfe, ob wir auf Unix/Linux oder Windows sind
-    if [ -f "$pip_path" ]; then
-        debug "Verwende Unix/Linux pip-Pfad: $pip_path" "CLI" "get_pip_path"
-        echo "$pip_path"
-        return 0
-    fi
-    
-    # Windows-Pfad prüfen
-    pip_path="$venv_dir/Scripts/pip.exe"
-    if [ -f "$pip_path" ]; then
-        debug "Verwende Windows pip-Pfad: $pip_path" "CLI" "get_pip_path"
-        echo "$pip_path"
-        return 0
-    fi
-    
-    # Python-Pfade ermitteln für python -m pip Fallback
-    local python_path="$venv_dir/bin/python3"
-    if [ ! -f "$python_path" ]; then
-        python_path="$venv_dir/bin/python"
-    fi
-    if [ ! -f "$python_path" ]; then
-        python_path="$venv_dir/Scripts/python.exe"
-    fi
-    
-    # Wenn Python existiert, können wir python -m pip verwenden
-    if [ -f "$python_path" ]; then
-        debug "Verwende Python-Modul für pip: $python_path -m pip" "CLI" "get_pip_path"
-        echo "$python_path -m pip"
-        return 0
-    fi
-    
-    # Als Fallback geben wir einfach "pip" zurück und hoffen, dass es im PATH ist
-    debug "Kein pip im venv gefunden, fallback auf System-pip" "CLI" "get_pip_path"
-    echo "pip"
-    return 0
-}
-
-# ------------------------------------------------------------------------------
-# get_nginx_conf_dir
-# ------------------------------------------------------------------------------
-# Funktion: Gibt den Pfad zum NGINX-Konfigurationsverzeichnis zurück
-# Parameter: keine
-# Rückgabe: Pfad zum NGINX-Konfigurationsverzeichnis oder leerer String bei Fehler
-# ------------------------------------------------------------------------------
-get_nginx_conf_dir() {
-    local dir
-    local config_dir
-    
-    debug "Ermittle NGINX-Konfigurations-Verzeichnis" "CLI" "get_nginx_conf_dir"
-    
-    # Zuerst den übergeordneten Konfigurationsordner ermitteln
-    config_dir=$(get_config_dir)
-    
-    # Prüfen, ob NGINX_CONF_DIR bereits gesetzt ist
-    if [ -n "$NGINX_CONF_DIR" ] && [ -d "$NGINX_CONF_DIR" ]; then
-        debug "Verwende bereits definiertes NGINX_CONF_DIR: $NGINX_CONF_DIR" "CLI" "get_nginx_conf_dir"
-        # Setze explizit die Standard-Berechtigungen (755)
-        create_directory "$NGINX_CONF_DIR" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
-        echo "$NGINX_CONF_DIR"
-        return 0
-    fi
-    
-    # Verwende die in lib_core definierten Pfade
-    debug "Prüfe Standard- und Fallback-Pfade für NGINX-Konfigurations-Verzeichnis" "CLI" "get_nginx_conf_dir"
-    dir=$(get_folder_path "$DEFAULT_NGINX_CONF_DIR" "$FALLBACK_NGINX_CONF_DIR" 1)
-    if [ -n "$dir" ]; then
-        debug "Verwende Pfad für NGINX-Konfigurations-Verzeichnis: $dir" "CLI" "get_nginx_conf_dir"
-        # Setze explizit die Standard-Berechtigungen (755)
-        create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
-        echo "$dir"
-        return 0
-    fi
-    
-    # Als Fallback ein Unterverzeichnis im Konfigurations-Verzeichnis verwenden
-    dir="$config_dir/nginx"
-    debug "Fallback für NGINX-Konfigurations-Verzeichnis: $dir" "CLI" "get_nginx_conf_dir"
-    # Setze explizit die Standard-Berechtigungen (755)
-    create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
-    echo "$dir"
-    return 0
-}
-
-# ------------------------------------------------------------------------------
-# get_nginx_backup_dir
-# ------------------------------------------------------------------------------
-# Funktion: Gibt den Pfad zum NGINX-Backup-Verzeichnis zurück
-# Parameter: keine
-# Rückgabe: Pfad zum NGINX-Backup-Verzeichnis oder leerer String bei Fehler
-# ------------------------------------------------------------------------------
-get_nginx_backup_dir() {
-    local dir
-    local backup_dir
-    
-    debug "Ermittle NGINX-Backup-Verzeichnis" "CLI" "get_nginx_backup_dir"
-    
-    # Zuerst das generelle Backup-Verzeichnis ermitteln
-    backup_dir=$(get_backup_dir)
-    
-    # Prüfen, ob NGINX_BACKUP_DIR bereits gesetzt ist
-    if [ -n "$NGINX_BACKUP_DIR" ] && [ -d "$NGINX_BACKUP_DIR" ]; then
-        debug "Verwende bereits definiertes NGINX_BACKUP_DIR: $NGINX_BACKUP_DIR" "CLI" "get_nginx_backup_dir"
-        create_directory "$NGINX_BACKUP_DIR" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
-        echo "$NGINX_BACKUP_DIR"
-        return 0
-    fi
-    
-    # Verwende die in lib_core definierten Pfade
-    debug "Prüfe Standard- und Fallback-Pfade für NGINX-Backup-Verzeichnis" "CLI" "get_nginx_backup_dir"
-    dir=$(get_folder_path "$DEFAULT_NGINX_BACKUP_DIR" "$FALLBACK_NGINX_BACKUP_DIR" 1)
-    if [ -n "$dir" ]; then
-        debug "Verwende Pfad für NGINX-Backup-Verzeichnis: $dir" "CLI" "get_nginx_backup_dir"
-        # Setze restriktivere Berechtigungen für das Backup-Verzeichnis (nur Besitzer und Gruppe haben Zugriff)
-        create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
-        echo "$dir"
-        return 0
-    fi
-    
-    # Als Fallback ein Unterverzeichnis im allgemeinen Backup-Verzeichnis verwenden
-    dir="$backup_dir/nginx"
-    debug "Fallback für NGINX-Backup-Verzeichnis: $dir" "CLI" "get_nginx_backup_dir"
-    # Setze restriktivere Berechtigungen für das Backup-Verzeichnis (nur Besitzer und Gruppe haben Zugriff)
-    create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
-    echo "$dir"
-    return 0
-}
-
-# Markiere dieses Modul als geladen
+# ---------------------------------------------------------------------------
+# Abschluss: Markiere dieses Modul als geladen
+# ---------------------------------------------------------------------------
 MANAGE_FOLDERS_LOADED=1
+

@@ -188,6 +188,93 @@ set_nginx_cnf_external_txt_0008="NGINX-Konfiguration konnte nach externer Integr
 # ===========================================================================
 
 # ===========================================================================
+# Funktionen zur Template-Verarbeitung
+# ===========================================================================
+
+apply_template() {
+    # -----------------------------------------------------------------------
+    # apply_template
+    # -----------------------------------------------------------------------
+    # Funktion: Lädt eine Template-Datei und ersetzt Platzhalter
+    # Parameter: $1 = Pfad zur Template-Datei
+    #            $2 = Ausgabepfad
+    #            Rest: Name-Wert-Paare für Ersetzungen (NAME=value)
+    # Rückgabe:  0 = OK, 1 = Template nicht gefunden
+    # Seiteneffekte: Schreibt die verarbeitete Template-Datei
+    # -----------------------------------------------------------------------
+    local template_file="$1"
+    local output_file="$2"
+    shift 2
+    
+    if [ ! -f "$template_file" ]; then
+        log "Template-Datei nicht gefunden: $template_file"
+        return 1
+    fi
+    
+    # Template in Variable laden
+    local content
+    content=$(cat "$template_file")
+    
+    # Ersetzungen durchführen
+    for pair in "$@"; do
+        local name="${pair%%=*}"
+        local value="${pair#*=}"
+        # Platzhalter im Format {{NAME}} ersetzen
+        content=$(echo "$content" | sed "s|{{$name}}|$value|g")
+    done
+    
+    # In Ausgabedatei schreiben
+    echo "$content" > "$output_file"
+    return 0
+}
+
+get_nginx_template_path() {
+    # -----------------------------------------------------------------------
+    # get_nginx_template_path
+    # -----------------------------------------------------------------------
+    # Funktion: Ermittelt den Pfad zu einer bestimmten NGINX-Template-Datei
+    # Parameter: $1 = Template-Typ (local, internal, external)
+    # Rückgabe:  Pfad zur NGINX-Template-Datei
+    # -----------------------------------------------------------------------
+    local template_type="${1:-internal}"
+    local manage_folders_sh
+    local template_file
+    
+    # Verwende manage_folders.sh, falls verfügbar
+    manage_folders_sh="$(dirname "$0")/manage_folders.sh"
+    
+    if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
+        # Hole NGINX-Konfigurationsverzeichnis
+        local nginx_conf_dir
+        nginx_conf_dir="$("$manage_folders_sh" get_nginx_conf_dir)"
+        template_file="$nginx_conf_dir/template_${template_type}.conf"
+        
+        # Prüfe, ob die Datei existiert
+        if [ ! -f "$template_file" ]; then
+            log "Template-Datei nicht gefunden: $template_file"
+            template_file="" # Leerer String als Fehlerindikator
+        fi
+    else
+        log "manage_folders.sh nicht verfügbar"
+        
+        # Fallback: Versuche manuelle Pfaderstellung
+        if [ -n "$DEFAULT_DIR_CONF_NGINX" ]; then
+            template_file="$DEFAULT_DIR_CONF_NGINX/template_${template_type}.conf"
+        else
+            template_file="" # Leerer String als Fehlerindikator
+        fi
+        
+        # Prüfe, ob die Datei existiert im Fallback
+        if [ -n "$template_file" ] && [ ! -f "$template_file" ]; then
+            log "Template-Datei im Fallback-Pfad nicht gefunden: $template_file"
+            template_file="" # Leerer String als Fehlerindikator
+        fi
+    fi
+    
+    echo "$template_file"
+}
+
+# ===========================================================================
 # Hilfsfunktionen
 # ===========================================================================
 
@@ -262,7 +349,9 @@ backup_nginx_config() {
         backup_dir="$("$manage_folders_sh" get_nginx_backup_dir)"
     else
         # Fallback zur alten Methode
-        backup_dir="/opt/fotobox/backup/nginx"
+        backup_dir="$FALLBACK_DIR_BACKUP_NGINX"
+        # Falls auch FALLBACK_DIR_BACKUP_NGINX nicht definiert ist
+        [ -z "$backup_dir" ] && backup_dir="/opt/fotobox/backup/nginx"
     fi
     
     local timestamp
@@ -722,9 +811,17 @@ get_nginx_webroot_path() {
         conf_file="/etc/nginx/conf.d/nginx-fotobox.conf"
     fi
     if [ -n "$conf_file" ]; then
+        # Bestimme den Frontend-Pfad über manage_folders
+        local frontend_path
+        if [ -f "$(dirname "$0")/manage_folders.sh" ] && [ -x "$(dirname "$0")/manage_folders.sh" ]; then
+            frontend_path="$($(dirname "$0")/manage_folders.sh get_frontend_dir)"
+        else
+            frontend_path="${DEFAULT_DIR_FRONTEND:-/opt/fotobox/frontend}"
+        fi
+        
         # Prüfe zuerst, ob wir eine direkte root-Direktive ohne spezifischen Location-Block haben
         local has_root_directive
-        has_root_directive=$(grep -E "^[[:space:]]*root[[:space:]]+/opt/fotobox/frontend;" "$conf_file")
+        has_root_directive=$(grep -E "^[[:space:]]*root[[:space:]]+${frontend_path};" "$conf_file")
         local has_location_block
         has_location_block=$(grep -E 'location[[:space:]]+/[^[:space:]/]+' "$conf_file" | grep -v '/api' | grep -v '/photos')
         
@@ -910,7 +1007,15 @@ set_nginx_cnf_internal() {
     log_or_json "$mode" "success" "$set_nginx_cnf_internal_txt_0004" 0
     # Prüfen, ob Fotobox-Block bereits vorhanden ist
     if ! grep -q "# Fotobox-Integration BEGIN" "$default_conf"; then
-        sed -i '/^}/i \\n    # Fotobox-Integration BEGIN\n    location /fotobox/ {\n        alias /opt/fotobox/frontend/;\n        index start.html index.html;\n    }\n    location /fotobox/api/ {\n        proxy_pass http://127.0.0.1:5000/;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto $scheme;\n    }\n    # Fotobox-Integration END\n' "$default_conf"
+        # Bestimme den Frontend-Pfad über manage_folders
+        local frontend_path
+        if [ -f "$(dirname "$0")/manage_folders.sh" ] && [ -x "$(dirname "$0")/manage_folders.sh" ]; then
+            frontend_path="$($(dirname "$0")/manage_folders.sh get_frontend_dir)"
+        else
+            frontend_path="${DEFAULT_DIR_FRONTEND:-/opt/fotobox/frontend}"
+        fi
+        
+        sed -i "/^}/i \\n    # Fotobox-Integration BEGIN\\n    location /fotobox/ {\\n        alias $frontend_path/;\\n        index start.html index.html;\\n    }\\n    location /fotobox/api/ {\\n        proxy_pass http://127.0.0.1:5000/;\\n        proxy_set_header Host \$host;\\n        proxy_set_header X-Real-IP \$remote_addr;\\n        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\\n        proxy_set_header X-Forwarded-Proto \$scheme;\\n    }\\n    # Fotobox-Integration END\\n" "$default_conf"
         log_or_json "$mode" "success" "$set_nginx_cnf_internal_txt_0005" 0
     else
         log_or_json "$mode" "info" "$set_nginx_cnf_internal_txt_0006" 0
@@ -938,7 +1043,7 @@ set_nginx_cnf_external() {
     # Rückgabe: 0 = OK, 1 = Fehler, 2 = Backup-Fehler, 4 = Reload-Fehler, 10 = Symlink-Fehler
     local mode="$1"
     local nginx_dst="/etc/nginx/sites-available/fotobox"
-    local conf_src="/opt/fotobox/conf/nginx-fotobox.conf"
+    local conf_src="$(get_nginx_template_file fotobox)"
 
     log "${set_nginx_cnf_external_txt_0001}"
     # Prüfen, ob bereits eine Zielkonfiguration existiert
@@ -991,25 +1096,25 @@ get_nginx_template_file() {
         conf_file="$nginx_conf_dir/template_$template_type.conf"
         
         # Prüfe, ob die Datei existiert, sonst Fallback auf Standardvorlage
-        if [ ! -f "$conf_file" ]; then
+        if [ -f "$conf_file" ]; then
+            echo "$conf_file"
+            return 0
+        else
             # Fallback: Datei aus conf-Verzeichnis kopieren, falls verfügbar
             local conf_dir
             conf_dir="$("$manage_folders_sh" config_dir)"
             if [ -f "$conf_dir/nginx-$template_type.conf" ]; then
                 mkdir -p "$nginx_conf_dir"
-                cp "$conf_dir/nginx-$template-type.conf" "$conf_file"
+                cp "$conf_dir/nginx-$template_type.conf" "$conf_file"
                 log "NGINX-Template wurde in das neue Verzeichnis kopiert: $conf_file"
-            else
-                # Fallback zur alten Methode
-                conf_file="/opt/fotobox/conf/nginx-$template_type.conf"
+                echo "$conf_file"
+                return 0
             fi
         fi
-    else
-        # Fallback zur alten Methode
-        conf_file="/opt/fotobox/conf/nginx-$template_type.conf"
     fi
     
-    echo "$conf_file"
+    # Fallback zur alten Methode
+    echo "/opt/fotobox/conf/nginx-$template_type.conf"
     return 0
 }
 
@@ -1390,68 +1495,46 @@ improved_nginx_install() {
         # oder eine komplett neue Konfiguration anlegen
         
         # Variante: Neue Konfiguration erstellen und aktivieren
-        local nginx_template
+        local nginx_content
         local config_name="fotobox"
         local priority=50
+        local template_path
         
-        # Template aus Konfigurationsverzeichnis laden
-        local conf_src="/opt/fotobox/conf/nginx-fotobox.conf"
+        # Template-Datei suchen
+        template_path=$(get_nginx_template_path "internal")
         
-        if [ -f "$conf_src" ]; then
-            nginx_template=$(cat "$conf_src")
+        if [ -n "$template_path" ] && [ -f "$template_path" ]; then
+            # Template-Datei gefunden, Platzhalter ersetzen
+            local temp_file="/tmp/nginx-fotobox-$$.conf"
+            
+            # Template anwenden mit Platzhalterersetzung
+            apply_template "$template_path" "$temp_file" \
+                "PORT=$port" \
+                "SERVER_NAME=_" \
+                "DOCUMENT_ROOT=/opt/fotobox/frontend" \
+                "INDEX_FILE=start.html index.html" \
+                "API_URL=http://127.0.0.1:5000"
+                
+            nginx_content=$(cat "$temp_file")
+            rm -f "$temp_file"
         else
-            # Fallback auf Default-Template
-            nginx_template=$(cat << EOF
-server {
+            log "Keine Template-Datei gefunden, verwende eingebautes Template"
+            # Fallback auf einfaches Template
+            nginx_content="server {
     listen $port;
     server_name _;
 
     root /opt/fotobox/frontend;
     index start.html index.html;
     
-    # Cache-Kontrolle für Testphase
-    add_header Cache-Control "no-cache, no-store, must-revalidate";
-    add_header Pragma "no-cache";
-    add_header Expires "0";
-    add_header X-Fotobox-Test-Mode "active";
-
-    # Saubere URLs für statische Seiten
-    location = /capture {
-        try_files /capture.html =404;
-    }
-    location = /gallery {
-        try_files /gallery.html =404;
-    }
-    location = /settings {
-        try_files /settings.html =404;
-    }
-    location = /installation {
-        try_files /install.html =404;
-    }
-    location = /contact {
-        try_files /contact.html =404;
-    }
-
     location / {
         try_files \$uri \$uri/ =404;
     }
 
-    # API-Requests an das Backend weiterleiten
     location /api/ {
         proxy_pass http://127.0.0.1:5000;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
     }
-
-    # Fotos aus Backend-Verzeichnis bereitstellen
-    location /photos/ {
-        proxy_pass http://127.0.0.1:5000/photos/;
-    }
-}
-EOF
-)
+}"
         fi
         
         # Anpassen des Ports im Template, falls nötig
@@ -1481,16 +1564,37 @@ EOF
             port=$alt_port
         fi
         
-        # Template aus Konfigurationsverzeichnis laden und Port anpassen
-        local conf_src="/opt/fotobox/conf/nginx-fotobox.conf"
+        local template_path
         local nginx_template
+        local temp_file="/tmp/nginx-fotobox-$$.conf"
         
-        if [ -f "$conf_src" ]; then
-            nginx_template=$(cat "$conf_src")
+        # Template-Datei für externe Konfiguration suchen
+        template_path=$(get_nginx_template_path "external")
+        
+        if [ -n "$template_path" ] && [ -f "$template_path" ]; then
+            # Template-Datei gefunden, Platzhalter ersetzen
+            
+            # Template anwenden mit Platzhalterersetzung
+            apply_template "$template_path" "$temp_file" \
+                "PORT=$port" \
+                "SERVER_NAME=_" \
+                "DOCUMENT_ROOT=/opt/fotobox/frontend" \
+                "INDEX_FILE=start.html index.html" \
+                "API_URL=http://127.0.0.1:5000"
+                
+            nginx_template=$(cat "$temp_file")
+            rm -f "$temp_file"
         else
-            # Fallback auf Default-Template
-            nginx_template=$(cat << EOF
-server {
+            log "Keine externe Template-Datei gefunden, verwende eingebautes Template"
+            # Fallback auf Default-Template-Datei oder eingebautes Template
+            local conf_src="$(get_nginx_template_file fotobox)"
+            if [ -f "$conf_src" ]; then
+                nginx_template=$(cat "$conf_src")
+                # Port im Template anpassen
+                nginx_template=$(echo "$nginx_template" | sed -E "s/listen [0-9]+;/listen $port;/")
+            else
+                # Eingebautes Fallback-Template
+                nginx_template="server {
     listen $port;
     server_name _;
 
@@ -1498,10 +1602,10 @@ server {
     index start.html index.html;
     
     # Cache-Kontrolle für Testphase
-    add_header Cache-Control "no-cache, no-store, must-revalidate";
-    add_header Pragma "no-cache";
-    add_header Expires "0";
-    add_header X-Fotobox-Test-Mode "active";
+    add_header Cache-Control \"no-cache, no-store, must-revalidate\";
+    add_header Pragma \"no-cache\";
+    add_header Expires \"0\";
+    add_header X-Fotobox-Test-Mode \"active\";
 
     # Saubere URLs für statische Seiten
     location = /capture {
@@ -1534,17 +1638,12 @@ server {
     }
 
     # Fotos aus Backend-Verzeichnis bereitstellen
-
     location /photos/ {
         proxy_pass http://127.0.0.1:5000/photos/;
     }
-}
-EOF
-)
+}"
+            fi
         fi
-        
-        # Port im Template anpassen
-        nginx_template=$(echo "$nginx_template" | sed -E "s/listen [0-9]+;/listen $port;/")
         
         # Konfiguration mit höherer Priorität hinzufügen (niedrigere Zahl)
         local config_name="fotobox"
