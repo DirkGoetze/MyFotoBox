@@ -20,8 +20,6 @@
 # Siehe: .manage_backend_service.todo
 # ===============================================================================
 
-# ... Skript-Logik folgt ...
-
 # ===========================================================================
 # Hilfsfunktionen zur Einbindung externer Skript-Ressourcen
 # ===========================================================================
@@ -59,6 +57,8 @@ SYSTEMD_DST="/etc/systemd/system/fotobox-backend.service"
 # Konfigurationsvariablen aus lib_core.sh werden verwendet
 # Debug-Modus für dieses Skript (lokales Flag)
 DEBUG_MOD_LOCAL=0  # Nur für dieses Skript
+
+# ... Skript-Logik folgt ...
 
 # Markiere dieses Modul als geladen
 MANAGE_BACKEND_SERVICE_LOADED=1

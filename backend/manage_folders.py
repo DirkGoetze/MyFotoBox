@@ -6,6 +6,13 @@
 # Funktion: Python-Wrapper für die zentrale Ordnerverwaltung (manage_folders.sh)
 # Erlaubt Python-Modulen den einheitlichen Zugriff auf die Ordnerstruktur.
 # ------------------------------------------------------------------------------
+"""
+Modul zur Verwaltung der Fotobox-Ordnerstruktur.
+
+Dieses Modul stellt Funktionen zum Zugriff auf die Ordnerstruktur der Fotobox bereit.
+Es dient als Python-Wrapper für die Shell-Implementierung (manage_folders.sh) und
+bietet einen einheitlichen Zugriff auf Verzeichnispfade in der gesamten Anwendung.
+"""
 
 import os
 import subprocess
@@ -15,14 +22,15 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # Globale Instanz des FolderManagers für die Zugangsfunktionen
-_folder_manager = None
+_FOLDER_MANAGER = None
 
 def _get_folder_manager():
     """Liefert eine singleton Instanz des FolderManagers"""
-    global _folder_manager
-    if _folder_manager is None:
-        _folder_manager = FolderManager()
-    return _folder_manager
+    # pylint: disable=global-statement
+    global _FOLDER_MANAGER
+    if _FOLDER_MANAGER is None:
+        _FOLDER_MANAGER = FolderManager()
+    return _FOLDER_MANAGER
 
 # Globale Funktionen für den einfachen Import in anderen Modulen
 def get_install_dir() -> str:
@@ -95,16 +103,15 @@ def get_https_backup_dir() -> str:
 
 def ensure_folder_structure() -> bool:
     """
-    # ----------------------------------------------------------------------------
-    # ensure_folder_structure
-    # ----------------------------------------------------------------------------
-    # Funktion: Stellt sicher, dass die gesamte Ordnerstruktur existiert und
-    #          alle benötigten Verzeichnisse mit korrekten Berechtigungen angelegt sind
-    # Parameter: keine
-    # Rückgabe: True bei erfolgreicher Erstellung aller Verzeichnisse, 
-    #          False bei einem Fehler
-    # Extras..: Verwendet die Shell-Implementierung falls verfügbar,
-    #          mit Python-Fallback wenn die Shell-Skripte nicht erreichbar sind
+    Stellt sicher, dass die gesamte Ordnerstruktur existiert und
+    alle benötigten Verzeichnisse mit korrekten Berechtigungen angelegt sind
+
+    Returns:
+        True bei erfolgreicher Erstellung aller Verzeichnisse, False bei einem Fehler
+
+    Notes:
+        Verwendet die Shell-Implementierung falls verfügbar,
+        mit Python-Fallback wenn die Shell-Skripte nicht erreichbar sind
     """
     return _get_folder_manager().ensure_folder_structure()
 
@@ -112,64 +119,64 @@ class FolderManager:
     """
     Verwaltet die Ordnerstruktur für die Fotobox durch Zugriff auf manage_folders.sh
     """
-    
+
     def __init__(self):
         """Initialisiert den FolderManager"""
-        self._script_path = os.path.join(os.path.dirname(__file__), 'scripts', 'manage_folders.sh')
-        
+        self._script_path = os.path.join(
+            os.path.dirname(__file__), 'scripts', 'manage_folders.sh'
+        )
+
         # Prüfen, ob das Skript existiert und ausführbar ist
         if not os.path.isfile(self._script_path):
-            logger.warning(f"manage_folders.sh nicht gefunden unter {self._script_path}")
+            logger.warning("manage_folders.sh nicht gefunden unter %s", self._script_path)
             # Fallback zur alten Struktur (für Abwärtskompatibilität)
             self._script_path = None
         elif not os.access(self._script_path, os.X_OK):
             try:
                 os.chmod(self._script_path, 0o755)
-            except Exception as e:
-                logger.warning(f"Konnte manage_folders.sh nicht ausführbar machen: {e}")
-                # Wir setzen das Skript nicht auf None, damit wir es trotzdem mit bash aufrufen können
+            except OSError as e:
+                logger.warning("Konnte manage_folders.sh nicht ausführbar machen: %s", e)
+                # Skript nicht auf None setzen, damit wir es mit bash aufrufen können
 
-    def _run_command(self, command: str, param: Optional[str] = None) -> str:
+    def _run_command(self, cmd_name: str, cmd_param: Optional[str] = None) -> str:
         """
-        Führt einen Befehl in manage_folders.sh aus und gibt die Ausgabe zurück
-        
-        Args:
-            command: Der auszuführende Befehl
-            param: Optionaler Parameter für den Befehl
-            
+        Führt einen Befehl in manage_folders.sh aus und gibt die Ausgabe zurück        Args:
+            cmd_name: Der auszuführende Befehl
+            cmd_param: Optionaler Parameter für den Befehl
+
         Returns:
             Die Ausgabe des Befehls oder einen Fallback-Pfad bei Fehler
         """
         if not self._script_path:
             # Fallback zur alten Struktur, wenn das Skript nicht verfügbar ist
-            return self._get_fallback_path(command)
-            
+            return self._get_fallback_path(cmd_name)
+
         try:
-            cmd = ['bash', self._script_path, command]
-            if param:
-                cmd.append(param)
-                
+            cmd = ['bash', self._script_path, cmd_name]
+            if cmd_param:
+                cmd.append(cmd_param)
+
             result = subprocess.check_output(cmd, stderr=subprocess.STDOUT, universal_newlines=True)
             return result.strip()
         except subprocess.CalledProcessError as e:
-            logger.error(f"Fehler beim Ausführen von {command}: {e}")
-            return self._get_fallback_path(command)
-        except Exception as e:
-            logger.error(f"Unerwarteter Fehler: {e}")
-            return self._get_fallback_path(command)
+            logger.error("Fehler beim Ausführen von %s: %s", cmd_name, e)
+            return self._get_fallback_path(cmd_name)
+        except OSError as e:
+            logger.error("Unerwarteter Fehler: %s", e)
+            return self._get_fallback_path(cmd_name)
 
-    def _get_fallback_path(self, command: str) -> str:
+    def _get_fallback_path(self, cmd_name: str) -> str:
         """
         Liefert einen Fallback-Pfad basierend auf dem angeforderten Befehl
-        
+
         Args:
-            command: Der angeforderte Befehl
-            
+            cmd_name: Der angeforderte Befehl
+
         Returns:
             Ein Fallback-Pfad für den angeforderten Befehl
         """
         base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-          # Mapping von Befehlen zu Fallback-Pfaden
+        # Mapping von Befehlen zu Fallback-Pfaden
         fallbacks = {
             'install_dir': base_dir,
             'data_dir': os.path.join(base_dir, 'data'),
@@ -188,16 +195,16 @@ class FolderManager:
             'https_conf_dir': os.path.join(base_dir, 'conf', 'https'),
             'https_backup_dir': os.path.join(base_dir, 'backup', 'https'),
         }
-        
-        return fallbacks.get(command, base_dir)
-    
+
+        return fallbacks.get(cmd_name, base_dir)
+
     def ensure_dir(self, path: str) -> bool:
         """
         Stellt sicher, dass ein Verzeichnis existiert
-        
+
         Args:
             path: Der zu prüfende und ggf. zu erstellende Pfad
-            
+
         Returns:
             True, wenn das Verzeichnis existiert oder erstellt wurde, sonst False
         """
@@ -205,8 +212,8 @@ class FolderManager:
             if not os.path.exists(path):
                 os.makedirs(path, exist_ok=True)
             return os.path.isdir(path)
-        except Exception as e:
-            logger.error(f"Fehler beim Erstellen des Verzeichnisses {path}: {e}")
+        except OSError as e:
+            logger.error("Fehler beim Erstellen des Verzeichnisses %s: %s", path, e)
             return False
 
     def get_install_dir(self) -> str:
@@ -214,87 +221,83 @@ class FolderManager:
         path = self._run_command('install_dir')
         self.ensure_dir(path)
         return path
-    
+
     def get_data_dir(self) -> str:
         """Gibt den Pfad zum Datenverzeichnis zurück"""
         path = self._run_command('data_dir')
         self.ensure_dir(path)
         return path
-    
+
     def get_backup_dir(self) -> str:
         """Gibt den Pfad zum Backup-Verzeichnis zurück"""
         path = self._run_command('backup_dir')
         self.ensure_dir(path)
         return path
-    
+
     def get_log_dir(self) -> str:
         """Gibt den Pfad zum Log-Verzeichnis zurück"""
         path = self._run_command('log_dir')
         self.ensure_dir(path)
         return path
-    
+
     def get_frontend_dir(self) -> str:
         """Gibt den Pfad zum Frontend-Verzeichnis zurück"""
         path = self._run_command('frontend_dir')
         self.ensure_dir(path)
         return path
-    
+
     def get_config_dir(self) -> str:
         """Gibt den Pfad zum Konfigurationsverzeichnis zurück"""
         path = self._run_command('config_dir')
         self.ensure_dir(path)
         return path
-    
+
     def get_camera_conf_dir(self) -> str:
         """Gibt den Pfad zum Kamera-Konfigurationsverzeichnis zurück"""
         path = self._run_command('camera_conf_dir')
         self.ensure_dir(path)
         return path
-    
+
     def get_photos_dir(self) -> str:
         """Gibt den Pfad zum Fotos-Verzeichnis zurück"""
         path = self._run_command('photos_dir')
         self.ensure_dir(path)
         return path
-    
+
     def get_photos_originals_dir(self, event_name: Optional[str] = None) -> str:
         """
         Gibt den Pfad zum Originalfotos-Verzeichnis zurück
-        
+
         Args:
             event_name: Optionaler Event-Name für ein Unterverzeichnis
-            
+
         Returns:
             Pfad zum Originalfotos-Verzeichnis
         """
         if event_name:
             path = self._run_command('photos_originals_dir', event_name)
-            self.ensure_dir(path)
-            return path
         else:
             path = self._run_command('photos_originals_dir')
-            self.ensure_dir(path)
-            return path
-    
+        self.ensure_dir(path)
+        return path
+
     def get_photos_gallery_dir(self, event_name: Optional[str] = None) -> str:
         """
         Gibt den Pfad zum Galerie-Verzeichnis zurück
-        
+
         Args:
             event_name: Optionaler Event-Name für ein Unterverzeichnis
-            
+
         Returns:
             Pfad zum Galerie-Verzeichnis
         """
         if event_name:
             path = self._run_command('photos_gallery_dir', event_name)
-            self.ensure_dir(path)
-            return path
         else:
             path = self._run_command('photos_gallery_dir')
-            self.ensure_dir(path)
-            return path
-    
+        self.ensure_dir(path)
+        return path
+
     def get_frontend_css_dir(self) -> str:
         """Gibt den Pfad zum Frontend-CSS-Verzeichnis zurück"""
         path = self._run_command('frontend_css_dir')
@@ -324,31 +327,30 @@ class FolderManager:
         path = self._run_command('script_dir')
         self.ensure_dir(path)
         return path
-    
+
     def get_https_conf_dir(self) -> str:
         """Gibt den Pfad zum HTTPS-Konfigurations-Verzeichnis zurück"""
         path = self._run_command('https_conf_dir')
         self.ensure_dir(path)
         return path
-        
+
     def get_https_backup_dir(self) -> str:
         """Gibt den Pfad zum HTTPS-Backup-Verzeichnis zurück"""
         path = self._run_command('https_backup_dir')
         self.ensure_dir(path)
         return path
-        
+
     def ensure_folder_structure(self) -> bool:
         """
-        # ----------------------------------------------------------------------------
-        # ensure_folder_structure
-        # ----------------------------------------------------------------------------
-        # Funktion: Stellt sicher, dass die gesamte Ordnerstruktur existiert und
-        #          alle benötigten Verzeichnisse mit korrekten Berechtigungen angelegt sind
-        # Parameter: keine
-        # Rückgabe: True bei erfolgreicher Erstellung aller Verzeichnisse,
-        #          False bei einem Fehler
-        # Extras..: Verwendet die Shell-Implementierung falls verfügbar,
-        #          mit Python-Fallback wenn die Shell-Skripte nicht erreichbar sind
+        Stellt sicher, dass die gesamte Ordnerstruktur existiert und
+        alle benötigten Verzeichnisse mit korrekten Berechtigungen angelegt sind
+
+        Returns:
+            True bei erfolgreicher Erstellung aller Verzeichnisse, False bei einem Fehler
+
+        Notes:
+            Verwendet die Shell-Implementierung falls verfügbar,
+            mit Python-Fallback wenn die Shell-Skripte nicht erreichbar sind
         """
         if not self._script_path:
             # Manuelles Erstellen der Struktur, wenn das Skript nicht verfügbar ist
@@ -360,12 +362,12 @@ class FolderManager:
                 self.ensure_dir(self.get_log_dir())
                 self.ensure_dir(self.get_frontend_dir())
                 self.ensure_dir(self.get_config_dir())
-                
+
                 # Photos-Verzeichnisse
                 self.ensure_dir(self.get_photos_dir())
                 self.ensure_dir(self.get_photos_originals_dir())
                 self.ensure_dir(self.get_photos_gallery_dir())
-                
+
                 # Kamera-Verzeichnis
                 self.ensure_dir(self.get_camera_conf_dir())
                 # Frontend-Unterverzeichnisse
@@ -379,40 +381,34 @@ class FolderManager:
                 self.ensure_dir(self.get_https_conf_dir())
                 self.ensure_dir(self.get_https_backup_dir())
                 return True
-            except Exception as e:
-                logger.error(f"Fehler beim Erstellen der Ordnerstruktur: {e}")
+            except OSError as e:
+                logger.error("Fehler beim Erstellen der Ordnerstruktur: %s", e)
                 return False
-        
+
         try:
-            result = subprocess.run(['bash', self._script_path, 'ensure_structure'], 
-                                    check=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+            subprocess.run(
+                ['bash', self._script_path, 'ensure_structure'],
+                check=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE
+            )
             return True
         except subprocess.CalledProcessError as e:
-            logger.error(f"Fehler beim Erstellen der Ordnerstruktur: {e.stderr.decode()}")
+            logger.error("Fehler beim Erstellen der Ordnerstruktur: %s", e.stderr.decode())
             return False
 
 
-# Die Funktionen im Modul wurden bereits am Anfang der Datei definiert
-# Sie rufen direkt _get_folder_manager() auf, was die FolderManager-Instanz als Singleton zurückgibt
-# Die doppelte Definition hier ist unnötig und würde zu Fehlern führen, da folder_manager nicht definiert ist
-
-
-if __name__ == "__main__":
-    """
-    Bei direktem Aufruf des Skripts werden einige Tests durchgeführt
-    """
+if __name__ == "__main__":    # Bei direktem Aufruf des Skripts werden einige Tests durchgeführt
     import sys
-    
+
     # Einfaches Logging einrichten
     logging.basicConfig(level=logging.INFO)
-    
+
     if len(sys.argv) > 1:
         # Aufruf mit Parametern
         command = sys.argv[1]
         param = sys.argv[2] if len(sys.argv) > 2 else None
-        
+
         fm = FolderManager()
-        
+
         if command == "install_dir":
             print(fm.get_install_dir())
         elif command == "data_dir":
@@ -460,5 +456,5 @@ if __name__ == "__main__":
         print(f"Frontend-Fonts-Verzeichnis:    {fm.get_frontend_fonts_dir()}")
         print(f"Frontend-Bilder-Verzeichnis:   {fm.get_frontend_picture_dir()}")
         print(f"Script-Verzeichnis:            {fm.get_script_dir()}")
-        print(f"HTTPS-Konfigurations-Verzeichnis:{fm.get_https_conf_dir()}")
+        print(f"HTTPS-Konfigurations-Verzeichnis: {fm.get_https_conf_dir()}")
         print(f"HTTPS-Backup-Verzeichnis:      {fm.get_https_backup_dir()}")
