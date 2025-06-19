@@ -1789,6 +1789,21 @@ Das Shell-Modul `manage_nginx.sh` stellt wesentliche Funktionen zur Verwaltung d
   - `get_nginx_backup_dir()`: Gibt den Pfad zum NGINX-Backup-Verzeichnis zurück (Berechtigungen: 750)
   - `get_nginx_template_file()`: Ermittelt den Pfad zur benötigten Template-Konfigurationsdatei
   - `backup_nginx_config()`: Sichert eine NGINX-Konfigurationsdatei mit einfachen Metadaten
+  - `nginx_add_config()`: Fügt eine neue NGINX-Konfiguration hinzu und aktiviert sie
+    - Parameter: Konfigurationsinhalt, Name, Priorität (10-99)
+    - Erstellt eine Konfigurationsdatei und einen entsprechenden Symlink
+    - Führt automatische NGINX-Neukonfiguration und Firewall-Update durch
+  - `get_nginx_url()`: Ermittelt die aktuelle NGINX-URL für die Fotobox
+    - Unterstützt Text- und JSON-Ausgabe
+    - Berücksichtigt HTTP/HTTPS und alternative Ports
+
+- **Installation und Konfigurationsfluss:**
+  - `improved_nginx_install()`: Führt den verbesserten NGINX-Installationsfluss aus
+    - Prüft ob NGINX installiert ist und installiert es bei Bedarf
+    - Erkennt den aktuellen Konfigurationsstatus (Default oder angepasst)
+    - Wählt die optimale Integration basierend auf dem Konfigurationsstatus
+    - Implementiert unterschiedliche Strategien für Default- und angepasste Konfigurationen
+    - Aktualisiert automatisch Firewall-Regeln nach der Konfiguration
 
 - **Erweiterte Backup- und Wiederherstellungsfunktionen:**
   - `backup_nginx_config_json()`: Erstellt ein JSON-basiertes Backup der NGINX-Konfiguration

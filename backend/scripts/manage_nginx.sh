@@ -154,6 +154,8 @@ get_nginx_url_txt_0001="Konnte IP-Adresse nicht ermitteln."
 get_nginx_url_txt_0002="Ermittelte Fotobox-URL: %s"
 get_nginx_url_txt_0003="URL-Ermittlung abgeschlossen."
 get_nginx_url_txt_0004="Fehler bei der URL-Ermittlung."
+get_nginx_url_txt_0005="Verwende IP-Adresse: %s"
+get_nginx_url_txt_0006="Verwende Hostname: %s"
 
 # set_nginx_port
 set_nginx_port_txt_0001="Portauswahl für Fotobox-Weboberfläche gestartet."
@@ -458,45 +460,72 @@ get_nginx_url() {
     # -----------------------------------------------------------------------
     # get_nginx_url
     # -----------------------------------------------------------------------
-    # Funktion: Ermittelt die tatsächlich aktive URL der Fotobox anhand der NGINX-Konfiguration.
-    # Parameter: $1 = Modus (text|json), optional (Standard: text)
-    # Rückgabe:  URL-String (http://IP:Port/) oder Fehlercode
-    local mode="$1"
-    local url=""
-    local ip_addr
-    ip_addr=$(hostname -I | awk '{print $1}')
-    # Prüfen, ob eine IP-Adresse ermittelt werden konnte
-    if [ -z "$ip_addr" ]; then
-        # IP-Adresse konnte nicht ermittelt werden
-        if [ "$mode" = "json" ]; then
-            json_out "error" "${get_nginx_url_txt_0001}" 1
-        else
-            log "${get_nginx_url_txt_0001}"
-        fi
-        log "${get_nginx_url_txt_0004}"
-        return 1
-    fi
-    # Prüfen, ob eigene Fotobox-Site oder Default-Konfiguration aktiv ist
-    if [ -L /etc/nginx/sites-enabled/fotobox ] && grep -q "listen" /etc/nginx/sites-enabled/fotobox; then
-        local port
-        port=$(grep -Eo 'listen[[:space:]]+[0-9.]*(:[0-9]+)?' /etc/nginx/sites-enabled/fotobox | head -n1 | grep -Eo '[0-9]+$')
-        [ -z "$port" ] && port=80
-        url="http://$ip_addr:$port/"
-    elif [ -f /etc/nginx/sites-enabled/default ] && grep -q "# Fotobox-Integration BEGIN" /etc/nginx/sites-enabled/default; then
-        local port
-        port=$(grep -Eo 'listen[[:space:]]+[0-9.]*(:[0-9]+)?' /etc/nginx/sites-enabled/default | head -n1 | grep -Eo '[0-9]+$')
-        [ -z "$port" ] && port=80
-        url="http://$ip_addr/fotobox/"
+    # Funktion: Gibt die aktuelle NGINX-URL zurück
+    # Parameter: $1 = Modus (text|json), optional (Default: text)
+    # Rückgabe:  URL als String oder JSON
+    # -----------------------------------------------------------------------
+    local mode="${1:-text}"
+    local server_port server_name server_proto url
+
+    # Port ermitteln
+    server_port=$(get_nginx_port text)
+    
+    # Protokoll basierend auf Port ermitteln
+    if [ "$server_port" = "443" ]; then
+        server_proto="https"
     else
-        url="http://$ip_addr:80/ oder http://$ip_addr/fotobox/"
+        server_proto="http"
     fi
-    log "$(printf "$get_nginx_url_txt_0002" "$url")"
-    log "${get_nginx_url_txt_0003}"
+    
+    # Servername/IP-Adresse ermitteln
+    # Versuche zuerst Hostname aufzulösen
+    server_name=$(hostname -I | awk '{print $1}')
+    
+    if [ -z "$server_name" ]; then
+        # Fallback: Versuche lokale IP-Adresse zu bestimmen
+        server_name=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v "127.0.0.1" | head -n 1)
+    fi
+    
+    if [ -z "$server_name" ]; then
+        # Fallback: localhost verwenden
+        server_name="localhost"
+        log_or_json "$mode" "warning" "$get_nginx_url_txt_0001" 1
+    else
+        log_or_json "$mode" "info" "$(printf "$get_nginx_url_txt_0005" "$server_name")" 0
+    fi
+    
+    # URL zusammenbauen
+    if [ "$server_port" = "80" ]; then
+        # Standard-HTTP-Port weglassen
+        url="${server_proto}://${server_name}"
+    elif [ "$server_port" = "443" ]; then
+        # Standard-HTTPS-Port weglassen
+        url="${server_proto}://${server_name}"
+    else
+        # Bei anderen Ports den Port mit angeben
+        url="${server_proto}://${server_name}:${server_port}"
+    fi
+    
+    # Ausgabe je nach Modus
     if [ "$mode" = "json" ]; then
-        json_out "success" "$url" 0
+        cat << EOF
+{
+  "status": "success",
+  "message": "$(printf "$get_nginx_url_txt_0002" "$url")",
+  "code": 0,
+  "data": {
+    "url": "$url",
+    "protocol": "$server_proto",
+    "hostname": "$server_name",
+    "port": "$server_port"
+  }
+}
+EOF
     else
-        log "$url"
+        echo "$url"
     fi
+    
+    log_debug "$get_nginx_url_txt_0003"
     return 0
 }
 
@@ -1181,389 +1210,372 @@ nginx_test_config() {
 }
 
 # ===========================================================================
-# Erweiterte Backup- und Wiederherstellungsfunktionen für NGINX-Konfiguration
+# Konstanten für nginx_add_config
 # ===========================================================================
-
-backup_nginx_config_json() {
-    # -----------------------------------------------------------------------
-    # backup_nginx_config_json
-    # -----------------------------------------------------------------------
-    # Funktion: Erstellt ein JSON-basiertes Backup der NGINX-Konfiguration
-    # Parameter: $1 = Quellverzeichnis oder Datei (Standard: /etc/nginx)
-    #            $2 = Aktionsnotiz (z.B. "Vor Installation", "Vor Update", etc.)
-    #            $3 = Ausgabeformat (text|json, Default: text)
-    # Rückgabe:  0 = OK, 1 = Fehler, Backup wurde nicht erstellt
-    # -----------------------------------------------------------------------
-    local src="${1:-/etc/nginx}"
-    local action="${2:-Manuelles Backup}"
-    local mode="${3:-text}"
-
-    local backup_dir
-    local manage_folders_sh
-    local timestamp
-    local backup_file
-    local json_file
-    local log_file
-    local is_default_config
-    
-    # Verwende manage_folders.sh für die Verzeichnisverwaltung
-    manage_folders_sh="$(dirname "$0")/manage_folders.sh"
-    if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
-        backup_dir="$("$manage_folders_sh" get_nginx_backup_dir)"
-    else
-        # Fallback zur direkten Pfadnutzung
-        backup_dir="/opt/fotobox/backup/nginx"
-        mkdir -p "$backup_dir"
-    fi
-    
-    # Generiere Zeitstempel und Dateinamen
-    timestamp="$(date +%Y%m%d_%H%M%S)"
-    backup_file="$backup_dir/${timestamp}_nginx_backup.tar.gz"
-    json_file="$backup_dir/${timestamp}_nginx_backup.json"
-    log_file="$backup_dir/${timestamp}_nginx_actions.log"
-    
-    # Prüfe den aktuellen NGINX-Konfigurationszustand
-    is_default_config="false"
-    if is_nginx_default; then
-        is_default_config="true"
-    fi
-    
-    # Erstelle Archiv mit Konfigurationen
-    if [ -d "$src" ]; then
-        if ! tar -czf "$backup_file" -C "$(dirname "$src")" "$(basename "$src")"; then
-            if [ "$mode" = "json" ]; then
-                json_out "error" "Backup der NGINX-Konfiguration fehlgeschlagen" 1
-            else
-                print_error "Backup der NGINX-Konfiguration fehlgeschlagen"
-            fi
-            return 1
-        fi
-    elif [ -f "$src" ]; then
-        if ! tar -czf "$backup_file" -C "$(dirname "$src")" "$(basename "$src")"; then
-            if [ "$mode" = "json" ]; then
-                json_out "error" "Backup der NGINX-Konfiguration fehlgeschlagen" 1
-            else
-                print_error "Backup der NGINX-Konfiguration fehlgeschlagen"
-            fi
-            return 1
-        fi
-    else
-        if [ "$mode" = "json" ]; then
-            json_out "error" "Ungültige Quelle für Backup: $src existiert nicht" 1
-        else
-            print_error "Ungültige Quelle für Backup: $src existiert nicht"
-        fi
-        return 1
-    fi
-    
-    # Hole Informationen zum NGINX-Status
-    local nginx_version=""
-    local nginx_running="false"
-    local nginx_conf_test="false"
-    
-    if command -v nginx >/dev/null 2>&1; then
-        nginx_version="$(nginx -v 2>&1 | sed 's/^nginx version: nginx\///')"
-    fi
-    
-    if is_nginx_running; then
-        nginx_running="true"
-    fi
-    
-    if nginx_test_config >/dev/null 2>&1; then
-        nginx_conf_test="true"
-    fi
-    
-    # Erstelle JSON-Metadaten
-    cat > "$json_file" <<EOF
-{
-  "timestamp": "$timestamp",
-  "source": "$src",
-  "backup_file": "$backup_file",
-  "action": "$action",
-  "nginx_status": {
-    "version": "$nginx_version",
-    "is_running": $nginx_running,
-    "is_default_config": $is_default_config,
-    "config_valid": $nginx_conf_test
-  },
-  "system_info": {
-    "hostname": "$(hostname)",
-    "date": "$(date)",
-    "user": "$(whoami)"
-  }
-}
-EOF
-    
-    # Erstelle Aktions-Log
-    echo "# NGINX-Konfigurationsänderung" > "$log_file"
-    echo "Zeitpunkt: $(date)" >> "$log_file"
-    echo "Aktion: $action" >> "$log_file"
-    echo "Konfiguration: $src" >> "$log_file"
-    echo "Backup: $backup_file" >> "$log_file"
-    echo "Status vor Änderung: $(if [ "$is_default_config" = "true" ]; then echo "Default"; else echo "Angepasst"; fi)" >> "$log_file"
-    echo "NGINX läuft: $(if [ "$nginx_running" = "true" ]; then echo "Ja"; else echo "Nein"; fi)" >> "$log_file"
-    
-    # Ausgabe je nach Modus
-    if [ "$mode" = "json" ]; then
-        json_out "success" "Backup der NGINX-Konfiguration erfolgreich erstellt: $backup_file" 0 "$json_file"
-    else
-        print_success "Backup der NGINX-Konfiguration erfolgreich erstellt: $backup_file"
-        print_info "JSON-Metadaten: $json_file"
-        print_info "Aktions-Log: $log_file"
-    fi
-    
-    return 0
-}
-
-nginx_restore_config() {
-    # -----------------------------------------------------------------------
-    # nginx_restore_config
-    # -----------------------------------------------------------------------
-    # Funktion: Stellt eine NGINX-Konfiguration aus einem Backup wieder her
-    # Parameter: $1 = Backup-ID oder Zeitstempel (Format: YYYYMMDD_HHMMSS)
-    #            $2 = Zielpfad (Standard: /etc/nginx)
-    #            $3 = Ausgabeformat (text|json, Default: text)
-    # Rückgabe:  0 = OK, 1 = Fehler bei Wiederherstellung
-    # -----------------------------------------------------------------------
-    local backup_id="$1"
-    local target_path="${2:-/etc/nginx}"
-    local mode="${3:-text}"
-    
-    local backup_dir
-    local manage_folders_sh
-    local backup_file
-    local json_file
-    local timestamp
-    
-    # Prüfe, ob ein Backup-ID/Zeitstempel angegeben wurde
-    if [ -z "$backup_id" ]; then
-        if [ "$mode" = "json" ]; then
-            json_out "error" "Keine Backup-ID oder Zeitstempel angegeben" 1
-        else
-            print_error "Keine Backup-ID oder Zeitstempel angegeben"
-        fi
-        return 1
-    fi
-    
-    # Verwende manage_folders.sh für die Verzeichnisverwaltung
-    manage_folders_sh="$(dirname "$0")/manage_folders.sh"
-    if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
-        backup_dir="$("$manage_folders_sh" get_nginx_backup_dir)"
-    else
-        # Fallback zur direkten Pfadnutzung
-        backup_dir="/opt/fotobox/backup/nginx"
-    fi
-    
-    # Finde Backupfiles anhand der ID/des Zeitstempels
-    if [[ "$backup_id" =~ ^[0-9]{8}_[0-9]{6}$ ]]; then
-        # Exakter Zeitstempel im Format YYYYMMDD_HHMMSS
-        timestamp="$backup_id"
-        backup_file="$backup_dir/${timestamp}_nginx_backup.tar.gz"
-        json_file="$backup_dir/${timestamp}_nginx_backup.json"
-    else
-        # Suche nach partieller Übereinstimmung
-        backup_file=$(find "$backup_dir" -name "*${backup_id}*_nginx_backup.tar.gz" | sort | tail -n 1)
-        if [ -n "$backup_file" ]; then
-            timestamp=$(basename "$backup_file" | sed 's/^\([0-9]\{8\}_[0-9]\{6\}\).*/\1/')
-            json_file="$backup_dir/${timestamp}_nginx_backup.json"
-        fi
-    fi
-    
-    # Prüfe, ob Backup-Dateien gefunden wurden
-    if [ ! -f "$backup_file" ]; then
-        if [ "$mode" = "json" ]; then
-            json_out "error" "Kein passendes Backup für ID/Zeitstempel '$backup_id' gefunden" 1
-        else
-            print_error "Kein passendes Backup für ID/Zeitstempel '$backup_id' gefunden"
-        fi
-        return 1
-    fi
-    
-    # Erstelle Backup der aktuellen Konfiguration vor der Wiederherstellung
-    local pre_restore_backup
-    pre_restore_backup=$(backup_nginx_config_json "$target_path" "Vor Wiederherstellung von $timestamp" "$mode")
-    
-    # Stoppe NGINX vor der Wiederherstellung
-    local nginx_was_running=false
-    if is_nginx_running; then
-        nginx_was_running=true
-        nginx_stop > /dev/null
-    fi
-    
-    # Erstelle temporäres Verzeichnis für die Wiederherstellung
-    local temp_dir
-    temp_dir=$(mktemp -d)
-    
-    # Entpacke das Backup
-    if ! tar -xzf "$backup_file" -C "$temp_dir"; then
-        if [ "$mode" = "json" ]; then
-            json_out "error" "Fehler beim Entpacken des Backups: $backup_file" 1
-        else
-            print_error "Fehler beim Entpacken des Backups: $backup_file"
-        fi
-        rm -rf "$temp_dir"
-        # Starte NGINX wieder, falls es vorher lief
-        if [ "$nginx_was_running" = true ]; then
-            nginx_start > /dev/null
-        fi
-        return 1
-    fi
-    
-    # Sichere den Inhalt des Zielverzeichnisses
-    local target_contents
-    target_contents=$(ls -A "$target_path" 2>/dev/null)
-    
-    # Lösche vorhandene Konfiguration (wenn Ziel nicht leer ist)
-    if [ -n "$target_contents" ]; then
-        if ! rm -rf "${target_path:?}"/*; then
-            if [ "$mode" = "json" ]; then
-                json_out "error" "Fehler beim Löschen der vorhandenen Konfiguration: $target_path" 1
-            else
-                print_error "Fehler beim Löschen der vorhandenen Konfiguration: $target_path"
-            fi
-            rm -rf "$temp_dir"
-            # Starte NGINX wieder, falls es vorher lief
-            if [ "$nginx_was_running" = true ]; then
-                nginx_start > /dev/null
-            fi
-            return 1
-        fi
-    fi
-    
-    # Kopiere wiederhergestellte Dateien
-    local nginx_dir_name
-    nginx_dir_name=$(basename "$target_path")
-    if [ -d "$temp_dir/$nginx_dir_name" ]; then
-        # Falls das Backup den vollständigen Pfad enthält
-        if ! cp -a "$temp_dir/$nginx_dir_name"/* "$target_path"/; then
-            if [ "$mode" = "json" ]; then
-                json_out "error" "Fehler beim Kopieren der wiederhergestellten Konfiguration" 1
-            else
-                print_error "Fehler beim Kopieren der wiederhergestellten Konfiguration"
-            fi
-            rm -rf "$temp_dir"
-            # Starte NGINX wieder, falls es vorher lief
-            if [ "$nginx_was_running" = true ]; then
-                nginx_start > /dev/null
-            fi
-            return 1
-        fi
-    else
-        # Falls das Backup direkt die Dateien enthält
-        if ! cp -a "$temp_dir"/* "$target_path"/; then
-            if [ "$mode" = "json" ]; then
-                json_out "error" "Fehler beim Kopieren der wiederhergestellten Konfiguration" 1
-            else
-                print_error "Fehler beim Kopieren der wiederhergestellten Konfiguration"
-            fi
-            rm -rf "$temp_dir"
-            # Starte NGINX wieder, falls es vorher lief
-            if [ "$nginx_was_running" = true ]; then
-                nginx_start > /dev/null
-            fi
-            return 1
-        fi
-    fi
-    
-    # Aufräumen
-    rm -rf "$temp_dir"
-    
-    # Teste die wiederhergestellte Konfiguration
-    if ! nginx_test_config > /dev/null; then
-        if [ "$mode" = "json" ]; then
-            json_out "error" "Die wiederhergestellte NGINX-Konfiguration enthält Fehler" 1
-        else
-            print_error "Die wiederhergestellte NGINX-Konfiguration enthält Fehler"
-            print_warning "NGINX wird nicht gestartet, um weitere Fehler zu vermeiden"
-        fi
-        return 1
-    fi
-    
-    # Starte NGINX neu, falls es vorher lief
-    if [ "$nginx_was_running" = true ]; then
-        if ! nginx_start > /dev/null; then
-            if [ "$mode" = "json" ]; then
-                json_out "error" "NGINX konnte nach der Wiederherstellung nicht gestartet werden" 1
-            else
-                print_error "NGINX konnte nach der Wiederherstellung nicht gestartet werden"
-            fi
-            return 1
-        fi
-    fi
-    
-    # Setze korrekte Berechtigungen
-    if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
-        "$manage_folders_sh" fix_permissions "$target_path" > /dev/null
-    else
-        chown -R www-data:www-data "$target_path"
-    fi
-    
-    # Ausgabe je nach Modus
-    if [ "$mode" = "json" ]; then
-        json_out "success" "NGINX-Konfiguration erfolgreich wiederhergestellt von $timestamp" 0
-    else
-        print_success "NGINX-Konfiguration erfolgreich wiederhergestellt von $timestamp"
-        print_info "Quelle: $backup_file"
-        print_info "Ziel: $target_path"
-        if [ "$nginx_was_running" = true ]; then
-            print_info "NGINX wurde neu gestartet"
-        else
-            print_info "NGINX war gestoppt und wurde nicht gestartet"
-        fi
-    fi
-    
-    return 0
-}
+# Textmeldungen zur Lokalisierung und zentralen Verwaltung
+nginx_add_config_txt_0001="Füge neue NGINX-Konfiguration hinzu: %s"
+nginx_add_config_txt_0002="Konfigurationsdatei %s erfolgreich erstellt."
+nginx_add_config_txt_0003="Fehler beim Erstellen der Konfigurationsdatei %s"
+nginx_add_config_txt_0004="Symlink für Konfiguration %s erstellt."
+nginx_add_config_txt_0005="Fehler beim Erstellen des Symlinks für Konfiguration %s"
+nginx_add_config_txt_0006="NGINX-Konfiguration konnte nach dem Hinzufügen nicht neu geladen werden!"
+nginx_add_config_txt_0007="Prioritätswert muss eine Zahl zwischen 10 und 99 sein"
+nginx_add_config_txt_0008="Konfigurationsname darf nur alphanumerische Zeichen und Bindestriche enthalten"
+nginx_add_config_txt_0009="Konfigurationsinhalt darf nicht leer sein"
+nginx_add_config_txt_0010="NGINX-Konfiguration %s wurde erfolgreich hinzugefügt und aktiviert."
+nginx_add_config_txt_0011="NGINX ist nicht installiert. Installation erforderlich."
 
 # ===========================================================================
-# Integration mit manage_firewall.sh
+# Erweiterte NGINX-Konfigurationsverwaltung
 # ===========================================================================
 
-update_firewall_rules() {
+nginx_add_config() {
     # -----------------------------------------------------------------------
-    # update_firewall_rules
+    # nginx_add_config
     # -----------------------------------------------------------------------
-    # Funktion: Aktualisiert die Firewall-Regeln entsprechend der NGINX-Konfiguration
-    # Parameter: $1 = Modus (text|json), optional (Default: text)
-    # Rückgabe: 0 = Erfolg, 1 = Fehler
-    # Seiteneffekte: Kann die Firewall-Konfiguration ändern
+    # Funktion: Fügt eine neue NGINX-Konfiguration hinzu und aktiviert sie
+    # Parameter: $1 = Konfigurationsinhalt
+    #            $2 = Konfigurationsname (default: fotobox)
+    #            $3 = Priorität (10-99, niedrigere Zahl = höhere Priorität)
+    #            $4 = Modus (text|json), optional (Default: text)
+    # Rückgabe: 0 = OK, >0 = Fehler
     # -----------------------------------------------------------------------
-    local mode="${1:-text}"
-    local current_port
-    current_port=$(get_nginx_port text)
-    local firewall_script="$SCRIPT_DIR/manage_firewall.sh"
+    local config_content="$1"
+    local config_name="${2:-fotobox}"
+    local priority="${3:-50}"
+    local mode="${4:-text}"
     
-    # Prüfen, ob manage_firewall.sh existiert
-    if [ ! -f "$firewall_script" ]; then
-        log_or_json "$mode" "warning" "Firewall-Management-Skript nicht gefunden: $firewall_script" 1
+    local sites_available="/etc/nginx/sites-available"
+    local sites_enabled="/etc/nginx/sites-enabled"
+    
+    # Prüfen, ob NGINX installiert ist
+    if ! is_nginx_available >/dev/null; then
+        log_or_json "$mode" "error" "$nginx_add_config_txt_0011" 1
         return 1
     fi
     
-    # Firewall-Modul laden, falls noch nicht geladen
-    if [ -z "$MANAGE_FIREWALL_LOADED" ] || [ "$MANAGE_FIREWALL_LOADED" -ne 1 ]; then
-        log_or_json "$mode" "info" "Lade Firewall-Management-Modul..." 0
-        load_module "manage_firewall" || {
-            log_or_json "$mode" "error" "Firewall-Management-Modul konnte nicht geladen werden" 2
-            return 2
-        }
+    # Validierungen
+    if [ -z "$config_content" ]; then
+        log_or_json "$mode" "error" "$nginx_add_config_txt_0009" 2
+        return 2
     fi
     
-    # Die für NGINX benötigten Ports setzen
-    export HTTP_PORT="$current_port"
-    export HTTPS_PORT="443"  # Standard HTTPS-Port
-    
-    log_or_json "$mode" "info" "Aktualisiere Firewall-Regeln für HTTP-Port $current_port und HTTPS-Port 443" 0
-    
-    # Firewall konfigurieren
-    if setup_firewall; then
-        log_or_json "$mode" "success" "Firewall-Regeln für NGINX-Ports erfolgreich aktualisiert" 0
-        return 0
-    else
-        log_or_json "$mode" "warning" "Fehler beim Aktualisieren der Firewall-Regeln" 3
+    if ! [[ "$config_name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        log_or_json "$mode" "error" "$nginx_add_config_txt_0008" 3
         return 3
     fi
+    
+    if ! [[ "$priority" =~ ^[0-9]+$ ]] || [ "$priority" -lt 10 ] || [ "$priority" -gt 99 ]; then
+        log_or_json "$mode" "error" "$nginx_add_config_txt_0007" 4
+        return 4
+    fi
+    
+    local config_file="$sites_available/$config_name"
+    local enabled_link="$sites_enabled/${priority}-$config_name"
+    
+    log_or_json "$mode" "info" "$(printf "$nginx_add_config_txt_0001" "$config_name")" 0
+    
+    # Existierende Konfiguration sichern, falls vorhanden
+    if [ -f "$config_file" ]; then
+        backup_nginx_config "$config_file" "add_config" "nginx_add_config" "$mode" || return 5
+    fi
+    
+    # Konfiguration schreiben
+    echo "$config_content" > "$config_file"
+    if [ $? -ne 0 ]; then
+        log_or_json "$mode" "error" "$(printf "$nginx_add_config_txt_0003" "$config_file")" 6
+        return 6
+    fi
+    log_or_json "$mode" "success" "$(printf "$nginx_add_config_txt_0002" "$config_file")" 0
+    
+    # Alte Symlinks entfernen, falls vorhanden
+    find "$sites_enabled" -name "*-$config_name" -type l -delete
+    
+    # Neuen Symlink erstellen
+    ln -s "$config_file" "$enabled_link"
+    if [ $? -ne 0 ]; then
+        log_or_json "$mode" "error" "$(printf "$nginx_add_config_txt_0005" "$config_name")" 7
+        return 7
+    fi
+    log_or_json "$mode" "success" "$(printf "$nginx_add_config_txt_0004" "$config_name")" 0
+    
+    # NGINX neu laden
+    local reload_result
+    reload_result=$(chk_nginx_reload "$mode")
+    local reload_status=$?
+    
+    if [ $reload_status -ne 0 ]; then 
+        log_or_json "$mode" "error" "$nginx_add_config_txt_0006" 8
+        return 8
+    fi
+    
+    # Firewall-Regeln aktualisieren
+    update_firewall_rules "$mode"
+    
+    log_or_json "$mode" "success" "$(printf "$nginx_add_config_txt_0010" "$config_name")" 0
+    return 0
 }
 
+# ===========================================================================
+# Konstanten für improved_nginx_install
+# ===========================================================================
+improved_nginx_install_txt_0001="Starte verbesserten NGINX-Installationsfluss..."
+improved_nginx_install_txt_0002="NGINX ist nicht installiert. Installation wird gestartet."
+improved_nginx_install_txt_0003="NGINX-Installation fehlgeschlagen!"
+improved_nginx_install_txt_0004="NGINX erfolgreich installiert."
+improved_nginx_install_txt_0005="NGINX verwendet Default-Konfiguration. Integriere Fotobox..."
+improved_nginx_install_txt_0006="NGINX verwendet angepasste Konfiguration. Erstelle separate Konfiguration..."
+improved_nginx_install_txt_0007="Erfolgreich: NGINX ist jetzt für die Fotobox konfiguriert."
+improved_nginx_install_txt_0008="Fehler bei der NGINX-Konfiguration für die Fotobox."
+improved_nginx_install_txt_0009="Unklarer Konfigurationsstatus bei NGINX."
+improved_nginx_install_txt_0010="NGINX wurde erfolgreich für die Fotobox konfiguriert."
+improved_nginx_install_txt_0011="Fotobox-URL: %s"
+improved_nginx_install_txt_0012="NGINX ist installiert, wird aber nicht verwendet. Aktiviere NGINX..."
+improved_nginx_install_txt_0013="Fehler beim Aktivieren von NGINX!"
+
+# ===========================================================================
+# Verbesserter NGINX-Installationsfluss
+# ===========================================================================
+
+improved_nginx_install() {
+    # -----------------------------------------------------------------------
+    # improved_nginx_install
+    # -----------------------------------------------------------------------
+    # Funktion: Führt die verbesserte NGINX-Installation durch
+    # Parameter: $1 = Modus (text|json|auto), optional (Default: text)
+    #            $2 = Port (optional, Default: 80)
+    # Rückgabe: 0 = OK, >0 = Fehler
+    # -----------------------------------------------------------------------
+    local mode="${1:-text}"
+    local port="${2:-80}"
+    
+    local is_interactive=1  # 0 = interaktiv, 1 = nicht-interaktiv
+    if [ "$mode" = "auto" ]; then
+        mode="text"
+        is_interactive=0
+    fi
+    
+    log_or_json "$mode" "info" "$improved_nginx_install_txt_0001" 0
+    
+    # Schritt 1: Prüfen, ob NGINX überhaupt installiert ist
+    if ! is_nginx_available >/dev/null; then
+        log_or_json "$mode" "warning" "$improved_nginx_install_txt_0002" 0
+        # NGINX installieren
+        if ! chk_nginx_installation "$mode" $is_interactive; then
+            log_or_json "$mode" "error" "$improved_nginx_install_txt_0003" 1
+            return 1
+        fi
+        log_or_json "$mode" "success" "$improved_nginx_install_txt_0004" 0
+    fi
+    
+    # Schritt 2: Prüfen, ob NGINX aktiv ist
+    if ! is_nginx_running >/dev/null; then
+        log_or_json "$mode" "warning" "$improved_nginx_install_txt_0012" 0
+        # NGINX aktivieren und starten
+        if ! nginx_start "$mode"; then
+            log_or_json "$mode" "error" "$improved_nginx_install_txt_0013" 2
+            return 2
+        fi
+    fi
+    
+    # Schritt 3: Je nach aktuellem Zustand der NGINX-Konfiguration vorgehen
+    local nginx_status
+    nginx_status=$(is_nginx_default)
+    
+    if [ $? -eq 0 ]; then  # Default-Konfiguration
+        log_or_json "$mode" "info" "$improved_nginx_install_txt_0005" 0
+        
+        # Option 1: NGINX hat nur Default-Konfiguration
+        # In diesem Fall können wir entweder die Default-Konfiguration ergänzen
+        # oder eine komplett neue Konfiguration anlegen
+        
+        # Variante: Neue Konfiguration erstellen und aktivieren
+        local nginx_template
+        local config_name="fotobox"
+        local priority=50
+        
+        # Template aus Konfigurationsverzeichnis laden
+        local conf_src="/opt/fotobox/conf/nginx-fotobox.conf"
+        
+        if [ -f "$conf_src" ]; then
+            nginx_template=$(cat "$conf_src")
+        else
+            # Fallback auf Default-Template
+            nginx_template=$(cat << EOF
+server {
+    listen $port;
+    server_name _;
+
+    root /opt/fotobox/frontend;
+    index start.html index.html;
+    
+    # Cache-Kontrolle für Testphase
+    add_header Cache-Control "no-cache, no-store, must-revalidate";
+    add_header Pragma "no-cache";
+    add_header Expires "0";
+    add_header X-Fotobox-Test-Mode "active";
+
+    # Saubere URLs für statische Seiten
+    location = /capture {
+        try_files /capture.html =404;
+    }
+    location = /gallery {
+        try_files /gallery.html =404;
+    }
+    location = /settings {
+        try_files /settings.html =404;
+    }
+    location = /installation {
+        try_files /install.html =404;
+    }
+    location = /contact {
+        try_files /contact.html =404;
+    }
+
+    location / {
+        try_files \$uri \$uri/ =404;
+    }
+
+    # API-Requests an das Backend weiterleiten
+    location /api/ {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    # Fotos aus Backend-Verzeichnis bereitstellen
+    location /photos/ {
+        proxy_pass http://127.0.0.1:5000/photos/;
+    }
+}
+EOF
+)
+        fi
+        
+        # Anpassen des Ports im Template, falls nötig
+        if [ "$port" != "80" ]; then
+            nginx_template=$(echo "$nginx_template" | sed -E "s/listen [0-9]+;/listen $port;/")
+        fi
+        
+        # Neue Konfiguration hinzufügen
+        if ! nginx_add_config "$nginx_template" "$config_name" "$priority" "$mode"; then
+            log_or_json "$mode" "error" "$improved_nginx_install_txt_0008" 3
+            return 3
+        fi
+        
+    elif [ $? -eq 1 ]; then  # Angepasste Konfiguration
+        log_or_json "$mode" "info" "$improved_nginx_install_txt_0006" 0
+        
+        # Option 2: NGINX hat bereits angepasste Konfiguration
+        # In diesem Fall erstellen wir eine separate Konfiguration mit einem alternativen Port
+        
+        # Alternativen Port wählen
+        local alt_port=8080
+        
+        # Prüfen, ob der Standard-Port bereits belegt ist
+        if [ "$port" = "80" ]; then
+            # Wenn der Standard-Port verwendet werden soll, aber andere Konfigurationen bestehen,
+            # verwenden wir einen alternativen Port
+            port=$alt_port
+        fi
+        
+        # Template aus Konfigurationsverzeichnis laden und Port anpassen
+        local conf_src="/opt/fotobox/conf/nginx-fotobox.conf"
+        local nginx_template
+        
+        if [ -f "$conf_src" ]; then
+            nginx_template=$(cat "$conf_src")
+        else
+            # Fallback auf Default-Template
+            nginx_template=$(cat << EOF
+server {
+    listen $port;
+    server_name _;
+
+    root /opt/fotobox/frontend;
+    index start.html index.html;
+    
+    # Cache-Kontrolle für Testphase
+    add_header Cache-Control "no-cache, no-store, must-revalidate";
+    add_header Pragma "no-cache";
+    add_header Expires "0";
+    add_header X-Fotobox-Test-Mode "active";
+
+    # Saubere URLs für statische Seiten
+    location = /capture {
+        try_files /capture.html =404;
+    }
+    location = /gallery {
+        try_files /gallery.html =404;
+    }
+    location = /settings {
+        try_files /settings.html =404;
+    }
+    location = /installation {
+        try_files /install.html =404;
+    }
+    location = /contact {
+        try_files /contact.html =404;
+    }
+
+    location / {
+        try_files \$uri \$uri/ =404;
+    }
+
+    # API-Requests an das Backend weiterleiten
+    location /api/ {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    # Fotos aus Backend-Verzeichnis bereitstellen
+
+    location /photos/ {
+        proxy_pass http://127.0.0.1:5000/photos/;
+    }
+}
+EOF
+)
+        fi
+        
+        # Port im Template anpassen
+        nginx_template=$(echo "$nginx_template" | sed -E "s/listen [0-9]+;/listen $port;/")
+        
+        # Konfiguration mit höherer Priorität hinzufügen (niedrigere Zahl)
+        local config_name="fotobox"
+        local priority=20  # Höhere Priorität für unsere Konfiguration
+        
+        if ! nginx_add_config "$nginx_template" "$config_name" "$priority" "$mode"; then
+            log_or_json "$mode" "error" "$improved_nginx_install_txt_0008" 4
+            return 4
+        fi
+        
+    else  # Unklarer Status
+        log_or_json "$mode" "warning" "$improved_nginx_install_txt_0009" 0
+        
+        # Option 3: Status unklar, wir versuchen externe Konfiguration
+        if ! set_nginx_cnf_external "$mode"; then
+            log_or_json "$mode" "error" "$improved_nginx_install_txt_0008" 5
+            return 5
+        fi
+    fi
+    
+    # Schritt 4: Firewall-Regeln aktualisieren
+    update_firewall_rules "$mode"
+    
+    # Schritt 5: NGINX-URL ermitteln und ausgeben
+    local nginx_url
+    nginx_url=$(get_nginx_url "text")
+    log_or_json "$mode" "success" "$(printf "$improved_nginx_install_txt_0011" "$nginx_url")" 0
+    
+    log_or_json "$mode" "success" "$improved_nginx_install_txt_0010" 0
+    return 0
+}
 # ===========================================================================
 # Markiere dieses Modul als geladen
 # ===========================================================================
