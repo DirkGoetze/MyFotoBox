@@ -34,6 +34,17 @@ Alle Abhängigkeiten werden zentral in den folgenden Dateien verwaltet:
 
 Gemäß unserer Projekt-Policy dürfen neue Abhängigkeiten nicht direkt installiert werden (z.B. mit `pip install` oder `apt install`), sondern müssen in den entsprechenden Requirements-Dateien definiert werden. Details finden Sie in den [Policies](./policies).
 
+### Ausführungsrechte für Shell-Skripte
+
+Bei direkter Entwicklung am Repository müssen Sie sicherstellen, dass alle Shell-Skripte ausführbare Berechtigungen haben. Nach dem Klonen des Repositories:
+
+```sh
+# Alle Shell-Skripte ausführbar machen
+chmod +x backend/scripts/*.sh
+```
+
+Bei der regulären Installation mit `install.sh` werden diese Berechtigungen automatisch gesetzt.
+
 ## Features
 
 - Fotos direkt über die Fotobox aufnehmen
