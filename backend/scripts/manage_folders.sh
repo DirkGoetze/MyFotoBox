@@ -69,6 +69,7 @@ fi
 : "${USER:=$DEFAULT_USER}"
 : "${GROUP:=$DEFAULT_GROUP}"
 : "${MODE:=$DEFAULT_MODE}"
+# ---------------------------------------------------------------------------
 
 # ===========================================================================
 # Lokale Konstanten (Vorgaben und Defaults nur für die Installation)
@@ -78,6 +79,7 @@ fi
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
 DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
+# ---------------------------------------------------------------------------
 
 # ===========================================================================
 # Hilfsfunktionen 
@@ -101,8 +103,8 @@ create_symlink_to_standard_path() {
     # create_symlink_to_standard_path
     # -----------------------------------------------------------------------
     # Funktion: Erstellt einen Symlink vom Standard-Pfad zum tatsächlich
-    # .........  verwendeten Fallback-Pfad. Dies hilft bei der Navigation und
-    # .........  sorgt für eine konsistente Verzeichnisstruktur.
+    # ......... verwendeten Fallback-Pfad. Dies hilft bei der Navigation und
+    # ......... sorgt für eine konsistente Verzeichnisstruktur.
     # Parameter: $1 - Standard-Pfad, an dem der Symlink erstellt werden soll
     # .........  $2 - Tatsächlich verwendeter Pfad, auf den der Symlink zeigen soll
     # Rückgabe.: 0 - Erfolg (Symlink wurde erstellt oder existiert bereits korrekt)
@@ -321,7 +323,7 @@ get_folder_path() {
 }
 
 # ===========================================================================
-# Get- und Set-Funktionen für die Ordnerstruktur 
+# Get- und Set-Funktionen für die Ordnerstruktur des Projektes
 # ===========================================================================
 
 # get_install_dir
@@ -1657,6 +1659,178 @@ ensure_folder_structure() {
     
     debug "$ensure_folder_structure_debug_0002" "CLI" "ensure_folder_structure"
     return 0
+}
+
+# ===========================================================================
+# Get- und Set-Funktionen für Systempfade
+# ===========================================================================
+
+# get_nginx_systemdir
+get_nginx_systemdir_debug_0001="Prüfe Standard-NGINX-Systemverzeichnis: %s"
+get_nginx_systemdir_debug_0002="Verwende Standard-NGINX-Systemverzeichnis: %s"
+get_nginx_systemdir_debug_0003="Standard-NGINX-Systemverzeichnis nicht verfügbar, verwende Fallback: %s"
+get_nginx_systemdir_debug_0004="Fallback-NGINX-Systemverzeichnis nicht verfügbar, verwende: %s"
+
+get_nginx_systemdir() {
+    # -----------------------------------------------------------------------
+    # get_nginx_systemdir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum NGINX-Systemverzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local primary_folder="/etc/nginx/sites-available"
+    local secondary_folder="$("$manage_folders_sh" get_nginx_conf_dir)"
+
+    # Standardpfad verwenden
+    dir="$primary_folder"
+    debug "$(printf "$get_nginx_systemdir_debug_0001" "$dir")" "CLI" "get_nginx_systemdir"
+    if [ -d "$dir" ]; then
+        create_directory "$dir" || true
+        debug "$(printf "$get_nginx_systemdir_debug_0002" "$dir")" "CLI" "get_nginx_systemdir"
+        echo "$dir"
+        return 0
+    fi
+    
+    # Fallback auf alternatives Verzeichnis
+    dir="$secondary_folder"
+    debug "$(printf "$get_nginx_systemdir_debug_0003" "$dir")" "CLI" "get_nginx_systemdir"
+    if [ -d "$dir" ]; then
+        create_directory "$dir" || true
+        debug "$(printf "$get_nginx_systemdir_debug_0004" "$dir")" "CLI" "get_nginx_systemdir"
+        echo "$dir"
+        return 0
+    fi
+    
+    # Fehler: Kein NGINX-Systemverzeichnis gefunden
+    echo ""
+    return 1
+}
+
+# get_systemd_systemdir
+get_systemd_systemdir_debug_0001="Prüfe Standard-systemd-Systemverzeichnis: %s"
+get_systemd_systemdir_debug_0002="Verwende Standard-systemd-Systemverzeichnis: %s"
+get_systemd_systemdir_debug_0003="Standard-systemd-Systemverzeichnis nicht verfügbar, verwende Fallback: %s"
+get_systemd_systemdir_debug_0004="Fallback-systemd-Systemverzeichnis nicht verfügbar, verwende: %s"
+
+get_systemd_systemdir() {
+    # -----------------------------------------------------------------------
+    # get_systemd_systemdir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum systemd-Systemverzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local primary_folder="/etc/systemd/system"
+    local secondary_folder="$("$manage_folders_sh" get_conf_dir)"
+
+    # Standardpfad verwenden
+    dir="$primary_folder"
+    debug "$(printf "$get_systemd_systemdir_debug_0001" "$dir")" "CLI" "get_systemd_systemdir"
+    if [ -d "$dir" ]; then
+        create_directory "$dir" || true
+        debug "$(printf "$get_systemd_systemdir_debug_0002" "$dir")" "CLI" "get_systemd_systemdir"
+        echo "$dir"
+        return 0
+    fi
+    
+    # Fallback auf alternatives Verzeichnis
+    dir="$secondary_folder"
+    debug "$(printf "$get_systemd_systemdir_debug_0003" "$dir")" "CLI" "get_systemd_systemdir"
+    if [ -d "$dir" ]; then
+        create_directory "$dir" || true
+        debug "$(printf "$get_systemd_systemdir_debug_0004" "$dir")" "CLI" "get_systemd_systemdir"
+        echo "$dir"
+        return 0
+    fi
+    
+    # Fehler: Kein systemd-Systemverzeichnis gefunden
+    echo ""
+    return 1
+}
+
+# get_ssl_cert_systemdir
+get_ssl_cert_systemdir_debug_0001="Prüfe Standard-SSL-Zertifikate-Systemverzeichnis: %s"
+get_ssl_cert_systemdir_debug_0002="Verwende Standard-SSL-Zertifikate-Systemverzeichnis: %s"
+get_ssl_cert_systemdir_debug_0003="Standard-SSL-Zertifikate-Systemverzeichnis nicht verfügbar, verwende Fallback: %s"
+get_ssl_cert_systemdir_debug_0004="Fallback-SSL-Zertifikate-Systemverzeichnis nicht verfügbar, verwende: %s"
+
+get_ssl_cert_systemdir() {
+    # -----------------------------------------------------------------------
+    # get_ssl_cert_systemdir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum SSL-Zertifikate-Systemverzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local primary_folder="/etc/ssl/certs"
+    local secondary_folder="$("$manage_folders_sh" get_ssl_dir)"
+
+    # Standardpfad verwenden
+    dir="$primary_folder"
+    debug "$(printf "$get_ssl_cert_systemdir_debug_0001" "$dir")" "CLI" "get_ssl_cert_systemdir"
+    if [ -d "$dir" ]; then
+        create_directory "$dir" || true
+        debug "$(printf "$get_ssl_cert_systemdir_debug_0002" "$dir")" "CLI" "get_ssl_cert_systemdir"
+        echo "$dir"
+        return 0
+    fi
+    
+    # Fallback auf alternatives Verzeichnis
+    dir="$secondary_folder"
+    debug "$(printf "$get_ssl_cert_systemdir_debug_0003" "$dir")" "CLI" "get_ssl_cert_systemdir"
+    if [ -d "$dir" ]; then
+        create_directory "$dir" || true
+        debug "$(printf "$get_ssl_cert_systemdir_debug_0004" "$dir")" "CLI" "get_ssl_cert_systemdir"
+        echo "$dir"
+        return 0
+    fi
+
+    # Fehler: Kein SSL-Zertifikate-Systemverzeichnis gefunden
+    echo ""
+    return 1
+}
+
+# get_ssl_key_systemdir
+get_ssl_key_systemdir_debug_0001="Prüfe Standard-SSL-Zertifikate-Systemverzeichnis: %s"
+get_ssl_key_systemdir_debug_0002="Verwende Standard-SSL-Zertifikate-Systemverzeichnis: %s"
+get_ssl_key_systemdir_debug_0003="Standard-SSL-Zertifikate-Systemverzeichnis nicht verfügbar, verwende Fallback: %s"
+get_ssl_key_systemdir_debug_0004="Fallback-SSL-Zertifikate-Systemverzeichnis nicht verfügbar, verwende: %s"
+
+get_ssl_key_systemdir() {
+    # -----------------------------------------------------------------------
+    # get_ssl_key_systemdir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum SSL-Schlüsseldateien-Systemverzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local primary_folder="/etc/ssl/private"
+    local secondary_folder="$("$manage_folders_sh" get_ssl_dir)"
+
+    # Standardpfad verwenden
+    dir="$primary_folder"
+    debug "$(printf "$get_ssl_key_systemdir_debug_0001" "$dir")" "CLI" "get_ssl_key_systemdir"
+    if [ -d "$dir" ]; then
+        create_directory "$dir" || true
+        debug "$(printf "$get_ssl_key_systemdir_debug_0002" "$dir")" "CLI" "get_ssl_key_systemdir"
+        echo "$dir"
+        return 0
+    fi
+    
+    # Fallback auf alternatives Verzeichnis
+    dir="$secondary_folder"
+    debug "$(printf "$get_ssl_key_systemdir_debug_0003" "$dir")" "CLI" "get_ssl_key_systemdir"
+    if [ -d "$dir" ]; then
+        create_directory "$dir" || true
+        debug "$(printf "$get_ssl_key_systemdir_debug_0004" "$dir")" "CLI" "get_ssl_key_systemdir"
+        echo "$dir"
+        return 0
+    fi
+
+    # Fehler: Kein SSL-Zertifikate-Systemverzeichnis gefunden
+    echo ""
+    return 1
 }
 
 # ===========================================================================

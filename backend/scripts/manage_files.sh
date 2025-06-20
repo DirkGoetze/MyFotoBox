@@ -1,241 +1,449 @@
 #!/bin/bash
-#
-# manage_files.sh - Zentrale Stelle für alle Dateipfad-Operationen
-# 
-# Teil der Fotobox2 Anwendung
-# Copyright (c) 2023-2025 Dirk Götze
-#
-# Abhängigkeiten:
-# - manage_folders.sh für alle Verzeichnispfade
-# - manage_logging.sh für Logging-Funktionen
-#
+# ---------------------------------------------------------------------------
+# manage_files.sh
+# ---------------------------------------------------------------------------
+# Funktion: Zentrale Stelle für alle Dateipfad-Operationen
+# ......... Stellt einheitliche Dateipfad-Getter bereit und arbeitet eng
+# ......... mit manage_folders.sh zusammen, das die Ordnerpfade verwaltet.
+# ......... Nach Policy müssen alle Skripte Dateien konsistent benennen
+# ......... und Pfadermittlungsfunktionen von diesem Modul nutzen.
+# ---------------------------------------------------------------------------
+# HINWEIS: Dieses Skript ist Bestandteil der Backend-Logik und darf nur im
+# Unterordner 'backend/scripts/' abgelegt werden 
+# ---------------------------------------------------------------------------
+# POLICY-HINWEIS: Dieses Skript ist ein reines Funktions-/Modulskript und 
+# enthält keine main()-Funktion mehr. Die Nutzung als eigenständiges 
+# CLI-Programm ist nicht vorgesehen. Die Policy zur main()-Funktion gilt nur 
+# für Hauptskripte.
+# ---------------------------------------------------------------------------
+# DEPENDENCY: Dieses Skript nutzt Funktionen aus manage_folders.sh, 
+# insbesondere die Verzeichnis-Getter. Die manage_folders.sh muss VOR diesem
+# Skript geladen werden!
+# ---------------------------------------------------------------------------
 
-# Konstanten und Konfiguration
-readonly SCRIPT_NAME="manage_files.sh"
-readonly VERSION="1.0.0"
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# ===========================================================================
+# Hilfsfunktionen zur Einbindung externer Skript-Ressourcen
+# ===========================================================================
+# Guard für dieses Management-Skript
+MANAGE_FILES_LOADED=0
 
-# Import von Hilfsskripten
-readonly manage_folders_sh="$SCRIPT_DIR/manage_folders.sh"
-readonly manage_logging_sh="$SCRIPT_DIR/manage_logging.sh"
+# Skript- und BASH-Verzeichnis festlegen
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+BASH_DIR="${BASH_DIR:-$SCRIPT_DIR}"
 
-# Prüfen, ob alle erforderlichen Skripte vorhanden sind
-if [ ! -f "$manage_folders_sh" ]; then
-  echo "FEHLER: $manage_folders_sh nicht gefunden!" >&2
-  exit 1
+# Textausgaben für das gesamte Skript
+manage_files_log_0001="KRITISCHER FEHLER: Zentrale Bibliothek lib_core.sh nicht gefunden!"
+manage_files_log_0002="Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch."
+manage_files_log_0003="KRITISCHER FEHLER: Die Kernressourcen konnten nicht geladen werden."
+manage_files_log_0004="KRITISCHER FEHLER: Erforderliches Modul manage_folders.sh nicht geladen!"
+
+# Lade alle Basis-Ressourcen ------------------------------------------------
+if [ ! -f "$BASH_DIR/lib_core.sh" ]; then
+    echo "$manage_files_log_0001" >&2
+    echo "$manage_files_log_0002" >&2
+    exit 1
 fi
 
-if [ ! -f "$manage_logging_sh" ]; then
-  echo "FEHLER: $manage_logging_sh nicht gefunden!" >&2
-  exit 1
+source "$BASH_DIR/lib_core.sh"
+
+# Hybrides Ladeverhalten: 
+# Bei MODULE_LOAD_MODE=1 (Installation/Update) werden alle Module geladen
+# Bei MODULE_LOAD_MODE=0 (normaler Betrieb) werden Module individuell geladen
+if [ "${MODULE_LOAD_MODE:-0}" -eq 1 ]; then
+    load_core_resources || {
+        echo "$manage_files_log_0003" >&2
+        echo "$manage_files_log_0002" >&2
+        exit 1
+    }
 fi
 
-# Importiere Logging-Funktionen
-source "$manage_logging_sh"
+# Prüfe, ob die benötigte manage_folders.sh geladen ist
+if [ "${MANAGE_FOLDERS_LOADED:-0}" -eq 0 ]; then
+    echo "$manage_files_log_0004" >&2
+    echo "$manage_files_log_0002" >&2
+    exit 1
+fi
+# ===========================================================================
 
-# Variablen für Mehrsprachigkeit
-TEXT_GET_FILE_NOT_FOUND="Die angeforderte Datei wurde nicht gefunden"
-TEXT_PARAM_MISSING="Erforderlicher Parameter fehlt"
-TEXT_UNKNOWN_CATEGORY="Unbekannte Dateikategorie"
-TEXT_PATH_CREATED="Dateipfad erstellt"
-TEXT_FILE_CREATED="Datei erstellt"
-TEXT_FILE_EXISTS="Datei existiert bereits"
-TEXT_FILE_REMOVED="Datei entfernt"
-TEXT_OPERATION_COMPLETED="Operation abgeschlossen"
+# ===========================================================================
+# Globale Konstanten
+# ===========================================================================
+# Die meisten globalen Konstanten werden bereits durch lib_core.sh gesetzt.
+# Hier definieren wir nur Konstanten, die noch nicht durch 
+# lib_core.sh gesetzt wurden oder die speziell für dieses Modul benötigt werden.
+# ---------------------------------------------------------------------------
+# Standardpfade und Fallback-Pfade werden in lib_core.sh zentral definiert
+# Nutzer- und Ordnereinstellungen werden ebenfalls in lib_core.sh zentral 
+# verwaltet
+# ---------------------------------------------------------------------------
 
-# -----------------------------------------------
-# HILFSFUNKTIONEN
-# -----------------------------------------------
+# ===========================================================================
+# Lokale Konstanten (Vorgaben und Defaults nur für die Installation)
+# ===========================================================================
+# Standard-Dateierweiterungen für verschiedene Dateitypen
+CONFIG_FILE_EXT_NGINX=".conf"
+CONFIG_FILE_EXT_CAMERA=".json"
+CONFIG_FILE_EXT_SYSTEM=".inf"
+CONFIG_FILE_EXT_SYSTEMD=".service"
+CONFIG_FILE_EXT_SSL_CERT=".crt"
+CONFIG_FILE_EXT_SSL_KEY=".key"
+CONFIG_FILE_EXT_BACKUP_META=".meta.json"
+CONFIG_FILE_EXT_LOG=".log"
+# ---------------------------------------------------------------------------
 
-# Prüft, ob ein Parameter vorhanden ist
-function check_param() {
-  local param="$1"
-  local param_name="$2"
-  
-  if [ -z "$param" ]; then
-    log_or_json error "$TEXT_PARAM_MISSING: $param_name"
-    return 1
-  fi
-  return 0
+# ---------------------------------------------------------------------------
+# System-Dateipfade mit Standardorten
+SYSTEM_PATH_NGINX="/etc/nginx/sites-available"
+SYSTEM_PATH_SYSTEMD="/etc/systemd/system"
+SYSTEM_PATH_SSL_CERT="/etc/ssl/certs"
+SYSTEM_PATH_SSL_KEY="/etc/ssl/private"
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Debug-Modus: Lokal und global steuerbar
+# DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
+# DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
+DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
+: "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Textausgaben für das gesamte Skript (Internationalisierung)
+manage_files_error_0001="FEHLER: Kategorie nicht angegeben"
+manage_files_error_0002="FEHLER: Name nicht angegeben"
+manage_files_error_0003="FEHLER: Unbekannte Dateikategorie: %s"
+manage_files_error_0004="FEHLER: Dateityp nicht angegeben"
+manage_files_error_0005="FEHLER: Unbekannter Dateityp: %s"
+manage_files_error_0006="FEHLER: Komponente nicht angegeben"
+manage_files_error_0007="FEHLER: Dateipfad nicht angegeben"
+manage_files_error_0008="FEHLER: Konnte Verzeichnis nicht erstellen: %s"
+
+manage_files_info_0001="Dateipfad erstellt: %s"
+manage_files_info_0002="Datei existiert bereits: %s"
+manage_files_info_0003="Datei erstellt: %s"
+# ---------------------------------------------------------------------------
+
+# ===========================================================================
+# Hilfsfunktionen
+# ===========================================================================
+
+log_message() {
+    # -----------------------------------------------------------------------
+    # log_message
+    # -----------------------------------------------------------------------
+    # Funktion: Adapterfunktion für Logging, die zwischen direktem CLI-Aufruf
+    # ......... und Modulaufruf unterscheidet. Bei direktem CLI-Aufruf wird
+    # ......... die log_message-Funktion direkt aufgerufen. Bei der Nutzung
+    # ......... werden die Standard-Logging-Funktionen aus manage_logging.sh 
+    # ......... genutzt
+    # -----------------------------------------------------------------------
+    local level="$1"
+    local message="$2"
+    
+    case "$level" in
+        "debug")
+            debug "$message" "Files" "manage_files"
+            ;;
+        "info")
+            info "$message" "Files" "manage_files"
+            ;;
+        "error")
+            error "$message" "Files" "manage_files"
+            ;;
+        *)
+            echo "$message"
+            ;;
+    esac
 }
 
-# Erstellt Verzeichnisse für einen Dateipfad falls nötig
-function ensure_path_exists() {
-  local file_path="$1"
-  local dir_path
-  
-  dir_path="$(dirname "$file_path")"
-  
-  if [ ! -d "$dir_path" ]; then
-    mkdir -p "$dir_path" 2>/dev/null
-    if [ $? -ne 0 ]; then
-      log_or_json error "Konnte Verzeichnis nicht erstellen: $dir_path"
-      return 1
+# check_param
+check_param_log_0001="ERROR: Parameter nicht angegeben: %s"
+
+check_param() {
+    # -----------------------------------------------------------------------
+    # check_param
+    # -----------------------------------------------------------------------
+    # Funktion: Prüft, ob ein Parameter vorhanden ist
+    # Parameter: $1 - Der zu prüfende Parameter
+    # .........  $2 - Der Name des Parameters (für Fehlermeldung)
+    # Rückgabewert: 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    local param="$1"
+    local param_name="$2"
+
+    # Überprüfen, ob ein Parameter übergeben wurde
+    if [ -z "$param" ]; then
+        log "$(printf "$check_param_log_0001" "$param_name")" "check_param" "manage_files"
+        debug "$(printf "$check_param_log_0001" "$param_name")" "check_param" "manage_files"
+        return 1
     fi
-    log_or_json info "$TEXT_PATH_CREATED: $dir_path"
-  fi
   
-  return 0
+    return 0
 }
 
-# -----------------------------------------------
-# HAUPTFUNKTIONEN FÜR DATEIPFADE
-# -----------------------------------------------
+# ===========================================================================
+# Hauptfunktionen für die Ermittlung von Dateipfaden
+# ===========================================================================
 
-# Gibt den Pfad zu einer Konfigurationsdatei zurück
-function get_config_file() {
-  local category="$1"
-  local name="$2"
-  local folder_path
-  
-  if ! check_param "$category" "category"; then return 1; fi
-  if ! check_param "$name" "name"; then return 1; fi
-  
-  case "$category" in
-    "nginx")
-      folder_path="$("$manage_folders_sh" get_nginx_conf_dir)"
-      echo "${folder_path}/${name}.conf"
-      ;;
-    "camera")
-      folder_path="$("$manage_folders_sh" get_camera_conf_dir)"
-      echo "${folder_path}/${name}.json"
-      ;;
-    "system")
-      folder_path="$("$manage_folders_sh" get_conf_dir)"
-      echo "${folder_path}/${name}.inf"
-      ;;
-    *)
-      log_or_json error "$TEXT_UNKNOWN_CATEGORY: $category"
-      return 1
-      ;;
-  esac
+# get_config_file
+get_config_file_log_0001="ERROR: Unbekannte Kategorie: %s"
+
+get_config_file() {
+    # -----------------------------------------------------------------------
+    # get_config_file
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einer Konfigurationsdatei zurück
+    # Parameter: $1 - Die Kategorie der Konfigurationsdatei
+    # .........  $2 - Der Name der Konfigurationsdatei (ohne Erweiterung)
+    # Rückgabewert: Der vollständige Pfad zur Datei
+    # -----------------------------------------------------------------------
+    local category="$1"
+    local name="$2"
+    local folder_path
+
+    # Überprüfen, ob die erforderlichen Parameter angegeben sind
+    if ! check_param "$category" "category"; then return 1; fi
+    if ! check_param "$name" "name"; then return 1; fi
+    
+    # Bestimmen des Ordnerpfads basierend auf der Kategorie
+    case "$category" in
+        "nginx")
+            folder_path="$("$manage_folders_sh" get_nginx_conf_dir)"
+            echo "${folder_path}/${name}.conf"
+            ;;
+        "camera")
+            folder_path="$("$manage_folders_sh" get_camera_conf_dir)"
+            echo "${folder_path}/${name}.json"
+            ;;
+        "system")
+          folder_path="$("$manage_folders_sh" get_conf_dir)"
+          echo "${folder_path}/${name}.inf"
+          ;;
+        *)
+          log "$(printf "$get_config_file_log_0001" "$category")" "get_config_file" "manage_files"
+          debug "$(printf "$get_config_file_log_0001" "$category")" "get_config_file" "manage_files"
+          return 1
+          ;;
+    esac
 }
 
-# Gibt den Pfad zu einer System-Konfigurationsdatei zurück (mit Fallback)
-function get_system_file() {
-  local file_type="$1"
-  local name="$2"
-  local primary_folder secondary_folder file_ext="conf"
+# get_system_file
+get_system_file_log_0001="ERROR: Konnte Nginx-Systemverzeichnis nicht ermitteln"
+get_system_file_log_0002="ERROR: Leeres Ergebnis beim Ermitteln des Nginx-Systemverzeichnisses"
+get_system_file_log_0003="ERROR: Konnte systemd-Systemverzeichnis nicht ermitteln"
+get_system_file_log_0004="ERROR: Leeres Ergebnis beim Ermitteln des systemd-Systemverzeichnisses"
+get_system_file_log_0005="ERROR: Konnte SSL-Zertifikat-Systemverzeichnis nicht ermitteln"
+get_system_file_log_0006="ERROR: Leeres Ergebnis beim Ermitteln des SSL-Zertifikat-Systemverzeichnisses"
+get_system_file_log_0007="ERROR: Konnte SSL-Schlüssel-Systemverzeichnis nicht ermitteln"
+get_system_file_log_0008="ERROR: Leeres Ergebnis beim Ermitteln des SSL-Schlüssel-Systemverzeichnisses"
+get_system_file_log_0009="ERROR: Unbekannter Dateityp: %s"
+
+get_system_file() {
+    # -----------------------------------------------------------------------
+    # get_system_file
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einer System-Konfigurationsdatei zurück
+    # ......... Diese Funktion ist speziell für Systemdateien wie Nginx,
+    # ......... Systemd-Dienste und SSL-Zertifikate gedacht.
+    # Parameter: $1 - Der Typ der Konfigurationsdatei
+    # .........  $2 - Der Name der Konfigurationsdatei (ohne Erweiterung)
+    # Rückgabewert: Der vollständige Pfad zur Datei
+    # -----------------------------------------------------------------------
+    local file_type="$1"
+    local name="$2"
+    local file_ext="conf"
+    local system_folder
   
-  if ! check_param "$file_type" "file_type"; then return 1; fi
-  if ! check_param "$name" "name"; then return 1; fi
+    # Überprüfen, ob die erforderlichen Parameter angegeben sind
+    if ! check_param "$file_type" "file_type"; then return 1; fi
+    if ! check_param "$name" "name"; then return 1; fi
   
-  case "$file_type" in
-    "nginx")
-      # Primärer (System-)Pfad
-      primary_folder="/etc/nginx/sites-available"
-      # Fallback-Pfad aus manage_folders
-      secondary_folder="$("$manage_folders_sh" get_nginx_conf_dir)"
-      file_ext="conf"
-      ;;
-    "systemd")
-      primary_folder="/etc/systemd/system"
-      secondary_folder="$("$manage_folders_sh" get_conf_dir)"
-      file_ext="service"
-      ;;
-    "ssl_cert")
-      primary_folder="/etc/ssl/certs"
-      secondary_folder="$("$manage_folders_sh" get_ssl_dir)"
-      file_ext="crt"
-      ;;
-    "ssl_key")
-      primary_folder="/etc/ssl/private"
-      secondary_folder="$("$manage_folders_sh" get_ssl_dir)"
-      file_ext="key"
-      ;;
-    *)
-      log_or_json error "$TEXT_UNKNOWN_CATEGORY: $file_type"
-      return 1
-      ;;
-  esac
-  
-  # Prüfen und Fallback-Logik anwenden
-  if [ -f "${primary_folder}/${name}.${file_ext}" ]; then
-    echo "${primary_folder}/${name}.${file_ext}"
-  else
-    echo "${secondary_folder}/${name}.${file_ext}"
-  fi
+    # Bestimmen des Ordnerpfads basierend auf dem Dateityp
+    case "$file_type" in
+        "nginx")
+            # Pfad für Nginx-Konfigurationsdateien
+            system_folder=$("$manage_folders_sh" get_nginx_systemdir)
+            if [ $? -ne 0 ]; then
+                log "$get_system_file_log_0001" "get_system_file" "manage_files"
+                debug "$get_system_file_log_0001" "get_system_file" "manage_files"
+                return 1
+            fi
+
+            # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
+            if [ -z "$system_folder" ]; then
+                log "$get_system_file_log_0002" "get_system_file" "manage_files" 
+                debug "$get_system_file_log_0002" "get_system_file" "manage_files"
+                return 1
+            fi
+            file_ext="conf"
+            ;;
+        "systemd")
+            # Pfad für Systemd-Dienste
+            system_folder=$("$manage_folders_sh" get_systemd_systemdir)
+            if [ $? -ne 0 ]; then
+                log "$get_system_file_log_0003" "get_system_file" "manage_files"
+                debug "$get_system_file_log_0003" "get_system_file" "manage_files"
+                return 1
+            fi
+
+            # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
+            if [ -z "$system_folder" ]; then
+                log "$get_system_file_log_0004" "get_system_file" "manage_files"
+                debug "$get_system_file_log_0004" "get_system_file" "manage_files"
+                return 1
+            fi
+            file_ext="service"
+            ;;
+        "ssl_cert")
+            # Pfad für SSL-Zertifikate
+            system_folder=$("$manage_folders_sh" get_ssl_cert_systemdir)
+            if [ $? -ne 0 ]; then
+                log "$get_system_file_log_0005" "get_system_file" "manage_files"
+                debug "$get_system_file_log_0005" "get_system_file" "manage_files"
+                return 1
+            fi
+
+            # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
+            if [ -z "$system_folder" ]; then
+                log "$get_system_file_log_0006" "get_system_file" "manage_files"
+                debug "$get_system_file_log_0006" "get_system_file" "manage_files"
+                return 1
+            fi
+            file_ext="crt"
+            ;;
+        "ssl_key")
+            # Pfad für SSL-Schlüsseldateien
+            system_folder=$("$manage_folders_sh" get_ssl_key_systemdir)
+            if [ $? -ne 0 ]; then
+                log "$get_system_file_log_0007" "get_system_file" "manage_files"
+                debug "$get_system_file_log_0007" "get_system_file" "manage_files"
+                return 1
+            fi
+
+            # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
+            if [ -z "$system_folder" ]; then
+                log "$get_system_file_log_0008" "get_system_file" "manage_files"
+                debug "$get_system_file_log_0008" "get_system_file" "manage_files"
+                return 1
+            fi
+            file_ext="key"
+            ;;
+        *)
+            log "$(printf "$get_system_file_log_0009" "$file_type")" "get_config_file" "manage_files"
+            debug "$(printf "$get_system_file_log_0009" "$file_type")" "get_config_file" "manage_files"
+            return 1
+            ;;
+    esac
+    
+    # Rückgabe des vollständigen Pfads zur Systemdatei
+    echo "${system_folder}/${name}.${file_ext}"
+    return 0
 }
 
-# Gibt den Pfad zu einer Log-Datei zurück
-function get_log_file() {
-  local component="$1"
-  local date_suffix
-  local log_dir
+get_log_file() {
+    # -----------------------------------------------------------------------
+    # get_log_file
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einer Log-Datei zurück
+    # Parameter: $1 - Komponente die eine Log-Datei anlegen möchte
+    # Rückgabewert: Der vollständige Pfad zur Datei
+    # -----------------------------------------------------------------------
+    local component="${1:-fotobox}"
+    local log_dir
   
-  if ! check_param "$component" "component"; then return 1; fi
-  
-  date_suffix="$(date +%Y-%m-%d)"
-  log_dir="$("$manage_folders_sh" get_log_dir)"
-  
-  echo "${log_dir}/${component}_${date_suffix}.log"
+    # Verzeichnis abrufen und Dateinamen generieren
+    log_dir="$("$manage_folders_sh" get_log_dir)"
+    echo "${log_dir}/$(date +%Y-%m-%d)_${component}.log"
 }
 
-# Gibt den Pfad zu einer temporären Datei zurück
-function get_temp_file() {
-  local prefix="$1"
-  local suffix="$2"
-  local temp_dir
-  
-  if ! check_param "$prefix" "prefix"; then return 1; fi
-  
-  # Default-Suffix falls nicht angegeben
-  suffix=${suffix:-.tmp}
-  
-  temp_dir="$("$manage_folders_sh" get_temp_dir)"
-  echo "${temp_dir}/${prefix}_$(date +%Y%m%d%H%M%S)_$RANDOM$suffix"
+get_temp_file() {
+    # -----------------------------------------------------------------------
+    # get_temp_file
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einer temporären Datei zurück
+    # Parameter: $1 - Präfix für den Dateinamen (optional) 
+    #            $2 - Suffix für die Dateierweiterung (optional)
+    # Rückgabewert: Der vollständige Pfad zur Datei
+    # -----------------------------------------------------------------------
+    local prefix="${1:-fotobox}"  # Standard-Präfix ist "fotobox"
+    local suffix="${2:-.tmp}"     # Standard-Suffix ist .tmp
+    local temp_dir
+        
+    # Temporäres Verzeichnis abrufen und Dateinamen generieren
+    temp_dir="$("$manage_folders_sh" get_temp_dir)"
+    echo "${temp_dir}/${prefix}_$(date +%Y%m%d%H%M%S)_$RANDOM$suffix"
 }
 
-# Gibt den Pfad zu einer Backup-Datei zurück
-function get_backup_file() {
-  local component="$1"
-  local extension="${2:-.zip}"  # Default: .zip
-  local backup_dir
-  
-  if ! check_param "$component" "component"; then return 1; fi
-  
-  backup_dir="$("$manage_folders_sh" get_backup_dir)"
-  echo "${backup_dir}/$(date +%Y-%m-%d)_${component}${extension}"
+get_backup_file() {
+    # -----------------------------------------------------------------------
+    # get_backup_file
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einer Backup-Datei zurück
+    # Parameter: $1 - Komponente die eine Backup-Datei anlegen möchte
+    #            $2 - Suffix für die Dateierweiterung (optional)
+    # Rückgabewert: Der vollständige Pfad zur Datei
+    # -----------------------------------------------------------------------
+    local component="$1"
+    local extension="${2:-.zip}"  # Default: .zip
+    local backup_dir
+    
+    # Überprüfen, ob die erforderlichen Parameter angegeben sind
+    if ! check_param "$component" "component"; then return 1; fi
+    
+    # Backup-Verzeichnis abrufen und Dateinamen generieren
+    backup_dir="$("$manage_folders_sh" get_backup_dir)"
+    echo "${backup_dir}/$(date +%Y-%m-%d)_${component}${extension}"
 }
 
-# Gibt den Pfad zu einer Backup-Metadaten-Datei zurück
-function get_backup_meta_file() {
-  local component="$1"
-  local backup_dir
-  
-  if ! check_param "$component" "component"; then return 1; fi
-  
-  backup_dir="$("$manage_folders_sh" get_backup_dir)"
-  echo "${backup_dir}/$(date +%Y-%m-%d)_${component}.meta.json"
+get_backup_meta_file() {
+    # -----------------------------------------------------------------------
+    # get_backup_file
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einer Backup-Metadaten-Datei zurück
+    # Parameter: $1 - Komponente die eine Backup-Datei anlegen möchte
+    # Rückgabewert: Der vollständige Pfad zur Datei
+    # -----------------------------------------------------------------------
+    local component="$1"
+    local backup_dir
+    
+    # Überprüfen, ob die erforderlichen Parameter angegeben sind
+    if ! check_param "$component" "component"; then return 1; fi
+    
+    # Backup-Verzeichnis abrufen und Dateinamen generieren
+    backup_dir="$("$manage_folders_sh" get_backup_dir)"
+    echo "${backup_dir}/$(date +%Y-%m-%d)_${component}.meta.json"
 }
 
 # Gibt den Pfad zu einer Template-Datei zurück
-function get_template_file() {
-  local category="$1"
-  local name="$2"
-  local folder_path
-  
-  if ! check_param "$category" "category"; then return 1; fi
-  if ! check_param "$name" "name"; then return 1; fi
-  
-  case "$category" in
-    "nginx")
-      folder_path="$("$manage_folders_sh" get_nginx_conf_dir)"
-      echo "${folder_path}/template_${name}"
-      ;;
-    "backup")
-      folder_path="$("$manage_folders_sh" get_nginx_conf_dir)"  # Gemeinsamer Speicherort mit nginx Templates
-      echo "${folder_path}/template_${name}"
-      ;;
-    *)
-      log_or_json error "$TEXT_UNKNOWN_CATEGORY: $category"
-      return 1
-      ;;
-  esac
+get_template_file() {
+    local category="$1"
+    local name="$2"
+    local folder_path
+    
+    if ! check_param "$category" "category"; then return 1; fi
+    if ! check_param "$name" "name"; then return 1; fi
+    
+    case "$category" in
+        "nginx")
+            folder_path="$("$manage_folders_sh" get_nginx_conf_dir)"
+            echo "${folder_path}/template_${name}"
+            return 0
+            ;;
+        "backup")
+            # Gemeinsamer Speicherort mit nginx Templates
+            folder_path="$("$manage_folders_sh" get_nginx_conf_dir)"  
+            echo "${folder_path}/template_${name}"
+            return 0
+            ;;
+        *)
+            log_message error "$TEXT_UNKNOWN_CATEGORY: $category"
+            return 1
+            ;;
+    esac
 }
 
 # Gibt den Pfad zu einer Bilddatei zurück
-function get_image_file() {
+get_image_file() {
   local type="$1"    # z.B. "original", "thumbnail"
   local filename="$2"
   local folder_path
@@ -251,7 +459,7 @@ function get_image_file() {
       folder_path="$("$manage_folders_sh" get_thumbnails_dir)"
       ;;
     *)
-      log_or_json error "$TEXT_UNKNOWN_CATEGORY: $type"
+      log_message error "$TEXT_UNKNOWN_CATEGORY: $type"
       return 1
       ;;
   esac
@@ -264,7 +472,7 @@ function get_image_file() {
 # -----------------------------------------------
 
 # Prüft, ob eine Datei existiert
-function file_exists() {
+file_exists() {
   local file_path="$1"
   
   if ! check_param "$file_path" "file_path"; then return 1; fi
@@ -277,90 +485,29 @@ function file_exists() {
 }
 
 # Erstellt eine leere Datei
-function create_empty_file() {
+create_empty_file() {
   local file_path="$1"
-  
-  if ! check_param "$file_path" "file_path"; then return 1; fi
+    if ! check_param "$file_path" "file_path"; then return 1; fi
   
   if file_exists "$file_path"; then
-    log_or_json info "$TEXT_FILE_EXISTS: $file_path"
+    log_message "info" "$(printf "$manage_files_info_0002" "$file_path")"
     return 0
   fi
   
-  ensure_path_exists "$file_path"
+  # Verzeichnis für die Datei erstellen
+  "$manage_folders_sh" create_directory "$(dirname "$file_path")"
   touch "$file_path"
   
   if [ $? -eq 0 ]; then
-    log_or_json info "$TEXT_FILE_CREATED: $file_path"
+    log_message "info" "$(printf "$manage_files_info_0003" "$file_path")"
     return 0
   else
-    log_or_json error "Konnte Datei nicht erstellen: $file_path"
+    log_message "error" "Konnte Datei nicht erstellen: $file_path"
     return 1
   fi
 }
 
-# -----------------------------------------------
-# HAUPTFUNKTION
-# -----------------------------------------------
-
-function main() {
-  local command="$1"
-  shift
-  
-  if [ -z "$command" ]; then
-    log_or_json error "Kein Befehl angegeben. Verfügbare Befehle: get_config_file, get_system_file, get_log_file, get_temp_file, get_backup_file, get_template_file, get_image_file, file_exists, create_empty_file"
-    exit 1
-  fi
-  
-  case "$command" in
-    "get_config_file")
-      get_config_file "$@"
-      ;;
-    "get_system_file")
-      get_system_file "$@"
-      ;;
-    "get_log_file")
-      get_log_file "$@"
-      ;;
-    "get_temp_file")
-      get_temp_file "$@"
-      ;;
-    "get_backup_file")
-      get_backup_file "$@"
-      ;;
-    "get_backup_meta_file")
-      get_backup_meta_file "$@"
-      ;;
-    "get_template_file")
-      get_template_file "$@"
-      ;;
-    "get_image_file")
-      get_image_file "$@"
-      ;;
-    "file_exists")
-      if file_exists "$@"; then
-        echo "true"
-        exit 0
-      else
-        echo "false"
-        exit 1
-      fi
-      ;;
-    "create_empty_file")
-      create_empty_file "$@"
-      exit $?
-      ;;
-    "version")
-      echo "$VERSION"
-      ;;
-    *)
-      log_or_json error "Unbekannter Befehl: $command"
-      exit 1
-      ;;
-  esac
-}
-
-# Wenn das Skript direkt ausgeführt wird
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-  main "$@"
-fi
+# ===========================================================================
+# Abschluss: Markiere dieses Modul als geladen
+# ===========================================================================
+MANAGE_FILES_LOADED=1
