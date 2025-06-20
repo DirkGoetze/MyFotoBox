@@ -473,5 +473,7 @@ reset_firewall() {
     return 0
 }
 
-# Markiere dieses Modul als geladen
+# ===========================================================================
+# Abschluss: Markiere dieses Modul als geladen
+# ===========================================================================
 MANAGE_FIREWALL_LOADED=1

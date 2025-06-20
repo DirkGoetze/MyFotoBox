@@ -1,0 +1,7 @@
+{
+  "timestamp": "{{timestamp}}",
+  "source": "{{source}}",
+  "backup": "{{backup}}",
+  "config_type": "{{config_type}}",
+  "action": "{{action}}"
+}

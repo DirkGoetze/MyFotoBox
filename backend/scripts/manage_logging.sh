@@ -1,7 +1,7 @@
 #!/bin/bash
-# ------------------------------------------------------------------------------
+# ===========================================================================
 # manage_logging.sh
-# ------------------------------------------------------------------------------
+# ===========================================================================
 # Funktion: Stellt Logging-Funktionalität für alle Fotobox-Skripte bereit.
 # ......... Logdateien werden im Projektordner /opt/fotobox/log/ abgelegt 
 # ......... Optional kann ein Symlink /var/log/fotobox → /opt/fotobox/log/
@@ -10,6 +10,10 @@
 # ---------------------------------------------------------------------------
 # HINWEIS: Dieses Skript ist Bestandteil der Backend-Logik und darf nur im
 # Unterordner 'backend/scripts/' abgelegt werden 
+# ---------------------------------------------------------------------------
+# DEPENDENCY: Dieses Skript nutzt Funktionen aus manage_folders.sh, 
+# insbesondere get_log_dir(). Die manage_folders.sh muss VOR diesem
+# Skript geladen werden!
 # ---------------------------------------------------------------------------
 # POLICY-HINWEIS: Dieses Skript ist ein reines Funktions-/Modulskript und 
 # enthält keine main()-Funktion mehr. Die Nutzung als eigenständiges 
@@ -97,40 +101,36 @@ chk_log_file() {
     local LOG_FILE
     LOG_FILE="$(get_log_file)"
     local MAX_ROTATE=5
+
     # Alte, maximal rotierte Datei löschen
     if [ -f "${LOG_FILE}.${MAX_ROTATE}.gz" ]; then
         rm -f "${LOG_FILE}.${MAX_ROTATE}.gz"
     fi
+    
     # Bestehende rotierte Dateien weiterschieben
     for ((i=MAX_ROTATE-1; i>=2; i--)); do
         if [ -f "${LOG_FILE}.${i}.gz" ]; then
             mv "${LOG_FILE}.${i}.gz" "${LOG_FILE}.$((i+1)).gz"
         fi
     done
+    
     # 1. Rotation komprimieren
     if [ -f "${LOG_FILE}.1" ]; then
         gzip -c "${LOG_FILE}.1" > "${LOG_FILE}.2.gz"
         rm -f "${LOG_FILE}.1"
     fi
+    
     # Aktuelles Logfile rotieren
     if [ -f "${LOG_FILE}" ]; then
         mv "${LOG_FILE}" "${LOG_FILE}.1"
     fi
-    # Sicherstellen, dass das Logfile-Verzeichnis existiert
-    local log_dir
-    log_dir=$(dirname "${LOG_FILE}")
-    if [ ! -d "$log_dir" ]; then
-        mkdir -p "$log_dir" 2>/dev/null || true
-        # Wenn das Verzeichnis nicht erstellt werden konnte, verwende /tmp
-        if [ ! -d "$log_dir" ] && [ -w "/tmp" ]; then
-            LOG_FILE="/tmp/fotobox/$(date '+%Y-%m-%d')_fotobox.log"
-            mkdir -p "/tmp/fotobox" 2>/dev/null || true
-        fi
-        # Wenn auch das nicht funktioniert, verwende das aktuelle Verzeichnis
-        if [ ! -d "$(dirname "${LOG_FILE}")" ]; then
-            LOG_FILE="./$(date '+%Y-%m-%d')_fotobox.log"
-        fi
-    fi
+    
+    # Durch den Aufruf von get_log_file/get_log_dir wurde bereits sichergestellt,
+    # sichergestellt, dass das Log-Verzeichnis existiert oder ein Fallback verwendet 
+    # wird. Wir aktualisieren LOG_FILE über get_log_file, um sicherzustellen, dass
+    # wir den aktuellen Pfad verwenden, falls get_log_dir eine Änderung vorgenommen 
+    # hat.
+    LOG_FILE="$(get_log_file)"
     
     # Sicherstellen, dass das Logfile existiert
     if [ ! -f "${LOG_FILE}" ]; then
@@ -142,6 +142,55 @@ chk_log_file() {
     fi
 }
 
+json_out() {
+    # -----------------------------------------------------------------------
+    # json_out
+    # -----------------------------------------------------------------------
+    # Funktion: Hilfsfunktion zur JSON-Ausgabe. Gibt eine JSON-formatierte 
+    # ........  Antwort aus
+    # Parameter: $1 = Status (success, error, info, prompt)
+    #            $2 = Nachricht
+    #            $3 = optionaler Fehlercode (optional)
+    # Rückgabe:  Gibt JSON-String auf stdout aus
+    # Seiteneffekte: keine
+    local status="$1"
+    local message="$2"
+    local code="$3"
+
+    # Prüfen, ob ein Fehlercode übergeben wurde
+    if [ -z "$code" ]; then
+        echo "{\"status\": \"$status\", \"message\": \"$message\"}"
+    else
+        echo "{\"status\": \"$status\", \"message\": \"$message\", \"code\": $code}"
+    fi
+}
+
+# ===========================================================================
+# Externe Funktionen zur Log-Verwaltung
+# ===========================================================================
+
+log_or_json() {
+    # -----------------------------------------------------------------------
+    # log_or_json
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt eine Nachricht entweder als JSON (für Web/Python) oder als Log (Shell) aus
+    # Parameter: $1 = Modus (text|json)
+    #            $2 = Status (success, error, info, prompt)
+    #            $3 = Nachricht
+    #            $4 = optionaler Fehlercode (optional)
+    # Rückgabe:  Gibt Nachricht auf stdout aus (Log oder JSON)
+    # Seiteneffekte: ruft log() auf (Logfile-Ausgabe möglich)
+    local mode="$1"
+    local status="$2"
+    local message="$3"
+    local code="$4"
+    if [ "$mode" = "json" ]; then
+        json_out "$status" "$message" "$code"
+    else
+        log "$message"
+    fi
+}
+
 log() {
     # -----------------------------------------------------------------------
     # log
@@ -149,46 +198,29 @@ log() {
     # Funktion: Schreibt eine Logzeile in die zentrale Logdatei oder führt
     #           Logrotation und Komprimierung durch (über chk_log_file).
     # Aufruf:  log "Nachricht" [Funktionsname] [Dateiname]
-    #          log               → prüft/rotiert/komprimiert das Logfile
+    #          log ohne Parameter → prüft/rotiert/komprimiert das Logfile
     # Besonderheiten:
     # - Logdatei: /opt/fotobox/log/YYYY-MM-DD_fotobox.log 
     #  (Fallback: /var/log/fotobox/ oder /tmp/fotobox/)
     # - Rotation und Komprimierung werden von chk_log_file übernommen
     # - Legt Logdatei neu an, falls sie fehlt oder verschoben wurde
-    # - Im Fehlerfall MUSS die aufrufende Funktion (Funktionsname) als verpflichtender Parameter an log() übergeben werden.
-    # - Wenn DEBUG aktiv ist, MUSS im Fehlerfall die Datei (Skript/Programm), in der der Fehler aufgetreten ist, als verpflichtender Parameter an log() übergeben werden.
+    # - Im Fehlerfall MUSS die aufrufende Funktion (Funktionsname) als 
+    #   verpflichtender Parameter an log() übergeben werden.
+    # - Wenn DEBUG aktiv ist, MUSS im Fehlerfall die Datei (Skript/
+    #   Programm), in der der Fehler aufgetreten ist, als verpflichtender 
+    #   Parameter an log() übergeben werden.
     local LOG_FILE
     LOG_FILE="$(get_log_file)"
     local msg="$1"
     local func="$2"
     local file="$3"
+
     if [ -z "$msg" ]; then
         chk_log_file
     else
-        # Prüfen und gegebenenfalls erstellen des Verzeichnisses
-        local log_dir
-        log_dir=$(dirname "$LOG_FILE")
-        if [ ! -d "$log_dir" ]; then
-            mkdir -p "$log_dir" 2>/dev/null || true
-            
-            # Wenn das Verzeichnis nicht erstellt werden konnte, Fallbacks verwenden
-            if [ ! -d "$log_dir" ]; then
-                if [ -w "/tmp" ]; then
-                    LOG_FILE="/tmp/fotobox/$(date '+%Y-%m-%d')_fotobox.log"
-                    mkdir -p "/tmp/fotobox" 2>/dev/null || true
-                else
-                    LOG_FILE="./$(date '+%Y-%m-%d')_fotobox.log"
-                fi
-            fi
-        fi
-        
-        # Versuche die Logdatei zu erstellen
+        # Stellen wir sicher, dass die Datei existiert
         if [ ! -f "$LOG_FILE" ]; then
-            touch "$LOG_FILE" 2>/dev/null || {
-                # Wenn das nicht klappt, verwende das aktuelle Verzeichnis
-                LOG_FILE="./$(date '+%Y-%m-%d')_fotobox.log"
-                touch "$LOG_FILE" 2>/dev/null || true
-            }
+            touch "$LOG_FILE" 2>/dev/null || true
         fi
         # Fehlerfall: Funktionsname und ggf. Dateiname erzwingen
         if [[ "$msg" == ERROR:* ]]; then
@@ -208,6 +240,36 @@ log() {
         fi
     fi
 }
+
+debug() {
+    # -----------------------------------------------------------------------
+    # debug
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt Debug-Ausgaben je nach Modus aus (LOG, CLI, JSON)
+    # Debug ist aktiv, wenn DEBUG_MOD_GLOBAL=1 oder DEBUG_MOD_LOCAL=1
+    # Parameter: $1 = Nachricht, $2 = optional: Modus (CLI|JSON|LOG), $3 = optional: Funktionsname
+    if [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ]; then
+        local msg="$1"
+        local mode="${2:-LOG}"
+        local func="${3:-${FUNCNAME[1]}}"
+        case "$mode" in
+            CLI)
+                print_debug "[$func] $msg"
+                ;;
+            JSON)
+                echo "{\"debug\":true, \"function\":\"$func\", \"message\":\"$msg\"}"
+                ;;
+            LOG|*)
+                log "DEBUG[$func]: $msg"
+                ;;
+        esac
+    fi
+}
+
+
+# ===========================================================================
+# Externe Funktionen zur Ausgabe von Meldungen
+# ===========================================================================
 
 print_step() {
     # -----------------------------------------------------------------------
@@ -335,34 +397,7 @@ print_debug() {
     echo -e "${COLOR_CYAN}  → ${COLOR_RESET}$*"
 }
 
-# Debug-Modus für dieses Skript (lokales Flag)
-# Die globalen Debug-Flags werden in lib_core.sh definiert
-DEBUG_MOD_LOCAL=0  # Nur für dieses Skript
-
-debug() {
-    # -----------------------------------------------------------------------
-    # debug
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt Debug-Ausgaben je nach Modus aus (LOG, CLI, JSON)
-    # Debug ist aktiv, wenn DEBUG_MOD_GLOBAL=1 oder DEBUG_MOD_LOCAL=1
-    # Parameter: $1 = Nachricht, $2 = optional: Modus (CLI|JSON|LOG), $3 = optional: Funktionsname
-    if [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ]; then
-        local msg="$1"
-        local mode="${2:-LOG}"
-        local func="${3:-${FUNCNAME[1]}}"
-        case "$mode" in
-            CLI)
-                print_debug "[$func] $msg"
-                ;;
-            JSON)
-                echo "{\"debug\":true, \"function\":\"$func\", \"message\":\"$msg\"}"
-                ;;
-            LOG|*)
-                log "DEBUG[$func]: $msg"
-                ;;
-        esac
-    fi
-}
-
-# Markiere dieses Modul als geladen
+# ===========================================================================
+# Abschluss: Markiere dieses Modul als geladen
+# ===========================================================================
 MANAGE_LOGGING_LOADED=1

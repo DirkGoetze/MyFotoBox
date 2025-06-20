@@ -282,6 +282,8 @@ setup_backend_service() {
     return 0
 }
 
-# Markiere dieses Modul als geladen
+# ===========================================================================
+# Abschluss: Markiere dieses Modul als geladen
+# ===========================================================================
 MANAGE_BACKEND_SERVICE_LOADED=1
 

@@ -27,10 +27,17 @@ MANAGE_NGINX_LOADED=0
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 BASH_DIR="${BASH_DIR:-$SCRIPT_DIR}"
 
+# Textausgaben für das gesamte Skript
+manage_nginx_log_0001="KRITISCHER FEHLER: Zentrale Bibliothek lib_core.sh nicht gefunden!"
+manage_nginx_log_0002="Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch."
+manage_nginx_log_0003="KRITISCHER FEHLER: Die Kernressourcen konnten nicht geladen werden."
+manage_nginx_log_0004="KRITISCHER FEHLER: Das Modul manage_folders.sh konnte nicht geladen werden."
+manage_nginx_log_0005="KRITISCHER FEHLER: Das Modul manage_logging.sh konnte nicht geladen werden."
+
 # Lade alle Basis-Ressourcen ------------------------------------------------
 if [ ! -f "$BASH_DIR/lib_core.sh" ]; then
-    echo "KRITISCHER FEHLER: Zentrale Bibliothek lib_core.sh nicht gefunden!" >&2
-    echo "Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch." >&2
+    echo "$manage_nginx_log_0001" >&2
+    echo "$manage_nginx_log_0002" >&2
     exit 1
 fi
 
@@ -41,19 +48,19 @@ source "$BASH_DIR/lib_core.sh"
 # Bei MODULE_LOAD_MODE=0 (normaler Betrieb) werden Module individuell geladen
 if [ "${MODULE_LOAD_MODE:-0}" -eq 1 ]; then
     load_core_resources || {
-        echo "KRITISCHER FEHLER: Die Kernressourcen konnten nicht geladen werden." >&2
-        echo "Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch." >&2
+        echo "$manage_nginx_log_0003" >&2
+        echo "$manage_nginx_log_0002" >&2
         exit 1
     }
 else
     # Im normalen Betrieb werden manage_folders und manage_logging benötigt
     load_module "manage_folders" || {
-        echo "KRITISCHER FEHLER: Das Modul manage_folders.sh konnte nicht geladen werden." >&2
+        echo "$manage_nginx_log_0004" >&2
         exit 1
     }
     
     load_module "manage_logging" || {
-        echo "KRITISCHER FEHLER: Das Modul manage_logging.sh konnte nicht geladen werden." >&2
+        echo "$manage_nginx_log_0005" >&2
         exit 1
     }
 fi
@@ -77,12 +84,18 @@ fi
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
 DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
+# Debug-Modus für dieses Skript (lokales Flag)
 
 # ===========================================================================
 
 # ===========================================================================
 # Funktionen zur Template-Verarbeitung
 # ===========================================================================
+
+# apply_template
+apply_template_txt_0001="Template-Datei nicht gefunden: %s"
+apply_template_txt_0002="Template-Datei erfolgreich verarbeitet"
+apply_template_txt_0003="Ersetzung ausgeführt: %s"
 
 apply_template() {
     # -----------------------------------------------------------------------
@@ -100,7 +113,7 @@ apply_template() {
     shift 2
     
     if [ ! -f "$template_file" ]; then
-        log "Template-Datei nicht gefunden: $template_file"
+        log "$(printf "$apply_template_txt_0001" "$template_file")"
         return 1
     fi
     
@@ -120,6 +133,11 @@ apply_template() {
     echo "$content" > "$output_file"
     return 0
 }
+
+# get_nginx_template_path
+get_nginx_template_path_txt_0001="Template-Datei nicht gefunden: %s"
+get_nginx_template_path_txt_0002="manage_folders.sh nicht verfügbar"
+get_nginx_template_path_txt_0003="Template-Datei im Fallback-Pfad nicht gefunden: %s"
 
 get_nginx_template_path() {
     # -----------------------------------------------------------------------
@@ -144,11 +162,11 @@ get_nginx_template_path() {
         
         # Prüfe, ob die Datei existiert
         if [ ! -f "$template_file" ]; then
-            log "Template-Datei nicht gefunden: $template_file"
+            log "$(printf "$get_nginx_template_path_txt_0001" "$template_file")"
             template_file="" # Leerer String als Fehlerindikator
         fi
     else
-        log "manage_folders.sh nicht verfügbar"
+        log "$get_nginx_template_path_txt_0002"
         
         # Fallback: Versuche manuelle Pfaderstellung
         if [ -n "$DEFAULT_DIR_CONF_NGINX" ]; then
@@ -159,7 +177,7 @@ get_nginx_template_path() {
         
         # Prüfe, ob die Datei existiert im Fallback
         if [ -n "$template_file" ] && [ ! -f "$template_file" ]; then
-            log "Template-Datei im Fallback-Pfad nicht gefunden: $template_file"
+            log "$(printf "$get_nginx_template_path_txt_0003" "$template_file")"
             template_file="" # Leerer String als Fehlerindikator
         fi
     fi
@@ -168,52 +186,13 @@ get_nginx_template_path() {
 }
 
 # ===========================================================================
-# Hilfsfunktionen
+# Externe Funktionen zur NGINX-Verwaltung
 # ===========================================================================
 
-json_out() {
-    # -----------------------------------------------------------------------
-    # Hilfsfunktion JSON-Ausgabe
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt eine JSON-formatierte Antwort aus
-    # Parameter: $1 = Status (success, error, info, prompt)
-    #            $2 = Nachricht
-    #            $3 = optionaler Fehlercode (optional)
-    # Rückgabe:  Gibt JSON-String auf stdout aus
-    # Seiteneffekte: keine
-    local status="$1"
-    local message="$2"
-    local code="$3"
-
-    # Prüfen, ob ein Fehlercode übergeben wurde
-    if [ -z "$code" ]; then
-        echo "{\"status\": \"$status\", \"message\": \"$message\"}"
-    else
-        echo "{\"status\": \"$status\", \"message\": \"$message\", \"code\": $code}"
-    fi
-}
-
-log_or_json() {
-    # -----------------------------------------------------------------------
-    # log_or_json
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt eine Nachricht entweder als JSON (für Web/Python) oder als Log (Shell) aus
-    # Parameter: $1 = Modus (text|json)
-    #            $2 = Status (success, error, info, prompt)
-    #            $3 = Nachricht
-    #            $4 = optionaler Fehlercode (optional)
-    # Rückgabe:  Gibt Nachricht auf stdout aus (Log oder JSON)
-    # Seiteneffekte: ruft log() auf (Logfile-Ausgabe möglich)
-    local mode="$1"
-    local status="$2"
-    local message="$3"
-    local code="$4"
-    if [ "$mode" = "json" ]; then
-        json_out "$status" "$message" "$code"
-    else
-        log "$message"
-    fi
-}
+# backup_nginx_config
+backup_nginx_config_txt_0001="Backup und Metadaten angelegt: %s"
+backup_nginx_config_txt_0002="Backup fehlgeschlagen: %s"
+backup_nginx_config_txt_0003="Fallback-Backup-Verzeichnis wird verwendet"
 
 backup_nginx_config() {
     # -----------------------------------------------------------------------
@@ -245,6 +224,7 @@ backup_nginx_config() {
         backup_dir="$FALLBACK_DIR_BACKUP_NGINX"
         # Falls auch FALLBACK_DIR_BACKUP_NGINX nicht definiert ist
         [ -z "$backup_dir" ] && backup_dir="/opt/fotobox/backup/nginx"
+        log "$backup_nginx_config_txt_0003: $backup_dir"
     fi
     
     local timestamp
@@ -263,27 +243,39 @@ backup_nginx_config() {
         mkdir -p "$backup_dir"
     fi
     if cp "$src" "$backup_file"; then
-        # Metadaten schreiben
-        cat > "$meta_file" <<EOF
-{
-  "timestamp": "$timestamp",
-  "source": "$src",
-  "backup": "$backup_file",
-  "config_type": "$config_type",
-  "action": "$action"
-}
-EOF
+        # Metadaten über Template-Datei erstellen
+        local template_file
+        template_file="$(get_nginx_template_path "backup_file.meta.json")"
+        
+        # Falls Template nicht gefunden wurde, verwende Fallback-Pfad direkt
+        if [ -z "$template_file" ]; then
+            local nginx_conf_dir
+            if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
+                nginx_conf_dir="$("$manage_folders_sh" get_nginx_conf_dir)"
+            else
+                nginx_conf_dir="${DEFAULT_DIR_CONF_NGINX:-/opt/fotobox/conf/nginx}"
+            fi
+            template_file="$nginx_conf_dir/template_backup_file.meta.json"
+        fi
+        
+        # Wende Template an
+        apply_template "$template_file" "$meta_file" \
+            "timestamp=$timestamp" \
+            "source=$src" \
+            "backup=$backup_file" \
+            "config_type=$config_type" \
+            "action=$action"
         if [ "$mode" = "json" ]; then
-            json_out "success" "Backup und Metadaten angelegt: $backup_file" 0
+            json_out "success" "$(printf "$backup_nginx_config_txt_0001" "$backup_file")" 0
         else
-            log "Backup und Metadaten angelegt: $backup_file"
+            log "$(printf "$backup_nginx_config_txt_0001" "$backup_file")"
         fi
         return 0
     else
         if [ "$mode" = "json" ]; then
-            json_out "error" "Backup fehlgeschlagen: $src" 1
+            json_out "error" "$(printf "$backup_nginx_config_txt_0002" "$src")" 1
         else
-            log "Backup fehlgeschlagen: $src"
+            log "$(printf "$backup_nginx_config_txt_0002" "$src")"
         fi
         return 1
     fi
@@ -377,7 +369,6 @@ chk_nginx_port_txt_0003="Port %s ist belegt."
 chk_nginx_port_txt_0004="Port %s ist frei."
 chk_nginx_port_txt_0005="Portprüfung abgeschlossen."
 chk_nginx_port_txt_0006="Fehler bei der Portprüfung."
-
 
 chk_nginx_port() {
     # -----------------------------------------------------------------------
@@ -667,6 +658,12 @@ get_nginx_bind_address() {
     fi
 }
 
+# set_nginx_bind_address
+set_nginx_bind_address_txt_0001="Bind-Adresse erfolgreich gesetzt"
+set_nginx_bind_address_txt_0002="Fehler beim Setzen der Bind-Adresse"
+set_nginx_bind_address_txt_0003="Keine passende NGINX-Konfiguration gefunden"
+set_nginx_bind_address_txt_0004="Keine IP-Adresse angegeben"
+
 set_nginx_bind_address() {
     # -----------------------------------------------------------------------
     # set_nginx_bind_address
@@ -716,6 +713,11 @@ get_nginx_server_name() {
         echo "$server_name"
     fi
 }
+
+# set_nginx_server_name
+set_nginx_server_name_txt_0001="Server-Name erfolgreich gesetzt"
+set_nginx_server_name_txt_0002="Fehler beim Setzen des Server-Namens"
+set_nginx_server_name_txt_0003="Kein Server-Name angegeben"
 
 set_nginx_server_name() {
     # -----------------------------------------------------------------------
@@ -789,6 +791,11 @@ get_nginx_webroot_path() {
         echo "$path"
     fi
 }
+
+# set_nginx_webroot_path
+set_nginx_webroot_path_txt_0001="Web-Root-Pfad erfolgreich gesetzt"
+set_nginx_webroot_path_txt_0002="Fehler beim Setzen des Web-Root-Pfads"
+set_nginx_webroot_path_txt_0003="Kein Web-Root-Pfad angegeben"
 
 set_nginx_webroot_path() {
     # -----------------------------------------------------------------------
@@ -1418,8 +1425,10 @@ nginx_add_config() {
 }
 
 # ===========================================================================
-# Konstanten für improved_nginx_install
+# Verbesserter NGINX-Installationsfluss
 # ===========================================================================
+
+# Konstanten für improved_nginx_install
 improved_nginx_install_txt_0001="Starte verbesserten NGINX-Installationsfluss..."
 improved_nginx_install_txt_0002="NGINX ist nicht installiert. Installation wird gestartet."
 improved_nginx_install_txt_0003="NGINX-Installation fehlgeschlagen!"
@@ -1433,10 +1442,6 @@ improved_nginx_install_txt_0010="NGINX wurde erfolgreich für die Fotobox konfig
 improved_nginx_install_txt_0011="Fotobox-URL: %s"
 improved_nginx_install_txt_0012="NGINX ist installiert, wird aber nicht verwendet. Aktiviere NGINX..."
 improved_nginx_install_txt_0013="Fehler beim Aktivieren von NGINX!"
-
-# ===========================================================================
-# Verbesserter NGINX-Installationsfluss
-# ===========================================================================
 
 improved_nginx_install() {
     # -----------------------------------------------------------------------
@@ -1671,7 +1676,8 @@ improved_nginx_install() {
     log_or_json "$mode" "success" "$improved_nginx_install_txt_0010" 0
     return 0
 }
+
 # ===========================================================================
-# Markiere dieses Modul als geladen
+# Abschluss: Markiere dieses Modul als geladen
 # ===========================================================================
 MANAGE_NGINX_LOADED=1

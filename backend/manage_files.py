@@ -4,6 +4,9 @@ Manage Filesystem Modul für die Fotobox2 Backend-Anwendung
 Dieses Modul bietet Funktionen für Dateisystem-Operationen wie das Auflisten,
 Speichern und Löschen von Bildern sowie Funktionen zur Verwaltung von Verzeichnissen
 und zur Überwachung des Speicherplatzes.
+
+Zusätzlich enthält es zentrale Funktionen zur Verwaltung von Dateipfaden für alle
+Komponenten des Systems, einschließlich Konfigurationsdateien, Log-Dateien und Systemdateien.
 """
 
 import os
@@ -381,6 +384,256 @@ def secure_directory(directory: str) -> str:
         return 'gallery'
     
     return os.path.join(*components)
+
+# -----------------------------------------------
+# ZENTRALE DATEIPFAD-FUNKTIONEN
+# -----------------------------------------------
+
+def get_config_file_path(category: str, name: str) -> str:
+    """Gibt den Pfad zu einer Konfigurationsdatei zurück.
+    
+    Args:
+        category: Die Kategorie der Datei (nginx, camera, system, ...)
+        name: Der Name der Datei ohne Erweiterung
+        
+    Returns:
+        str: Der vollständige Pfad zur Konfigurationsdatei
+        
+    Raises:
+        ValueError: Wenn eine ungültige Kategorie angegeben wird
+    """
+    logger.debug(f"Konfigurationsdateipfad angefordert: Kategorie={category}, Name={name}")
+    
+    if not category:
+        raise ValueError("Kategorie nicht angegeben")
+    if not name:
+        raise ValueError("Name nicht angegeben")
+    
+    # Sicherstellen, dass keine Verzeichnistraversierungen möglich sind
+    safe_name = secure_filename(name)
+    
+    if category == "nginx":
+        from manage_folders import get_nginx_conf_dir
+        folder_path = get_nginx_conf_dir()
+        return os.path.join(folder_path, f"{safe_name}.conf")
+    elif category == "camera":
+        from manage_folders import get_camera_conf_dir
+        folder_path = get_camera_conf_dir()
+        return os.path.join(folder_path, f"{safe_name}.json")
+    elif category == "system":
+        from manage_folders import get_conf_dir
+        folder_path = get_conf_dir()
+        return os.path.join(folder_path, f"{safe_name}.inf")
+    else:
+        raise ValueError(f"Unbekannte Dateikategorie: {category}")
+
+def get_system_file_path(file_type: str, name: str) -> str:
+    """Gibt den Pfad zu einer System-Konfigurationsdatei zurück (mit Fallback).
+    
+    Args:
+        file_type: Der Typ der Systemdatei (nginx, systemd, ssl_cert, ssl_key)
+        name: Der Name der Systemdatei ohne Erweiterung
+        
+    Returns:
+        str: Der vollständige Pfad zur Systemdatei
+        
+    Raises:
+        ValueError: Wenn ein ungültiger Dateityp angegeben wird
+    """
+    logger.debug(f"Systemdateipfad angefordert: Typ={file_type}, Name={name}")
+    
+    if not file_type:
+        raise ValueError("Dateityp nicht angegeben")
+    if not name:
+        raise ValueError("Name nicht angegeben")
+    
+    # Sicherstellen, dass keine Verzeichnistraversierungen möglich sind
+    safe_name = secure_filename(name)
+    
+    # Konfiguration für Systemdateitypen
+    file_conf = {
+        "nginx": {
+            "primary": "/etc/nginx/sites-available",
+            "extension": ".conf",
+            "fallback_getter": "get_nginx_conf_dir" 
+        },
+        "systemd": {
+            "primary": "/etc/systemd/system",
+            "extension": ".service",
+            "fallback_getter": "get_conf_dir"
+        },
+        "ssl_cert": {
+            "primary": "/etc/ssl/certs",
+            "extension": ".crt",
+            "fallback_getter": "get_ssl_dir"
+        },
+        "ssl_key": {
+            "primary": "/etc/ssl/private",
+            "extension": ".key",
+            "fallback_getter": "get_ssl_dir"
+        }
+    }
+    
+    if file_type not in file_conf:
+        raise ValueError(f"Unbekannter Dateityp: {file_type}")
+    
+    config = file_conf[file_type]
+    primary_path = os.path.join(config["primary"], f"{safe_name}{config['extension']}")
+    
+    # Prüfen, ob die Datei am primären Ort existiert
+    if os.path.isfile(primary_path):
+        logger.debug(f"Datei {safe_name} am primären Ort gefunden: {primary_path}")
+        return primary_path
+    
+    # Fallback-Ort verwenden
+    try:
+        # Dynamisch den Fallback-Ort aus manage_folders abrufen
+        import manage_folders
+        fallback_dir = getattr(manage_folders, config["fallback_getter"])()
+        fallback_path = os.path.join(fallback_dir, f"{safe_name}{config['extension']}")
+        
+        logger.debug(f"Fallback-Pfad für {safe_name}: {fallback_path}")
+        return fallback_path
+    except (ImportError, AttributeError) as e:
+        logger.error(f"Fehler beim Abrufen des Fallback-Pfads: {str(e)}")
+        # Wenn manage_folders nicht verfügbar ist, verwenden wir feste Pfade
+        if file_type == "nginx":
+            return os.path.join("../conf/nginx", f"{safe_name}.conf")
+        else:
+            return os.path.join("../conf", f"{safe_name}{config['extension']}")
+
+def get_log_file_path(component: str) -> str:
+    """Gibt den Pfad zu einer Log-Datei zurück.
+    
+    Args:
+        component: Die Komponente, für die die Log-Datei bestimmt ist
+        
+    Returns:
+        str: Der vollständige Pfad zur Log-Datei
+    """
+    if not component:
+        raise ValueError("Komponente nicht angegeben")
+    
+    # Sicherstellen, dass keine Verzeichnistraversierungen möglich sind
+    safe_component = secure_filename(component)
+    
+    date_suffix = datetime.now().strftime("%Y-%m-%d")
+    
+    try:
+        # Verwende get_log_dir aus manage_folders
+        from manage_folders import get_log_dir
+        log_dir = get_log_dir()
+    except ImportError:
+        # Fallback, falls manage_folders nicht verfügbar ist
+        log_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'log'))
+        os.makedirs(log_dir, exist_ok=True)
+    
+    return os.path.join(log_dir, f"{safe_component}_{date_suffix}.log")
+
+def get_template_file_path(category: str, name: str) -> str:
+    """Gibt den Pfad zu einer Template-Datei zurück.
+    
+    Args:
+        category: Die Kategorie des Templates (nginx, backup, ...)
+        name: Der Name des Templates
+        
+    Returns:
+        str: Der vollständige Pfad zur Template-Datei
+        
+    Raises:
+        ValueError: Wenn eine ungültige Kategorie angegeben wird
+    """
+    if not category:
+        raise ValueError("Kategorie nicht angegeben")
+    if not name:
+        raise ValueError("Name nicht angegeben")
+    
+    # Sicherstellen, dass keine Verzeichnistraversierungen möglich sind
+    safe_name = secure_filename(name)
+    
+    try:
+        if category == "nginx":
+            from manage_folders import get_nginx_conf_dir
+            folder_path = get_nginx_conf_dir()
+        elif category == "backup":
+            # Gemeinsamer Speicherort mit nginx Templates
+            from manage_folders import get_nginx_conf_dir
+            folder_path = get_nginx_conf_dir()
+        else:
+            raise ValueError(f"Unbekannte Template-Kategorie: {category}")
+    except ImportError:
+        # Fallback, falls manage_folders nicht verfügbar ist
+        folder_path = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'conf', 'nginx'))
+        os.makedirs(folder_path, exist_ok=True)
+    
+    return os.path.join(folder_path, f"template_{safe_name}")
+
+def file_exists(file_path: str) -> bool:
+    """Prüft, ob eine Datei existiert.
+    
+    Args:
+        file_path: Der vollständige Pfad zur Datei
+        
+    Returns:
+        bool: True wenn die Datei existiert, False wenn nicht
+    """
+    if not file_path:
+        raise ValueError("Dateipfad nicht angegeben")
+    
+    return os.path.isfile(file_path)
+
+# Funktion zum Lesen des Inhalts einer Textdatei
+def read_file_content(file_path: str, encoding: str = 'utf-8') -> str:
+    """Liest den Inhalt einer Textdatei.
+    
+    Args:
+        file_path: Der vollständige Pfad zur Datei
+        encoding: Die zu verwendende Kodierung (Standard: utf-8)
+        
+    Returns:
+        str: Der Inhalt der Datei
+        
+    Raises:
+        FileNotFoundError: Wenn die Datei nicht existiert
+        UnicodeDecodeError: Wenn die Datei nicht mit der angegebenen Kodierung gelesen werden kann
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Datei nicht gefunden: {file_path}")
+    
+    try:
+        with open(file_path, 'r', encoding=encoding) as file:
+            return file.read()
+    except UnicodeDecodeError:
+        # Wenn UTF-8 fehlschlägt, versuchen wir es mit Latin-1 als Fallback
+        with open(file_path, 'r', encoding='latin-1') as file:
+            return file.read()
+
+# Funktion zum Schreiben in eine Textdatei
+def write_file_content(file_path: str, content: str, encoding: str = 'utf-8') -> bool:
+    """Schreibt Inhalt in eine Textdatei.
+    
+    Args:
+        file_path: Der vollständige Pfad zur Datei
+        content: Der zu schreibende Inhalt
+        encoding: Die zu verwendende Kodierung (Standard: utf-8)
+        
+    Returns:
+        bool: True wenn erfolgreich, False wenn ein Fehler aufgetreten ist
+    """
+    try:
+        # Sicherstellen, dass das Verzeichnis existiert
+        directory = os.path.dirname(file_path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        
+        with open(file_path, 'w', encoding=encoding) as file:
+            file.write(content)
+        
+        logger.info(f"Inhalt in Datei geschrieben: {file_path}")
+        return True
+    except Exception as e:
+        logger.error(f"Fehler beim Schreiben in Datei {file_path}: {str(e)}")
+        return False
 
 # Initialisierung
 ensure_directories_exist()

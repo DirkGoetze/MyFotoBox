@@ -26,6 +26,7 @@ import api_settings
 import api_uninstall
 import api_update
 import api_backend_service  # Neu importiert für Backend-Service API
+import api_files  # Neu importiert für Dateiverwaltung API
 
 # -------------------------------------------------------------------------------
 # DB_PATH und Datenverzeichnis sicherstellen
@@ -48,6 +49,7 @@ app.register_blueprint(api_settings.api_settings)
 app.register_blueprint(api_uninstall.api_uninstall)
 app.register_blueprint(api_update.api_update)
 app.register_blueprint(api_backend_service.api_backend_service, url_prefix='/api/backend_service')
+app.register_blueprint(api_files.api_files_bp)  # Neu: API für Dateiverwaltung
 
 # Cache-Kontrolle für die Testphase
 @app.after_request
