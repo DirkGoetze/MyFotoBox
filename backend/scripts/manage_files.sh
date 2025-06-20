@@ -123,6 +123,11 @@ manage_files_info_0002="Datei existiert bereits: %s"
 manage_files_info_0003="Datei erstellt: %s"
 # ---------------------------------------------------------------------------
 
+# Textkonstanten
+TEXT_UNKNOWN_CATEGORY="Unbekannte Kategorie"
+TEXT_TEMPLATE_PATH_ERROR="Fehler beim Abrufen des Template-Pfades für"
+# ===========================================================================
+
 # ===========================================================================
 # Hilfsfunktionen
 # ===========================================================================
@@ -415,56 +420,124 @@ get_backup_meta_file() {
 }
 
 # Gibt den Pfad zu einer Template-Datei zurück
+get_template_file_debug_0001="Ermittle Pfad zu Template-Datei für Modul %s, Name %s"
+get_template_file_debug_0002="Template-Basisverzeichnis: %s"
+get_template_file_debug_0003="Dateiendung für Modul %s: %s"
+get_template_file_debug_0004="Vollständiger Template-Pfad: %s"
+get_template_file_log_0001="ERROR: Unbekannte Modul-Kategorie: %s"
+get_template_file_log_0002="ERROR: Template-Pfad konnte nicht ermittelt werden: %s/%s"
+get_template_file_log_0003="INFO: Template-Datei gefunden: %s"
+
 get_template_file() {
-    local category="$1"
+    # -----------------------------------------------------------------------
+    # get_template_file
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einer Template-Datei zurück
+    # Parameter: $1 - Modulname
+    # .........  $2 - Template-Name
+    # Rückgabewert: Der vollständige Pfad zur Datei oder leerer String bei Fehler
+    # .......... Exit-Code 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    local modul="$1"
     local name="$2"
-    local folder_path
     
-    if ! check_param "$category" "category"; then return 1; fi
+    # Überprüfen, ob die erforderlichen Parameter angegeben sind
+    if ! check_param "$modul" "modul"; then return 1; fi
     if ! check_param "$name" "name"; then return 1; fi
     
-    case "$category" in
+    debug "$(printf "$get_template_file_debug_0001" "$modul" "$name")" "CLI" "get_template_file"
+    
+    # Ermitteln des Template-Basisordners für das Modul
+    local template_dir
+    template_dir="$("$manage_folders_sh" get_template_dir "$modul")"
+    
+    if [ $? -ne 0 ] || [ -z "$template_dir" ]; then
+        log "$(printf "$get_template_file_log_0002" "$modul" "$name")" "get_template_file"
+        return 1
+    fi
+    
+    debug "$(printf "$get_template_file_debug_0002" "$template_dir")" "CLI" "get_template_file"
+    
+    # Dateiendung basierend auf dem Modul festlegen
+    local extension=""
+    case "$modul" in
         "nginx")
-            folder_path="$("$manage_folders_sh" get_nginx_conf_dir)"
-            echo "${folder_path}/template_${name}"
-            return 0
+            extension=".conf"
             ;;
-        "backup")
-            # Gemeinsamer Speicherort mit nginx Templates
-            folder_path="$("$manage_folders_sh" get_nginx_conf_dir)"  
-            echo "${folder_path}/template_${name}"
-            return 0
+        "systemd")
+            extension=".service"
+            ;;
+        "ssl_cert")
+            extension=".crt"
+            ;;
+        "ssl_key")
+            extension=".key"
+            ;;
+        "backup_meta")
+            extension=".meta.json"
+            ;;
+        "firewall")
+            extension=".rules"
+            ;;
+        "ssh")
+            extension=".ssh"
+            ;;
+        "html"|"js"|"css")
+            extension=".$modul"  # Verwende den Modulnamen direkt als Dateiendung
             ;;
         *)
-            log_message error "$TEXT_UNKNOWN_CATEGORY: $category"
-            return 1
+            # Für andere Module keine spezifische Endung hinzufügen
+            # Wir nehmen an, dass der Name bereits die korrekte Endung enthält
+            extension=""
             ;;
     esac
+    
+    debug "$(printf "$get_template_file_debug_0003" "$modul" "$extension")" "CLI" "get_template_file"
+    
+    # Vollständigen Pfad zur Template-Datei erstellen
+    local template_path
+    if [ -n "$extension" ]; then
+        template_path="${template_dir}/${name}${extension}"
+    else
+        template_path="${template_dir}/${name}"
+    fi
+    
+    debug "$(printf "$get_template_file_debug_0004" "$template_path")" "CLI" "get_template_file"
+    
+    # Überprüfen, ob der Pfad gültig ist (keine Fehlerprüfung, ob die Datei existiert)
+    if [ -z "$template_path" ]; then
+        log "$(printf "$get_template_file_log_0002" "$modul" "$name")" "get_template_file"
+        return 1
+    fi
+    
+    log "$(printf "$get_template_file_log_0003" "$template_path")" "get_template_file"
+    echo "$template_path"
+    return 0
 }
 
 # Gibt den Pfad zu einer Bilddatei zurück
 get_image_file() {
-  local type="$1"    # z.B. "original", "thumbnail"
-  local filename="$2"
-  local folder_path
-  
-  if ! check_param "$type" "type"; then return 1; fi
-  if ! check_param "$filename" "filename"; then return 1; fi
-  
-  case "$type" in
-    "original")
-      folder_path="$("$manage_folders_sh" get_photos_dir)"
-      ;;
-    "thumbnail")
-      folder_path="$("$manage_folders_sh" get_thumbnails_dir)"
-      ;;
-    *)
-      log_message error "$TEXT_UNKNOWN_CATEGORY: $type"
-      return 1
-      ;;
-  esac
-  
-  echo "${folder_path}/${filename}"
+    local type="$1"    # z.B. "original", "thumbnail"
+    local filename="$2"
+    local folder_path
+    
+    if ! check_param "$type" "type"; then return 1; fi
+    if ! check_param "$filename" "filename"; then return 1; fi
+    
+    case "$type" in
+        "original")
+            folder_path="$("$manage_folders_sh" get_photos_dir)"
+            ;;
+        "thumbnail")
+            folder_path="$("$manage_folders_sh" get_thumbnails_dir)"
+            ;;
+        *)
+            log_message error "$TEXT_UNKNOWN_CATEGORY: $type"
+            return 1
+            ;;
+    esac
+    
+    echo "${folder_path}/${filename}"
 }
 
 # -----------------------------------------------
@@ -473,38 +546,38 @@ get_image_file() {
 
 # Prüft, ob eine Datei existiert
 file_exists() {
-  local file_path="$1"
-  
-  if ! check_param "$file_path" "file_path"; then return 1; fi
-  
-  if [ -f "$file_path" ]; then
-    return 0
-  else
-    return 1
-  fi
+    local file_path="$1"
+    
+    if ! check_param "$file_path" "file_path"; then return 1; fi
+    
+    if [ -f "$file_path" ]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 # Erstellt eine leere Datei
 create_empty_file() {
-  local file_path="$1"
+    local file_path="$1"
     if ! check_param "$file_path" "file_path"; then return 1; fi
   
-  if file_exists "$file_path"; then
-    log_message "info" "$(printf "$manage_files_info_0002" "$file_path")"
-    return 0
-  fi
+    if file_exists "$file_path"; then
+        log_message "info" "$(printf "$manage_files_info_0002" "$file_path")"
+        return 0
+    fi
   
-  # Verzeichnis für die Datei erstellen
-  "$manage_folders_sh" create_directory "$(dirname "$file_path")"
-  touch "$file_path"
+    # Verzeichnis für die Datei erstellen
+    "$manage_folders_sh" create_directory "$(dirname "$file_path")"
+    touch "$file_path"
   
-  if [ $? -eq 0 ]; then
-    log_message "info" "$(printf "$manage_files_info_0003" "$file_path")"
-    return 0
-  else
-    log_message "error" "Konnte Datei nicht erstellen: $file_path"
-    return 1
-  fi
+    if [ $? -eq 0 ]; then
+        log_message "info" "$(printf "$manage_files_info_0003" "$file_path")"
+        return 0
+    else
+        log_message "error" "Konnte Datei nicht erstellen: $file_path"
+        return 1
+    fi
 }
 
 # ===========================================================================

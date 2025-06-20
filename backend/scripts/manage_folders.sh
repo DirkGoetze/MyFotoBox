@@ -1602,6 +1602,71 @@ get_tmp_dir() {
     return 0
 }
 
+# get_template_dir
+get_template_dir_debug_0001="Ermittle Template-Verzeichnis"
+get_template_dir_debug_0002="Verwende bereits definiertes CONF_DIR_TEMPLATES: %s"
+get_template_dir_debug_0003="Prüfe Standard-Template-Verzeichnis"
+get_template_dir_debug_0004="Verwende Template-Verzeichnis: %s"
+get_template_dir_debug_0005="Kein Modul-Parameter angegeben, gebe Template-Basisordner zurück"
+get_template_dir_debug_0006="Template-Pfad mit Modul wird erstellt: %s"
+get_template_dir_log_0001="INFO: Kein Modul angegeben, verwende Template-Basisordner"
+get_template_dir_log_0002="INFO: Template-Verzeichnis gefunden: %s"
+get_template_dir_log_0003="INFO: Verwende Template-Unterordner: %s für Modul: %s"
+
+get_template_dir() {
+    # -----------------------------------------------------------------------
+    # get_template_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einem Template-Verzeichnis in der konfigurierten
+    # ......... Template-Struktur zurück.
+    # Parameter: $1 - (Optional) Name des Moduls (Unterverzeichnis im templates-Ordner)
+    # .......... Wenn nicht angegeben, wird der Pfad zum Template-Basisordner zurückgegeben
+    # Rückgabe.: Pfad zum Template-Verzeichnis oder zum Template-Basisordner bei fehlendem Modul-Parameter
+    # .......... Exit-Code 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    local modul="$1"
+    local config_dir
+    local templates_dir
+    local template_path
+    
+    debug "$get_template_dir_debug_0001" "CLI" "get_template_dir"
+    
+    # Zuerst den übergeordneten Konfigurationsordner ermitteln
+    config_dir="$(get_config_dir)"
+    
+    # Prüfen, ob CONF_DIR_TEMPLATES bereits gesetzt ist
+    if [ -n "$CONF_DIR_TEMPLATES" ] && [ -d "$CONF_DIR_TEMPLATES" ]; then
+        debug "$(printf "$get_template_dir_debug_0002" "$CONF_DIR_TEMPLATES")" "CLI" "get_template_dir"
+        create_directory "$CONF_DIR_TEMPLATES" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+        templates_dir="$CONF_DIR_TEMPLATES"
+    else
+        # Standard-Templates-Verzeichnis verwenden
+        debug "$get_template_dir_debug_0003" "CLI" "get_template_dir"
+        templates_dir="${config_dir}/templates"
+        create_directory "$templates_dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+    fi
+    
+    debug "$(printf "$get_template_dir_debug_0004" "$templates_dir")" "CLI" "get_template_dir"
+    
+    # Wenn kein Modul-Parameter übergeben wurde, gebe den Template-Basisordner zurück
+    if [ -z "$modul" ]; then
+        log "$get_template_dir_log_0001" "get_template_dir"
+        debug "$get_template_dir_debug_0005" "CLI" "get_template_dir"
+        template_path="$templates_dir"
+    else
+        # Vollständigen Template-Pfad mit Modul erstellen
+        template_path="$templates_dir/${modul}"
+        debug "$(printf "$get_template_dir_debug_0006" "$template_path")" "CLI" "get_template_dir"
+        log "$(printf "$get_template_dir_log_0003" "$template_path" "$modul")" "get_template_dir"
+        
+        # Verzeichnis erstellen, wenn es noch nicht existiert
+        create_directory "$template_path" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+    fi
+    
+    echo "$template_path"
+    return 0
+}
+
 # ---------------------------------------------------------------------------
 # Verzeichnis Struktur sicherstellen
 # ---------------------------------------------------------------------------
