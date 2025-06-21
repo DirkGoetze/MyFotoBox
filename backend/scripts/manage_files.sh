@@ -267,6 +267,7 @@ get_log_file() {
     local component="${1:-fotobox}"
     local log_dir
 
+    echo "$(printf "$get_log_file_debug_0001" "$component")"
     debug "$(printf "$get_log_file_debug_0001" "$component")" "CLI" "get_log_file"
 
     # Verzeichnis abrufen und Dateinamen generieren
