@@ -98,6 +98,8 @@ chk_log_file() {
     LOG_FILE="$(get_log_file)"
     local MAX_ROTATE=5
 
+    echo "Prüfe Logdatei: ${LOG_FILE}"
+
     # Alte, maximal rotierte Datei löschen
     if [ -f "${LOG_FILE}.${MAX_ROTATE}.gz" ]; then
         rm -f "${LOG_FILE}.${MAX_ROTATE}.gz"
@@ -213,7 +215,8 @@ log() {
 
     # Entferne den debug-Aufruf, der die Rekursion verursachen könnte
     # debug "log() aufgerufen mit: msg='$msg', func='$func', file='$file'"
-
+    echo "log() aufgerufen mit: msg='$msg', func='$func', file='$file'"
+    
     if [ -z "$msg" ]; then
         # Auch hier debug-Aufruf entfernen
         # debug "log() ohne Parameter aufgerufen, führe Logrotation durch"
