@@ -2,8 +2,10 @@
 # ---------------------------------------------------------------------------
 # test_modules.sh
 # ---------------------------------------------------------------------------
-# Funktion: Testet die Funktionen in manage_folders.sh und manage_files.sh
-# ......... mit gültigen Parametern und überprüft deren Rückgabewerte.
+# Funktion: Testet die Funktionen in manage_folders.sh, manage_files.sh und
+# ......... manage_logging.sh mit gültigen Parametern und überprüft deren
+# ......... Rückgabewerte. Verwendet das zentrale Modulsystem aus lib_core.sh
+# ......... zum Laden der Module. Aktiviert das Debug-Logging in allen Modulen.
 # ---------------------------------------------------------------------------
 
 # Setze strict mode für sicheres Bash-Scripting
@@ -11,18 +13,33 @@ set -e  # Beende bei Fehlern
 set -u  # Beende bei Verwendung nicht gesetzter Variablen
 set +e  # Deaktiviere strict mode für die Initialisierung
 
+# Hilfsfunktion zum Prüfen des Moduls
+check_load_status() {
+    local module_name="$1"
+    local var_name="$2"
+    
+    # Prüfen ob die Modul-Variable gesetzt ist
+    if [ -n "${!var_name:-}" ] && [ ${!var_name} -eq 1 ]; then
+        echo "✅ Modul $module_name ist korrekt geladen (${var_name}=1)"
+        return 0
+    else
+        echo "❌ Modul $module_name ist NICHT korrekt geladen (${var_name}=${!var_name:-nicht gesetzt})"
+        return 1
+    fi
+}
+
 # Skriptpfad für korrekte Ausführung aus dem Root-Verzeichnis
 CURRENT_DIR=$(pwd)
 SCRIPT_DIR="$CURRENT_DIR/backend/scripts"
 
-# Wenn das Standardverzeichnis nicht existiert, suchen wir nach Alternativen
+# Verbesserte Skriptpfaderkennung 
 if [ ! -d "$SCRIPT_DIR" ]; then
     echo "Warnung: Standard-Skriptpfad nicht gefunden, suche nach Alternativen..."
     
     # Alternative 1: Prüfe, ob wir direkt im scripts-Verzeichnis sind
     if [ -f "./lib_core.sh" ] && [ -f "./manage_folders.sh" ] && [ -f "./manage_files.sh" ]; then
         SCRIPT_DIR="."
-        echo "Skriptverzeichnis gefunden: aktuelle Verzeichnis"
+        echo "Skriptverzeichnis gefunden: aktuelles Verzeichnis"
     
     # Alternative 2: Prüfe, ob wir bereits im backend-Verzeichnis sind
     elif [ -d "./scripts" ] && [ -f "./scripts/lib_core.sh" ]; then
@@ -33,26 +50,41 @@ if [ ! -d "$SCRIPT_DIR" ]; then
     elif [ -d "/opt/fotobox/backend/scripts" ]; then
         SCRIPT_DIR="/opt/fotobox/backend/scripts"
         echo "Skriptverzeichnis gefunden: $SCRIPT_DIR"
-    
-    # Wenn keine Alternative funktioniert, brechen wir ab
+        
+    # Alternative 4: Suche nach lib_core.sh im System
     else
-        echo "FEHLER: Skriptverzeichnis konnte nicht gefunden werden."
-        echo "Bitte führen Sie dieses Skript aus dem Root-Verzeichnis des Fotobox-Projekts aus."
-        exit 1
+        echo "Führe systemweite Suche nach lib_core.sh durch..."
+        # Finde alle lib_core.sh Dateien im System
+        core_files=$(find /opt -name "lib_core.sh" 2>/dev/null)
+        
+        if [ -n "$core_files" ]; then
+            # Verwende den ersten gefundenen Pfad
+            first_file=$(echo "$core_files" | head -n 1)
+            SCRIPT_DIR=$(dirname "$first_file")
+            echo "Skriptverzeichnis gefunden durch Suche: $SCRIPT_DIR"
+        else
+            echo "FEHLER: Skriptverzeichnis konnte nicht gefunden werden."
+            echo "Bitte führen Sie dieses Skript aus dem Root-Verzeichnis des Fotobox-Projekts aus."
+            exit 1
+        fi
     fi
 fi
 
-# Vergewissere uns, dass alle benötigten Skripte existieren
-if [ ! -f "$SCRIPT_DIR/lib_core.sh" ] || [ ! -f "$SCRIPT_DIR/manage_folders.sh" ] || [ ! -f "$SCRIPT_DIR/manage_files.sh" ]; then
-    echo "FEHLER: Benötigte Skriptdateien fehlen im Verzeichnis: $SCRIPT_DIR"
+# Überprüfe, ob lib_core.sh vorhanden ist (die anderen Module werden
+# über das zentrale Ladesystem von lib_core.sh geladen)
+if [ ! -f "$SCRIPT_DIR/lib_core.sh" ]; then
+    echo "FEHLER: lib_core.sh fehlt im Verzeichnis: $SCRIPT_DIR"
     echo "Vorhandene Dateien im Skriptverzeichnis:"
     ls -la "$SCRIPT_DIR"
     exit 1
 fi
 
+# Informiere über Strategie
+echo "Test verwendet das zentrale Modulsystem aus lib_core.sh zum Laden der Module"
+
 echo "==========================================================================="
-echo "               Test der Module lib_core.sh, manage_folders.sh"
-echo "                      und manage_files.sh"
+echo "           Test der Module lib_core.sh, manage_folders.sh,"
+echo "                 manage_files.sh und manage_logging.sh"
 echo "==========================================================================="
 echo
 
@@ -63,8 +95,16 @@ echo "Lade Module aus Verzeichnis: $SCRIPT_DIR"
 echo "Vorhandene Dateien im Skriptverzeichnis:"
 ls -la "$SCRIPT_DIR"
 
-# Laden von lib_core.sh
+# Setze BASH_DIR für lib_core.sh
+export BASH_DIR="$SCRIPT_DIR"
+
+# Lade zuerst lib_core.sh
 echo -n "Lade lib_core.sh... "
+if [ ! -f "$SCRIPT_DIR/lib_core.sh" ]; then
+    echo "FEHLER: lib_core.sh nicht gefunden!"
+    exit 1
+fi
+
 source "$SCRIPT_DIR/lib_core.sh"
 if [ $? -eq 0 ]; then
     echo "Erfolg."
@@ -75,27 +115,59 @@ else
     exit 1
 fi
 
-# Laden von manage_folders.sh
-echo -n "Lade manage_folders.sh... "
-source "$SCRIPT_DIR/manage_folders.sh"
-if [ $? -eq 0 ] && [ "${MANAGE_FOLDERS_LOADED:-0}" -eq 1 ]; then
+# Aktiviere den zentralen Lademanager für Module
+echo "Aktiviere den zentralen Lademanager für Module..."
+export MODULE_LOAD_MODE=1
+
+# Verwende load_module aus lib_core.sh zum Laden der Module
+echo -n "Lade manage_folders.sh über load_module Funktion... "
+if load_module "manage_folders"; then
     echo "Erfolg."
-    echo "Modul manage_folders.sh wurde geladen."
+    if [ "${MANAGE_FOLDERS_LOADED:-0}" -eq 1 ]; then
+        echo "Modul manage_folders.sh wurde korrekt geladen."
+        # Debug-Modus für manage_folders.sh aktivieren
+        echo "Aktiviere DEBUG_MOD_LOCAL=1 in manage_folders.sh"
+        export DEBUG_MOD_LOCAL=1
+    else
+        echo "WARNUNG: Modul wurde geladen, aber MANAGE_FOLDERS_LOADED ist nicht 1."
+    fi
 else
     echo "FEHLER!"
-    echo "Fehler beim Laden von manage_folders.sh oder MANAGE_FOLDERS_LOADED ist nicht 1"
+    echo "Fehler beim Laden von manage_folders.sh über load_module"
     exit 1
 fi
 
-# Laden von manage_files.sh
-echo -n "Lade manage_files.sh... "
-source "$SCRIPT_DIR/manage_files.sh"
-if [ $? -eq 0 ] && [ "${MANAGE_FILES_LOADED:-0}" -eq 1 ]; then
+echo -n "Lade manage_files.sh über load_module Funktion... "
+if load_module "manage_files"; then
     echo "Erfolg."
-    echo "Modul manage_files.sh wurde geladen."
+    if [ "${MANAGE_FILES_LOADED:-0}" -eq 1 ]; then
+        echo "Modul manage_files.sh wurde korrekt geladen."
+        # Debug-Modus für manage_files.sh aktivieren
+        echo "Aktiviere DEBUG_MOD_LOCAL=1 in manage_files.sh"
+        export DEBUG_MOD_LOCAL=1
+    else
+        echo "WARNUNG: Modul wurde geladen, aber MANAGE_FILES_LOADED ist nicht 1."
+    fi
 else
     echo "FEHLER!"
-    echo "Fehler beim Laden von manage_files.sh oder MANAGE_FILES_LOADED ist nicht 1"
+    echo "Fehler beim Laden von manage_files.sh über load_module"
+    exit 1
+fi
+
+echo -n "Lade manage_logging.sh über load_module Funktion... "
+if load_module "manage_logging"; then
+    echo "Erfolg."
+    if [ "${MANAGE_LOGGING_LOADED:-0}" -eq 1 ]; then
+        echo "Modul manage_logging.sh wurde korrekt geladen."
+        # Debug-Modus für manage_logging.sh aktivieren
+        echo "Aktiviere DEBUG_MOD_LOCAL=1 in manage_logging.sh"
+        export DEBUG_MOD_LOCAL=1
+    else
+        echo "WARNUNG: Modul wurde geladen, aber MANAGE_LOGGING_LOADED ist nicht 1."
+    fi
+else
+    echo "FEHLER!"
+    echo "Fehler beim Laden von manage_logging.sh über load_module"
     exit 1
 fi
 echo
@@ -112,6 +184,101 @@ test_function() {
         echo "❌ Die Funktion $function_name ist fehlgeschlagen. Ergebnis: $result, Erwartet: $expected_result"
     fi
 }
+
+# -------------------------------
+# Test der manage_logging.sh Funktionen
+# -------------------------------
+echo
+echo "-------------------------------------------------------------------------"
+echo "Test der Funktionen in manage_logging.sh"
+echo "-------------------------------------------------------------------------"
+
+# Test: log
+echo -n "Test log mit einfacher Nachricht: "
+log "Testmessage für log"
+result=$?
+test_function $result "log (einfache Nachricht)" 0
+
+# Test: log mit Funktionsname
+echo -n "Test log mit Funktionsname: "
+log "Testmessage mit Funktionsname" "test_function"
+result=$?
+test_function $result "log (mit Funktionsname)" 0
+
+# Test: log für Fehlermeldung
+echo -n "Test log für Fehlermeldungen: "
+log "ERROR: Testfehlermeldung" "test_function" "test_modules.sh"
+result=$?
+test_function $result "log (Fehlermeldung mit Funktionsname und Datei)" 0
+
+# Test: debug (LOG-Modus)
+echo -n "Test debug im LOG-Modus: "
+debug "Debug-Testmessage im LOG-Modus"
+result=$?
+test_function $result "debug (LOG-Modus)" 0
+
+# Test: debug (CLI-Modus)
+echo -n "Test debug im CLI-Modus: "
+debug "Debug-Testmessage im CLI-Modus" "CLI"
+result=$?
+test_function $result "debug (CLI-Modus)" 0
+
+# Test: debug (JSON-Modus)
+echo -n "Test debug im JSON-Modus: "
+debug "Debug-Testmessage im JSON-Modus" "JSON"
+result=$?
+test_function $result "debug (JSON-Modus)" 0
+
+# Test: print_step
+echo -n "Test print_step: "
+print_step "Testschritt wird ausgeführt"
+result=$?
+test_function $result "print_step" 0
+
+# Test: print_info
+echo -n "Test print_info: "
+print_info "Testinfo wird angezeigt"
+result=$?
+test_function $result "print_info" 0
+
+# Test: print_success
+echo -n "Test print_success: "
+print_success "Testoperation erfolgreich"
+result=$?
+test_function $result "print_success" 0
+
+# Test: print_warning
+echo -n "Test print_warning: "
+print_warning "Testwarnung wird angezeigt"
+result=$?
+test_function $result "print_warning" 0
+
+# Test: print_error
+echo -n "Test print_error: "
+print_error "Testfehler wird angezeigt"
+result=$?
+test_function $result "print_error" 0
+
+# Test: print_debug
+echo -n "Test print_debug: "
+print_debug "Debug-Testmeldung wird angezeigt"
+result=$?
+test_function $result "print_debug" 0
+
+# Überprüfe die Log-Datei auf vorhandene Debug-Ausgaben
+log_file=$(get_log_file)
+echo
+echo "Prüfe, ob Debug-Ausgaben in der Log-Datei vorhanden sind:"
+if grep -q "DEBUG" "$log_file"; then
+    echo "✅ Debug-Ausgaben sind in der Log-Datei vorhanden: $log_file"
+    # Zeige die letzten Debug-Einträge
+    echo "Letzte Debug-Einträge aus der Log-Datei:"
+    grep "DEBUG" "$log_file" | tail -n 5
+else
+    echo "❌ Keine Debug-Ausgaben in der Log-Datei gefunden: $log_file"
+fi
+
+echo "Testdateien wurden entfernt."
 
 # -------------------------------
 # Test der manage_folders.sh Funktionen
@@ -305,7 +472,6 @@ echo "-------------------------------------------------------------------------"
 rm -f "$temp_test_file" "$empty_file" 2>/dev/null
 rm -rf "$test_dir" "$target_dir" "$source_dir" 2>/dev/null
 
-echo "Testdateien wurden entfernt."
 echo
 echo "==========================================================================="
 echo "                            Test abgeschlossen"
