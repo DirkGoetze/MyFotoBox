@@ -165,7 +165,7 @@ echo "Aktiviere Testmodus (TEST_MODE=1)..."
 export TEST_MODE=1
 
 # Lade Module direkt nacheinander
-echo -n "Lade manage_folders.sh direkt... "
+echo -n "Lade $SCRIPT_DIR/manage_folders.sh direkt... "
 if source "$SCRIPT_DIR/manage_folders.sh"; then
     echo "Erfolg."
     if [ "${MANAGE_FOLDERS_LOADED:-0}" -eq 1 ]; then
@@ -181,7 +181,7 @@ else
     exit 1
 fi
 
-echo -n "Lade manage_files.sh direkt... "
+echo -n "Lade $SCRIPT_DIR/manage_files.sh direkt... "
 if source "$SCRIPT_DIR/manage_files.sh"; then
     echo "Erfolg."
     if [ "${MANAGE_FILES_LOADED:-0}" -eq 1 ]; then
@@ -197,7 +197,7 @@ else
     exit 1
 fi
 
-echo -n "Lade manage_logging.sh direkt... "
+echo -n "Lade $SCRIPT_DIR/manage_logging.sh direkt... "
 if source "$SCRIPT_DIR/manage_logging.sh"; then
     echo "Erfolg."
     if [ "${MANAGE_LOGGING_LOADED:-0}" -eq 1 ]; then
