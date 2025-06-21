@@ -2,7 +2,7 @@
 # ---------------------------------------------------------------------------
 # test_modules.sh
 # ---------------------------------------------------------------------------
-# Funktion: Testet die Funktionen in manage_folders.sh, manage_files.sh und
+# Funktion: Funktionen in manage_folders.sh, manage_files.sh und
 # ......... manage_logging.sh mit gültigen Parametern und überprüft deren
 # ......... Rückgabewerte. Verwendet das zentrale Modulsystem aus lib_core.sh
 # ......... zum Laden der Module. Aktiviert das Debug-Logging in allen Modulen.
@@ -41,32 +41,11 @@ test_function() {
     fi
 }
 
-# Aktiviert den DEBUG-Modus für ein bestimmtes Modul
-enable_debug_for_module() {
-    local module_name="$1"
-    echo "Aktiviere DEBUG_MOD_LOCAL=1 für Modul $module_name"
-    
-    # Direktes Bearbeiten der Skriptdateien mit sed für Debian
-    case "$module_name" in
-        "manage_folders")
-            # Aktiviere Debug-Ausgaben für manage_folders.sh
-            sed -i 's/^DEBUG_MOD_LOCAL=0/DEBUG_MOD_LOCAL=1/' "$TEST_SCRIPT_DIR/manage_folders.sh" 2>/dev/null || true
-            ;;
-        "manage_files")
-            # Aktiviere Debug-Ausgaben für manage_files.sh
-            sed -i 's/^DEBUG_MOD_LOCAL=0/DEBUG_MOD_LOCAL=1/' "$TEST_SCRIPT_DIR/manage_files.sh" 2>/dev/null || true
-            ;;
-        "manage_logging")
-            # Aktiviere Debug-Ausgaben für manage_logging.sh
-            sed -i 's/^DEBUG_MOD_LOCAL=0/DEBUG_MOD_LOCAL=1/' "$TEST_SCRIPT_DIR/manage_logging.sh" 2>/dev/null || true
-            ;;
-    esac
-    
-    # Alternativ können wir auch die globale Debug-Variable setzen
-    # Dadurch werden alle Module in den Debug-Modus versetzt
-    export DEBUG_MOD_GLOBAL=1
-    echo "DEBUG-Modus wurde global aktiviert (DEBUG_MOD_GLOBAL=1)"
-}
+# HINWEIS: DEBUG-Modus wird manuell aktiviert
+# Die Funktion enable_debug_for_module wurde entfernt, da der Debug-Modus 
+# manuell gesetzt wird. Um den Debug-Modus zu aktivieren:
+# 1. Setze DEBUG_MOD_LOCAL=1 in den jeweiligen Skriptdateien oder
+# 2. Exportiere DEBUG_MOD_GLOBAL=1 vor dem Skriptaufruf
 
 # Skriptpfad für korrekte Ausführung aus dem Root-Verzeichnis
 TEST_CURRENT_DIR=$(pwd)
@@ -205,8 +184,6 @@ if source "$TEST_SCRIPT_DIR/manage_folders.sh"; then
     echo "Erfolg."
     if [ "${MANAGE_FOLDERS_LOADED:-0}" -eq 1 ]; then
         echo "Modul manage_folders.sh wurde korrekt geladen."
-        # Debug-Modus für manage_folders.sh aktivieren 
-        enable_debug_for_module "manage_folders"
     else
         echo "WARNUNG: Modul wurde geladen, aber MANAGE_FOLDERS_LOADED ist nicht 1."
     fi
@@ -221,8 +198,6 @@ if source "$TEST_SCRIPT_DIR/manage_files.sh"; then
     echo "Erfolg."
     if [ "${MANAGE_FILES_LOADED:-0}" -eq 1 ]; then
         echo "Modul manage_files.sh wurde korrekt geladen."
-        # Debug-Modus für manage_files.sh aktivieren
-        enable_debug_for_module "manage_files"
     else
         echo "WARNUNG: Modul wurde geladen, aber MANAGE_FILES_LOADED ist nicht 1."
     fi
@@ -237,8 +212,6 @@ if source "$TEST_SCRIPT_DIR/manage_logging.sh"; then
     echo "Erfolg."
     if [ "${MANAGE_LOGGING_LOADED:-0}" -eq 1 ]; then
         echo "Modul manage_logging.sh wurde korrekt geladen."
-        # Debug-Modus für manage_logging.sh aktivieren
-        enable_debug_for_module "manage_logging"
     else
         echo "WARNUNG: Modul wurde geladen, aber MANAGE_LOGGING_LOADED ist nicht 1."
     fi
