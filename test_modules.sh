@@ -28,6 +28,46 @@ check_load_status() {
     fi
 }
 
+# Hilfsfunktion zur Überprüfung der Test-Ergebnisse
+test_function() {
+    local result=$1
+    local function_name=$2
+    local expected_result=$3
+
+    if [ "$result" -eq "$expected_result" ]; then
+        echo "✅ Die Funktion $function_name wurde erfolgreich ausgeführt."
+    else
+        echo "❌ Die Funktion $function_name ist fehlgeschlagen. Ergebnis: $result, Erwartet: $expected_result"
+    fi
+}
+
+# Aktiviert den DEBUG-Modus für ein bestimmtes Modul
+enable_debug_for_module() {
+    local module_name="$1"
+    echo "Aktiviere DEBUG_MOD_LOCAL=1 für Modul $module_name"
+    
+    # Direktes Bearbeiten der Skriptdateien mit sed für Debian
+    case "$module_name" in
+        "manage_folders")
+            # Aktiviere Debug-Ausgaben für manage_folders.sh
+            sed -i 's/^DEBUG_MOD_LOCAL=0/DEBUG_MOD_LOCAL=1/' "$SCRIPT_DIR/manage_folders.sh" 2>/dev/null || true
+            ;;
+        "manage_files")
+            # Aktiviere Debug-Ausgaben für manage_files.sh
+            sed -i 's/^DEBUG_MOD_LOCAL=0/DEBUG_MOD_LOCAL=1/' "$SCRIPT_DIR/manage_files.sh" 2>/dev/null || true
+            ;;
+        "manage_logging")
+            # Aktiviere Debug-Ausgaben für manage_logging.sh
+            sed -i 's/^DEBUG_MOD_LOCAL=0/DEBUG_MOD_LOCAL=1/' "$SCRIPT_DIR/manage_logging.sh" 2>/dev/null || true
+            ;;
+    esac
+    
+    # Alternativ können wir auch die globale Debug-Variable setzen
+    # Dadurch werden alle Module in den Debug-Modus versetzt
+    export DEBUG_MOD_GLOBAL=1
+    echo "DEBUG-Modus wurde global aktiviert (DEBUG_MOD_GLOBAL=1)"
+}
+
 # Skriptpfad für korrekte Ausführung aus dem Root-Verzeichnis
 CURRENT_DIR=$(pwd)
 SCRIPT_DIR="$CURRENT_DIR/backend/scripts"
@@ -173,46 +213,6 @@ else
     exit 1
 fi
 echo
-
-# Hilfsfunktion zur Überprüfung der Test-Ergebnisse
-test_function() {
-    local result=$1
-    local function_name=$2
-    local expected_result=$3
-
-    if [ "$result" -eq "$expected_result" ]; then
-        echo "✅ Die Funktion $function_name wurde erfolgreich ausgeführt."
-    else
-        echo "❌ Die Funktion $function_name ist fehlgeschlagen. Ergebnis: $result, Erwartet: $expected_result"
-    fi
-}
-
-# Aktiviert den DEBUG-Modus für ein bestimmtes Modul
-enable_debug_for_module() {
-    local module_name="$1"
-    echo "Aktiviere DEBUG_MOD_LOCAL=1 für Modul $module_name"
-    
-    # Direktes Bearbeiten der Skriptdateien mit sed für Debian
-    case "$module_name" in
-        "manage_folders")
-            # Aktiviere Debug-Ausgaben für manage_folders.sh
-            sed -i 's/^DEBUG_MOD_LOCAL=0/DEBUG_MOD_LOCAL=1/' "$SCRIPT_DIR/manage_folders.sh" 2>/dev/null || true
-            ;;
-        "manage_files")
-            # Aktiviere Debug-Ausgaben für manage_files.sh
-            sed -i 's/^DEBUG_MOD_LOCAL=0/DEBUG_MOD_LOCAL=1/' "$SCRIPT_DIR/manage_files.sh" 2>/dev/null || true
-            ;;
-        "manage_logging")
-            # Aktiviere Debug-Ausgaben für manage_logging.sh
-            sed -i 's/^DEBUG_MOD_LOCAL=0/DEBUG_MOD_LOCAL=1/' "$SCRIPT_DIR/manage_logging.sh" 2>/dev/null || true
-            ;;
-    esac
-    
-    # Alternativ können wir auch die globale Debug-Variable setzen
-    # Dadurch werden alle Module in den Debug-Modus versetzt
-    export DEBUG_MOD_GLOBAL=1
-    echo "DEBUG-Modus wurde global aktiviert (DEBUG_MOD_GLOBAL=1)"
-}
 
 # -------------------------------
 # Test der manage_logging.sh Funktionen
