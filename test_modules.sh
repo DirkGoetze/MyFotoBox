@@ -6,13 +6,47 @@
 # ......... mit gültigen Parametern und überprüft deren Rückgabewerte.
 # ---------------------------------------------------------------------------
 
+# Setze strict mode für sicheres Bash-Scripting
+set -e  # Beende bei Fehlern
+set -u  # Beende bei Verwendung nicht gesetzter Variablen
+set +e  # Deaktiviere strict mode für die Initialisierung
+
 # Skriptpfad für korrekte Ausführung aus dem Root-Verzeichnis
 CURRENT_DIR=$(pwd)
 SCRIPT_DIR="$CURRENT_DIR/backend/scripts"
 
-# Prüfen, ob im Root-Verzeichnis des Projekts ausgeführt
+# Wenn das Standardverzeichnis nicht existiert, suchen wir nach Alternativen
 if [ ! -d "$SCRIPT_DIR" ]; then
-    echo "FEHLER: Dieses Skript muss aus dem Root-Verzeichnis des Fotobox-Projekts ausgeführt werden."
+    echo "Warnung: Standard-Skriptpfad nicht gefunden, suche nach Alternativen..."
+    
+    # Alternative 1: Prüfe, ob wir direkt im scripts-Verzeichnis sind
+    if [ -f "./lib_core.sh" ] && [ -f "./manage_folders.sh" ] && [ -f "./manage_files.sh" ]; then
+        SCRIPT_DIR="."
+        echo "Skriptverzeichnis gefunden: aktuelle Verzeichnis"
+    
+    # Alternative 2: Prüfe, ob wir bereits im backend-Verzeichnis sind
+    elif [ -d "./scripts" ] && [ -f "./scripts/lib_core.sh" ]; then
+        SCRIPT_DIR="./scripts"
+        echo "Skriptverzeichnis gefunden: $SCRIPT_DIR"
+    
+    # Alternative 3: Prüfe Standard-Installationspfade
+    elif [ -d "/opt/fotobox/backend/scripts" ]; then
+        SCRIPT_DIR="/opt/fotobox/backend/scripts"
+        echo "Skriptverzeichnis gefunden: $SCRIPT_DIR"
+    
+    # Wenn keine Alternative funktioniert, brechen wir ab
+    else
+        echo "FEHLER: Skriptverzeichnis konnte nicht gefunden werden."
+        echo "Bitte führen Sie dieses Skript aus dem Root-Verzeichnis des Fotobox-Projekts aus."
+        exit 1
+    fi
+fi
+
+# Vergewissere uns, dass alle benötigten Skripte existieren
+if [ ! -f "$SCRIPT_DIR/lib_core.sh" ] || [ ! -f "$SCRIPT_DIR/manage_folders.sh" ] || [ ! -f "$SCRIPT_DIR/manage_files.sh" ]; then
+    echo "FEHLER: Benötigte Skriptdateien fehlen im Verzeichnis: $SCRIPT_DIR"
+    echo "Vorhandene Dateien im Skriptverzeichnis:"
+    ls -la "$SCRIPT_DIR"
     exit 1
 fi
 
@@ -23,40 +57,47 @@ echo "==========================================================================
 echo
 
 # Laden der erforderlichen Module
-if [ ! -f "$SCRIPT_DIR/lib_core.sh" ]; then
-    echo "FEHLER: lib_core.sh nicht gefunden!"
-    exit 1
-fi
+echo "Lade Module aus Verzeichnis: $SCRIPT_DIR"
+
+# Debug-Ausgabe zum Anzeigen der vorhandenen Dateien
+echo "Vorhandene Dateien im Skriptverzeichnis:"
+ls -la "$SCRIPT_DIR"
 
 # Laden von lib_core.sh
+echo -n "Lade lib_core.sh... "
 source "$SCRIPT_DIR/lib_core.sh"
-echo "Modul lib_core.sh wurde geladen."
+if [ $? -eq 0 ]; then
+    echo "Erfolg."
+    echo "Modul lib_core.sh wurde geladen."
+else
+    echo "FEHLER!"
+    echo "Fehler beim Laden von lib_core.sh"
+    exit 1
+fi
 
 # Laden von manage_folders.sh
-if [ ! -f "$SCRIPT_DIR/manage_folders.sh" ]; then
-    echo "FEHLER: manage_folders.sh nicht gefunden!"
-    exit 1
-fi
-
+echo -n "Lade manage_folders.sh... "
 source "$SCRIPT_DIR/manage_folders.sh"
-if [ $MANAGE_FOLDERS_LOADED -eq 0 ]; then
-    echo "FEHLER: manage_folders.sh konnte nicht korrekt geladen werden!"
+if [ $? -eq 0 ] && [ "${MANAGE_FOLDERS_LOADED:-0}" -eq 1 ]; then
+    echo "Erfolg."
+    echo "Modul manage_folders.sh wurde geladen."
+else
+    echo "FEHLER!"
+    echo "Fehler beim Laden von manage_folders.sh oder MANAGE_FOLDERS_LOADED ist nicht 1"
     exit 1
 fi
-echo "Modul manage_folders.sh wurde geladen."
 
 # Laden von manage_files.sh
-if [ ! -f "$SCRIPT_DIR/manage_files.sh" ]; then
-    echo "FEHLER: manage_files.sh nicht gefunden!"
-    exit 1
-fi
-
+echo -n "Lade manage_files.sh... "
 source "$SCRIPT_DIR/manage_files.sh"
-if [ $MANAGE_FILES_LOADED -eq 0 ]; then
-    echo "FEHLER: manage_files.sh konnte nicht korrekt geladen werden!"
+if [ $? -eq 0 ] && [ "${MANAGE_FILES_LOADED:-0}" -eq 1 ]; then
+    echo "Erfolg."
+    echo "Modul manage_files.sh wurde geladen."
+else
+    echo "FEHLER!"
+    echo "Fehler beim Laden von manage_files.sh oder MANAGE_FILES_LOADED ist nicht 1"
     exit 1
 fi
-echo "Modul manage_files.sh wurde geladen."
 echo
 
 # Hilfsfunktion zur Überprüfung der Test-Ergebnisse
@@ -82,16 +123,23 @@ echo "-------------------------------------------------------------------------"
 # Test: create_directory
 echo -n "Test create_directory: "
 test_dir="$CURRENT_DIR/tmp/test_directory"
+mkdir -p "$CURRENT_DIR/tmp" 2>/dev/null || true
+set +e  # Fehler nicht als fatal behandeln
 create_directory "$test_dir"
-test_function $? "create_directory" 0
+result=$?
+set -e  # Fehlerbehandlung wieder aktivieren
+test_function $result "create_directory" 0
 
 # Test: create_symlink_to_standard_path
 echo -n "Test create_symlink_to_standard_path: "
 source_dir="$CURRENT_DIR/tmp/symlink_source"
 target_dir="$CURRENT_DIR/tmp/symlink_target"
-create_directory "$target_dir"
+create_directory "$target_dir" || true
+set +e  # Fehler nicht als fatal behandeln
 create_symlink_to_standard_path "$source_dir" "$target_dir"
-test_function $? "create_symlink_to_standard_path" 0
+result=$?
+set -e  # Fehlerbehandlung wieder aktivieren
+test_function $result "create_symlink_to_standard_path" 0
 
 # Test: get_install_dir
 echo -n "Test get_install_dir: "
@@ -148,7 +196,9 @@ echo "-------------------------------------------------------------------------"
 
 # Test: get_config_file
 echo -n "Test get_config_file: "
-config_file=$(get_config_file "system" "version")
+set +e  # Fehler nicht als fatal behandeln
+config_file=$(get_config_file "system" "version" 2>/dev/null)
+set -e  # Fehlerbehandlung wieder aktivieren
 if [ -n "$config_file" ]; then
     echo "✅ Die Funktion get_config_file wurde erfolgreich ausgeführt. Ergebnis: $config_file"
 else
@@ -157,7 +207,9 @@ fi
 
 # Test: get_template_file
 echo -n "Test get_template_file: "
-template_file=$(get_template_file "nginx" "fotobox")
+set +e  # Fehler nicht als fatal behandeln
+template_file=$(get_template_file "nginx" "fotobox" 2>/dev/null)
+set -e  # Fehlerbehandlung wieder aktivieren
 if [ -n "$template_file" ]; then
     echo "✅ Die Funktion get_template_file wurde erfolgreich ausgeführt. Ergebnis: $template_file"
 else
@@ -211,7 +263,9 @@ fi
 
 # Test: get_system_file
 echo -n "Test get_system_file: "
-system_file=$(get_system_file "nginx" "fotobox")
+set +e  # Fehler nicht als fatal behandeln
+system_file=$(get_system_file "nginx" "fotobox" 2>/dev/null)
+set -e  # Fehlerbehandlung wieder aktivieren
 if [ -n "$system_file" ]; then
     echo "✅ Die Funktion get_system_file wurde erfolgreich ausgeführt. Ergebnis: $system_file"
 else
@@ -221,16 +275,24 @@ fi
 # Test: file_exists
 echo -n "Test file_exists: "
 # Erstelle eine temporäre Datei
+mkdir -p "$CURRENT_DIR/tmp" 2>/dev/null || true
 temp_test_file="$CURRENT_DIR/tmp/test_file.txt"
-touch "$temp_test_file"
+touch "$temp_test_file" 2>/dev/null || true
+set +e  # Fehler nicht als fatal behandeln
 file_exists "$temp_test_file"
-test_function $? "file_exists" 0
+result=$?
+set -e  # Fehlerbehandlung wieder aktivieren
+test_function $result "file_exists" 0
 
 # Test: create_empty_file
 echo -n "Test create_empty_file: "
+mkdir -p "$CURRENT_DIR/tmp" 2>/dev/null || true
 empty_file="$CURRENT_DIR/tmp/empty_test_file.txt"
+set +e  # Fehler nicht als fatal behandeln
 create_empty_file "$empty_file"
-test_function $? "create_empty_file" 0
+result=$?
+set -e  # Fehlerbehandlung wieder aktivieren
+test_function $result "create_empty_file" 0
 
 # -------------------------------
 # Aufräumen der Testdateien und -verzeichnisse
