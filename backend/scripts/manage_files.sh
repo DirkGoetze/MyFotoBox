@@ -27,10 +27,6 @@
 # Guard für dieses Management-Skript
 MANAGE_FILES_LOADED=0
 
-# Skript- und BASH-Verzeichnis festlegen
-SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-BASH_DIR="${BASH_DIR:-$SCRIPT_DIR}"
-
 # Textausgaben für das gesamte Skript
 manage_files_log_0001="KRITISCHER FEHLER: Zentrale Bibliothek lib_core.sh nicht gefunden!"
 manage_files_log_0002="Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch."
@@ -38,13 +34,13 @@ manage_files_log_0003="KRITISCHER FEHLER: Die Kernressourcen konnten nicht gelad
 manage_files_log_0004="KRITISCHER FEHLER: Erforderliches Modul manage_folders.sh nicht geladen!"
 
 # Lade alle Basis-Ressourcen ------------------------------------------------
-if [ ! -f "$BASH_DIR/lib_core.sh" ]; then
+if [ ! -f "$SCRIPT_DIR/lib_core.sh" ]; then
     echo "$manage_files_log_0001" >&2
     echo "$manage_files_log_0002" >&2
     exit 1
 fi
 
-source "$BASH_DIR/lib_core.sh"
+source "$SCRIPT_DIR/lib_core.sh"
 
 # Hybrides Ladeverhalten: 
 # Bei MODULE_LOAD_MODE=1 (Installation/Update) werden alle Module geladen

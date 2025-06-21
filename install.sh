@@ -16,24 +16,24 @@ set -e
 # ===========================================================================
 # Einbindung der zentralen Bibliothek (falls verfügbar)
 # ===========================================================================
-# Skript- und BASH-Verzeichnis festlegen
+# Skript-Verzeichnis festlegen
 INSTALL_DIR="$(dirname "$(readlink -f "$0")")"
-BASH_DIR="$INSTALL_DIR/backend/scripts"
-# Diese Variablen werden zu Beginn direkt gesetzt, damit die lib_core.sh geladen werden kann
+SCRIPT_DIR="$INSTALL_DIR/backend/scripts"
+# Diese Variable wird zu Beginn direkt gesetzt, damit die lib_core.sh geladen werden kann
 # Nach dem Laden der lib_core.sh sollten die Getter-Funktionen verwendet werden
 
 # Debug-Ausgabe zum Nachverfolgen des Installationspfads
 echo "INSTALL_DIR=$INSTALL_DIR"
-echo "BASH_DIR=$BASH_DIR"
+echo "SCRIPT_DIR=$SCRIPT_DIR"
 
 # Installation/Update benötigt alle Module -> Lademodus auf 1 setzen
 # Dies vor dem Einbinden von lib_core.sh festlegen
 export MODULE_LOAD_MODE=1
 
-if [ -f "$BASH_DIR/lib_core.sh" ]; then
+if [ -f "$SCRIPT_DIR/lib_core.sh" ]; then
     # Direkt core-Bibliothek einbinden, ohne sofort alle Module zu laden
     echo "Lade lib_core.sh..."
-    source "$BASH_DIR/lib_core.sh"
+    source "$SCRIPT_DIR/lib_core.sh"
     echo "lib_core.sh geladen."
     
     # Jetzt alle Ressourcen explizit laden - vermeidet rekursives Laden
@@ -575,11 +575,11 @@ set_structure() {
     if [ -d "$backend_dir/scripts" ]; then
         chmod +x "$backend_dir"/scripts/*.sh || true
     else
-        chmod +x "$BASH_DIR"/*.sh || true
+        chmod +x "$SCRIPT_DIR"/*.sh || true
     fi
     
     # Prüfe, ob manage_folders.sh vorhanden ist
-    if [ ! -f "$backend_dir/scripts/manage_folders.sh" ] && [ ! -f "$BASH_DIR/manage_folders.sh" ]; then
+    if [ ! -f "$backend_dir/scripts/manage_folders.sh" ] && [ ! -f "$SCRIPT_DIR/manage_folders.sh" ]; then
         print_error "manage_folders.sh nicht gefunden. Die Projektstruktur scheint unvollständig zu sein."
         debug "manage_folders.sh nicht gefunden" "CLI" "set_structure"
         return 1
@@ -601,8 +601,8 @@ set_structure() {
             debug "Fehler bei manage_folders.sh" "CLI" "set_structure"
             return 1
         fi
-    elif [ -f "$BASH_DIR/manage_folders.sh" ]; then
-        if ! "$BASH_DIR/manage_folders.sh" ensure_structure; then
+    elif [ -f "$SCRIPT_DIR/manage_folders.sh" ]; then
+        if ! "$SCRIPT_DIR/manage_folders.sh" ensure_structure; then
             print_error "Fehler bei der Erstellung der Ordnerstruktur über manage_folders.sh."
             debug "Fehler bei manage_folders.sh" "CLI" "set_structure"
             return 1
@@ -825,7 +825,7 @@ set_systemd_install() {
     # Rückgabe: 0 bei Erfolg, 1 bei Fehler
     
     # Stelle sicher, dass das Modul geladen ist
-    if ! source "$BASH_DIR/manage_backend_service.sh" 2>/dev/null; then
+    if ! source "$SCRIPT_DIR/manage_backend_service.sh" 2>/dev/null; then
         echo "  → [FEHLER] Backend-Service-Modul konnte nicht geladen werden."
         return 1
     fi
@@ -1043,12 +1043,12 @@ dlg_nginx_installation() {
     ((STEP_COUNTER++))
     print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] NGINX-Installation und Konfiguration ..."
 
-    debug "Starte NGINX-Dialog, UNATTENDED=$UNATTENDED, BASH_DIR=$BASH_DIR" "CLI" "dlg_nginx_installation"
+    debug "Starte NGINX-Dialog, UNATTENDED=$UNATTENDED, SCRIPT_DIR=$SCRIPT_DIR" "CLI" "dlg_nginx_installation"
     # Verwenden der globalen Variable zur Prüfung, ob manage_nginx.sh existiert
     # Robustere Prüfung auf Verfügbarkeit von manage_nginx.sh
     if [ -z "$MANAGE_NGINX_AVAILABLE" ]; then
         # Falls die Variable nicht gesetzt ist, prüfen wir direkt die Dateipräsenz
-        if [ -f "$BASH_DIR/manage_nginx.sh" ]; then
+        if [ -f "$SCRIPT_DIR/manage_nginx.sh" ]; then
             MANAGE_NGINX_AVAILABLE=1
         else
             MANAGE_NGINX_AVAILABLE=0
@@ -1066,7 +1066,7 @@ dlg_nginx_installation() {
         NGINX_SCRIPT="$MANAGE_NGINX_PATH"
     else
         # Fallback auf den standardmäßigen Pfad
-        NGINX_SCRIPT="$BASH_DIR/manage_nginx.sh"
+        NGINX_SCRIPT="$SCRIPT_DIR/manage_nginx.sh"
     fi
     
     if [ "$UNATTENDED" -eq 1 ]; then
@@ -1440,13 +1440,13 @@ dlg_firewall_config() {
     # Funktion: Konfiguriert die Firewall für die Fotobox
     # ------------------------------------------------------------------------------
     # Prüfe, ob die Fotobox-Verzeichnisstruktur schon angelegt wurde
-    if [ ! -d "$BASH_DIR" ]; then
+    if [ ! -d "$SCRIPT_DIR" ]; then
         print_error "Fotobox-Verzeichnisstruktur muss vor der Firewall-Konfiguration erstellt werden."
         return 1
     fi
 
     # Suche nach dem Firewall-Management-Skript
-    local firewall_script="$BASH_DIR/manage_firewall.sh"
+    local firewall_script="$SCRIPT_DIR/manage_firewall.sh"
     if [ ! -f "$firewall_script" ]; then
         print_error "Firewall-Management-Skript nicht gefunden: $firewall_script"
         return 1
@@ -1460,7 +1460,7 @@ dlg_firewall_config() {
     
     # Lade NGINX-Management-Modul, wenn noch nicht geladen
     if [ -z "$MANAGE_NGINX_LOADED" ] || [ "$MANAGE_NGINX_LOADED" -ne 1 ]; then
-        local nginx_script="$BASH_DIR/manage_nginx.sh"
+        local nginx_script="$SCRIPT_DIR/manage_nginx.sh"
         if [ -f "$nginx_script" ]; then
             source "$nginx_script"
         else
@@ -1491,7 +1491,7 @@ dlg_firewall_config() {
         export HTTPS_PORT="$https_port"
         
         # Führe das Firewall-Skript korrekt mit der setup_firewall Funktion aus
-        if ! bash -c "BASH_DIR=\"$BASH_DIR\"; source \"$firewall_script\"; setup_firewall"; then
+        if ! bash -c "SCRIPT_DIR=\"$SCRIPT_DIR\"; source \"$firewall_script\"; setup_firewall"; then
             print_warning "Firewall-Konfiguration fehlgeschlagen. Die Weboberfläche könnte nicht erreichbar sein."
             log "WARN: Firewall-Konfiguration fehlgeschlagen."
             return 1
@@ -1548,7 +1548,7 @@ dlg_firewall_config() {
             print_info "Konfiguriere Firewall für HTTP-Port $http_port und HTTPS-Port $https_port..."
             
             # Korrekter Aufruf mit Übergabe der benötigten Umgebungsvariablen
-            if ! bash -c "BASH_DIR=\"$BASH_DIR\"; source \"$firewall_script\"; setup_firewall"; then
+            if ! bash -c "SCRIPT_DIR=\"$SCRIPT_DIR\"; source \"$firewall_script\"; setup_firewall"; then
                 print_warning "Firewall-Konfiguration fehlgeschlagen. Die Weboberfläche könnte nicht erreichbar sein."
                 log "WARN: Firewall-Konfiguration fehlgeschlagen."
                 return 1
@@ -1578,7 +1578,7 @@ dlg_show_summary() {
     if [ -n "$MANAGE_NGINX_PATH" ]; then
         source "$MANAGE_NGINX_PATH"
     else
-        source "$BASH_DIR/manage_nginx.sh"
+        source "$SCRIPT_DIR/manage_nginx.sh"
     fi
     local nginx_status_json
     nginx_status_json=$(get_nginx_status json)

@@ -50,15 +50,15 @@ enable_debug_for_module() {
     case "$module_name" in
         "manage_folders")
             # Aktiviere Debug-Ausgaben für manage_folders.sh
-            sed -i 's/^DEBUG_MOD_LOCAL=0/DEBUG_MOD_LOCAL=1/' "$SCRIPT_DIR/manage_folders.sh" 2>/dev/null || true
+            sed -i 's/^DEBUG_MOD_LOCAL=0/DEBUG_MOD_LOCAL=1/' "$TEST_SCRIPT_DIR/manage_folders.sh" 2>/dev/null || true
             ;;
         "manage_files")
             # Aktiviere Debug-Ausgaben für manage_files.sh
-            sed -i 's/^DEBUG_MOD_LOCAL=0/DEBUG_MOD_LOCAL=1/' "$SCRIPT_DIR/manage_files.sh" 2>/dev/null || true
+            sed -i 's/^DEBUG_MOD_LOCAL=0/DEBUG_MOD_LOCAL=1/' "$TEST_SCRIPT_DIR/manage_files.sh" 2>/dev/null || true
             ;;
         "manage_logging")
             # Aktiviere Debug-Ausgaben für manage_logging.sh
-            sed -i 's/^DEBUG_MOD_LOCAL=0/DEBUG_MOD_LOCAL=1/' "$SCRIPT_DIR/manage_logging.sh" 2>/dev/null || true
+            sed -i 's/^DEBUG_MOD_LOCAL=0/DEBUG_MOD_LOCAL=1/' "$TEST_SCRIPT_DIR/manage_logging.sh" 2>/dev/null || true
             ;;
     esac
     
@@ -69,27 +69,27 @@ enable_debug_for_module() {
 }
 
 # Skriptpfad für korrekte Ausführung aus dem Root-Verzeichnis
-CURRENT_DIR=$(pwd)
-SCRIPT_DIR="$CURRENT_DIR/backend/scripts"
+TEST_CURRENT_DIR=$(pwd)
+TEST_SCRIPT_DIR="$TEST_CURRENT_DIR/backend/scripts"
 
 # Verbesserte Skriptpfaderkennung 
-if [ ! -d "$SCRIPT_DIR" ]; then
+if [ ! -d "$TEST_SCRIPT_DIR" ]; then
     echo "Warnung: Standard-Skriptpfad nicht gefunden, suche nach Alternativen..."
     
     # Alternative 1: Prüfe, ob wir direkt im scripts-Verzeichnis sind
     if [ -f "./lib_core.sh" ] && [ -f "./manage_folders.sh" ] && [ -f "./manage_files.sh" ]; then
-        SCRIPT_DIR="."
+        TEST_SCRIPT_DIR="."
         echo "Skriptverzeichnis gefunden: aktuelles Verzeichnis"
     
     # Alternative 2: Prüfe, ob wir bereits im backend-Verzeichnis sind
     elif [ -d "./scripts" ] && [ -f "./scripts/lib_core.sh" ]; then
-        SCRIPT_DIR="./scripts"
-        echo "Skriptverzeichnis gefunden: $SCRIPT_DIR"
+        TEST_SCRIPT_DIR="./scripts"
+        echo "Skriptverzeichnis gefunden: $TEST_SCRIPT_DIR"
     
     # Alternative 3: Prüfe Standard-Installationspfade
     elif [ -d "/opt/fotobox/backend/scripts" ]; then
-        SCRIPT_DIR="/opt/fotobox/backend/scripts"
-        echo "Skriptverzeichnis gefunden: $SCRIPT_DIR"
+        TEST_SCRIPT_DIR="/opt/fotobox/backend/scripts"
+        echo "Skriptverzeichnis gefunden: $TEST_SCRIPT_DIR"
         
     # Alternative 4: Suche nach lib_core.sh im System
     else
@@ -100,8 +100,8 @@ if [ ! -d "$SCRIPT_DIR" ]; then
         if [ -n "$core_files" ]; then
             # Verwende den ersten gefundenen Pfad
             first_file=$(echo "$core_files" | head -n 1)
-            SCRIPT_DIR=$(dirname "$first_file")
-            echo "Skriptverzeichnis gefunden durch Suche: $SCRIPT_DIR"
+            TEST_SCRIPT_DIR=$(dirname "$first_file")
+            echo "Skriptverzeichnis gefunden durch Suche: $TEST_SCRIPT_DIR"
         else
             echo "FEHLER: Skriptverzeichnis konnte nicht gefunden werden."
             echo "Bitte führen Sie dieses Skript aus dem Root-Verzeichnis des Fotobox-Projekts aus."
@@ -112,10 +112,10 @@ fi
 
 # Überprüfe, ob lib_core.sh vorhanden ist (die anderen Module werden
 # über das zentrale Ladesystem von lib_core.sh geladen)
-if [ ! -f "$SCRIPT_DIR/lib_core.sh" ]; then
-    echo "FEHLER: lib_core.sh fehlt im Verzeichnis: $SCRIPT_DIR"
+if [ ! -f "$TEST_SCRIPT_DIR/lib_core.sh" ]; then
+    echo "FEHLER: lib_core.sh fehlt im Verzeichnis: $TEST_SCRIPT_DIR"
     echo "Vorhandene Dateien im Skriptverzeichnis:"
-    ls -la "$SCRIPT_DIR"
+    ls -la "$TEST_SCRIPT_DIR"
     exit 1
 fi
 
@@ -130,26 +130,61 @@ echo "==========================================================================
 echo
 
 # Laden der erforderlichen Module
-echo "Lade Module aus Verzeichnis: $SCRIPT_DIR"
+echo "Lade Module aus Verzeichnis: $TEST_SCRIPT_DIR"
 
 # Debug-Ausgabe zum Anzeigen der vorhandenen Dateien
 echo "Vorhandene Dateien im Skriptverzeichnis:"
-ls -la "$SCRIPT_DIR"
+ls -la "$TEST_SCRIPT_DIR"
 
-# Setze BASH_DIR für lib_core.sh
-export BASH_DIR="$SCRIPT_DIR"
+# Setze SCRIPT_DIR für lib_core.sh
+export SCRIPT_DIR="$TEST_SCRIPT_DIR"
+
+# Funktionen zum Sichern und Wiederherstellen der Modulvariablen
+# Diese helfen, Kollisionen zwischen Testskript und Modulen zu vermeiden
+save_module_vars() {
+    # Sichere wichtige Variablen, die von Modulen verwendet werden könnten
+    TEST_SAVED_SCRIPT_DIR="${SCRIPT_DIR:-}"
+    TEST_SAVED_DEBUG_MOD="${DEBUG_MOD:-}"
+    TEST_SAVED_DEBUG_MOD_LOCAL="${DEBUG_MOD_LOCAL:-}"
+    TEST_SAVED_MODULE_LOAD_MODE="${MODULE_LOAD_MODE:-}"
+    
+    echo "Modulvariablen wurden gesichert"
+}
+
+restore_module_vars() {
+    # Stelle wichtige Variablen wieder her
+    if [ -n "${TEST_SAVED_SCRIPT_DIR:-}" ]; then
+        export SCRIPT_DIR="$TEST_SAVED_SCRIPT_DIR"
+    fi
+    if [ -n "${TEST_SAVED_DEBUG_MOD:-}" ]; then
+        export DEBUG_MOD="$TEST_SAVED_DEBUG_MOD"
+    fi
+    if [ -n "${TEST_SAVED_DEBUG_MOD_LOCAL:-}" ]; then
+        export DEBUG_MOD_LOCAL="$TEST_SAVED_DEBUG_MOD_LOCAL"
+    fi
+    if [ -n "${TEST_SAVED_MODULE_LOAD_MODE:-}" ]; then
+        export MODULE_LOAD_MODE="$TEST_SAVED_MODULE_LOAD_MODE"
+    fi
+    
+    echo "Modulvariablen wurden wiederhergestellt"
+}
 
 # Lade zuerst lib_core.sh
 echo -n "Lade lib_core.sh... "
-if [ ! -f "$SCRIPT_DIR/lib_core.sh" ]; then
+if [ ! -f "$TEST_SCRIPT_DIR/lib_core.sh" ]; then
     echo "FEHLER: lib_core.sh nicht gefunden!"
     exit 1
 fi
 
-source "$SCRIPT_DIR/lib_core.sh"
+# Sichere die ursprünglichen Variablenwerte
+save_module_vars
+
+source "$TEST_SCRIPT_DIR/lib_core.sh"
 if [ $? -eq 0 ]; then
     echo "Erfolg."
     echo "Modul lib_core.sh wurde geladen."
+    # Stelle die gesicherten Variablen wieder her
+    restore_module_vars
 else
     echo "FEHLER!"
     echo "Fehler beim Laden von lib_core.sh"
@@ -165,8 +200,8 @@ echo "Aktiviere Testmodus (TEST_MODE=1)..."
 export TEST_MODE=1
 
 # Lade Module direkt nacheinander
-echo -n "Lade $SCRIPT_DIR/manage_folders.sh direkt... "
-if source "$SCRIPT_DIR/manage_folders.sh"; then
+echo -n "Lade $TEST_SCRIPT_DIR/manage_folders.sh direkt... "
+if source "$TEST_SCRIPT_DIR/manage_folders.sh"; then
     echo "Erfolg."
     if [ "${MANAGE_FOLDERS_LOADED:-0}" -eq 1 ]; then
         echo "Modul manage_folders.sh wurde korrekt geladen."
@@ -181,8 +216,8 @@ else
     exit 1
 fi
 
-echo -n "Lade $SCRIPT_DIR/manage_files.sh direkt... "
-if source "$SCRIPT_DIR/manage_files.sh"; then
+echo -n "Lade $TEST_SCRIPT_DIR/manage_files.sh direkt... "
+if source "$TEST_SCRIPT_DIR/manage_files.sh"; then
     echo "Erfolg."
     if [ "${MANAGE_FILES_LOADED:-0}" -eq 1 ]; then
         echo "Modul manage_files.sh wurde korrekt geladen."
@@ -197,8 +232,8 @@ else
     exit 1
 fi
 
-echo -n "Lade $SCRIPT_DIR/manage_logging.sh direkt... "
-if source "$SCRIPT_DIR/manage_logging.sh"; then
+echo -n "Lade $TEST_SCRIPT_DIR/manage_logging.sh direkt... "
+if source "$TEST_SCRIPT_DIR/manage_logging.sh"; then
     echo "Erfolg."
     if [ "${MANAGE_LOGGING_LOADED:-0}" -eq 1 ]; then
         echo "Modul manage_logging.sh wurde korrekt geladen."
@@ -327,8 +362,8 @@ echo "-------------------------------------------------------------------------"
 
 # Test: create_directory
 echo -n "Test create_directory: "
-test_dir="$CURRENT_DIR/tmp/test_directory"
-mkdir -p "$CURRENT_DIR/tmp" 2>/dev/null || true
+test_dir="$TEST_CURRENT_DIR/tmp/test_directory"
+mkdir -p "$TEST_CURRENT_DIR/tmp" 2>/dev/null || true
 set +e  # Fehler nicht als fatal behandeln
 create_directory "$test_dir"
 result=$?
@@ -337,8 +372,8 @@ test_function $result "create_directory" 0
 
 # Test: create_symlink_to_standard_path
 echo -n "Test create_symlink_to_standard_path: "
-source_dir="$CURRENT_DIR/tmp/symlink_source"
-target_dir="$CURRENT_DIR/tmp/symlink_target"
+source_dir="$TEST_CURRENT_DIR/tmp/symlink_source"
+target_dir="$TEST_CURRENT_DIR/tmp/symlink_target"
 create_directory "$target_dir" || true
 set +e  # Fehler nicht als fatal behandeln
 create_symlink_to_standard_path "$source_dir" "$target_dir"
@@ -480,8 +515,8 @@ fi
 # Test: file_exists
 echo -n "Test file_exists: "
 # Erstelle eine temporäre Datei
-mkdir -p "$CURRENT_DIR/tmp" 2>/dev/null || true
-temp_test_file="$CURRENT_DIR/tmp/test_file.txt"
+mkdir -p "$TEST_CURRENT_DIR/tmp" 2>/dev/null || true
+temp_test_file="$TEST_CURRENT_DIR/tmp/test_file.txt"
 touch "$temp_test_file" 2>/dev/null || true
 set +e  # Fehler nicht als fatal behandeln
 file_exists "$temp_test_file"
@@ -491,8 +526,8 @@ test_function $result "file_exists" 0
 
 # Test: create_empty_file
 echo -n "Test create_empty_file: "
-mkdir -p "$CURRENT_DIR/tmp" 2>/dev/null || true
-empty_file="$CURRENT_DIR/tmp/empty_test_file.txt"
+mkdir -p "$TEST_CURRENT_DIR/tmp" 2>/dev/null || true
+empty_file="$TEST_CURRENT_DIR/tmp/empty_test_file.txt"
 set +e  # Fehler nicht als fatal behandeln
 create_empty_file "$empty_file"
 result=$?
@@ -514,3 +549,12 @@ echo
 echo "==========================================================================="
 echo "                            Test abgeschlossen"
 echo "==========================================================================="
+
+# Verarbeitete Variablen im Test-Skript:
+# TEST_CURRENT_DIR - Aktuelles Verzeichnis beim Start des Tests
+# TEST_SCRIPT_DIR  - Verzeichnis, in dem sich die Backend-Skripte befinden
+# 
+# Diese Variablen sind vom Testskript reserviert und zur Vermeidung von Kollisionen
+# mit den zu testenden Modulen uniquifiziert. Die Module verwenden ihre eigenen
+# Variablen wie SCRIPT_DIR, BASH_DIR usw., die durch das Testskript nicht
+# beschädigt werden.

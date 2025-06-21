@@ -23,23 +23,19 @@
 # Guard für dieses Management-Skript
 MANAGE_FOLDERS_LOADED=0
 
-# Skript- und BASH-Verzeichnis festlegen
-SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-BASH_DIR="${BASH_DIR:-$SCRIPT_DIR}"
-
 # Textausgaben für das gesamte Skript
 manage_folders_log_0001="KRITISCHER FEHLER: Zentrale Bibliothek lib_core.sh nicht gefunden!"
 manage_folders_log_0002="Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch."
 manage_folders_log_0003="KRITISCHER FEHLER: Die Kernressourcen konnten nicht geladen werden."
 
 # Lade alle Basis-Ressourcen ------------------------------------------------
-if [ ! -f "$BASH_DIR/lib_core.sh" ]; then
+if [ ! -f "$SCRIPT_DIR/lib_core.sh" ]; then
     echo "$manage_folders_log_0001" >&2
     echo "$manage_folders_log_0002" >&2
     exit 1
 fi
 
-source "$BASH_DIR/lib_core.sh"
+source "$SCRIPT_DIR/lib_core.sh"
 
 # Hybrides Ladeverhalten: 
 # Bei MODULE_LOAD_MODE=1 (Installation/Update) werden alle Module geladen
@@ -454,27 +450,27 @@ get_script_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    local dir
-    local standard_path="$DEFAULT_DIR_BACKEND_SCRIPTS"
-        
-    # Prüfen, ob BASH_DIR bereits gesetzt ist
+    # HINWEIS: Diese Funktion verwendet nun die zentrale Definition von SCRIPT_DIR aus lib_core.sh
+    
     debug "$get_script_dir_debug_0001" "CLI" "get_script_dir"
-    if [ -n "$BASH_DIR" ] && [ -d "$BASH_DIR" ]; then
-        debug "$(printf "$get_script_dir_debug_0002" "$BASH_DIR")" "CLI" "get_script_dir"
-        create_directory "$BASH_DIR" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+    
+    # Gebe die zentrale Definition zurück (definiert in lib_core.sh)
+    if [ -n "$SCRIPT_DIR" ] && [ -d "$SCRIPT_DIR" ]; then
+        debug "$(printf "$get_script_dir_debug_0002" "$SCRIPT_DIR")" "CLI" "get_script_dir"
+        create_directory "$SCRIPT_DIR" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
         
         # Wenn das definierte Verzeichnis nicht dem Standard entspricht, erstelle einen Symlink
-        if [ "$BASH_DIR" != "$standard_path" ]; then
-            create_symlink_to_standard_path "$standard_path" "$BASH_DIR" || true
+        if [ "$SCRIPT_DIR" != "$DEFAULT_DIR_BACKEND_SCRIPTS" ]; then
+            create_symlink_to_standard_path "$DEFAULT_DIR_BACKEND_SCRIPTS" "$SCRIPT_DIR" || true
         fi
         
-        echo "$BASH_DIR"
+        echo "$SCRIPT_DIR"
         return 0
     fi
     
-    # Verwende die in lib_core definierten Pfade
+    # Alternativfall, wenn SCRIPT_DIR nicht gesetzt oder ungültig ist
     debug "$get_script_dir_debug_0003" "CLI" "get_script_dir"
-    dir="$DEFAULT_DIR_BACKEND_SCRIPTS"
+    local dir="$DEFAULT_DIR_BACKEND_SCRIPTS"
     if [ -d "$dir" ]; then
         debug "$(printf "$get_script_dir_debug_0004" "$dir")" "CLI" "get_script_dir"
         create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true

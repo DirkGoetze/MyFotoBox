@@ -15,6 +15,10 @@ fi
 # Sofort markieren, dass diese Bibliothek geladen wird, um rekursive Probleme zu vermeiden
 LIB_CORE_LOADED=1
 
+# Zentrale Definition des Skriptverzeichnisses - wird von allen Modulen verwendet
+SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+# Hinweis: BASH_DIR wurde vollständig entfernt und durch SCRIPT_DIR ersetzt
+
 # ===========================================================================
 # Allgemeine Hilfsfunktionen für alle Skripte
 # ===========================================================================
@@ -131,7 +135,7 @@ FALLBACK_DIR_TMP="/tmp/fotobox"
 # Initialisiere Runtime-Variablen mit den Standardwerten
 : "${INSTALL_DIR:=$DEFAULT_DIR_INSTALL}"
 : "${BACKEND_DIR:=$DEFAULT_DIR_BACKEND}"
-: "${BASH_DIR:=$DEFAULT_DIR_BACKEND_SCRIPTS}"
+# BASH_DIR wurde entfernt und durch SCRIPT_DIR ersetzt
 : "${BACKEND_VENV_DIR:=$DEFAULT_DIR_BACKEND_VENV}"
 : "${BACKUP_DIR:=$DEFAULT_DIR_BACKUP}"
 : "${BACKUP_DIR_NGINX:=$DEFAULT_DIR_BACKUP_NGINX}" 
@@ -167,7 +171,7 @@ COLOR_CYAN="\033[1;36m"
 # DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
 : "${DEBUG_MOD_LOCAL:=0}"    # Lokales Debug-Flag für einzelne Skripte
-DEBUG_MOD_GLOBAL=0           # Globales Flag, das alle lokalen überstimmt
+DEBUG_MOD_GLOBAL=1           # Globales Flag, das alle lokalen überstimmt
 
 # Lademodus für Module
 # 0 = Bei Bedarf laden (für laufenden Betrieb)
@@ -213,7 +217,7 @@ bind_resource() {
     # -----------------------------------------------------------------------
     # Funktion: Prüfung und Einbindung externer Skript-Ressourcen
     # Parameter: $1 = Name der Guard-Variable (z.B. "MANAGE_FOLDERS_LOADED")
-    # .........  $2 = Pfad zur Ressource (z.B. "$BASH_DIR")
+    # .........  $2 = Pfad zur Ressource (z.B. "$SCRIPT_DIR")
     # .........  $3 = Name der benötigten Ressource (z.B. "manage_folders.sh")
     # Rückgabe: 0 = OK, 1 = Ressource nicht verfügbar, 2 = Verzeichnis nicht verfügbar
     # -----------------------------------------------------------------------
@@ -331,7 +335,7 @@ chk_resources() {
     
     # 1. manage_folders.sh einbinden
     debug_output "chk_resources: Versuche manage_folders.sh einzubinden"
-    bind_resource "MANAGE_FOLDERS_LOADED" "$BASH_DIR" "manage_folders.sh"
+    bind_resource "MANAGE_FOLDERS_LOADED" "$SCRIPT_DIR" "manage_folders.sh"
     if [ $? -ne 0 ]; then
         debug_output "chk_resources: Fehler beim Laden von manage_folders.sh, erstelle Fallback-Funktionen"
         echo "Fehler: manage_folders.sh konnte nicht geladen werden."
@@ -385,7 +389,7 @@ chk_resources() {
     
     # 2. manage_logging.sh einbinden
     debug_output "chk_resources: Versuche manage_logging.sh einzubinden"
-    bind_resource "MANAGE_LOGGING_LOADED" "$BASH_DIR" "manage_logging.sh"
+    bind_resource "MANAGE_LOGGING_LOADED" "$SCRIPT_DIR" "manage_logging.sh"
     if [ $? -ne 0 ]; then
         debug_output "chk_resources: Fehler beim Laden von manage_logging.sh, erstelle Fallback-Funktionen"
         echo "Fehler: manage_logging.sh konnte nicht geladen werden."
@@ -520,7 +524,7 @@ chk_resources() {
     
     # 3. manage_nginx.sh einbinden
     debug_output "chk_resources: Versuche manage_nginx.sh einzubinden"
-    bind_resource "MANAGE_NGINX_LOADED" "$BASH_DIR" "manage_nginx.sh"
+    bind_resource "MANAGE_NGINX_LOADED" "$SCRIPT_DIR" "manage_nginx.sh"
     if [ $? -ne 0 ]; then
         debug_output "chk_resources: Fehler beim Laden von manage_nginx.sh"
         echo "Fehler: manage_nginx.sh konnte nicht geladen werden."
@@ -529,7 +533,7 @@ chk_resources() {
 
     # 4. manage_https.sh einbinden
     debug_output "chk_resources: Versuche manage_https.sh einzubinden"
-    bind_resource "MANAGE_HTTPS_LOADED" "$BASH_DIR" "manage_https.sh"
+    bind_resource "MANAGE_HTTPS_LOADED" "$SCRIPT_DIR" "manage_https.sh"
     if [ $? -ne 0 ]; then
         debug_output "chk_resources: Fehler beim Laden von manage_https.sh"
         echo "Fehler: manage_https.sh konnte nicht geladen werden."
@@ -538,7 +542,7 @@ chk_resources() {
 
     # 5. manage_firewall.sh einbinden
     debug_output "chk_resources: Versuche manage_firewall.sh einzubinden"
-    bind_resource "MANAGE_FIREWALL_LOADED" "$BASH_DIR" "manage_firewall.sh"
+    bind_resource "MANAGE_FIREWALL_LOADED" "$SCRIPT_DIR" "manage_firewall.sh"
     if [ $? -ne 0 ]; then
         debug_output "chk_resources: Fehler beim Laden von manage_firewall.sh"
         echo "Fehler: manage_firewall.sh konnte nicht geladen werden."
@@ -547,7 +551,7 @@ chk_resources() {
 
     # 6. manage_python_env.sh einbinden
     debug_output "chk_resources: Versuche manage_python_env.sh einzubinden"
-    bind_resource "MANAGE_PYTHON_ENV_LOADED" "$BASH_DIR" "manage_python_env.sh"
+    bind_resource "MANAGE_PYTHON_ENV_LOADED" "$SCRIPT_DIR" "manage_python_env.sh"
     if [ $? -ne 0 ]; then
         debug_output "chk_resources: Fehler beim Laden von manage_python_env.sh"
         echo "Fehler: manage_python_env.sh konnte nicht geladen werden."
@@ -556,7 +560,7 @@ chk_resources() {
 
     # 7. manage_sql.sh einbinden
     debug_output "chk_resources: Versuche manage_sql.sh einzubinden"
-    bind_resource "MANAGE_SQL_LOADED" "$BASH_DIR" "manage_sql.sh"
+    bind_resource "MANAGE_SQL_LOADED" "$SCRIPT_DIR" "manage_sql.sh"
     if [ $? -ne 0 ]; then
         debug_output "chk_resources: Fehler beim Laden von manage_sql.sh"
         echo "Fehler: manage_sql.sh konnte nicht geladen werden."
@@ -565,7 +569,7 @@ chk_resources() {
 
     # 8. manage_backend_service.sh einbinden
     debug_output "chk_resources: Versuche manage_backend_service.sh einzubinden"
-    bind_resource "MANAGE_BACKEND_SERVICE_LOADED" "$BASH_DIR" "manage_backend_service.sh"
+    bind_resource "MANAGE_BACKEND_SERVICE_LOADED" "$SCRIPT_DIR" "manage_backend_service.sh"
     if [ $? -ne 0 ]; then
         debug_output "chk_resources: Fehler beim Laden von manage_backend_service.sh"
         echo "Fehler: manage_backend_service.sh konnte nicht geladen werden."
@@ -666,7 +670,7 @@ load_module() {
         debug_output "load_module: Lademodus 0 (Einzeln) - Lade nur '$module_name'"
         # Nur das angeforderte Modul laden
         local script_name="${module_name}.sh"
-        bind_resource "$module_guard" "$BASH_DIR" "$script_name"
+        bind_resource "$module_guard" "$SCRIPT_DIR" "$script_name"
         if [ $? -ne 0 ]; then
             debug_output "load_module: Fehler - Konnte Modul '$module_name' nicht laden"
             return 1

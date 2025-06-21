@@ -27,18 +27,14 @@
 # Guard für dieses Management-Skript
 MANAGE_LOGGING_LOADED=0
 
-# Skript- und BASH-Verzeichnis festlegen
-SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-BASH_DIR="${BASH_DIR:-$SCRIPT_DIR}"
-
 # Lade alle Basis-Ressourcen ------------------------------------------------
-if [ ! -f "$BASH_DIR/lib_core.sh" ]; then
+if [ ! -f "$SCRIPT_DIR/lib_core.sh" ]; then
     echo "KRITISCHER FEHLER: Zentrale Bibliothek lib_core.sh nicht gefunden!" >&2
     echo "Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch." >&2
     exit 1
 fi
 
-source "$BASH_DIR/lib_core.sh"
+source "$SCRIPT_DIR/lib_core.sh"
 
 # Hybrides Ladeverhalten: 
 # Bei MODULE_LOAD_MODE=1 (Installation/Update) werden alle Module geladen
