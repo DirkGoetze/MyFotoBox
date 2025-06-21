@@ -187,10 +187,13 @@ check_param() {
 }
 
 # ===========================================================================
-# Hauptfunktionen für die Ermittlung von Dateipfaden
+# Hauptfunktionen für die Ermittlung von Projekt Dateipfaden
 # ===========================================================================
 
 # get_config_file
+get_config_file_debug_0001="Ermittle Pfad zu Konfigurationsdatei für Kategorie %s, Name %s"
+get_config_file_debug_0002="Konfigurationsordner für Kategorie %s: %s"
+get_config_file_debug_0003="Vollständiger Konfigurationspfad: %s/%s%s"
 get_config_file_log_0001="ERROR: Unbekannte Kategorie: %s"
 
 get_config_file() {
@@ -205,221 +208,44 @@ get_config_file() {
     local category="$1"
     local name="$2"
     local folder_path
+    local file_ext=""
 
     # Überprüfen, ob die erforderlichen Parameter angegeben sind
     if ! check_param "$category" "category"; then return 1; fi
     if ! check_param "$name" "name"; then return 1; fi
-    
+
+    debug "$(printf "$get_config_file_debug_0001" "$category" "$name")" "CLI" "get_config_file"
+
     # Bestimmen des Ordnerpfads basierend auf der Kategorie
     case "$category" in
         "nginx")
             folder_path="$("$manage_folders_sh" get_nginx_conf_dir)"
-            echo "${folder_path}/${name}.conf"
+            file_ext=".conf"
             ;;
         "camera")
             folder_path="$("$manage_folders_sh" get_camera_conf_dir)"
-            echo "${folder_path}/${name}.json"
+            file_ext=".json"
             ;;
         "system")
-          folder_path="$("$manage_folders_sh" get_conf_dir)"
-          echo "${folder_path}/${name}.inf"
-          ;;
+            folder_path="$("$manage_folders_sh" get_conf_dir)"
+            file_ext=".inf"
+            ;;
         *)
           log "$(printf "$get_config_file_log_0001" "$category")" "get_config_file" "manage_files"
           debug "$(printf "$get_config_file_log_0001" "$category")" "get_config_file" "manage_files"
+          echo ""
           return 1
           ;;
     esac
-}
+    debug "$(printf "$get_config_file_debug_0002" "$category" "$folder_path")" "CLI" "get_config_file"
 
-# get_system_file
-get_system_file_log_0001="ERROR: Konnte Nginx-Systemverzeichnis nicht ermitteln"
-get_system_file_log_0002="ERROR: Leeres Ergebnis beim Ermitteln des Nginx-Systemverzeichnisses"
-get_system_file_log_0003="ERROR: Konnte systemd-Systemverzeichnis nicht ermitteln"
-get_system_file_log_0004="ERROR: Leeres Ergebnis beim Ermitteln des systemd-Systemverzeichnisses"
-get_system_file_log_0005="ERROR: Konnte SSL-Zertifikat-Systemverzeichnis nicht ermitteln"
-get_system_file_log_0006="ERROR: Leeres Ergebnis beim Ermitteln des SSL-Zertifikat-Systemverzeichnisses"
-get_system_file_log_0007="ERROR: Konnte SSL-Schlüssel-Systemverzeichnis nicht ermitteln"
-get_system_file_log_0008="ERROR: Leeres Ergebnis beim Ermitteln des SSL-Schlüssel-Systemverzeichnisses"
-get_system_file_log_0009="ERROR: Unbekannter Dateityp: %s"
-
-get_system_file() {
-    # -----------------------------------------------------------------------
-    # get_system_file
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zu einer System-Konfigurationsdatei zurück
-    # ......... Diese Funktion ist speziell für Systemdateien wie Nginx,
-    # ......... Systemd-Dienste und SSL-Zertifikate gedacht.
-    # Parameter: $1 - Der Typ der Konfigurationsdatei
-    # .........  $2 - Der Name der Konfigurationsdatei (ohne Erweiterung)
-    # Rückgabewert: Der vollständige Pfad zur Datei
-    # -----------------------------------------------------------------------
-    local file_type="$1"
-    local name="$2"
-    local file_ext="conf"
-    local system_folder
-  
-    # Überprüfen, ob die erforderlichen Parameter angegeben sind
-    if ! check_param "$file_type" "file_type"; then return 1; fi
-    if ! check_param "$name" "name"; then return 1; fi
-  
-    # Bestimmen des Ordnerpfads basierend auf dem Dateityp
-    case "$file_type" in
-        "nginx")
-            # Pfad für Nginx-Konfigurationsdateien
-            system_folder=$("$manage_folders_sh" get_nginx_systemdir)
-            if [ $? -ne 0 ]; then
-                log "$get_system_file_log_0001" "get_system_file" "manage_files"
-                debug "$get_system_file_log_0001" "get_system_file" "manage_files"
-                return 1
-            fi
-
-            # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
-            if [ -z "$system_folder" ]; then
-                log "$get_system_file_log_0002" "get_system_file" "manage_files" 
-                debug "$get_system_file_log_0002" "get_system_file" "manage_files"
-                return 1
-            fi
-            file_ext="conf"
-            ;;
-        "systemd")
-            # Pfad für Systemd-Dienste
-            system_folder=$("$manage_folders_sh" get_systemd_systemdir)
-            if [ $? -ne 0 ]; then
-                log "$get_system_file_log_0003" "get_system_file" "manage_files"
-                debug "$get_system_file_log_0003" "get_system_file" "manage_files"
-                return 1
-            fi
-
-            # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
-            if [ -z "$system_folder" ]; then
-                log "$get_system_file_log_0004" "get_system_file" "manage_files"
-                debug "$get_system_file_log_0004" "get_system_file" "manage_files"
-                return 1
-            fi
-            file_ext="service"
-            ;;
-        "ssl_cert")
-            # Pfad für SSL-Zertifikate
-            system_folder=$("$manage_folders_sh" get_ssl_cert_systemdir)
-            if [ $? -ne 0 ]; then
-                log "$get_system_file_log_0005" "get_system_file" "manage_files"
-                debug "$get_system_file_log_0005" "get_system_file" "manage_files"
-                return 1
-            fi
-
-            # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
-            if [ -z "$system_folder" ]; then
-                log "$get_system_file_log_0006" "get_system_file" "manage_files"
-                debug "$get_system_file_log_0006" "get_system_file" "manage_files"
-                return 1
-            fi
-            file_ext="crt"
-            ;;
-        "ssl_key")
-            # Pfad für SSL-Schlüsseldateien
-            system_folder=$("$manage_folders_sh" get_ssl_key_systemdir)
-            if [ $? -ne 0 ]; then
-                log "$get_system_file_log_0007" "get_system_file" "manage_files"
-                debug "$get_system_file_log_0007" "get_system_file" "manage_files"
-                return 1
-            fi
-
-            # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
-            if [ -z "$system_folder" ]; then
-                log "$get_system_file_log_0008" "get_system_file" "manage_files"
-                debug "$get_system_file_log_0008" "get_system_file" "manage_files"
-                return 1
-            fi
-            file_ext="key"
-            ;;
-        *)
-            log "$(printf "$get_system_file_log_0009" "$file_type")" "get_config_file" "manage_files"
-            debug "$(printf "$get_system_file_log_0009" "$file_type")" "get_config_file" "manage_files"
-            return 1
-            ;;
-    esac
-    
-    # Rückgabe des vollständigen Pfads zur Systemdatei
-    echo "${system_folder}/${name}.${file_ext}"
+    # Rückgabe des vollständigen Pfads zur Konfigurationsdatei
+    debug "$(printf "$get_config_file_debug_0003" "$folder_path" "$name" "$file_ext")" "CLI" "get_config_file"
+    echo "${folder_path}/${name}${file_ext}"
     return 0
 }
 
-get_log_file() {
-    # -----------------------------------------------------------------------
-    # get_log_file
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zu einer Log-Datei zurück
-    # Parameter: $1 - Komponente die eine Log-Datei anlegen möchte
-    # Rückgabewert: Der vollständige Pfad zur Datei
-    # -----------------------------------------------------------------------
-    local component="${1:-fotobox}"
-    local log_dir
-  
-    # Verzeichnis abrufen und Dateinamen generieren
-    log_dir="$("$manage_folders_sh" get_log_dir)"
-    echo "${log_dir}/$(date +%Y-%m-%d)_${component}.log"
-}
-
-get_temp_file() {
-    # -----------------------------------------------------------------------
-    # get_temp_file
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zu einer temporären Datei zurück
-    # Parameter: $1 - Präfix für den Dateinamen (optional) 
-    #            $2 - Suffix für die Dateierweiterung (optional)
-    # Rückgabewert: Der vollständige Pfad zur Datei
-    # -----------------------------------------------------------------------
-    local prefix="${1:-fotobox}"  # Standard-Präfix ist "fotobox"
-    local suffix="${2:-.tmp}"     # Standard-Suffix ist .tmp
-    local temp_dir
-        
-    # Temporäres Verzeichnis abrufen und Dateinamen generieren
-    temp_dir="$("$manage_folders_sh" get_temp_dir)"
-    echo "${temp_dir}/${prefix}_$(date +%Y%m%d%H%M%S)_$RANDOM$suffix"
-}
-
-get_backup_file() {
-    # -----------------------------------------------------------------------
-    # get_backup_file
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zu einer Backup-Datei zurück
-    # Parameter: $1 - Komponente die eine Backup-Datei anlegen möchte
-    #            $2 - Suffix für die Dateierweiterung (optional)
-    # Rückgabewert: Der vollständige Pfad zur Datei
-    # -----------------------------------------------------------------------
-    local component="$1"
-    local extension="${2:-.zip}"  # Default: .zip
-    local backup_dir
-    
-    # Überprüfen, ob die erforderlichen Parameter angegeben sind
-    if ! check_param "$component" "component"; then return 1; fi
-    
-    # Backup-Verzeichnis abrufen und Dateinamen generieren
-    backup_dir="$("$manage_folders_sh" get_backup_dir)"
-    echo "${backup_dir}/$(date +%Y-%m-%d)_${component}${extension}"
-}
-
-get_backup_meta_file() {
-    # -----------------------------------------------------------------------
-    # get_backup_file
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zu einer Backup-Metadaten-Datei zurück
-    # Parameter: $1 - Komponente die eine Backup-Datei anlegen möchte
-    # Rückgabewert: Der vollständige Pfad zur Datei
-    # -----------------------------------------------------------------------
-    local component="$1"
-    local backup_dir
-    
-    # Überprüfen, ob die erforderlichen Parameter angegeben sind
-    if ! check_param "$component" "component"; then return 1; fi
-    
-    # Backup-Verzeichnis abrufen und Dateinamen generieren
-    backup_dir="$("$manage_folders_sh" get_backup_dir)"
-    echo "${backup_dir}/$(date +%Y-%m-%d)_${component}.meta.json"
-}
-
-# Gibt den Pfad zu einer Template-Datei zurück
+# get_template_file
 get_template_file_debug_0001="Ermittle Pfad zu Template-Datei für Modul %s, Name %s"
 get_template_file_debug_0002="Template-Basisverzeichnis: %s"
 get_template_file_debug_0003="Dateiendung für Modul %s: %s"
@@ -515,15 +341,123 @@ get_template_file() {
     return 0
 }
 
-# Gibt den Pfad zu einer Bilddatei zurück
+# get_log_file
+get_log_file_debug_0001="Ermittle Log-Datei für Komponente: %s"
+
+get_log_file() {
+    # -----------------------------------------------------------------------
+    # get_log_file
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einer Log-Datei zurück
+    # Parameter: $1 - Komponente die eine Log-Datei anlegen möchte
+    # Rückgabewert: Der vollständige Pfad zur Datei
+    # -----------------------------------------------------------------------
+    local component="${1:-fotobox}"
+    local log_dir
+
+    debug "$(printf "$get_log_file_debug_0001" "$component")" "CLI" "get_log_file"
+
+    # Verzeichnis abrufen und Dateinamen generieren
+    log_dir="$("$manage_folders_sh" get_log_dir)"
+    echo "${log_dir}/$(date +%Y-%m-%d)_${component}.log"
+}
+
+# get_temp_file
+get_temp_file_debug_0001="Generiere temporären Dateinamen mit Präfix '%s' und Suffix '%s'"
+
+get_temp_file() {
+    # -----------------------------------------------------------------------
+    # get_temp_file
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einer temporären Datei zurück
+    # Parameter: $1 - Präfix für den Dateinamen (optional) 
+    #            $2 - Suffix für die Dateierweiterung (optional)
+    # Rückgabewert: Der vollständige Pfad zur Datei
+    # -----------------------------------------------------------------------
+    local prefix="${1:-fotobox}"  # Standard-Präfix ist "fotobox"
+    local suffix="${2:-.tmp}"     # Standard-Suffix ist .tmp
+    local temp_dir
+
+    debug "$(printf "$get_temp_file_debug_0001" "$prefix" "$suffix")" "CLI" "get_temp_file"
+
+    # Temporäres Verzeichnis abrufen und Dateinamen generieren
+    temp_dir="$("$manage_folders_sh" get_temp_dir)"
+    echo "${temp_dir}/${prefix}_$(date +%Y%m%d%H%M%S)_$RANDOM$suffix"
+}
+
+# get_backup_file
+get_backup_file_debug_0001="Ermittle Backup-Datei für Komponente: %s"
+
+get_backup_file() {
+    # -----------------------------------------------------------------------
+    # get_backup_file
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einer Backup-Datei zurück
+    # Parameter: $1 - Komponente die eine Backup-Datei anlegen möchte
+    #            $2 - Suffix für die Dateierweiterung (optional)
+    # Rückgabewert: Der vollständige Pfad zur Datei
+    # -----------------------------------------------------------------------
+    local component="$1"
+    local extension="${2:-.zip}"  # Default: .zip
+    local backup_dir
+
+    debug "$(printf "$get_backup_file_debug_0001" "$component")" "CLI" "get_backup_file"
+
+    # Überprüfen, ob die erforderlichen Parameter angegeben sind
+    if ! check_param "$component" "component"; then return 1; fi
+    
+    # Backup-Verzeichnis abrufen und Dateinamen generieren
+    backup_dir="$("$manage_folders_sh" get_backup_dir)"
+    echo "${backup_dir}/$(date +%Y-%m-%d)_${component}${extension}"
+}
+
+# get_backup_meta_file
+get_backup_meta_file_debug_0001="Ermittle Backup-Metadaten-Datei für Komponente: %s"
+
+get_backup_meta_file() {
+    # -----------------------------------------------------------------------
+    # get_backup_meta_file
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einer Backup-Metadaten-Datei zurück
+    # Parameter: $1 - Komponente die eine Backup-Datei anlegen möchte
+    # Rückgabewert: Der vollständige Pfad zur Datei
+    # -----------------------------------------------------------------------
+    local component="$1"
+    local backup_dir
+
+    debug "$(printf "$get_backup_meta_file_debug_0001" "$component")" "CLI" "get_backup_meta_file"
+
+    # Überprüfen, ob die erforderlichen Parameter angegeben sind
+    if ! check_param "$component" "component"; then return 1; fi
+    
+    # Backup-Verzeichnis abrufen und Dateinamen generieren
+    backup_dir="$("$manage_folders_sh" get_backup_dir)"
+    echo "${backup_dir}/$(date +%Y-%m-%d)_${component}.meta.json"
+}
+
+# get_image_file
+get_image_file_debug_0001="Ermittle Bilddatei für Typ: %s, Name: %s"
+
 get_image_file() {
+    # -----------------------------------------------------------------------
+    # get_image_file
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einer Bilddatei zurück
+    # Parameter: $1 - Der Typ des Bildes (z.B. "original", "thumbnail")
+    #            $2 - Der Dateiname (ohne Erweiterung)
+    # Rückgabewert: Der vollständige Pfad zur Bilddatei
+    # -----------------------------------------------------------------------
     local type="$1"    # z.B. "original", "thumbnail"
     local filename="$2"
     local folder_path
     
+    # Überprüfen, ob die erforderlichen Parameter angegeben sind
     if ! check_param "$type" "type"; then return 1; fi
     if ! check_param "$filename" "filename"; then return 1; fi
-    
+
+    debug "$(printf "$get_image_file_debug_0001" "$type" "$filename")" "CLI" "get_image_file"
+
+    # Bild-Verzeichnis abrufen
     case "$type" in
         "original")
             folder_path="$("$manage_folders_sh" get_photos_dir)"
@@ -537,45 +471,209 @@ get_image_file() {
             ;;
     esac
     
+    # Dateinamen generieren
     echo "${folder_path}/${filename}"
 }
 
-# -----------------------------------------------
-# DATEIVERWALTUNGSFUNKTIONEN
-# -----------------------------------------------
+# ===========================================================================
+# Hauptfunktionen für die Ermittlung von System-Dateipfaden
+# ===========================================================================
 
-# Prüft, ob eine Datei existiert
+# get_system_file
+get_system_file_debug_0001="Ermittle Systemdatei für Typ: %s, Name: %s"
+get_system_file_debug_0002="Systemverzeichnis für %s: %s"
+get_system_file_log_0001="ERROR: Konnte Nginx-Systemverzeichnis nicht ermitteln"
+get_system_file_log_0002="ERROR: Leeres Ergebnis beim Ermitteln des Nginx-Systemverzeichnisses"
+get_system_file_log_0003="ERROR: Konnte systemd-Systemverzeichnis nicht ermitteln"
+get_system_file_log_0004="ERROR: Leeres Ergebnis beim Ermitteln des systemd-Systemverzeichnisses"
+get_system_file_log_0005="ERROR: Konnte SSL-Zertifikat-Systemverzeichnis nicht ermitteln"
+get_system_file_log_0006="ERROR: Leeres Ergebnis beim Ermitteln des SSL-Zertifikat-Systemverzeichnisses"
+get_system_file_log_0007="ERROR: Konnte SSL-Schlüssel-Systemverzeichnis nicht ermitteln"
+get_system_file_log_0008="ERROR: Leeres Ergebnis beim Ermitteln des SSL-Schlüssel-Systemverzeichnisses"
+get_system_file_log_0009="ERROR: Unbekannter Dateityp: %s"
+
+get_system_file() {
+    # -----------------------------------------------------------------------
+    # get_system_file
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einer System-Konfigurationsdatei zurück
+    # ......... Diese Funktion ist speziell für Systemdateien wie Nginx,
+    # ......... Systemd-Dienste und SSL-Zertifikate gedacht.
+    # Parameter: $1 - Der Typ der Konfigurationsdatei
+    # .........  $2 - Der Name der Konfigurationsdatei (ohne Erweiterung)
+    # Rückgabewert: Der vollständige Pfad zur Datei
+    # -----------------------------------------------------------------------
+    local file_type="$1"
+    local name="$2"
+    local file_ext="conf"
+    local system_folder
+  
+    # Überprüfen, ob die erforderlichen Parameter angegeben sind
+    if ! check_param "$file_type" "file_type"; then return 1; fi
+    if ! check_param "$name" "name"; then return 1; fi
+
+    debug "$(printf "$get_system_file_debug_0001" "$file_type" "$name")" "CLI" "get_system_file"
+
+    # Bestimmen des Ordnerpfads basierend auf dem Dateityp
+    case "$file_type" in
+        "nginx")
+            # Pfad für Nginx-Konfigurationsdateien
+            system_folder=$("$manage_folders_sh" get_nginx_systemdir)
+            if [ $? -ne 0 ]; then
+                log "$get_system_file_log_0001" "get_system_file" "manage_files"
+                debug "$get_system_file_log_0001" "get_system_file" "manage_files"
+                return 1
+            fi
+
+            # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
+            if [ -z "$system_folder" ]; then
+                log "$get_system_file_log_0002" "get_system_file" "manage_files" 
+                debug "$get_system_file_log_0002" "get_system_file" "manage_files"
+                return 1
+            fi
+            file_ext="conf"
+            ;;
+        "systemd")
+            # Pfad für Systemd-Dienste
+            system_folder=$("$manage_folders_sh" get_systemd_systemdir)
+            if [ $? -ne 0 ]; then
+                log "$get_system_file_log_0003" "get_system_file" "manage_files"
+                debug "$get_system_file_log_0003" "get_system_file" "manage_files"
+                return 1
+            fi
+
+            # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
+            if [ -z "$system_folder" ]; then
+                log "$get_system_file_log_0004" "get_system_file" "manage_files"
+                debug "$get_system_file_log_0004" "get_system_file" "manage_files"
+                return 1
+            fi
+            file_ext="service"
+            ;;
+        "ssl_cert")
+            # Pfad für SSL-Zertifikate
+            system_folder=$("$manage_folders_sh" get_ssl_cert_systemdir)
+            if [ $? -ne 0 ]; then
+                log "$get_system_file_log_0005" "get_system_file" "manage_files"
+                debug "$get_system_file_log_0005" "get_system_file" "manage_files"
+                return 1
+            fi
+
+            # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
+            if [ -z "$system_folder" ]; then
+                log "$get_system_file_log_0006" "get_system_file" "manage_files"
+                debug "$get_system_file_log_0006" "get_system_file" "manage_files"
+                return 1
+            fi
+            file_ext="crt"
+            ;;
+        "ssl_key")
+            # Pfad für SSL-Schlüsseldateien
+            system_folder=$("$manage_folders_sh" get_ssl_key_systemdir)
+            if [ $? -ne 0 ]; then
+                log "$get_system_file_log_0007" "get_system_file" "manage_files"
+                debug "$get_system_file_log_0007" "get_system_file" "manage_files"
+                return 1
+            fi
+
+            # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
+            if [ -z "$system_folder" ]; then
+                log "$get_system_file_log_0008" "get_system_file" "manage_files"
+                debug "$get_system_file_log_0008" "get_system_file" "manage_files"
+                return 1
+            fi
+            file_ext="key"
+            ;;
+        *)
+            log "$(printf "$get_system_file_log_0009" "$file_type")" "get_config_file" "manage_files"
+            debug "$(printf "$get_system_file_log_0009" "$file_type")" "get_config_file" "manage_files"
+            return 1
+            ;;
+    esac
+
+    # Debug-Ausgabe des Systemordners
+    debug "$(printf "$get_system_file_debug_0002" "$file_type" "$system_folder")" "CLI" "get_system_file"
+
+    # Rückgabe des vollständigen Pfads zur Systemdatei
+    echo "${system_folder}/${name}.${file_ext}"
+    return 0
+}
+
+# ===========================================================================
+# Allgeme Dateiverwaltungsfunktionen
+# ===========================================================================
+
+# file_exists
+file_exists_debug_0001="Überprüfe, ob Datei existiert: %s"
+file_exists_debug_0002="INFO: Datei existiert bereits: %s"
+file_exists_debug_0003="INFO: Datei existiert nicht: %s"
+file_exists_log_0001="INFO: Datei existiert bereits: %s"
+file_exists_log_0002="INFO: Datei existiert nicht: %s"
+
 file_exists() {
+    # -----------------------------------------------------------------------
+    # file_exists
+    # -----------------------------------------------------------------------
+    # Funktion: Überprüft, ob eine Datei existiert
+    # Parameter: $1 - Der Pfad zur Datei
+    # Rückgabewert: 0 wenn die Datei existiert, 1 wenn nicht
+    # -----------------------------------------------------------------------
     local file_path="$1"
     
+    # Überprüfen, ob der Dateipfad angegeben ist
     if ! check_param "$file_path" "file_path"; then return 1; fi
     
+    debug "$(printf "$file_exists_debug_0001" "$file_path")" "CLI" "file_exists"
+ 
+    # Überprüfen, ob die Datei existiert
     if [ -f "$file_path" ]; then
+        debug "$(printf "$file_exists_debug_0002" "$file_path")" "CLI" "file_exists"
+        log_message "info" "$(printf "$file_exists_log_0001" "$file_path")"
         return 0
     else
+        debug "$(printf "$file_exists_debug_0003" "$file_path")" "CLI" "file_exists"
+        log_message "info" "$(printf "$file_exists_log_0002" "$file_path")"
         return 1
     fi
 }
 
-# Erstellt eine leere Datei
+# create_empty_file
+create_empty_file_debug_0001="Erstelle leere Datei: %s"
+create_empty_file_log_0001="INFO: Datei existiert bereits: %s"
+create_empty_file_log_0002="INFO: Datei wurde erstellt: %s"
+create_empty_file_log_0003="ERROR: Konnte Datei nicht erstellen: %s"
+
 create_empty_file() {
-    local file_path="$1"
-    if ! check_param "$file_path" "file_path"; then return 1; fi
-  
-    if file_exists "$file_path"; then
-        log_message "info" "$(printf "$manage_files_info_0002" "$file_path")"
+    # -----------------------------------------------------------------------
+    # create_empty_file
+    # -----------------------------------------------------------------------
+    # Funktion: Erstellt eine leere Datei, wenn sie nicht existiert
+    # Parameter: $1 - Der Pfad zur Datei, die erstellt werden soll
+    # Rückgabewert: 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    local full_filename="$1"
+
+    # Überprüfen, ob der Dateipfad angegeben ist
+    if ! check_param "$full_filename" "file_path"; then return 1; fi
+
+    # Debug-Ausgabe des Dateipfads
+    debug "$(printf "$create_empty_file_debug_0001" "$full_filename")" "CLI" "create_empty_file"
+
+    # Überprüfen, ob die Datei bereits existiert
+    if file_exists "$full_filename"; then
+        log_message "info" "$(printf "$create_empty_file_log_0001" "$full_filename")"
         return 0
     fi
   
     # Verzeichnis für die Datei erstellen
-    "$manage_folders_sh" create_directory "$(dirname "$file_path")"
-    touch "$file_path"
-  
+    "$manage_folders_sh" create_directory "$(dirname "$full_filename")"
+    touch "$full_filename"
+
     if [ $? -eq 0 ]; then
-        log_message "info" "$(printf "$manage_files_info_0003" "$file_path")"
+        log_message "info" "$(printf "$create_empty_file_log_0002" "$full_filename")"
         return 0
     else
-        log_message "error" "Konnte Datei nicht erstellen: $file_path"
+        log_message "error" "$(printf "$create_empty_file_log_0003" "$full_filename")"
         return 1
     fi
 }
