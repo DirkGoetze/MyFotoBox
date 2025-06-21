@@ -53,13 +53,58 @@ if [ "${MODULE_LOAD_MODE:-0}" -eq 1 ]; then
     }
 fi
 
-# Prüfe, ob die benötigte manage_folders.sh geladen ist
-# Im Testmodus wird die strikte Abhängigkeitsprüfung deaktiviert
-if [ "${MANAGE_FOLDERS_LOADED:-0}" -eq 0 ] && [ "${TEST_MODE:-0}" -ne 1 ]; then
-    echo "$manage_files_log_0004" >&2
-    echo "$manage_files_log_0002" >&2
-    exit 1
-fi
+# Einheitliche Funktion zur Sicherstellung des Zugriffs auf das Folders-Modul
+ensure_folders_module() {
+    # -----------------------------------------------------------------------
+    # ensure_folders_module
+    # -----------------------------------------------------------------------
+    # Funktion: Stellt sicher, dass manage_folders.sh verfügbar ist und
+    # setzt die Variable manage_folders_sh für externe Aufrufe
+    # Rückgabewert: 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    local is_critical="${1:-1}"  # 1=Kritisch (Exit bei Fehler), 0=Optional
+    
+    # 1. Prüfen, ob das Modul bereits geladen ist
+    if [ "${MANAGE_FOLDERS_LOADED:-0}" -eq 1 ]; then
+        # Modul ist bereits geladen - definiere nur den Pfad für externe Aufrufe
+        if [ -z "${manage_folders_sh:-}" ]; then
+            manage_folders_sh="${SCRIPT_DIR}/manage_folders.sh"
+            if [ ! -f "$manage_folders_sh" ] || [ ! -x "$manage_folders_sh" ]; then
+                echo "WARNUNG: manage_folders.sh wurde nicht gefunden oder ist nicht ausführbar!" >&2
+                echo "Pfad: $manage_folders_sh" >&2
+                return 1
+            fi
+        fi
+        return 0
+    fi
+    
+    # 2. Modul ist nicht geladen - Verhalten je nach Testmodus und Kritikalität
+    if [ "${TEST_MODE:-0}" -eq 1 ]; then
+        # Im Testmodus: Warnung ausgeben und Pfad für externe Aufrufe definieren
+        echo "HINWEIS: Testmodus aktiv - manage_folders.sh nicht geladen, versuche externe Aufrufe" >&2
+        manage_folders_sh="${SCRIPT_DIR}/manage_folders.sh"
+        return 0
+    elif [ "$is_critical" -eq 1 ]; then
+        # Kritischer Modus außerhalb des Testmodus: Fehler und Exit
+        echo "$manage_files_log_0004" >&2
+        echo "$manage_files_log_0002" >&2
+        exit 1
+    else
+        # Nicht-kritischer Modus: Warnung und Pfaddefinition
+        echo "WARNUNG: manage_folders.sh nicht geladen - einige Funktionen könnten eingeschränkt sein" >&2
+        manage_folders_sh="${SCRIPT_DIR}/manage_folders.sh"
+        if [ ! -f "$manage_folders_sh" ] || [ ! -x "$manage_folders_sh" ]; then
+            echo "KRITISCHER FEHLER: Das Skript manage_folders.sh wurde nicht gefunden oder ist nicht ausführbar!" >&2
+            echo "Pfad: $manage_folders_sh" >&2
+            echo "Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch." >&2
+            return 1
+        fi
+        return 0
+    fi
+}
+
+# Stelle sicher, dass manage_folders.sh verfügbar ist (kritischer Modus)
+ensure_folders_module 1 || exit 1
 # ===========================================================================
 
 # ===========================================================================
