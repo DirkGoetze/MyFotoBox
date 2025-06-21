@@ -230,6 +230,15 @@ echo "-------------------------------------------------------------------------"
 echo "Test der Funktionen in manage_logging.sh"
 echo "-------------------------------------------------------------------------"
 
+# Test: get_log_file
+echo -n "Test get_log_file: "
+log_file=$(get_log_file "test_script")
+if [ -n "$log_file" ]; then
+    echo "✅ Die Funktion get_log_file wurde erfolgreich ausgeführt. Ergebnis: $log_file"
+else
+    echo "❌ Die Funktion get_log_file ist fehlgeschlagen."
+fi
+
 # Test: log
 echo -n "Test log mit einfacher Nachricht: "
 log "Testmessage für log"
