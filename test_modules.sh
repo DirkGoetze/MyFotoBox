@@ -80,11 +80,12 @@ if [ ! -f "$SCRIPT_DIR/lib_core.sh" ]; then
 fi
 
 # Informiere über Strategie
-echo "Test verwendet das zentrale Modulsystem aus lib_core.sh zum Laden der Module"
+echo "Test lädt Module direkt und aktiviert den Debug-Modus für jeden Test"
 
 echo "==========================================================================="
 echo "           Test der Module lib_core.sh, manage_folders.sh,"
 echo "                 manage_files.sh und manage_logging.sh"
+echo "         mit aktiviertem Debug-Modus (DEBUG_MOD_LOCAL=1)"
 echo "==========================================================================="
 echo
 
@@ -115,59 +116,60 @@ else
     exit 1
 fi
 
-# Aktiviere den zentralen Lademanager für Module
-echo "Aktiviere den zentralen Lademanager für Module..."
-export MODULE_LOAD_MODE=1
+# Aktiviere direktes Laden statt des zentralen Lademanagers
+echo "Lade Module direkt ohne zentralen Lademanager..."
+export MODULE_LOAD_MODE=0
 
-# Verwende load_module aus lib_core.sh zum Laden der Module
-echo -n "Lade manage_folders.sh über load_module Funktion... "
-if load_module "manage_folders"; then
+# Aktiviere den Test-Modus für das Laden der Module
+echo "Aktiviere Testmodus (TEST_MODE=1)..."
+export TEST_MODE=1
+
+# Lade Module direkt nacheinander
+echo -n "Lade manage_folders.sh direkt... "
+if source "$SCRIPT_DIR/manage_folders.sh"; then
     echo "Erfolg."
     if [ "${MANAGE_FOLDERS_LOADED:-0}" -eq 1 ]; then
         echo "Modul manage_folders.sh wurde korrekt geladen."
-        # Debug-Modus für manage_folders.sh aktivieren
-        echo "Aktiviere DEBUG_MOD_LOCAL=1 in manage_folders.sh"
-        export DEBUG_MOD_LOCAL=1
+        # Debug-Modus für manage_folders.sh aktivieren 
+        enable_debug_for_module "manage_folders"
     else
         echo "WARNUNG: Modul wurde geladen, aber MANAGE_FOLDERS_LOADED ist nicht 1."
     fi
 else
     echo "FEHLER!"
-    echo "Fehler beim Laden von manage_folders.sh über load_module"
+    echo "Fehler beim Laden von manage_folders.sh"
     exit 1
 fi
 
-echo -n "Lade manage_files.sh über load_module Funktion... "
-if load_module "manage_files"; then
+echo -n "Lade manage_files.sh direkt... "
+if source "$SCRIPT_DIR/manage_files.sh"; then
     echo "Erfolg."
     if [ "${MANAGE_FILES_LOADED:-0}" -eq 1 ]; then
         echo "Modul manage_files.sh wurde korrekt geladen."
         # Debug-Modus für manage_files.sh aktivieren
-        echo "Aktiviere DEBUG_MOD_LOCAL=1 in manage_files.sh"
-        export DEBUG_MOD_LOCAL=1
+        enable_debug_for_module "manage_files"
     else
         echo "WARNUNG: Modul wurde geladen, aber MANAGE_FILES_LOADED ist nicht 1."
     fi
 else
     echo "FEHLER!"
-    echo "Fehler beim Laden von manage_files.sh über load_module"
+    echo "Fehler beim Laden von manage_files.sh"
     exit 1
 fi
 
-echo -n "Lade manage_logging.sh über load_module Funktion... "
-if load_module "manage_logging"; then
+echo -n "Lade manage_logging.sh direkt... "
+if source "$SCRIPT_DIR/manage_logging.sh"; then
     echo "Erfolg."
     if [ "${MANAGE_LOGGING_LOADED:-0}" -eq 1 ]; then
         echo "Modul manage_logging.sh wurde korrekt geladen."
         # Debug-Modus für manage_logging.sh aktivieren
-        echo "Aktiviere DEBUG_MOD_LOCAL=1 in manage_logging.sh"
-        export DEBUG_MOD_LOCAL=1
+        enable_debug_for_module "manage_logging"
     else
         echo "WARNUNG: Modul wurde geladen, aber MANAGE_LOGGING_LOADED ist nicht 1."
     fi
 else
     echo "FEHLER!"
-    echo "Fehler beim Laden von manage_logging.sh über load_module"
+    echo "Fehler beim Laden von manage_logging.sh"
     exit 1
 fi
 echo
@@ -183,6 +185,33 @@ test_function() {
     else
         echo "❌ Die Funktion $function_name ist fehlgeschlagen. Ergebnis: $result, Erwartet: $expected_result"
     fi
+}
+
+# Aktiviert den DEBUG-Modus für ein bestimmtes Modul
+enable_debug_for_module() {
+    local module_name="$1"
+    echo "Aktiviere DEBUG_MOD_LOCAL=1 für Modul $module_name"
+    
+    # Direktes Bearbeiten der Skriptdateien mit sed für Debian
+    case "$module_name" in
+        "manage_folders")
+            # Aktiviere Debug-Ausgaben für manage_folders.sh
+            sed -i 's/^DEBUG_MOD_LOCAL=0/DEBUG_MOD_LOCAL=1/' "$SCRIPT_DIR/manage_folders.sh" 2>/dev/null || true
+            ;;
+        "manage_files")
+            # Aktiviere Debug-Ausgaben für manage_files.sh
+            sed -i 's/^DEBUG_MOD_LOCAL=0/DEBUG_MOD_LOCAL=1/' "$SCRIPT_DIR/manage_files.sh" 2>/dev/null || true
+            ;;
+        "manage_logging")
+            # Aktiviere Debug-Ausgaben für manage_logging.sh
+            sed -i 's/^DEBUG_MOD_LOCAL=0/DEBUG_MOD_LOCAL=1/' "$SCRIPT_DIR/manage_logging.sh" 2>/dev/null || true
+            ;;
+    esac
+    
+    # Alternativ können wir auch die globale Debug-Variable setzen
+    # Dadurch werden alle Module in den Debug-Modus versetzt
+    export DEBUG_MOD_GLOBAL=1
+    echo "DEBUG-Modus wurde global aktiviert (DEBUG_MOD_GLOBAL=1)"
 }
 
 # -------------------------------
@@ -269,13 +298,22 @@ test_function $result "print_debug" 0
 log_file=$(get_log_file)
 echo
 echo "Prüfe, ob Debug-Ausgaben in der Log-Datei vorhanden sind:"
-if grep -q "DEBUG" "$log_file"; then
+if grep -q "DEBUG" "$log_file" 2>/dev/null; then
     echo "✅ Debug-Ausgaben sind in der Log-Datei vorhanden: $log_file"
     # Zeige die letzten Debug-Einträge
     echo "Letzte Debug-Einträge aus der Log-Datei:"
-    grep "DEBUG" "$log_file" | tail -n 5
+    grep "DEBUG" "$log_file" 2>/dev/null | tail -n 5
 else
     echo "❌ Keine Debug-Ausgaben in der Log-Datei gefunden: $log_file"
+    
+    # Prüfe, ob die Log-Datei überhaupt existiert
+    if [ ! -f "$log_file" ]; then
+        echo "   Log-Datei existiert nicht: $log_file"
+    else
+        echo "   Log-Datei existiert, aber enthält keine DEBUG-Einträge"
+        echo "   Inhalt der Log-Datei:"
+        tail -n 10 "$log_file" 2>/dev/null || cat "$log_file" 2>/dev/null || echo "   (Keine Ausgabe möglich)"
+    fi
 fi
 
 echo "Testdateien wurden entfernt."

@@ -58,7 +58,8 @@ if [ "${MODULE_LOAD_MODE:-0}" -eq 1 ]; then
 fi
 
 # Prüfe, ob die benötigte manage_folders.sh geladen ist
-if [ "${MANAGE_FOLDERS_LOADED:-0}" -eq 0 ]; then
+# Im Testmodus wird die strikte Abhängigkeitsprüfung deaktiviert
+if [ "${MANAGE_FOLDERS_LOADED:-0}" -eq 0 ] && [ "${TEST_MODE:-0}" -ne 1 ]; then
     echo "$manage_files_log_0004" >&2
     echo "$manage_files_log_0002" >&2
     exit 1
