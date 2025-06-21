@@ -212,12 +212,15 @@ log() {
     local file="$3"
 
     if [ -z "$msg" ]; then
+        echo "INFO: Logdatei-Check und Rotation wird durchgeführt." >&2
         chk_log_file
     else
         # Stellen wir sicher, dass die Datei existiert
         if [ ! -f "$LOG_FILE" ]; then
+            echo "WARNUNG: Logdatei $LOG_FILE existiert nicht. Erstelle neue Logdatei." >&2
             touch "$LOG_FILE" 2>/dev/null || true
         fi
+
         # Fehlerfall: Funktionsname und ggf. Dateiname erzwingen
         if [[ "$msg" == ERROR:* ]]; then
             if [ -z "$func" ]; then
