@@ -211,13 +211,15 @@ log() {
     local func="$2"
     local file="$3"
 
+    debug "log() aufgerufen mit: msg='$msg', func='$func', file='$file'"
+
     if [ -z "$msg" ]; then
-        echo "INFO: Logdatei-Check und Rotation wird durchgeführt." >&2
+        debug "log() ohne Parameter aufgerufen, führe Logrotation durch"
         chk_log_file
     else
         # Stellen wir sicher, dass die Datei existiert
         if [ ! -f "$LOG_FILE" ]; then
-            echo "WARNUNG: Logdatei $LOG_FILE existiert nicht. Erstelle neue Logdatei." >&2
+            debug "Logdatei $LOG_FILE existiert nicht, versuche sie zu erstellen"
             touch "$LOG_FILE" 2>/dev/null || true
         fi
 
