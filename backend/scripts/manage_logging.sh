@@ -211,16 +211,36 @@ log() {
     local func="$2"
     local file="$3"
 
-    debug "log() aufgerufen mit: msg='$msg', func='$func', file='$file'"
+    # Entferne den debug-Aufruf, der die Rekursion verursachen könnte
+    # debug "log() aufgerufen mit: msg='$msg', func='$func', file='$file'"
 
     if [ -z "$msg" ]; then
-        debug "log() ohne Parameter aufgerufen, führe Logrotation durch"
+        # Auch hier debug-Aufruf entfernen
+        # debug "log() ohne Parameter aufgerufen, führe Logrotation durch"
         chk_log_file
     else
+        # Prüfen, ob das Log-Verzeichnis existiert und schreibbar ist
+        local log_dir
+        log_dir="$(dirname "$LOG_FILE")"
+        if [ ! -d "$log_dir" ]; then
+            echo "Logverzeichnis $log_dir existiert nicht, versuche es zu erstellen" >&2
+            mkdir -p "$log_dir" 2>/dev/null || {
+                echo "FEHLER: Konnte Logverzeichnis $log_dir nicht erstellen. Verwende /tmp als Fallback." >&2
+                LOG_FILE="/tmp/fotobox_$(date '+%Y-%m-%d').log"
+            }
+        fi
+
         # Stellen wir sicher, dass die Datei existiert
         if [ ! -f "$LOG_FILE" ]; then
-            debug "Logdatei $LOG_FILE existiert nicht, versuche sie zu erstellen"
-            touch "$LOG_FILE" 2>/dev/null || true
+            echo "Logdatei $LOG_FILE existiert nicht, versuche sie zu erstellen" >&2
+            touch "$LOG_FILE" 2>/dev/null || {
+                echo "FEHLER: Konnte Logdatei $LOG_FILE nicht erstellen. Verwende /tmp als Fallback." >&2
+                LOG_FILE="/tmp/fotobox_$(date '+%Y-%m-%d').log"
+                touch "$LOG_FILE" 2>/dev/null || {
+                    echo "KRITISCHER FEHLER: Kann keine Logdatei erstellen!" >&2
+                    return 1
+                }
+            }
         fi
 
         # Fehlerfall: Funktionsname und ggf. Dateiname erzwingen
@@ -232,14 +252,24 @@ log() {
                 file="${BASH_SOURCE[1]}"
             fi
             if [ -n "$file" ]; then
-                echo "$(date "+%Y-%m-%d %H:%M:%S") [$func][$file] $msg" >> "$LOG_FILE"
+                echo "$(date "+%Y-%m-%d %H:%M:%S") [$func][$file] $msg" >> "$LOG_FILE" 2>/dev/null || {
+                    echo "FEHLER: Konnte nicht in Logdatei $LOG_FILE schreiben!" >&2
+                    return 1
+                }
             else
-                echo "$(date "+%Y-%m-%d %H:%M:%S") [$func] $msg" >> "$LOG_FILE"
+                echo "$(date "+%Y-%m-%d %H:%M:%S") [$func] $msg" >> "$LOG_FILE" 2>/dev/null || {
+                    echo "FEHLER: Konnte nicht in Logdatei $LOG_FILE schreiben!" >&2
+                    return 1
+                }
             fi
         else
-            echo "$(date "+%Y-%m-%d %H:%M:%S") $msg" >> "$LOG_FILE"
+            echo "$(date "+%Y-%m-%d %H:%M:%S") $msg" >> "$LOG_FILE" 2>/dev/null || {
+                echo "FEHLER: Konnte nicht in Logdatei $LOG_FILE schreiben!" >&2
+                return 1
+            }
         fi
     fi
+    return 0
 }
 
 debug() {
@@ -263,12 +293,20 @@ debug() {
                 echo "{\"debug\":true, \"function\":\"$func\", \"message\":\"$msg\"}"
                 ;;
             LOG|*)
-                log "DEBUG[$func]: $msg"
+                # Direkt in die Logdatei schreiben statt log() aufzurufen
+                local LOG_FILE
+                LOG_FILE="$(get_log_file)"
+                if [ -f "$LOG_FILE" ] && [ -w "$LOG_FILE" ]; then
+                    echo "$(date "+%Y-%m-%d %H:%M:%S") DEBUG[$func]: $msg" >> "$LOG_FILE" 2>/dev/null || {
+                        echo "FEHLER: Konnte Debug-Nachricht nicht in $LOG_FILE schreiben!" >&2
+                    }
+                else
+                    echo "DEBUG[$func]: $msg" >&2
+                fi
                 ;;
         esac
     fi
 }
-
 
 # ===========================================================================
 # Externe Funktionen zur Ausgabe von Meldungen
