@@ -89,14 +89,8 @@ CONFIG_FILE_EXT_SSL_CERT=".crt"
 CONFIG_FILE_EXT_SSL_KEY=".key"
 CONFIG_FILE_EXT_BACKUP_META=".meta.json"
 CONFIG_FILE_EXT_LOG=".log"
-# ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
-# System-Dateipfade mit Standardorten
-SYSTEM_PATH_NGINX="/etc/nginx/sites-available"
-SYSTEM_PATH_SYSTEMD="/etc/systemd/system"
-SYSTEM_PATH_SSL_CERT="/etc/ssl/certs"
-SYSTEM_PATH_SSL_KEY="/etc/ssl/private"
+CONFIG_FILE_EXT_FIREWALL=".rules"
+CONFIG_FILE_EXT_SSH=".ssh"
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
@@ -106,85 +100,6 @@ SYSTEM_PATH_SSL_KEY="/etc/ssl/private"
 DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
 # ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
-# Textausgaben für das gesamte Skript (Internationalisierung)
-manage_files_error_0001="FEHLER: Kategorie nicht angegeben"
-manage_files_error_0002="FEHLER: Name nicht angegeben"
-manage_files_error_0003="FEHLER: Unbekannte Dateikategorie: %s"
-manage_files_error_0004="FEHLER: Dateityp nicht angegeben"
-manage_files_error_0005="FEHLER: Unbekannter Dateityp: %s"
-manage_files_error_0006="FEHLER: Komponente nicht angegeben"
-manage_files_error_0007="FEHLER: Dateipfad nicht angegeben"
-manage_files_error_0008="FEHLER: Konnte Verzeichnis nicht erstellen: %s"
-
-manage_files_info_0001="Dateipfad erstellt: %s"
-manage_files_info_0002="Datei existiert bereits: %s"
-manage_files_info_0003="Datei erstellt: %s"
-# ---------------------------------------------------------------------------
-
-# Textkonstanten
-TEXT_UNKNOWN_CATEGORY="Unbekannte Kategorie"
-TEXT_TEMPLATE_PATH_ERROR="Fehler beim Abrufen des Template-Pfades für"
-# ===========================================================================
-
-# ===========================================================================
-# Hilfsfunktionen
-# ===========================================================================
-
-log_message() {
-    # -----------------------------------------------------------------------
-    # log_message
-    # -----------------------------------------------------------------------
-    # Funktion: Adapterfunktion für Logging, die zwischen direktem CLI-Aufruf
-    # ......... und Modulaufruf unterscheidet. Bei direktem CLI-Aufruf wird
-    # ......... die log_message-Funktion direkt aufgerufen. Bei der Nutzung
-    # ......... werden die Standard-Logging-Funktionen aus manage_logging.sh 
-    # ......... genutzt
-    # -----------------------------------------------------------------------
-    local level="$1"
-    local message="$2"
-    
-    case "$level" in
-        "debug")
-            debug "$message" "Files" "manage_files"
-            ;;
-        "info")
-            info "$message" "Files" "manage_files"
-            ;;
-        "error")
-            error "$message" "Files" "manage_files"
-            ;;
-        *)
-            echo "$message"
-            ;;
-    esac
-}
-
-# check_param
-check_param_log_0001="ERROR: Parameter nicht angegeben: %s"
-
-check_param() {
-    # -----------------------------------------------------------------------
-    # check_param
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob ein Parameter vorhanden ist
-    # Parameter: $1 - Der zu prüfende Parameter
-    # .........  $2 - Der Name des Parameters (für Fehlermeldung)
-    # Rückgabewert: 0 bei Erfolg, 1 bei Fehler
-    # -----------------------------------------------------------------------
-    local param="$1"
-    local param_name="$2"
-
-    # Überprüfen, ob ein Parameter übergeben wurde
-    if [ -z "$param" ]; then
-        log "$(printf "$check_param_log_0001" "$param_name")" "check_param" "manage_files"
-        debug "$(printf "$check_param_log_0001" "$param_name")" "check_param" "manage_files"
-        return 1
-    fi
-  
-    return 0
-}
 
 # ===========================================================================
 # Hauptfunktionen für die Ermittlung von Projekt Dateipfaden
@@ -288,25 +203,25 @@ get_template_file() {
     local extension=""
     case "$modul" in
         "nginx")
-            extension=".conf"
+            extension="$CONFIG_FILE_EXT_NGINX" 
             ;;
         "systemd")
-            extension=".service"
+            extension="$CONFIG_FILE_EXT_SYSTEMD"
             ;;
         "ssl_cert")
-            extension=".crt"
+            extension="$CONFIG_FILE_EXT_SSL_CERT"
             ;;
         "ssl_key")
-            extension=".key"
+            extension="$CONFIG_FILE_EXT_SSL_KEY"
             ;;
         "backup_meta")
-            extension=".meta.json"
+            extension="$CONFIG_FILE_EXT_BACKUP_META"
             ;;
         "firewall")
-            extension=".rules"
+            extension="$CONFIG_FILE_EXT_FIREWALL"
             ;;
         "ssh")
-            extension=".ssh"
+            extension="$CONFIG_FILE_EXT_SSH"
             ;;
         "html"|"js"|"css")
             extension=".$modul"  # Verwende den Modulnamen direkt als Dateiendung
@@ -437,6 +352,7 @@ get_backup_meta_file() {
 
 # get_image_file
 get_image_file_debug_0001="Ermittle Bilddatei für Typ: %s, Name: %s"
+get_image_file_debug_0002="Unbekannter Bildtyp: %s"
 
 get_image_file() {
     # -----------------------------------------------------------------------
@@ -466,7 +382,8 @@ get_image_file() {
             folder_path="$("$manage_folders_sh" get_thumbnails_dir)"
             ;;
         *)
-            log_message error "$TEXT_UNKNOWN_CATEGORY: $type"
+            debug "$(printf "$get_image_file_debug_0002" "$type")" "CLI" "get_image_file"
+            log "$(printf "$get_image_file_debug_0002" "$type")" "get_image_file"
             return 1
             ;;
     esac
@@ -531,7 +448,7 @@ get_system_file() {
                 debug "$get_system_file_log_0002" "get_system_file" "manage_files"
                 return 1
             fi
-            file_ext="conf"
+            file_ext="$CONFIG_FILE_EXT_NGINX"
             ;;
         "systemd")
             # Pfad für Systemd-Dienste
@@ -548,7 +465,7 @@ get_system_file() {
                 debug "$get_system_file_log_0004" "get_system_file" "manage_files"
                 return 1
             fi
-            file_ext="service"
+            file_ext="$CONFIG_FILE_EXT_SYSTEMD"
             ;;
         "ssl_cert")
             # Pfad für SSL-Zertifikate
@@ -565,7 +482,7 @@ get_system_file() {
                 debug "$get_system_file_log_0006" "get_system_file" "manage_files"
                 return 1
             fi
-            file_ext="crt"
+            file_ext="$CONFIG_FILE_EXT_SSL_CERT"
             ;;
         "ssl_key")
             # Pfad für SSL-Schlüsseldateien
@@ -582,7 +499,7 @@ get_system_file() {
                 debug "$get_system_file_log_0008" "get_system_file" "manage_files"
                 return 1
             fi
-            file_ext="key"
+            file_ext="$CONFIG_FILE_EXT_SSL_KEY"
             ;;
         *)
             log "$(printf "$get_system_file_log_0009" "$file_type")" "get_config_file" "manage_files"
@@ -595,7 +512,7 @@ get_system_file() {
     debug "$(printf "$get_system_file_debug_0002" "$file_type" "$system_folder")" "CLI" "get_system_file"
 
     # Rückgabe des vollständigen Pfads zur Systemdatei
-    echo "${system_folder}/${name}.${file_ext}"
+    echo "${system_folder}/${name}${file_ext}"
     return 0
 }
 
@@ -628,11 +545,11 @@ file_exists() {
     # Überprüfen, ob die Datei existiert
     if [ -f "$file_path" ]; then
         debug "$(printf "$file_exists_debug_0002" "$file_path")" "CLI" "file_exists"
-        log_message "info" "$(printf "$file_exists_log_0001" "$file_path")"
+        log "$(printf "$file_exists_log_0001" "$file_path")" "get_image_file"
         return 0
     else
         debug "$(printf "$file_exists_debug_0003" "$file_path")" "CLI" "file_exists"
-        log_message "info" "$(printf "$file_exists_log_0002" "$file_path")"
+        log "$(printf "$file_exists_log_0002" "$file_path")" "get_image_file"
         return 1
     fi
 }
@@ -661,7 +578,7 @@ create_empty_file() {
 
     # Überprüfen, ob die Datei bereits existiert
     if file_exists "$full_filename"; then
-        log_message "info" "$(printf "$create_empty_file_log_0001" "$full_filename")"
+        log "$(printf "$create_empty_file_log_0001" "$full_filename")" "create_empty_file"
         return 0
     fi
   
@@ -670,10 +587,10 @@ create_empty_file() {
     touch "$full_filename"
 
     if [ $? -eq 0 ]; then
-        log_message "info" "$(printf "$create_empty_file_log_0002" "$full_filename")"
+        log "$(printf "$create_empty_file_log_0002" "$full_filename")" "create_empty_file"
         return 0
     else
-        log_message "error" "$(printf "$create_empty_file_log_0003" "$full_filename")"
+        log "$(printf "$create_empty_file_log_0003" "$full_filename")" "create_empty_file"
         return 1
     fi
 }

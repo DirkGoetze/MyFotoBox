@@ -247,7 +247,9 @@ debug() {
     # -----------------------------------------------------------------------
     # Funktion: Gibt Debug-Ausgaben je nach Modus aus (LOG, CLI, JSON)
     # Debug ist aktiv, wenn DEBUG_MOD_GLOBAL=1 oder DEBUG_MOD_LOCAL=1
-    # Parameter: $1 = Nachricht, $2 = optional: Modus (CLI|JSON|LOG), $3 = optional: Funktionsname
+    # Parameter: $1 = Nachricht, 
+    # .........  $2 = optional: Modus (CLI|JSON|LOG), 
+    # .........  $3 = optional: Funktionsname
     if [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ]; then
         local msg="$1"
         local mode="${2:-LOG}"

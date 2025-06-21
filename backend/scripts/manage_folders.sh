@@ -74,6 +74,14 @@ fi
 # ===========================================================================
 # Lokale Konstanten (Vorgaben und Defaults nur für die Installation)
 # ===========================================================================
+# System-Dateipfade mit Standardorten
+SYSTEM_PATH_NGINX="/etc/nginx/sites-available"
+SYSTEM_PATH_SYSTEMD="/etc/systemd/system"
+SYSTEM_PATH_SSL_CERT="/etc/ssl/certs"
+SYSTEM_PATH_SSL_KEY="/etc/ssl/private"
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
 # Debug-Modus: Lokal und global steuerbar
 # DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
@@ -113,6 +121,11 @@ create_symlink_to_standard_path() {
     # -----------------------------------------------------------------------
     local standard_path="$1"
     local actual_path="$2"
+    
+    # Überprüfung der Parameter
+    if ! check_param "$standard_path" "standard_path"; then return 1; fi
+    if ! check_param "$actual_path" "actual_path"; then return 1; fi
+    
     # Wenn die Pfade identisch sind, kein Symlink nötig
     if [ "$standard_path" = "$actual_path" ]; then
         debug "$create_symlink_to_standard_path_debug_0001: $standard_path" "CLI" "create_symlink_to_standard_path"
@@ -204,11 +217,7 @@ create_directory() {
     local mode="${4:-$DEFAULT_MODE}"
 
     # Prüfung der Parameter
-    if [ -z "$dir" ]; then
-        log "$create_directory_log_0001" "create_directory"
-        debug "$create_directory_debug_0001" "CLI" "create_directory"
-        return 1
-    fi
+    if ! check_param "$dir" "dir"; then return 1; fi
 
     # Verzeichnis erstellen, falls es nicht existiert
     if [ ! -d "$dir" ]; then
@@ -275,6 +284,10 @@ get_folder_path() {
     local use_root_fallback="${3:-1}" # Standard: Ja, Root-Fallback verwenden
     local create_symlink="${4:-1}"    # Standard: Ja, Symlink erstellen
     local actual_path=""
+
+    # Überprüfung der Parameter
+    if ! check_param "$standard_path" "standard_path"; then return 1; fi
+    if ! check_param "$fallback_path" "fallback_path"; then return 1; fi
 
     # Versuchen, den Standardpfad zu verwenden
     debug "$(printf "$get_folder_path_debug_0001" "$standard_path" "$fallback_path")" "CLI" "get_folder_path"
@@ -1240,6 +1253,10 @@ get_photos_originals_dir() {
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     local event_name="$1"
+
+   # Überprüfung der Parameter
+    if ! check_param "$event_name" "event_name"; then return 1; fi
+
     debug "$get_photos_originals_dir_debug_0001" "CLI" "get_photos_originals_dir"
     
     local photos_dir
@@ -1649,9 +1666,7 @@ get_template_dir() {
     debug "$(printf "$get_template_dir_debug_0004" "$templates_dir")" "CLI" "get_template_dir"
     
     # Wenn kein Modul-Parameter übergeben wurde, gebe den Template-Basisordner zurück
-    if [ -z "$modul" ]; then
-        log "$get_template_dir_log_0001" "get_template_dir"
-        debug "$get_template_dir_debug_0005" "CLI" "get_template_dir"
+    if ! check_param "$modul" "modul" &>/dev/null; then
         template_path="$templates_dir"
     else
         # Vollständigen Template-Pfad mit Modul erstellen
@@ -1744,7 +1759,7 @@ get_nginx_systemdir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    local primary_folder="/etc/nginx/sites-available"
+    local primary_folder="$SYSTEM_PATH_NGINX"
     local secondary_folder="$("$manage_folders_sh" get_nginx_conf_dir)"
 
     # Standardpfad verwenden
@@ -1786,7 +1801,7 @@ get_systemd_systemdir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    local primary_folder="/etc/systemd/system"
+    local primary_folder="$SYSTEM_PATH_SYSTEMD"
     local secondary_folder="$("$manage_folders_sh" get_conf_dir)"
 
     # Standardpfad verwenden
@@ -1828,7 +1843,7 @@ get_ssl_cert_systemdir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    local primary_folder="/etc/ssl/certs"
+    local primary_folder="$SYSTEM_PATH_SSL_CERT"
     local secondary_folder="$("$manage_folders_sh" get_ssl_dir)"
 
     # Standardpfad verwenden
@@ -1870,7 +1885,7 @@ get_ssl_key_systemdir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    local primary_folder="/etc/ssl/private"
+    local primary_folder="$SYSTEM_PATH_SSL_KEY"
     local secondary_folder="$("$manage_folders_sh" get_ssl_dir)"
 
     # Standardpfad verwenden

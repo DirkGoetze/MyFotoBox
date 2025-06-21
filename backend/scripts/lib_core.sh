@@ -15,6 +15,10 @@ fi
 # Sofort markieren, dass diese Bibliothek geladen wird, um rekursive Probleme zu vermeiden
 LIB_CORE_LOADED=1
 
+# ===========================================================================
+# Allgemeine Hilfsfunktionen für alle Skripte
+# ===========================================================================
+
 # Hilfsfunktion für Debug-Ausgaben (wird vor dem Laden von manage_logging.sh verwendet)
 debug_output() {
     # Diese Funktion entscheidet, ob print_debug (falls geladen) oder echo verwendet wird
@@ -37,6 +41,50 @@ trace_output() {
     if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ] || [ "${DEBUG_MOD:-0}" = "1" ]; then
         echo "TRACE: $message" >&2
     fi
+}
+
+# check_param
+check_param_debug_0001="Parameterprüfung durch Funktion '%s' in Modul '%s': %s"
+check_param_debug_0002="Parameter '%s' in Funktion '%s' des Moduls '%s' ist leer oder nicht gesetzt"
+check_param_log_0001="check_param: Parameter '%s' fehlt in Funktion '%s' des Moduls '%s'"
+
+check_param() {
+    # -----------------------------------------------------------------------
+    # check_param
+    # -----------------------------------------------------------------------
+    # Funktion: Prüft, ob ein Parameter vorhanden ist
+    # Parameter: $1 - Der zu prüfende Parameter
+    # .........  $2 - Der Name des Parameters (für Fehlermeldung)
+    # Rückgabewert: 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    local param="$1"
+    local param_name="$2"
+    local calling_function="${FUNCNAME[1]}"  # Name der aufrufenden Funktion
+    local calling_file
+    local module_name
+    
+    # Auto-Erkennung des aufrufenden Moduls, 
+    # Versuche, den Dateinamen aus BASH_SOURCE zu ermitteln
+    if [ -n "${BASH_SOURCE[1]}" ]; then
+        calling_file=$(basename "${BASH_SOURCE[1]}")
+        # Entferne Dateiendung .sh, falls vorhanden
+        module_name="${calling_file%.sh}"
+    else
+        module_name="lib_core"  # Fallback, wenn BASH_SOURCE nicht verfügbar
+    fi
+
+    # Debugging-Ausgabe für die Modul-Identifikation
+    debug "$(printf "$check_param_debug_0001" "$calling_function" "$module_name" "$param_name")" "CLI" "check_param"
+
+    # Überprüfen, ob ein Parameter übergeben wurde
+    if [ -z "$param" ]; then
+        # Parameter ist leer oder nicht gesetzt
+        debug "$(printf "$check_param_debug_0002" "$param_name" "$calling_function" "$module_name")" "CLI" "check_param"
+        log "$(printf "$check_param_log_0001" "$param_name" "$calling_function" "$module_name")" "check_param" "$module_name"
+        return 1
+    fi
+  
+    return 0
 }
 
 # ===========================================================================
@@ -628,6 +676,7 @@ load_module() {
     debug_output "load_module: Modul '$module_name' erfolgreich geladen"
     return 0
 }
+
 # ===========================================================================
 # Bibliothek wurde bereits am Anfang der Datei als geladen markiert (LIB_CORE_LOADED=1)
 # um rekursive Ladeprobleme zu vermeiden
