@@ -952,7 +952,7 @@ function setup_security_headers() {
             # Füge nach dem letzten Header ein
             awk '/add_header/ {last_line=NR} END {if (last_line) {for (i=1; i<=NR; i++) {print $0; if (i==last_line) {print "    add_header Referrer-Policy \"'"$referrer_value"'\" always;"}} next} {print}' "$nginx_ssl_conf" > "$temp_file"
             cat "$temp_file" > "$nginx_ssl_conf"
-        }
+        fi
     fi
     
     # Temporäre Datei entfernen

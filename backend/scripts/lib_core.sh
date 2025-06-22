@@ -556,16 +556,7 @@ load_resources() {
         result=1
     fi
 
-    # 8. manage_sql.sh einbinden
-    debug_output "chk_resources: Versuche manage_sql.sh einzubinden"
-    bind_resource "MANAGE_SQL_LOADED" "$SCRIPT_DIR" "manage_sql.sh"
-    if [ $? -ne 0 ]; then
-        debug_output "chk_resources: Fehler beim Laden von manage_sql.sh"
-        echo "Fehler: manage_sql.sh konnte nicht geladen werden."
-        result=1
-    fi
-
-    # 9. manage_backend_service.sh einbinden
+    # 8. manage_backend_service.sh einbinden
     debug_output "chk_resources: Versuche manage_backend_service.sh einzubinden"
     bind_resource "MANAGE_BACKEND_SERVICE_LOADED" "$SCRIPT_DIR" "manage_backend_service.sh"
     if [ $? -ne 0 ]; then
@@ -619,7 +610,6 @@ check_all_modules_loaded() {
     check_module "MANAGE_HTTPS_LOADED" "manage_https.sh" || { all_loaded=false; failed_modules+=" manage_https.sh"; }
     check_module "MANAGE_FIREWALL_LOADED" "manage_firewall.sh" || { all_loaded=false; failed_modules+=" manage_firewall.sh"; }
     check_module "MANAGE_PYTHON_ENV_LOADED" "manage_python_env.sh" || { all_loaded=false; failed_modules+=" manage_python_env.sh"; }
-    check_module "MANAGE_SQL_LOADED" "manage_sql.sh" || { all_loaded=false; failed_modules+=" manage_sql.sh"; }
     check_module "MANAGE_BACKEND_SERVICE_LOADED" "manage_backend_service.sh" || { all_loaded=false; failed_modules+=" manage_backend_service.sh"; }
     # Weitere Module hier hinzufügen, wenn sie Teil des Systems sind
     
