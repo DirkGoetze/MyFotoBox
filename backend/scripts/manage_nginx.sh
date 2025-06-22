@@ -15,6 +15,8 @@
 # enthält keine main()-Funktion mehr. Die Nutzung als eigenständiges 
 # CLI-Programm ist nicht vorgesehen. Die Policy zur main()-Funktion gilt nur 
 # für Hauptskripte.
+#
+# HINWEIS: Dieses Skript erfordert lib_core.sh und sollte nie direkt aufgerufen werden.
 # ---------------------------------------------------------------------------
 
 # ===========================================================================
@@ -27,8 +29,6 @@ MANAGE_NGINX_LOADED=0
 manage_nginx_log_0001="KRITISCHER FEHLER: Zentrale Bibliothek lib_core.sh nicht gefunden!"
 manage_nginx_log_0002="Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch."
 manage_nginx_log_0003="KRITISCHER FEHLER: Die Kernressourcen konnten nicht geladen werden."
-manage_nginx_log_0004="KRITISCHER FEHLER: Das Modul manage_folders.sh konnte nicht geladen werden."
-manage_nginx_log_0005="KRITISCHER FEHLER: Das Modul manage_logging.sh konnte nicht geladen werden."
 
 # Lade alle Basis-Ressourcen ------------------------------------------------
 if [ ! -f "$SCRIPT_DIR/lib_core.sh" ]; then
@@ -46,17 +46,6 @@ if [ "${MODULE_LOAD_MODE:-0}" -eq 1 ]; then
     load_core_resources || {
         echo "$manage_nginx_log_0003" >&2
         echo "$manage_nginx_log_0002" >&2
-        exit 1
-    }
-else
-    # Im normalen Betrieb werden manage_folders und manage_logging benötigt
-    load_module "manage_folders" || {
-        echo "$manage_nginx_log_0004" >&2
-        exit 1
-    }
-    
-    load_module "manage_logging" || {
-        echo "$manage_nginx_log_0005" >&2
         exit 1
     }
 fi

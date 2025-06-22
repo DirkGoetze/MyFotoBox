@@ -15,10 +15,8 @@
 # enthält keine main()-Funktion mehr. Die Nutzung als eigenständiges 
 # CLI-Programm ist nicht vorgesehen. Die Policy zur main()-Funktion gilt nur 
 # für Hauptskripte.
-# ---------------------------------------------------------------------------
-# DEPENDENCY: Dieses Skript nutzt Funktionen aus manage_folders.sh, 
-# insbesondere die Verzeichnis-Getter. Die manage_folders.sh muss VOR diesem
-# Skript geladen werden!
+#
+# HINWEIS: Dieses Skript erfordert lib_core.sh und sollte nie direkt aufgerufen werden.
 # ---------------------------------------------------------------------------
 
 # ===========================================================================

@@ -15,6 +15,8 @@
 # enthält keine main()-Funktion mehr. Die Nutzung als eigenständiges 
 # CLI-Programm ist nicht vorgesehen. Die Policy zur main()-Funktion gilt nur 
 # für Hauptskripte.
+#
+# HINWEIS: Dieses Skript erfordert lib_core.sh und sollte nie direkt aufgerufen werden.
 # ---------------------------------------------------------------------------
 
 # ===========================================================================
