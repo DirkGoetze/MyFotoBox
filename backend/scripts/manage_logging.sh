@@ -48,16 +48,6 @@ DEBUG_MOD_LOCAL=1            # Lokales Debug-Flag für einzelne Skripte
 # Hilfsfunktionen
 # ===========================================================================
 
-get_log_file() {
-    # --------------------------------------------------------------------------
-    # get_log_file
-    # --------------------------------------------------------------------------
-    # Funktion: Gibt den vollständigen Pfad zur aktuellen Logdatei zurück
-    local logdir
-    logdir="$(get_log_dir)"
-    echo "${logdir}/$(date '+%Y-%m-%d')_fotobox.log"
-}
-
 chk_log_file() {
     # -----------------------------------------------------------------------
     # chk_log_file
@@ -66,7 +56,7 @@ chk_log_file() {
     #           ggf. Rotation und Komprimierung durch. Legt Logfile neu an,
     #           falls es fehlt oder durch Rotation verschoben wurde.
     local LOG_FILE
-    LOG_FILE="$(get_log_file)"
+    LOG_FILE="$("$manage_files_sh" get_log_file)"
     local MAX_ROTATE=5
 
     echo "Prüfe Logdatei: ${LOG_FILE}"
@@ -179,7 +169,7 @@ log() {
     #   Programm), in der der Fehler aufgetreten ist, als verpflichtender 
     #   Parameter an log() übergeben werden.
     local LOG_FILE
-    LOG_FILE="$(get_log_file)"
+    LOG_FILE="$("$manage_files_sh" get_log_file)"
     local msg="$1"
     local func="$2"
     local file="$3"
@@ -269,7 +259,7 @@ debug() {
             LOG|*)
                 # Direkt in die Logdatei schreiben statt log() aufzurufen
                 local LOG_FILE
-                LOG_FILE="$(get_log_file)"
+                LOG_FILE="$("$manage_files_sh" get_log_file)"
                 if [ -f "$LOG_FILE" ] && [ -w "$LOG_FILE" ]; then
                     echo "$(date "+%Y-%m-%d %H:%M:%S") DEBUG[$func]: $msg" >> "$LOG_FILE" 2>/dev/null || {
                         echo "FEHLER: Konnte Debug-Nachricht nicht in $LOG_FILE schreiben!" >&2
