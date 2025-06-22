@@ -197,13 +197,9 @@ SYSTEMD_DST="/etc/systemd/system/fotobox-backend.service"
 # ===========================================================================
 # Hilfsfunktionen zur Einbindung externer Skript-Ressourcen
 # ===========================================================================
-# Lademodus für Module
-# 0 = Bei Bedarf laden (für laufenden Betrieb)
-# 1 = Alle Module sofort laden (für Installation/Update/Deinstallation)
-: "${MODULE_LOAD_MODE:=0}"
-
 # Standardwerte für Guard-Variablen festlegen
 : "${MANAGE_FOLDERS_LOADED:=0}"
+: "${MANAGE_FILES_LOADED:=0}"
 : "${MANAGE_LOGGING_LOADED:=0}"
 : "${MANAGE_NGINX_LOADED:=0}"
 : "${MANAGE_HTTPS_LOADED:=0}"
@@ -215,7 +211,7 @@ SYSTEMD_DST="/etc/systemd/system/fotobox-backend.service"
 
 bind_resource() {
     # -----------------------------------------------------------------------
-    # Funktion: Prüfung und Einbindung externer Skript-Ressourcen
+    # Funktion: Vereinfachte Version zum Laden von Skript-Ressourcen
     # Parameter: $1 = Name der Guard-Variable (z.B. "MANAGE_FOLDERS_LOADED")
     # .........  $2 = Pfad zur Ressource (z.B. "$SCRIPT_DIR")
     # .........  $3 = Name der benötigten Ressource (z.B. "manage_folders.sh")
@@ -224,106 +220,53 @@ bind_resource() {
     local guard_var_name="$1"
     local resource_path="$2"
     local resource_name="$3"
-    
-    # Schutz vor rekursiven Aufrufen: Durch rekursive Erkennung
-    # Wir verwenden statische Variablen innerhalb von Bash-Funktionen mit declare
-    # Entferne Sonderzeichen aus dem Ressourcennamen für gültige Variablennamen
-    local safe_resource_name="${resource_name//[^a-zA-Z0-9_]/_}"
-    declare -g "BINDING_${safe_resource_name}_IN_PROGRESS=0"
-    local binding_in_progress_var="BINDING_${safe_resource_name}_IN_PROGRESS"
-    
-    if [ "${!binding_in_progress_var:-0}" = "1" ]; then
-        trace_output "Rekursiver Aufruf für $resource_name erkannt, überspringe"
-        debug_output "bind_resource: Erkenne rekursiven Aufruf für '$resource_name', überspringe Laden"
-        
-        # Setze die Guard-Variable auf 1, auch bei rekursiven Aufrufen
-        # Dies behebt das Problem, dass die Variablen bei rekursiven Aufrufen nicht gesetzt werden
-        eval "$guard_var_name=1"
-        trace_output "Setze Guard-Variable $guard_var_name auf 1 trotz rekursivem Aufruf"
-        debug_output "bind_resource: Setze Guard-Variable $guard_var_name auf 1 (geladen) trotz rekursivem Aufruf"
-        
-        return 0  # Überspringe und kehre zurück, um Endlosschleife zu vermeiden
-    fi
-    
-    # Setze Markierung, dass wir gerade dabei sind, diese Ressource zu laden
-    eval "${binding_in_progress_var}=1"
-    # Definiere lock_file - temporäre Datei im System-Temp-Verzeichnis
-    local lock_file="/tmp/fotobox_${safe_resource_name}.lock"
-    touch "$lock_file" 2>/dev/null || true  # Erzeuge Sperre falls möglich
-    
-    # Ausgabe für Debugging-Zwecke
-    trace_output "bind_resource für $guard_var_name ($resource_name) gestartet"
-    
-    debug_output "bind_resource: Versuche Ressource zu laden - Guard: $guard_var_name, Pfad: $resource_path, Name: $resource_name"
+    local resource_file="$resource_path/$resource_name"
     
     # Prüfen, ob die Ressource bereits geladen ist
-    if [ "$(eval echo \$$guard_var_name)" -ne 0 ]; then
-        trace_output "Ressource $resource_name bereits geladen"
-        debug_output "bind_resource: Ressource '$resource_name' bereits geladen (Guard: $guard_var_name = $(eval echo \$$guard_var_name))"
-        # Definiere lock_file, wenn es nicht existiert
-        local lock_file="${lock_file:-/tmp/fotobox_${safe_resource_name}.lock}"
-        rm -f "$lock_file" 2>/dev/null || true  # Sperre entfernen falls möglich
+    if [ "$(eval echo \$$guard_var_name)" -eq 1 ]; then
+        debug_output "bind_resource: Ressource '$resource_name' bereits geladen"
         return 0  # Bereits geladen, alles OK
     fi
     
+    debug_output "bind_resource: Versuche Ressource zu laden - '$resource_name'"
+    
     # Prüfung des Ressourcen-Verzeichnisses
-    if [ ! -d "$resource_path" ]; then
-        trace_output "Verzeichnis $resource_path nicht gefunden"
-        debug_output "bind_resource: Fehler - Verzeichnis '$resource_path' nicht gefunden"
-        echo "Fehler: Verzeichnis '$resource_path' nicht gefunden."
-        rm -f "$lock_file" 2>/dev/null || true  # Sperre entfernen falls möglich
-        return 2  # Verzeichnis nicht gefunden
+    if [ ! -d "$resource_path" ] || [ ! -r "$resource_path" ]; then
+        debug_output "bind_resource: Fehler - Verzeichnis '$resource_path' nicht gefunden oder nicht lesbar"
+        echo "Fehler: Verzeichnis '$resource_path' nicht gefunden oder nicht lesbar."
+        return 2
     fi
     
-    if [ ! -r "$resource_path" ]; then
-        trace_output "Verzeichnis $resource_path nicht lesbar"
-        debug_output "bind_resource: Fehler - Verzeichnis '$resource_path' nicht lesbar"
-        echo "Fehler: Verzeichnis '$resource_path' nicht lesbar."
-        rm -f "$lock_file" 2>/dev/null || true  # Sperre entfernen falls möglich
-        return 2  # Verzeichnis nicht lesbar
-    fi
-    
-    # Pfad zur Ressource zusammensetzen
-    local resource_file="$resource_path/$resource_name"
-    trace_output "Versuche Datei zu laden: $resource_file"
-    debug_output "bind_resource: Vollständiger Ressourcen-Pfad: $resource_file"
-    
-    # Prüfen, ob die Ressource existiert und ausführbar ist
-    if [ ! -f "$resource_file" ]; then
-        trace_output "Datei $resource_file existiert nicht"
-        debug_output "bind_resource: Fehler - Die Datei '$resource_file' existiert nicht"
-        echo "Fehler: Die Datei '$resource_file' existiert nicht."
-        rm -f "$lock_file" 2>/dev/null || true  # Sperre entfernen falls möglich
-        return 1  # Ressource nicht gefunden
-    fi
-    
-    if [ ! -r "$resource_file" ]; then
-        trace_output "Datei $resource_file ist nicht lesbar"
-        debug_output "bind_resource: Fehler - Die Datei '$resource_file' ist nicht lesbar"
-        echo "Fehler: Die Datei '$resource_file' ist nicht lesbar."
-        rm -f "$lock_file" 2>/dev/null || true  # Sperre entfernen falls möglich
-        return 1  # Ressource nicht lesbar
+    # Prüfen, ob die Ressourcendatei existiert und lesbar ist
+    if [ ! -f "$resource_file" ] || [ ! -r "$resource_file" ]; then
+        debug_output "bind_resource: Fehler - Die Datei '$resource_file' existiert nicht oder ist nicht lesbar"
+        echo "Fehler: Die Datei '$resource_file' existiert nicht oder ist nicht lesbar."
+        return 1
     fi
     
     # Ressource laden
-    trace_output "Lade Ressource $resource_file"
     debug_output "bind_resource: Lade Ressource '$resource_file'"
     source "$resource_file"
     local source_result=$?
-    trace_output "Laden von $resource_file abgeschlossen mit Status $source_result"
-    debug_output "bind_resource: Laden von '$resource_file' abgeschlossen mit Status: $source_result"
     
-    # Guard-Variable auf "geladen" setzen (1)
-    eval "$guard_var_name=1"
-    trace_output "Guard-Variable $guard_var_name auf 1 gesetzt"
-    debug_output "bind_resource: Guard-Variable $guard_var_name auf 1 (geladen) gesetzt"
+    if [ $source_result -ne 0 ]; then
+        debug_output "bind_resource: Fehler beim Laden von '$resource_file' (Status: $source_result)"
+        echo "Fehler: Konnte '$resource_name' nicht laden."
+        return 1
+    fi
     
-    # Markierung zurücksetzen
-    eval "${binding_in_progress_var}=0"
+    # Prüfen ob die Guard-Variable wirklich auf 1 gesetzt wurde (durch das Skript selbst)
+    if [ "$(eval echo \$$guard_var_name)" -ne 1 ]; then
+        debug_output "bind_resource: Warnung - Das Modul '$resource_name' hat seine Guard-Variable nicht auf 1 gesetzt"
+        echo "Warnung: Das Modul '$resource_name' hat seine Guard-Variable nicht auf 1 gesetzt."
+        eval "$guard_var_name=1"  # Sicherstellen, dass die Guard-Variable gesetzt ist
+    fi
+    
+    debug_output "bind_resource: Ressource '$resource_name' erfolgreich geladen"
     return 0  # Erfolgreich geladen
 }
 
-chk_resources() {
+load_resources() {
     # -----------------------------------------------------------------------
     # Funktion: Prüfung und Einbindung aller benötigten Skript-Ressourcen
     # Parameter: keine
@@ -387,7 +330,16 @@ chk_resources() {
         debug_output "chk_resources: Fallback-Funktion für manage_folders.sh wurde erstellt"
     fi
     
-    # 2. manage_logging.sh einbinden
+    # 2. manage_files.sh einbinden
+    debug_output "chk_resources: Versuche manage_files.sh einzubinden"
+    bind_resource "MANAGE_FILES_LOADED" "$SCRIPT_DIR" "manage_files.sh"
+    if [ $? -ne 0 ]; then
+        debug_output "chk_resources: Fehler beim Laden von manage_files.sh, erstelle Fallback-Funktionen"
+        echo "Fehler: manage_files.sh konnte nicht geladen werden."
+        result=1
+    fi
+
+    # 3. manage_logging.sh einbinden
     debug_output "chk_resources: Versuche manage_logging.sh einzubinden"
     bind_resource "MANAGE_LOGGING_LOADED" "$SCRIPT_DIR" "manage_logging.sh"
     if [ $? -ne 0 ]; then
@@ -522,7 +474,7 @@ chk_resources() {
         debug_output "chk_resources: Fallback-Funktionen für manage_logging.sh wurden erstellt"
     fi
     
-    # 3. manage_nginx.sh einbinden
+    # 4. manage_nginx.sh einbinden
     debug_output "chk_resources: Versuche manage_nginx.sh einzubinden"
     bind_resource "MANAGE_NGINX_LOADED" "$SCRIPT_DIR" "manage_nginx.sh"
     if [ $? -ne 0 ]; then
@@ -531,7 +483,7 @@ chk_resources() {
         result=1
     fi
 
-    # 4. manage_https.sh einbinden
+    # 5. manage_https.sh einbinden
     debug_output "chk_resources: Versuche manage_https.sh einzubinden"
     bind_resource "MANAGE_HTTPS_LOADED" "$SCRIPT_DIR" "manage_https.sh"
     if [ $? -ne 0 ]; then
@@ -540,7 +492,7 @@ chk_resources() {
         result=1
     fi
 
-    # 5. manage_firewall.sh einbinden
+    # 6. manage_firewall.sh einbinden
     debug_output "chk_resources: Versuche manage_firewall.sh einzubinden"
     bind_resource "MANAGE_FIREWALL_LOADED" "$SCRIPT_DIR" "manage_firewall.sh"
     if [ $? -ne 0 ]; then
@@ -549,7 +501,7 @@ chk_resources() {
         result=1
     fi
 
-    # 6. manage_python_env.sh einbinden
+    # 7. manage_python_env.sh einbinden
     debug_output "chk_resources: Versuche manage_python_env.sh einzubinden"
     bind_resource "MANAGE_PYTHON_ENV_LOADED" "$SCRIPT_DIR" "manage_python_env.sh"
     if [ $? -ne 0 ]; then
@@ -558,7 +510,7 @@ chk_resources() {
         result=1
     fi
 
-    # 7. manage_sql.sh einbinden
+    # 8. manage_sql.sh einbinden
     debug_output "chk_resources: Versuche manage_sql.sh einzubinden"
     bind_resource "MANAGE_SQL_LOADED" "$SCRIPT_DIR" "manage_sql.sh"
     if [ $? -ne 0 ]; then
@@ -567,7 +519,7 @@ chk_resources() {
         result=1
     fi
 
-    # 8. manage_backend_service.sh einbinden
+    # 9. manage_backend_service.sh einbinden
     debug_output "chk_resources: Versuche manage_backend_service.sh einzubinden"
     bind_resource "MANAGE_BACKEND_SERVICE_LOADED" "$SCRIPT_DIR" "manage_backend_service.sh"
     if [ $? -ne 0 ]; then
@@ -580,108 +532,89 @@ chk_resources() {
     return $result
 }
 
-load_core_resources() {
+check_module() {
     # -----------------------------------------------------------------------
-    # Funktion: Lädt alle Kernressourcen für ein Skript
-    # Parameter: keine
-    # Rückgabe: 0 = OK, 1 = mind. eine Ressource fehlt oder ist nicht nutzbar
+    # Funktion: Überprüft, ob ein einzelnes Modul korrekt geladen wurde
+    # Parameter: $1 - Name der Guard-Variable (z.B. "MANAGE_FOLDERS_LOADED")
+    #            $2 - Name des Moduls für die Ausgabe
+    # Rückgabe: 0 = OK, 1 = Fehler (nicht geladen)
     # -----------------------------------------------------------------------
-    # Statische Variable um rekursive Aufrufe zu verhindern
-    # Verwende declare -g, um eine globale Variable zu definieren
-    declare -g CORE_RESOURCES_LOADING
+    local guard_var="$1"
+    local module_name="$2"
     
-    if [ "${CORE_RESOURCES_LOADING:-0}" -eq 1 ]; then
-        debug_output "load_core_resources: Rekursiver Aufruf erkannt, überspringe"
+    if [ "$(eval echo \$$guard_var)" -ne 1 ]; then
+        debug_output "check_module: Modul '$module_name' wurde nicht korrekt geladen (${guard_var}=$(eval echo \$$guard_var))"
+        return 1
+    else
+        debug_output "check_module: Modul '$module_name' erfolgreich geladen"
         return 0
     fi
-    
-    # Markiere, dass wir gerade laden
-    CORE_RESOURCES_LOADING=1
-    
-    trace_output "load_core_resources wird ausgeführt"
-    debug_output "load_core_resources: Starte das Laden aller Kernressourcen"
-    
-    # Direkt chk_resources aufrufen ohne Zuweisung (könnte Probleme verursachen)
-    trace_output "Rufe chk_resources direkt auf"
-    chk_resources
-    local status=$?
-    
-    trace_output "chk_resources abgeschlossen mit Status $status"
-    debug_output "load_core_resources: Laden aller Kernressourcen abgeschlossen mit Status: $status"
-    
-    # Zurücksetzen der statischen Variable
-    CORE_RESOURCES_LOADING=0
-    
-    return $status
 }
 
-load_module() {
+check_all_modules_loaded() {
     # -----------------------------------------------------------------------
-    # Funktion: Lädt ein einzelnes Modul oder bei Bedarf alle Module
-    # Parameter: $1 = Name des Moduls (z.B. "manage_folders")
-    # Rückgabe: 0 = OK, 1 = Modul nicht verfügbar
+    # Funktion: Überprüft, ob alle Module korrekt geladen wurden
+    # Parameter: keine
+    # Rückgabe: 0 = Alles OK, 1 = Mindestens ein Modul fehlerhaft geladen
     # -----------------------------------------------------------------------
-    local module_name="$1"
-    local module_guard="${module_name^^}_LOADED"  # Konvertiere zu Großbuchstaben und füge _LOADED an
+    local all_loaded=true
+    local module_count=0
+    local modules_loaded=0
+    local modules_failed=0
+    local failed_modules=""
     
-    debug_output "load_module: Angefordert: $module_name (Guard: $module_guard, Lademodus: $MODULE_LOAD_MODE)"
+    debug_output "check_all_modules_loaded: Prüfe Status aller Module"
     
-    # Prüfen, ob das Modul bereits geladen ist
-    if [ "$(eval echo \$$module_guard 2>/dev/null)" = "1" ]; then
-        debug_output "load_module: Modul '$module_name' bereits geladen"
-        return 0
-    fi
+    # Alle bekannten Module prüfen
+    check_module "MANAGE_FOLDERS_LOADED" "manage_folders.sh" || { all_loaded=false; failed_modules+=" manage_folders.sh"; }
+    check_module "MANAGE_FILES_LOADED" "manage_files.sh" || { all_loaded=false; failed_modules+=" manage_files.sh"; }
+    check_module "MANAGE_LOGGING_LOADED" "manage_logging.sh" || { all_loaded=false; failed_modules+=" manage_logging.sh"; }
+    check_module "MANAGE_NGINX_LOADED" "manage_nginx.sh" || { all_loaded=false; failed_modules+=" manage_nginx.sh"; }
+    check_module "MANAGE_HTTPS_LOADED" "manage_https.sh" || { all_loaded=false; failed_modules+=" manage_https.sh"; }
+    check_module "MANAGE_FIREWALL_LOADED" "manage_firewall.sh" || { all_loaded=false; failed_modules+=" manage_firewall.sh"; }
+    check_module "MANAGE_PYTHON_ENV_LOADED" "manage_python_env.sh" || { all_loaded=false; failed_modules+=" manage_python_env.sh"; }
+    check_module "MANAGE_SQL_LOADED" "manage_sql.sh" || { all_loaded=false; failed_modules+=" manage_sql.sh"; }
+    check_module "MANAGE_BACKEND_SERVICE_LOADED" "manage_backend_service.sh" || { all_loaded=false; failed_modules+=" manage_backend_service.sh"; }
+    # Weitere Module hier hinzufügen, wenn sie Teil des Systems sind
     
-    # Je nach Lademodus alle Module oder nur das angeforderte laden
-    if [ "${MODULE_LOAD_MODE:-0}" -eq 1 ]; then
-        debug_output "load_module: Lademodus 1 (Alle) - Lade alle Module"
-        
-        # Überprüfen, ob wir aktuell schon beim Laden sind, um rekursive Aufrufe zu vermeiden
-        if [ "${CORE_RESOURCES_LOADING:-0}" -ne 1 ]; then
-            # Definiere eine Variable für dieses spezifische Modul-Loading
-            # Entferne Sonderzeichen aus dem Modulnamen für gültige Variablennamen
-            local safe_module_name="${module_name//[^a-zA-Z0-9_]/_}"
-            declare -g "LOADING_MODULE_${safe_module_name}=0"
-            local module_loading_var="LOADING_MODULE_${safe_module_name}"
-            
-            # Prüfen, ob dieses spezifische Modul gerade geladen wird
-            if [ "${!module_loading_var:-0}" -ne 1 ]; then
-                # Markiere, dass wir dieses Modul laden
-                eval "${module_loading_var}=1"
-                
-                # Lade alle Ressourcen
-                load_core_resources
-                
-                # Zurücksetzen der Modul-Loading-Variable
-                eval "${module_loading_var}=0"
-            else
-                debug_output "load_module: Rekursiven Aufruf für Modul '$module_name' erkannt, überspringe"
-            fi
+    # Modulstatistik ausgeben
+    for var in $(compgen -v MANAGE_*_LOADED); do
+        module_count=$((module_count + 1))
+        if [ "${!var}" -eq 1 ]; then
+            modules_loaded=$((modules_loaded + 1))
         else
-            debug_output "load_module: Kern-Ressourcen werden bereits geladen, überspringe load_core_resources"
+            modules_failed=$((modules_failed + 1))
         fi
-        
-        # Prüfen, ob das angeforderte Modul jetzt geladen ist
-        if [ "$(eval echo \$$module_guard 2>/dev/null)" != "1" ]; then
-            debug_output "load_module: Fehler - Modul '$module_name' konnte nicht geladen werden"
-            return 1
-        fi
-    else
-        debug_output "load_module: Lademodus 0 (Einzeln) - Lade nur '$module_name'"
-        # Nur das angeforderte Modul laden
-        local script_name="${module_name}.sh"
-        bind_resource "$module_guard" "$SCRIPT_DIR" "$script_name"
-        if [ $? -ne 0 ]; then
-            debug_output "load_module: Fehler - Konnte Modul '$module_name' nicht laden"
-            return 1
-        fi
-    fi
+    done
     
-    debug_output "load_module: Modul '$module_name' erfolgreich geladen"
-    return 0
+    debug_output "check_all_modules_loaded: Ergebnis - Gesamt: $module_count, Geladen: $modules_loaded, Fehlerhaft: $modules_failed"
+    
+    if $all_loaded; then
+        if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ]; then
+            echo -e "${COLOR_GREEN}Alle Module wurden erfolgreich geladen.${COLOR_RESET}"
+        fi
+        return 0
+    else
+        echo -e "${COLOR_RED}Folgende Module konnten nicht korrekt geladen werden:${COLOR_RESET}${failed_modules}"
+        return 1
+    fi
 }
 
 # ===========================================================================
-# Bibliothek wurde bereits am Anfang der Datei als geladen markiert (LIB_CORE_LOADED=1)
-# um rekursive Ladeprobleme zu vermeiden
+# Hauptteil des Skripts: Ressourcen laden und Module überprüfen
+# ===========================================================================
+# Initialisieren aller Ressourcen
+debug_output "load_resources: Initialisiere alle Ressourcen"
 
+# Versuche, alle benötigten Ressourcen zu laden
+load_resources
+
+# Überprüfen, ob Ressourcen erfolgreich geladen wurden
+if [ $? -ne 0 ]; then
+    debug_output "load_resources: Fehler beim Laden der Ressourcen, Abbruch"
+    echo "Fehler: Einige Ressourcen konnten nicht geladen werden. Bitte überprüfen Sie die Fehlermeldungen."
+    exit 1
+fi
+
+# Überprüfen, ob alle Module korrekt geladen wurden
+check_all_modules_loaded

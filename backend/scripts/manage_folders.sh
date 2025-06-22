@@ -24,31 +24,6 @@
 # ===========================================================================
 # Guard für dieses Management-Skript
 MANAGE_FOLDERS_LOADED=0
-
-# Textausgaben für das gesamte Skript
-manage_folders_log_0001="KRITISCHER FEHLER: Zentrale Bibliothek lib_core.sh nicht gefunden!"
-manage_folders_log_0002="Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch."
-manage_folders_log_0003="KRITISCHER FEHLER: Die Kernressourcen konnten nicht geladen werden."
-
-# Lade alle Basis-Ressourcen ------------------------------------------------
-if [ ! -f "$SCRIPT_DIR/lib_core.sh" ]; then
-    echo "$manage_folders_log_0001" >&2
-    echo "$manage_folders_log_0002" >&2
-    exit 1
-fi
-
-source "$SCRIPT_DIR/lib_core.sh"
-
-# Hybrides Ladeverhalten: 
-# Bei MODULE_LOAD_MODE=1 (Installation/Update) werden alle Module geladen
-# Bei MODULE_LOAD_MODE=0 (normaler Betrieb) werden Module individuell geladen
-if [ "${MODULE_LOAD_MODE:-0}" -eq 1 ]; then
-    load_core_resources || {
-        echo "$manage_folders_log_0003" >&2
-        echo "$manage_folders_log_0002" >&2
-        exit 1
-    }
-fi
 # ===========================================================================
 
 # ===========================================================================
