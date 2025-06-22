@@ -41,6 +41,114 @@ test_function() {
     fi
 }
 
+# Hilfsfunktion für den korrekten Aufruf von Funktionen aus dem Modul
+call_module_function() {
+    local module_path="$1"
+    local function_name="$2"
+    shift 2  # Entferne die ersten beiden Parameter
+    
+    # Führe die Funktion aus dem Modul aus
+    if [ -x "$module_path" ]; then
+        # Führe das Skript direkt aus mit der Funktion als erstem Argument
+        "$module_path" "$function_name" "$@"
+        return $?
+    else
+        # Sourcing-Fallback (sollte nicht benötigt werden, wenn Skripte ausführbar sind)
+        echo "WARNUNG: Modul $module_path hat keine Ausführungsrechte, versuche Sourcing-Methode"
+        # shellcheck disable=SC1090
+        source "$module_path" >/dev/null 2>&1
+        "$function_name" "$@"
+        return $?
+    fi
+}
+
+# Hilfsfunktion zur Überprüfung der Modulpfade
+check_module_path() {
+    local module_var="$1"
+    local expected_name="$2"
+    
+    if [ -n "${!module_var}" ] && [ -f "${!module_var}" ]; then
+        echo "✅ Modulpfad-Variable $module_var ist korrekt definiert: ${!module_var}"
+        return 0
+    else
+        echo "❌ Modulpfad-Variable $module_var ist NICHT korrekt definiert: ${!module_var:-nicht gesetzt}"
+        return 1
+    fi
+}
+
+# Verarbeitete Variablen im Test-Skript:
+# TEST_CURRENT_DIR - Aktuelles Verzeichnis beim Start des Tests
+# TEST_SCRIPT_DIR  - Verzeichnis, in dem sich die Backend-Skripte befinden
+# 
+# Diese Variablen sind vom Testskript reserviert und zur Vermeidung von Kollisionen
+# mit den zu testenden Modulen uniquifiziert. Die Module verwenden ihre eigenen
+# Variablen wie SCRIPT_DIR, BASH_DIR usw., die durch das Testskript nicht
+# beschädigt werden.
+
+# -------------------------------
+# Automatischer Test aller Module
+# -------------------------------
+echo
+echo "-------------------------------------------------------------------------"
+echo "Automatische Überprüfung aller gefundenen Module"
+echo "-------------------------------------------------------------------------"
+
+# Alle Guard-Variablen finden und prüfen
+echo "Überprüfung des Ladestatus aller Module (Guard-Variablen):"
+all_guards_ok=true
+module_count=0
+modules_loaded=0
+modules_failed=0
+failed_modules=""
+
+# Finde alle MANAGE_*_LOADED Variablen
+for var in $(compgen -v MANAGE_*_LOADED); do
+    module_count=$((module_count + 1))
+    module_name=$(echo "$var" | sed 's/_LOADED//' | tr '[:upper:]' '[:lower:]')
+    module_name="${module_name#manage_}.sh"
+    
+    if [ "${!var}" -eq 1 ]; then
+        echo "✅ $var=1 : $module_name ist korrekt geladen"
+        modules_loaded=$((modules_loaded + 1))
+    else
+        echo "❌ $var=${!var} : $module_name ist NICHT korrekt geladen"
+        all_guards_ok=false
+        modules_failed=$((modules_failed + 1))
+        failed_modules+=" $module_name"
+    fi
+done
+
+echo
+echo "Überprüfung der Modulpfad-Variablen für alle erkannten Module:"
+all_paths_ok=true
+
+# Finde alle manage_*_sh Variablen
+for var in $(compgen -v manage_*_sh); do
+    if [ -n "${!var}" ] && [ -f "${!var}" ]; then
+        echo "✅ $var=${!var} : Pfad existiert"
+    else
+        echo "❌ $var=${!var:-nicht gesetzt} : Pfad fehlt oder ist ungültig"
+        all_paths_ok=false
+    fi
+done
+
+# Zusammenfassung der automatischen Überprüfung
+echo
+echo "Zusammenfassung des automatischen Modultests:"
+echo "Gesamt: $module_count Module, Geladen: $modules_loaded, Fehlerhaft: $modules_failed"
+
+if $all_guards_ok; then
+    echo "✅ Alle Guard-Variablen sind korrekt gesetzt (MANAGE_*_LOADED=1)"
+else
+    echo "❌ Einige Guard-Variablen sind nicht korrekt gesetzt: $failed_modules"
+fi
+
+if $all_paths_ok; then
+    echo "✅ Alle Modulpfad-Variablen sind korrekt definiert"
+else
+    echo "❌ Einige Modulpfad-Variablen fehlen oder zeigen auf nicht existierende Dateien"
+fi
+
 # HINWEIS: DEBUG-Modus wird manuell aktiviert
 # Die Funktion enable_debug_for_module wurde entfernt, da der Debug-Modus 
 # manuell gesetzt wird. Um den Debug-Modus zu aktivieren:
@@ -119,20 +227,6 @@ ls -la "$TEST_SCRIPT_DIR"
 
 # Setze SCRIPT_DIR für lib_core.sh
 export SCRIPT_DIR="$TEST_SCRIPT_DIR"
-
-# Hilfsfunktion zur Überprüfung der Modulpfade
-check_module_path() {
-    local module_var="$1"
-    local expected_name="$2"
-    
-    if [ -n "${!module_var}" ] && [ -f "${!module_var}" ]; then
-        echo "✅ Modulpfad-Variable $module_var ist korrekt definiert: ${!module_var}"
-        return 0
-    else
-        echo "❌ Modulpfad-Variable $module_var ist NICHT korrekt definiert: ${!module_var:-nicht gesetzt}"
-        return 1
-    fi
-}
 
 # Lade lib_core.sh, was automatisch alle anderen Module laden sollte
 echo -n "Lade lib_core.sh für zentrale Modulladelogik... "
@@ -464,97 +558,3 @@ echo
 echo "==========================================================================="
 echo "                            Test abgeschlossen"
 echo "==========================================================================="
-
-# Verarbeitete Variablen im Test-Skript:
-# TEST_CURRENT_DIR - Aktuelles Verzeichnis beim Start des Tests
-# TEST_SCRIPT_DIR  - Verzeichnis, in dem sich die Backend-Skripte befinden
-# 
-# Diese Variablen sind vom Testskript reserviert und zur Vermeidung von Kollisionen
-# mit den zu testenden Modulen uniquifiziert. Die Module verwenden ihre eigenen
-# Variablen wie SCRIPT_DIR, BASH_DIR usw., die durch das Testskript nicht
-# beschädigt werden.
-
-# -------------------------------
-# Automatischer Test aller Module
-# -------------------------------
-echo
-echo "-------------------------------------------------------------------------"
-echo "Automatische Überprüfung aller gefundenen Module"
-echo "-------------------------------------------------------------------------"
-
-# Alle Guard-Variablen finden und prüfen
-echo "Überprüfung des Ladestatus aller Module (Guard-Variablen):"
-all_guards_ok=true
-module_count=0
-modules_loaded=0
-modules_failed=0
-failed_modules=""
-
-# Finde alle MANAGE_*_LOADED Variablen
-for var in $(compgen -v MANAGE_*_LOADED); do
-    module_count=$((module_count + 1))
-    module_name=$(echo "$var" | sed 's/_LOADED//' | tr '[:upper:]' '[:lower:]')
-    module_name="${module_name#manage_}.sh"
-    
-    if [ "${!var}" -eq 1 ]; then
-        echo "✅ $var=1 : $module_name ist korrekt geladen"
-        modules_loaded=$((modules_loaded + 1))
-    else
-        echo "❌ $var=${!var} : $module_name ist NICHT korrekt geladen"
-        all_guards_ok=false
-        modules_failed=$((modules_failed + 1))
-        failed_modules+=" $module_name"
-    fi
-done
-
-echo
-echo "Überprüfung der Modulpfad-Variablen für alle erkannten Module:"
-all_paths_ok=true
-
-# Finde alle manage_*_sh Variablen
-for var in $(compgen -v manage_*_sh); do
-    if [ -n "${!var}" ] && [ -f "${!var}" ]; then
-        echo "✅ $var=${!var} : Pfad existiert"
-    else
-        echo "❌ $var=${!var:-nicht gesetzt} : Pfad fehlt oder ist ungültig"
-        all_paths_ok=false
-    fi
-done
-
-# Zusammenfassung der automatischen Überprüfung
-echo
-echo "Zusammenfassung des automatischen Modultests:"
-echo "Gesamt: $module_count Module, Geladen: $modules_loaded, Fehlerhaft: $modules_failed"
-
-if $all_guards_ok; then
-    echo "✅ Alle Guard-Variablen sind korrekt gesetzt (MANAGE_*_LOADED=1)"
-else
-    echo "❌ Einige Guard-Variablen sind nicht korrekt gesetzt: $failed_modules"
-fi
-
-if $all_paths_ok; then
-    echo "✅ Alle Modulpfad-Variablen sind korrekt definiert"
-else
-    echo "❌ Einige Modulpfad-Variablen fehlen oder zeigen auf nicht existierende Dateien"
-fi
-
-# Hilfsfunktion für den korrekten Aufruf von Funktionen aus dem Modul
-call_module_function() {
-    local module_path="$1"
-    local function_name="$2"
-    shift 2  # Entferne die ersten beiden Parameter
-    
-    # Führe die Funktion aus dem Modul aus
-    if [ -x "$module_path" ]; then
-        # Führe das Skript direkt aus mit der Funktion als erstem Argument
-        "$module_path" "$function_name" "$@"
-        return $?
-    else
-        # Sourcing-Fallback (sollte nicht benötigt werden, wenn Skripte ausführbar sind)
-        echo "WARNUNG: Modul $module_path hat keine Ausführungsrechte, versuche Sourcing-Methode"
-        # shellcheck disable=SC1090
-        source "$module_path" >/dev/null 2>&1
-        "$function_name" "$@"
-        return $?
-    fi
-}
