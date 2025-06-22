@@ -11,14 +11,14 @@
 # HINWEIS: Dieses Skript ist Bestandteil der Backend-Logik und darf nur im
 # Unterordner 'backend/scripts/' abgelegt werden 
 # ---------------------------------------------------------------------------
-# DEPENDENCY: Dieses Skript nutzt Funktionen aus manage_folders.sh, 
-# insbesondere get_log_dir(). Die manage_folders.sh muss VOR diesem
-# Skript geladen werden!
-# ---------------------------------------------------------------------------
 # POLICY-HINWEIS: Dieses Skript ist ein reines Funktions-/Modulskript und 
 # enthält keine main()-Funktion mehr. Die Nutzung als eigenständiges 
 # CLI-Programm ist nicht vorgesehen. Die Policy zur main()-Funktion gilt nur 
 # für Hauptskripte.
+# ---------------------------------------------------------------------------
+# DEPENDENCY: Dieses Skript nutzt Funktionen aus manage_files.sh und  
+# manage_folders.sh, insbesondere get_log_dir(). Die manage_files.sh muss 
+# VOR diesen Skripten geladen werden!
 # ---------------------------------------------------------------------------
 
 # ===========================================================================
