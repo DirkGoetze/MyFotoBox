@@ -17,7 +17,53 @@ LIB_CORE_LOADED=1
 
 # Zentrale Definition des Skriptverzeichnisses - wird von allen Modulen verwendet
 SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
-# Hinweis: BASH_DIR wurde vollständig entfernt und durch SCRIPT_DIR ersetzt
+
+define_module_paths() {
+    # -----------------------------------------------------------------------
+    # define_module_paths
+    # -----------------------------------------------------------------------
+    # Funktion: Definiert Konstanten für die Pfade zu allen Modulen für externe Aufrufe
+    # Parameter: keine
+    # Rückgabewert: 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    local script_dir="${SCRIPT_DIR:-$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")}"
+    local prefix="manage_"
+    local suffix=".sh"
+    
+    # Stelle sicher, dass SCRIPT_DIR gesetzt ist
+    : "${SCRIPT_DIR:=$script_dir}"
+    
+    debug "Definiere Modulpfade für externe Aufrufe..." "CLI" "define_module_paths"
+    
+    # Finde alle manage_*.sh Dateien im Skriptverzeichnis
+    local module_files
+    if [ -d "$SCRIPT_DIR" ]; then
+        module_files=$(find "$SCRIPT_DIR" -maxdepth 1 -name "${prefix}*${suffix}" -type f 2>/dev/null)
+        
+        if [ -z "$module_files" ]; then
+            echo "WARNUNG: Keine Module (${prefix}*${suffix}) im Verzeichnis $SCRIPT_DIR gefunden" >&2
+            return 1
+        fi
+        
+        # Exportiere einen Pfadvariable für jedes Modul
+        for module_path in $module_files; do
+            local module_name=$(basename "$module_path" "$suffix")
+            local var_name="${module_name}_sh"
+            
+            # Definiere die Variable global
+            eval "$var_name=\"$module_path\""
+            export "$var_name"
+            
+            debug "Modul-Pfad definiert: $var_name=$module_path" "CLI" "define_module_paths"
+        done
+        
+        debug "Alle Modulpfade wurden erfolgreich definiert" "CLI" "define_module_paths"
+        return 0
+    else
+        echo "FEHLER: Skriptverzeichnis $SCRIPT_DIR existiert nicht" >&2
+        return 1
+    fi
+}
 
 # ===========================================================================
 # Allgemeine Hilfsfunktionen für alle Skripte
@@ -608,13 +654,14 @@ debug_output "load_resources: Initialisiere alle Ressourcen"
 
 # Versuche, alle benötigten Ressourcen zu laden
 load_resources
-
-# Überprüfen, ob Ressourcen erfolgreich geladen wurden
 if [ $? -ne 0 ]; then
     debug_output "load_resources: Fehler beim Laden der Ressourcen, Abbruch"
     echo "Fehler: Einige Ressourcen konnten nicht geladen werden. Bitte überprüfen Sie die Fehlermeldungen."
     exit 1
 fi
+
+# Definiere Pfade für externe Modulaufrufe
+define_module_paths || echo "WARNUNG: Einige Modul-Pfade konnten nicht definiert werden" >&2
 
 # Überprüfen, ob alle Module korrekt geladen wurden
 check_all_modules_loaded
