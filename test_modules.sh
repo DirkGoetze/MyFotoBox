@@ -98,6 +98,9 @@ if [ ! -f "$TEST_SCRIPT_DIR/lib_core.sh" ]; then
     exit 1
 fi
 
+# Aktiviere Debug-Modus für alle Tests
+export DEBUG_MOD_LOCAL=1
+
 # Informiere über Strategie
 echo "==========================================================================="
 echo "           Test der Module lib_core.sh, manage_folders.sh,"
@@ -173,7 +176,7 @@ echo -n "Test create_directory: "
 test_dir="$TEST_CURRENT_DIR/tmp/test_directory"
 mkdir -p "$TEST_CURRENT_DIR/tmp" 2>/dev/null || true
 set +e  # Fehler nicht als fatal behandeln
-"$manage_folders_sh" create_directory "$test_dir"
+call_module_function "$manage_folders_sh" "create_directory" "$test_dir"
 result=$?
 set -e  # Fehlerbehandlung wieder aktivieren
 test_function $result "create_directory" 0
@@ -182,16 +185,16 @@ test_function $result "create_directory" 0
 echo -n "Test create_symlink_to_standard_path: "
 source_dir="$TEST_CURRENT_DIR/tmp/symlink_source"
 target_dir="$TEST_CURRENT_DIR/tmp/symlink_target"
-"$manage_folders_sh" create_directory "$target_dir" || true
+call_module_function "$manage_folders_sh" "create_directory" "$target_dir" || true
 set +e  # Fehler nicht als fatal behandeln
-"$manage_folders_sh" create_symlink_to_standard_path "$source_dir" "$target_dir"
+call_module_function "$manage_folders_sh" "create_symlink_to_standard_path" "$source_dir" "$target_dir"
 result=$?
 set -e  # Fehlerbehandlung wieder aktivieren
 test_function $result "create_symlink_to_standard_path" 0
 
 # Test: get_install_dir
 echo -n "Test get_install_dir: "
-install_dir=$("$manage_folders_sh" get_install_dir)
+install_dir=$(call_module_function "$manage_folders_sh" "get_install_dir")
 if [ -n "$install_dir" ]; then
     echo "✅ Die Funktion get_install_dir wurde erfolgreich ausgeführt. Ergebnis: $install_dir"
 else
@@ -200,7 +203,7 @@ fi
 
 # Test: get_backend_dir
 echo -n "Test get_backend_dir: "
-backend_dir=$("$manage_folders_sh" get_backend_dir)
+backend_dir=$(call_module_function "$manage_folders_sh" "get_backend_dir")
 if [ -n "$backend_dir" ]; then
     echo "✅ Die Funktion get_backend_dir wurde erfolgreich ausgeführt. Ergebnis: $backend_dir"
 else
@@ -209,7 +212,7 @@ fi
 
 # Test: get_script_dir
 echo -n "Test get_script_dir: "
-script_dir=$("$manage_folders_sh" get_script_dir)
+script_dir=$(call_module_function "$manage_folders_sh" "get_script_dir")
 if [ -n "$script_dir" ]; then
     echo "✅ Die Funktion get_script_dir wurde erfolgreich ausgeführt. Ergebnis: $script_dir"
 else
@@ -218,7 +221,7 @@ fi
 
 # Test: get_template_dir
 echo -n "Test get_template_dir: "
-template_dir=$("$manage_folders_sh" get_template_dir "nginx")
+template_dir=$(call_module_function "$manage_folders_sh" "get_template_dir" "nginx")
 if [ -n "$template_dir" ]; then
     echo "✅ Die Funktion get_template_dir wurde erfolgreich ausgeführt. Ergebnis: $template_dir"
 else
@@ -227,7 +230,7 @@ fi
 
 # Test: get_template_dir (ohne Modul-Parameter)
 echo -n "Test get_template_dir (ohne Modul): "
-template_dir_base=$("$manage_folders_sh" get_template_dir)
+template_dir_base=$(call_module_function "$manage_folders_sh" "get_template_dir")
 if [ -n "$template_dir_base" ]; then
     echo "✅ Die Funktion get_template_dir ohne Modul wurde erfolgreich ausgeführt. Ergebnis: $template_dir_base"
 else
@@ -245,7 +248,7 @@ echo "-------------------------------------------------------------------------"
 # Test: get_config_file
 echo -n "Test get_config_file: "
 set +e  # Fehler nicht als fatal behandeln
-config_file=$("$manage_files_sh" get_config_file "system" "version" 2>/dev/null)
+config_file=$(call_module_function "$manage_files_sh" "get_config_file" "system" "version" 2>/dev/null)
 set -e  # Fehlerbehandlung wieder aktivieren
 if [ -n "$config_file" ]; then
     echo "✅ Die Funktion get_config_file wurde erfolgreich ausgeführt. Ergebnis: $config_file"
@@ -256,7 +259,7 @@ fi
 # Test: get_template_file
 echo -n "Test get_template_file: "
 set +e  # Fehler nicht als fatal behandeln
-template_file=$("$manage_files_sh" get_template_file "nginx" "fotobox" 2>/dev/null)
+template_file=$(call_module_function "$manage_files_sh" "get_template_file" "nginx" "fotobox" 2>/dev/null)
 set -e  # Fehlerbehandlung wieder aktivieren
 if [ -n "$template_file" ]; then
     echo "✅ Die Funktion get_template_file wurde erfolgreich ausgeführt. Ergebnis: $template_file"
@@ -266,7 +269,7 @@ fi
 
 # Test: get_log_file
 echo -n "Test get_log_file: "
-log_file=$("$manage_files_sh" get_log_file "test_script")
+log_file=$(call_module_function "$manage_files_sh" "get_log_file" "test_script")
 if [ -n "$log_file" ]; then
     echo "✅ Die Funktion get_log_file wurde erfolgreich ausgeführt. Ergebnis: $log_file"
 else
@@ -275,7 +278,7 @@ fi
 
 # Test: get_temp_file
 echo -n "Test get_temp_file: "
-temp_file=$("$manage_files_sh" get_temp_file "testfile" ".txt")
+temp_file=$(call_module_function "$manage_files_sh" "get_temp_file" "testfile" ".txt")
 if [ -n "$temp_file" ]; then
     echo "✅ Die Funktion get_temp_file wurde erfolgreich ausgeführt. Ergebnis: $temp_file"
 else
@@ -284,7 +287,7 @@ fi
 
 # Test: get_backup_file
 echo -n "Test get_backup_file: "
-backup_file=$("$manage_files_sh" get_backup_file "test_backup")
+backup_file=$(call_module_function "$manage_files_sh" "get_backup_file" "test_backup")
 if [ -n "$backup_file" ]; then
     echo "✅ Die Funktion get_backup_file wurde erfolgreich ausgeführt. Ergebnis: $backup_file"
 else
@@ -293,7 +296,7 @@ fi
 
 # Test: get_backup_meta_file
 echo -n "Test get_backup_meta_file: "
-backup_meta_file=$("$manage_files_sh" get_backup_meta_file "test_backup")
+backup_meta_file=$(call_module_function "$manage_files_sh" "get_backup_meta_file" "test_backup")
 if [ -n "$backup_meta_file" ]; then
     echo "✅ Die Funktion get_backup_meta_file wurde erfolgreich ausgeführt. Ergebnis: $backup_meta_file"
 else
@@ -302,7 +305,7 @@ fi
 
 # Test: get_image_file
 echo -n "Test get_image_file: "
-image_file=$("$manage_files_sh" get_image_file "original" "test_image")
+image_file=$(call_module_function "$manage_files_sh" "get_image_file" "original" "test_image")
 if [ -n "$image_file" ]; then
     echo "✅ Die Funktion get_image_file wurde erfolgreich ausgeführt. Ergebnis: $image_file"
 else
@@ -312,7 +315,7 @@ fi
 # Test: get_system_file
 echo -n "Test get_system_file: "
 set +e  # Fehler nicht als fatal behandeln
-system_file=$("$manage_files_sh" get_system_file "nginx" "fotobox" 2>/dev/null)
+system_file=$(call_module_function "$manage_files_sh" "get_system_file" "nginx" "fotobox" 2>/dev/null)
 set -e  # Fehlerbehandlung wieder aktivieren
 if [ -n "$system_file" ]; then
     echo "✅ Die Funktion get_system_file wurde erfolgreich ausgeführt. Ergebnis: $system_file"
@@ -327,7 +330,7 @@ mkdir -p "$TEST_CURRENT_DIR/tmp" 2>/dev/null || true
 temp_test_file="$TEST_CURRENT_DIR/tmp/test_file.txt"
 touch "$temp_test_file" 2>/dev/null || true
 set +e  # Fehler nicht als fatal behandeln
-"$manage_files_sh" file_exists "$temp_test_file"
+call_module_function "$manage_files_sh" "file_exists" "$temp_test_file"
 result=$?
 set -e  # Fehlerbehandlung wieder aktivieren
 test_function $result "file_exists" 0
@@ -337,7 +340,7 @@ echo -n "Test create_empty_file: "
 mkdir -p "$TEST_CURRENT_DIR/tmp" 2>/dev/null || true
 empty_file="$TEST_CURRENT_DIR/tmp/empty_test_file.txt"
 set +e  # Fehler nicht als fatal behandeln
-"$manage_files_sh" create_empty_file "$empty_file"
+call_module_function "$manage_files_sh" "create_empty_file" "$empty_file"
 result=$?
 set -e  # Fehlerbehandlung wieder aktivieren
 test_function $result "create_empty_file" 0
@@ -363,78 +366,78 @@ echo "-------------------------------------------------------------------------"
 
 # Test: log
 echo -n "Test log mit einfacher Nachricht: "
-"$manage_logging_sh" log "Testmessage für log"
+call_module_function "$manage_logging_sh" "log" "Testmessage für log"
 result=$?
 test_function $result "log (einfache Nachricht)" 0
 
 # Test: log mit Funktionsname
 echo -n "Test log mit Funktionsname: "
-"$manage_logging_sh" log "Testmessage mit Funktionsname" "test_function"
+call_module_function "$manage_logging_sh" "log" "Testmessage mit Funktionsname" "test_function"
 result=$?
 test_function $result "log (mit Funktionsname)" 0
 
 # Test: log für Fehlermeldung
 echo -n "Test log für Fehlermeldungen: "
-"$manage_logging_sh" log "ERROR: Testfehlermeldung" "test_function" "test_modules.sh"
+call_module_function "$manage_logging_sh" "log" "ERROR: Testfehlermeldung" "test_function" "test_modules.sh"
 result=$?
 test_function $result "log (Fehlermeldung mit Funktionsname und Datei)" 0
 
 # Test: debug (LOG-Modus)
 echo -n "Test debug im LOG-Modus: "
-"$manage_logging_sh" debug "Debug-Testmessage im LOG-Modus"
+call_module_function "$manage_logging_sh" "debug" "Debug-Testmessage im LOG-Modus"
 result=$?
 test_function $result "debug (LOG-Modus)" 0
 
 # Test: debug (CLI-Modus)
 echo -n "Test debug im CLI-Modus: "
-"$manage_logging_sh" debug "Debug-Testmessage im CLI-Modus" "CLI"
+call_module_function "$manage_logging_sh" "debug" "Debug-Testmessage im CLI-Modus" "CLI"
 result=$?
 test_function $result "debug (CLI-Modus)" 0
 
 # Test: debug (JSON-Modus)
 echo -n "Test debug im JSON-Modus: "
-"$manage_logging_sh" debug "Debug-Testmessage im JSON-Modus" "JSON"
+call_module_function "$manage_logging_sh" "debug" "Debug-Testmessage im JSON-Modus" "JSON"
 result=$?
 test_function $result "debug (JSON-Modus)" 0
 
 # Test: print_step
 echo -n "Test print_step: "
-"$manage_logging_sh" print_step "Testschritt wird ausgeführt"
+call_module_function "$manage_logging_sh" "print_step" "Testschritt wird ausgeführt"
 result=$?
 test_function $result "print_step" 0
 
 # Test: print_info
 echo -n "Test print_info: "
-"$manage_logging_sh" print_info "Testinfo wird angezeigt"
+call_module_function "$manage_logging_sh" "print_info" "Testinfo wird angezeigt"
 result=$?
 test_function $result "print_info" 0
 
 # Test: print_success
 echo -n "Test print_success: "
-"$manage_logging_sh" print_success "Testoperation erfolgreich"
+call_module_function "$manage_logging_sh" "print_success" "Testoperation erfolgreich"
 result=$?
 test_function $result "print_success" 0
 
 # Test: print_warning
 echo -n "Test print_warning: "
-"$manage_logging_sh" print_warning "Testwarnung wird angezeigt"
+call_module_function "$manage_logging_sh" "print_warning" "Testwarnung wird angezeigt"
 result=$?
 test_function $result "print_warning" 0
 
 # Test: print_error
 echo -n "Test print_error: "
-"$manage_logging_sh" print_error "Testfehler wird angezeigt"
+call_module_function "$manage_logging_sh" "print_error" "Testfehler wird angezeigt"
 result=$?
 test_function $result "print_error" 0
 
 # Test: print_debug
 echo -n "Test print_debug: "
-"$manage_logging_sh" print_debug "Debug-Testmeldung wird angezeigt"
+call_module_function "$manage_logging_sh" "print_debug" "Debug-Testmeldung wird angezeigt"
 result=$?
 test_function $result "print_debug" 0
 
 # Überprüfe die Log-Datei auf vorhandene Debug-Ausgaben
-log_file=$("$manage_logging_sh" get_log_file)
+log_file=$(call_module_function "$manage_logging_sh" "get_log_file")
 echo
 echo "Prüfe, ob Debug-Ausgaben in der Log-Datei vorhanden sind:"
 if grep -q "DEBUG" "$log_file" 2>/dev/null; then
@@ -534,3 +537,24 @@ if $all_paths_ok; then
 else
     echo "❌ Einige Modulpfad-Variablen fehlen oder zeigen auf nicht existierende Dateien"
 fi
+
+# Hilfsfunktion für den korrekten Aufruf von Funktionen aus dem Modul
+call_module_function() {
+    local module_path="$1"
+    local function_name="$2"
+    shift 2  # Entferne die ersten beiden Parameter
+    
+    # Führe die Funktion aus dem Modul aus
+    if [ -x "$module_path" ]; then
+        # Führe das Skript direkt aus mit der Funktion als erstem Argument
+        "$module_path" "$function_name" "$@"
+        return $?
+    else
+        # Sourcing-Fallback (sollte nicht benötigt werden, wenn Skripte ausführbar sind)
+        echo "WARNUNG: Modul $module_path hat keine Ausführungsrechte, versuche Sourcing-Methode"
+        # shellcheck disable=SC1090
+        source "$module_path" >/dev/null 2>&1
+        "$function_name" "$@"
+        return $?
+    fi
+}
