@@ -74,22 +74,7 @@ test_function() {
     else
         debug "$(printf "$test_function_debug_0009" "$result")" "CLI" "test_function"
     fi
-    
-    # Zeige Ergebnis in Format "ERFOLG/FEHLER"
-    if [ $result -eq 0 ]; then
-        if [ -n "$output" ]; then
-            echo "✅ Die Funktion $function_name wurde erfolgreich ausgeführt. Ausgabe: $output"
-        else
-            echo "✅ Die Funktion $function_name wurde erfolgreich ausgeführt."
-        fi
-    else
-        if [ -n "$output" ]; then
-            echo "❌ Die Funktion $function_name ist fehlgeschlagen. Rückgabewert: $result, Ausgabe: $output"
-        else
-            echo "❌ Die Funktion $function_name ist fehlgeschlagen. Rückgabewert: $result"
-        fi
-    fi
-    
+        
     # Gib den originalen Rückgabewert der getesteten Funktion zurück
     return $result
 }
