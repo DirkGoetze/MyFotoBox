@@ -171,10 +171,6 @@ log() {
     local LOG_FILE
     LOG_FILE="$("$MANAGE_FILES_SH" get_log_file)"
     local msg="$1"
-
-    # Entferne den debug-Aufruf, der die Rekursion verursachen könnte
-    # debug "log() aufgerufen mit: msg='$msg', func='$func', file='$file'"
-    echo "log() aufgerufen mit: msg='$msg', func='$func', file='$file'"
     
     if [ -z "$msg" ]; then
         # Auch hier debug-Aufruf entfernen
