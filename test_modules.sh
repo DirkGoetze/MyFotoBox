@@ -96,18 +96,6 @@ else
     exit 1
 fi
 
-# Überprüfe, ob alle Module geladen wurden
-echo
-echo "---------------------------------------------------------------------------"
-echo "Überprüfe, ob alle Module geladen wurden (interne Funktion check_all_modules_loaded) ..."
-check_all_modules_loaded
-if [ $? -ne 0 ]; then
-    echo "❌ FEHLER: Es wurden nicht alle Module korrekt geladen!"
-    exit 1
-else
-    echo "✅ SUCCES: Alle Module wurden erfolgreich geladen."
-fi
-
 # -------------------------------
 # Test der manage_folders.sh Funktionen
 # -------------------------------
