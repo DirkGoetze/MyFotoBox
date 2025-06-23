@@ -21,8 +21,9 @@ test_function_debug_0004="Fehler: Funktion '%s' wurde nicht gefunden"
 test_function_debug_0005="Funktion '%s' in Modul %s gefunden"
 test_function_debug_0006="Führe Funktion '%s' aus mit Parametern: %s"
 test_function_debug_0007="Führe Funktion '%s' aus"
-test_function_debug_0008="Rückgabewert: %d, Ausgabe: %s"
-test_function_debug_0009="Ergebnis: %s"
+test_function_debug_0008="Rückgabewert: %d"
+test_function_debug_0009="Ausgabe: %s"
+test_function_debug_0010="Ergebnis: %s"
 
 test_function() {
     # Erweiterte Testfunktion für flexible Modulaufrufe und Ergebnisanalyse
@@ -70,9 +71,10 @@ test_function() {
     
     # Rest der Funktion bleibt gleich...
     if [ -n "$output" ]; then
-        debug "$(printf "$test_function_debug_0008" "$result" "$output")" "CLI" "test_function"
+        debug "$(printf "$test_function_debug_0008" "$result")" "CLI" "test_function"
+        debug "$(printf "$test_function_debug_0009" "$output")" "CLI" "test_function"
     else
-        debug "$(printf "$test_function_debug_0009" "$result")" "CLI" "test_function"
+        debug "$(printf "$test_function_debug_0010" "$result")" "CLI" "test_function"
     fi
         
     # Gib den originalen Rückgabewert der getesteten Funktion zurück

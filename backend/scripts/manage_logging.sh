@@ -399,6 +399,15 @@ print_debug() {
             indent="$indent  "
         done
         
-        echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET}${indent}$*"
+        # Behandlung mehrzeiliger Ausgaben - Zeilen aufteilen und einzeln formatieren
+        if [[ "$*" == *$'\n'* ]]; then
+            # Wenn Zeilenumbrüche vorhanden sind
+            echo "$*" | while IFS= read -r line; do
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET}${indent}$line"
+            done
+        else
+            # Einfache einzeilige Ausgabe
+            echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET}${indent}$*"
+        fi
     fi
 }
