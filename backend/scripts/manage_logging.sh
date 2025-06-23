@@ -399,37 +399,53 @@ print_debug() {
         local IFS=$'\n'
         local lines=($content)
         
-        # 2. Extrahiere Präfix aus dem ersten Array-Eintrag
+        # 2. Extrahiere Präfix und Info aus dem ersten Array-Eintrag
         local prefix=""
         local first_line="${lines[0]}"
+        local first_info=""
         
         if [[ "$first_line" == *"$debug_marker"* ]]; then
+            # Extrahiere Präfix (Teil vor dem Debug-Marker)
             prefix="${first_line%%$debug_marker*}"
+            
+            # Extrahiere den Text nach dem Debug-Marker in der ersten Zeile
+            first_info="${first_line#*$debug_marker}"
+            
+            # Entferne führende Leerzeichen aus dem first_info
+            first_info="${first_info#"${first_info%%[![:space:]]*}"}"
         fi
-        echo "DEBUG-PREFIX: $prefix"
 
         # 3. Extrahiere Ergebnistext aus dem letzten Array-Eintrag
         local result_text="${lines[-1]}"
-        echo "DEBUG-RESULT: $result_text"
 
-        # Entferne den letzten Eintrag aus dem Array, wenn es mindestens 2 Einträge gibt
+        # 4. Neue Array für bereinigte Debug-Zeilen erstellen
+        local clean_lines=()
+        
+        # 5. Bereinigte Debug-Zeilen sammeln (ab Index 1, erste Zeile wird separat behandelt)
         if [ ${#lines[@]} -gt 1 ]; then
-            unset 'lines[-1]'
+            # Wenn es mehr als eine Zeile gibt, fange bei Index 1 an (zweite Zeile)
+            for ((i=1; i<${#lines[@]}-1; i++)); do
+                local line="${lines[$i]}"
+                if [[ "$line" == *"$debug_marker"* ]]; then
+                    clean_lines+=("$line")
+                fi
+            done
         fi
         
-        # 4. Ausgabe aller Debug-Zeilen
-        for line in "${lines[@]}"; do
-            if [[ "$line" == *"$debug_marker"* ]]; then
-                # Wenn die Zeile einen Debug-Marker enthält, gib sie direkt aus
-                echo -e "$line"
-            fi
+        # 6. Ausgabe aller bereinigten Debug-Zeilen
+        for line in "${clean_lines[@]}"; do
+            echo -e "$line"
         done
         
-        # 5. Ausgabe der ursprünglichen Nachricht mit dem extrahierten Präfix
-        # Entferne führenden Leerraum vor dem Präfix, falls vorhanden
+        # 7. Entferne führende Leerräume vor dem Präfix, falls vorhanden
         prefix=$(echo "$prefix" | sed 's/^[[:space:]]*//')
         
-        # Gib das Ergebnis mit dem Debug-Präfix aus
-        echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${result_text}"
+        # 8. Ausgabe der ersten Debug-Zeile mit korrektem Präfix und extrahiertem Inhalt
+        echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${first_info}"
+        
+        # 9. Ausgabe des Ergebnistextes mit dem korrekten Präfix
+        if [ "$result_text" != "$first_line" ]; then
+            echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${result_text}"
+        fi
     fi
 }
