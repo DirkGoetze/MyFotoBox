@@ -17,8 +17,8 @@ set +e  # Deaktiviere strict mode für die Initialisierung
 test_function() {
     local result=$1
     local function_name=$2
-    local expected_result=$3
-    local function_output="${4:-}"
+    local expected_result="${3:-0}"   # Erwartetes Ergebnis, default= 0
+    local function_output="${4:-''}"  # Optionaler Funktionsausgabe-Parameter
 
     if [ "$result" -eq "$expected_result" ]; then
         echo "✅ Die Funktion $function_name wurde erfolgreich ausgeführt ($result). Rückgabe: $function_output"
@@ -86,7 +86,7 @@ echo "-------------------------------------------------------------------------"
 # Test: get_install_dir
 echo -n "Test get_install_dir: "
 install_dir="$("$MANAGE_FOLDERS_SH" "get_install_dir")"
-test_function $install_dir "get_install_dir" 0
+test_function $install_dir "get_install_dir" 0 "$install_dir"
 
 # Test: get_backend_dir
 echo -n "Test get_backend_dir: "
