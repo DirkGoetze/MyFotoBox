@@ -13,18 +13,80 @@ set -e  # Beende bei Fehlern
 set -u  # Beende bei Verwendung nicht gesetzter Variablen
 set +e  # Deaktiviere strict mode für die Initialisierung
 
-# Hilfsfunktion zur Überprüfung der Test-Ergebnisse
+# Erweiterte Testfunktion für flexible Modulaufrufe und Ergebnisanalyse
 test_function() {
-    local result=$1
-    local function_name=$2
-    local expected_result="${3:-0}"   # Erwartetes Ergebnis, default= 0
-    local function_output="${4:-''}"  # Optionaler Funktionsausgabe-Parameter
+    # Parameter verarbeiten
+    local module_path_var="$1"        # Name der Modul-Pfad-Variable (z.B. MANAGE_FOLDERS_SH)
+    local module_path_var_upper="${module_path_var^^}"  # Großbuchstaben erzwingen
+    local function_name="$2"          # Name der zu testenden Funktion
+    local params=("${@:3}")           # Alle weiteren Parameter für die Funktion
 
-    if [ "$result" -eq "$expected_result" ]; then
-        echo "✅ Die Funktion $function_name wurde erfolgreich ausgeführt ($result). Rückgabe: $function_output"
-    else
-        echo "❌ Die Funktion $function_name ist fehlgeschlagen. Ergebnis: $result, Erwartet: $expected_result"
+    echo -n "Test $function_name: "
+
+    # DEBUG: Informationen über den Aufruf
+    echo -e "\n→ [DEBUG] test_function: Teste Funktion '$function_name' aus Modul '${!module_path_var_upper}'"
+    echo "→ [DEBUG] test_function: Parameter: ${params[*]}"
+
+    # Prüfe, ob das Modul verfügbar ist
+    if [ -z "${!module_path_var_upper}" ] || [ ! -f "${!module_path_var_upper}" ]; then
+        echo "→ [DEBUG] test_function: ❌ Modul nicht verfügbar. Variable: $module_path_var_upper, Pfad: ${!module_path_var_upper:-nicht gesetzt}"
+        echo "❌ Die Funktion $function_name konnte nicht getestet werden: Modul nicht verfügbar."
+        return 1
     fi
+    
+    echo "→ [DEBUG] test_function: ✅ Modul gefunden: '${!module_path_var_upper}'"
+    
+    # Prüfe, ob die Funktion im Modul existiert
+    if ! grep -q "^$function_name[[:space:]]*()[[:space:]]*{" "${!module_path_var_upper}" 2>/dev/null; then
+        echo "→ [DEBUG] test_function: ❌ Funktion '$function_name' wurde im Modul nicht gefunden"
+        echo "❌ Die Funktion $function_name konnte nicht getestet werden: Funktion nicht im Modul gefunden."
+        return 2
+    fi
+    
+    echo "→ [DEBUG] test_function: ✅ Funktion '$function_name' im Modul gefunden"
+    
+    # Führe die Funktion aus und erfasse Rückgabewert und Ausgabe
+    local output
+    local result
+    
+    # Führe die Funktion mit den übergebenen Parametern aus
+    set +e  # Deaktiviere Fehlerabbruch
+    if [ ${#params[@]} -gt 0 ]; then
+        echo "→ [DEBUG] test_function: Führe aus: ${!module_path_var_upper} $function_name ${params[*]}"
+        output=$("${!module_path_var_upper}" "$function_name" "${params[@]}" 2>&1)
+        result=$?
+    else
+        echo "→ [DEBUG] test_function: Führe aus: ${!module_path_var_upper} $function_name"
+        output=$("${!module_path_var_upper}" "$function_name" 2>&1)
+        result=$?
+    fi
+    set -e  # Reaktiviere Fehlerabbruch
+    
+    # Zeige Ergebnisse
+    echo "→ [DEBUG] test_function: Rückgabewert: $result"
+    if [ -n "$output" ]; then
+        echo "→ [DEBUG] test_function: Ausgabe: $output"
+    else
+        echo "→ [DEBUG] test_function: Keine Ausgabe"
+    fi
+    
+    # Zeige Ergebnis in Format "ERFOLG/FEHLER"
+    if [ $result -eq 0 ]; then
+        if [ -n "$output" ]; then
+            echo "✅ Die Funktion $function_name wurde erfolgreich ausgeführt. Ausgabe: $output"
+        else
+            echo "✅ Die Funktion $function_name wurde erfolgreich ausgeführt."
+        fi
+    else
+        if [ -n "$output" ]; then
+            echo "❌ Die Funktion $function_name ist fehlgeschlagen. Rückgabewert: $result, Ausgabe: $output"
+        else
+            echo "❌ Die Funktion $function_name ist fehlgeschlagen. Rückgabewert: $result"
+        fi
+    fi
+    
+    # Gib den originalen Rückgabewert der getesteten Funktion zurück
+    return $result
 }
 
 # Informiere über Strategie
@@ -84,9 +146,7 @@ echo "Test der Funktionen in manage_folders.sh"
 echo "-------------------------------------------------------------------------"
 
 # Test: get_install_dir
-echo -n "Test get_install_dir: "
-install_dir="$("$MANAGE_FOLDERS_SH" "get_install_dir")"
-test_function $install_dir "get_install_dir" 0 "$install_dir"
+test_function "$MANAGE_FOLDERS_SH" "get_install_dir" 
 
 # Test: get_backend_dir
 echo -n "Test get_backend_dir: "
