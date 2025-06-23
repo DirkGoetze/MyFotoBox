@@ -60,7 +60,6 @@ echo
 # -------------------------------
 echo "-------------------------------------------------------------------------"
 echo "Test für das Laden aller Module zentral über lib_core.sh"
-echo "-------------------------------------------------------------------------"
 
 # Setze den Pfad zum Skriptverzeichnis
 TEST_SCRIPT_DIR="/opt/fotobox/backend/scripts"
@@ -77,7 +76,7 @@ echo "Lade Module aus Verzeichnis: $TEST_SCRIPT_DIR"
 
 # Lade lib_core.sh, was automatisch alle anderen Module laden sollte
 echo
-echo -n "Lade lib_core.sh für zentrale Modulladelogik... "
+echo "Lade lib_core.sh für zentrale Modulladelogik ..."
 if [ ! -f "$TEST_SCRIPT_DIR/lib_core.sh" ]; then
     echo "❌ ERROR: lib_core.sh nicht gefunden!"
     exit 1

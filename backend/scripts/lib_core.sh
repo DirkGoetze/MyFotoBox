@@ -15,8 +15,115 @@ fi
 # Sofort markieren, dass diese Bibliothek geladen wird, um rekursive Probleme zu vermeiden
 LIB_CORE_LOADED=1
 
+# ===========================================================================
+# Zentrale Konstanten für das gesamte Fotobox-System
+# ===========================================================================
+# Primäre Pfaddefinitionen (Single Source of Truth)
+DEFAULT_DIR_INSTALL="/opt/fotobox"
+DEFAULT_DIR_BACKEND="$DEFAULT_DIR_INSTALL/backend"
+DEFAULT_DIR_BACKEND_SCRIPTS="$DEFAULT_DIR_BACKEND/scripts"
+DEFAULT_DIR_BACKEND_VENV="$DEFAULT_DIR_BACKEND/venv"
+DEFAULT_DIR_DATA="$DEFAULT_DIR_INSTALL/data"
+DEFAULT_DIR_LOG="$DEFAULT_DIR_INSTALL/log"
+DEFAULT_DIR_TMP="$DEFAULT_DIR_INSTALL/tmp"
+DEFAULT_DIR_BACKUP="$DEFAULT_DIR_INSTALL/backup"
+DEFAULT_DIR_BACKUP_NGINX="$DEFAULT_DIR_BACKUP/nginx"
+DEFAULT_DIR_BACKUP_HTTPS="$DEFAULT_DIR_BACKUP/https"
+DEFAULT_DIR_CONF="$DEFAULT_DIR_INSTALL/conf"
+DEFAULT_DIR_CONF_NGINX="$DEFAULT_DIR_CONF/nginx"
+DEFAULT_DIR_CONF_TEMPLATES="$DEFAULT_DIR_CONF/templates"
+DEFAULT_DIR_CONF_HTTPS="$DEFAULT_DIR_CONF/https"
+DEFAULT_DIR_CONF_CAMERA="$DEFAULT_DIR_CONF/cameras"
+DEFAULT_DIR_FRONTEND="$DEFAULT_DIR_INSTALL/frontend"
+
+# Fallback-Pfade für den Fall, dass Standardpfade nicht verfügbar sind
+FALLBACK_DIR_INSTALL="/var/lib/fotobox"
+FALLBACK_DIR_BACKEND="$FALLBACK_DIR_INSTALL/backend"
+FALLBACK_DIR_BACKEND_SCRIPTS="$FALLBACK_DIR_INSTALL/backend/scripts"
+FALLBACK_DIR_BACKEND_VENV="$FALLBACK_DIR_INSTALL/backend/venv"
+FALLBACK_DIR_DATA="$FALLBACK_DIR_INSTALL/data"
+FALLBACK_DIR_BACKUP="/var/backups/fotobox"
+FALLBACK_DIR_LOG="/var/log/fotobox"
+FALLBACK_DIR_LOG_2="/tmp/fotobox"
+FALLBACK_DIR_LOG_3="."
+FALLBACK_DIR_FRONTEND="/var/www/html/fotobox"
+FALLBACK_DIR_CONF="/etc/fotobox"
+FALLBACK_DIR_CONF_NGINX="$FALLBACK_DIR_CONF/nginx"
+FALLBACK_DIR_CONF_TEMPLATES="$FALLBACK_DIR_CONF/templates"
+FALLBACK_DIR_CONF_HTTPS="$FALLBACK_DIR_CONF/https"
+FALLBACK_DIR_CONF_CAMERA="$FALLBACK_DIR_CONF/cameras"
+FALLBACK_DIR_BACKUP_NGINX="$FALLBACK_DIR_BACKUP/nginx"
+FALLBACK_DIR_BACKUP_HTTPS="$FALLBACK_DIR_BACKUP/https"
+FALLBACK_DIR_TMP="/tmp/fotobox"
+
+# Initialisiere Runtime-Variablen mit den Standardwerten
+: "${INSTALL_DIR:=$DEFAULT_DIR_INSTALL}"
+: "${BACKEND_DIR:=$DEFAULT_DIR_BACKEND}"
+# BASH_DIR wurde entfernt und durch SCRIPT_DIR ersetzt
+: "${BACKEND_VENV_DIR:=$DEFAULT_DIR_BACKEND_VENV}"
+: "${BACKUP_DIR:=$DEFAULT_DIR_BACKUP}"
+: "${BACKUP_DIR_NGINX:=$DEFAULT_DIR_BACKUP_NGINX}" 
+: "${CONF_DIR:=$DEFAULT_DIR_CONF}"
+: "${CONF_DIR_NGINX:=$DEFAULT_DIR_CONF_NGINX}"
+: "${CONF_DIR_TEMPLATES:=$DEFAULT_DIR_CONF_TEMPLATES}"
+: "${DATA_DIR:=$DEFAULT_DIR_DATA}"
+: "${LOG_DIR:=$DEFAULT_DIR_LOG}"
+: "${FRONTEND_DIR:=$DEFAULT_DIR_FRONTEND}"
+: "${TMP_DIR:=$DEFAULT_DIR_TMP}"
+
 # Zentrale Definition des Skriptverzeichnisses - wird von allen Modulen verwendet
-SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+: "${SCRIPT_DIR:=$DEFAULT_DIR_BACKEND_SCRIPTS}"
+
+# Farbkonstanten für Ausgaben (Shell-ANSI)
+# ------------------------------------------------------------------------------
+# HINWEIS: Für Shellskripte gilt zusätzlich:
+# - Fehlerausgaben immer in Rot
+# - Ausgaben zu auszuführenden Schritten in Gelb
+# - Erfolgsmeldungen in Dunkelgrün
+# - Aufforderungen zur Nutzeraktion in Blau
+# - Alle anderen Ausgaben nach Systemstandard
+# Siehe Funktionsbeispiele und DOKUMENTATIONSSTANDARD.md
+COLOR_RESET="\033[0m"
+COLOR_RED="\033[1;31m"
+COLOR_GREEN="\033[1;32m"
+COLOR_YELLOW="\033[1;33m"
+COLOR_BLUE="\033[1;34m"
+COLOR_CYAN="\033[1;36m"
+
+# Standard-Flags
+: "${DEBUG_MOD:=0}"          # Legacy-Flag (für Kompatibilität mit älteren Skripten)
+: "${UNATTENDED:=0}"
+
+# Debug-Modus: Lokal und global steuerbar
+# DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
+# DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
+: "${DEBUG_MOD_LOCAL:=0}"    # Lokales Debug-Flag für einzelne Skripte
+DEBUG_MOD_GLOBAL=1           # Globales Flag, das alle lokalen überstimmt
+
+# Lademodus für Module
+# 0 = Bei Bedarf laden (für laufenden Betrieb)
+# 1 = Alle Module sofort laden (für Installation/Update/Deinstallation)
+: "${MODULE_LOAD_MODE:=0}"   # Standardmäßig Module nur bei Bedarf laden
+
+# Benutzer- und Berechtigungseinstellungen
+DEFAULT_USER="fotobox"
+DEFAULT_GROUP="fotobox"
+DEFAULT_MODE="755"
+
+# Port-Einstellungen
+DEFAULT_HTTP_PORT=80
+DEFAULT_HTTPS_PORT=443
+
+# Konfigurationsdatei
+DEFAULT_CONFIG_FILE="$DEFAULT_DIR_CONF/fotobox-config.ini"
+
+# Backend Service 
+SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
+SYSTEMD_DST="/etc/systemd/system/fotobox-backend.service"
+
+# ===========================================================================
+# Allgemeine Hilfsfunktionen für alle Skripte
+# ===========================================================================
 
 define_module_paths() {
     # -----------------------------------------------------------------------
@@ -26,7 +133,7 @@ define_module_paths() {
     # Parameter: keine
     # Rückgabewert: 0 bei Erfolg, 1 bei Fehler
     # -----------------------------------------------------------------------
-    local script_dir="${SCRIPT_DIR:-$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")}"
+    local script_dir="$DEFAULT_DIR_BACKEND_SCRIPTS"
     local prefix="manage_"
     local suffix=".sh"
     
@@ -65,10 +172,6 @@ define_module_paths() {
     fi
 }
 
-# ===========================================================================
-# Allgemeine Hilfsfunktionen für alle Skripte
-# ===========================================================================
-
 # Hilfsfunktion für Debug-Ausgaben (wird vor dem Laden von manage_logging.sh verwendet)
 debug_output() {
     # Diese Funktion entscheidet, ob print_debug (falls geladen) oder echo verwendet wird
@@ -78,7 +181,7 @@ debug_output() {
         if [ "${MANAGE_LOGGING_LOADED:-0}" = "1" ] && type print_debug &>/dev/null; then
             print_debug "$message"
         else
-            echo -e "\033[1;36m  → [DEBUG]\033[0m $message"
+            echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $message"
         fi
     fi
 }
@@ -136,109 +239,6 @@ check_param() {
   
     return 0
 }
-
-# ===========================================================================
-# Zentrale Konstanten für das gesamte Fotobox-System
-# ===========================================================================
-# Primäre Pfaddefinitionen (Single Source of Truth)
-DEFAULT_DIR_INSTALL="/opt/fotobox"
-DEFAULT_DIR_BACKEND="$DEFAULT_DIR_INSTALL/backend"
-DEFAULT_DIR_BACKEND_SCRIPTS="$DEFAULT_DIR_BACKEND/scripts"
-DEFAULT_DIR_BACKEND_VENV="$DEFAULT_DIR_BACKEND/venv"
-DEFAULT_DIR_DATA="$DEFAULT_DIR_INSTALL/data"
-DEFAULT_DIR_LOG="$DEFAULT_DIR_INSTALL/log"
-DEFAULT_DIR_TMP="$DEFAULT_DIR_INSTALL/tmp"
-DEFAULT_DIR_BACKUP="$DEFAULT_DIR_INSTALL/backup"
-DEFAULT_DIR_BACKUP_NGINX="$DEFAULT_DIR_BACKUP/nginx"
-DEFAULT_DIR_BACKUP_HTTPS="$DEFAULT_DIR_BACKUP/https"
-DEFAULT_DIR_CONF="$DEFAULT_DIR_INSTALL/conf"
-DEFAULT_DIR_CONF_NGINX="$DEFAULT_DIR_CONF/nginx"
-DEFAULT_DIR_CONF_TEMPLATES="$DEFAULT_DIR_CONF/templates"
-DEFAULT_DIR_CONF_HTTPS="$DEFAULT_DIR_CONF/https"
-DEFAULT_DIR_CONF_CAMERA="$DEFAULT_DIR_CONF/cameras"
-DEFAULT_DIR_FRONTEND="$DEFAULT_DIR_INSTALL/frontend"
-
-# Fallback-Pfade für den Fall, dass Standardpfade nicht verfügbar sind
-FALLBACK_DIR_INSTALL="/var/lib/fotobox"
-FALLBACK_DIR_BACKEND="$FALLBACK_DIR_INSTALL/backend"
-FALLBACK_DIR_BACKEND_SCRIPTS="$FALLBACK_DIR_INSTALL/backend/scripts"
-FALLBACK_DIR_BACKEND_VENV="$FALLBACK_DIR_INSTALL/backend/venv"
-FALLBACK_DIR_DATA="$FALLBACK_DIR_INSTALL/data"
-FALLBACK_DIR_BACKUP="/var/backups/fotobox"
-FALLBACK_DIR_LOG="/var/log/fotobox"
-FALLBACK_DIR_LOG_2="/tmp/fotobox"
-FALLBACK_DIR_LOG_3="."
-FALLBACK_DIR_FRONTEND="/var/www/html/fotobox"
-FALLBACK_DIR_CONF="/etc/fotobox"
-FALLBACK_DIR_CONF_NGINX="$FALLBACK_DIR_CONF/nginx"
-FALLBACK_DIR_CONF_TEMPLATES="$FALLBACK_DIR_CONF/templates"
-FALLBACK_DIR_CONF_HTTPS="$FALLBACK_DIR_CONF/https"
-FALLBACK_DIR_CONF_CAMERA="$FALLBACK_DIR_CONF/cameras"
-FALLBACK_DIR_BACKUP_NGINX="$FALLBACK_DIR_BACKUP/nginx"
-FALLBACK_DIR_BACKUP_HTTPS="$FALLBACK_DIR_BACKUP/https"
-FALLBACK_DIR_TMP="/tmp/fotobox"
-
-# Initialisiere Runtime-Variablen mit den Standardwerten
-: "${INSTALL_DIR:=$DEFAULT_DIR_INSTALL}"
-: "${BACKEND_DIR:=$DEFAULT_DIR_BACKEND}"
-# BASH_DIR wurde entfernt und durch SCRIPT_DIR ersetzt
-: "${BACKEND_VENV_DIR:=$DEFAULT_DIR_BACKEND_VENV}"
-: "${BACKUP_DIR:=$DEFAULT_DIR_BACKUP}"
-: "${BACKUP_DIR_NGINX:=$DEFAULT_DIR_BACKUP_NGINX}" 
-: "${CONF_DIR:=$DEFAULT_DIR_CONF}"
-: "${CONF_DIR_NGINX:=$DEFAULT_DIR_CONF_NGINX}"
-: "${CONF_DIR_TEMPLATES:=$DEFAULT_DIR_CONF_TEMPLATES}"
-: "${DATA_DIR:=$DEFAULT_DIR_DATA}"
-: "${LOG_DIR:=$DEFAULT_DIR_LOG}"
-: "${FRONTEND_DIR:=$DEFAULT_DIR_FRONTEND}"
-: "${TMP_DIR:=$DEFAULT_DIR_TMP}"
-
-# Farbkonstanten für Ausgaben (Shell-ANSI)
-# ------------------------------------------------------------------------------
-# HINWEIS: Für Shellskripte gilt zusätzlich:
-# - Fehlerausgaben immer in Rot
-# - Ausgaben zu auszuführenden Schritten in Gelb
-# - Erfolgsmeldungen in Dunkelgrün
-# - Aufforderungen zur Nutzeraktion in Blau
-# - Alle anderen Ausgaben nach Systemstandard
-# Siehe Funktionsbeispiele und DOKUMENTATIONSSTANDARD.md
-COLOR_RESET="\033[0m"
-COLOR_RED="\033[1;31m"
-COLOR_GREEN="\033[1;32m"
-COLOR_YELLOW="\033[1;33m"
-COLOR_BLUE="\033[1;34m"
-COLOR_CYAN="\033[1;36m"
-
-# Standard-Flags
-: "${DEBUG_MOD:=0}"          # Legacy-Flag (für Kompatibilität mit älteren Skripten)
-: "${UNATTENDED:=0}"
-
-# Debug-Modus: Lokal und global steuerbar
-# DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
-# DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
-: "${DEBUG_MOD_LOCAL:=0}"    # Lokales Debug-Flag für einzelne Skripte
-DEBUG_MOD_GLOBAL=1           # Globales Flag, das alle lokalen überstimmt
-
-# Lademodus für Module
-# 0 = Bei Bedarf laden (für laufenden Betrieb)
-# 1 = Alle Module sofort laden (für Installation/Update/Deinstallation)
-: "${MODULE_LOAD_MODE:=0}"   # Standardmäßig Module nur bei Bedarf laden
-
-# Benutzer- und Berechtigungseinstellungen
-DEFAULT_USER="fotobox"
-DEFAULT_GROUP="fotobox"
-DEFAULT_MODE="755"
-
-# Port-Einstellungen
-DEFAULT_HTTP_PORT=80
-DEFAULT_HTTPS_PORT=443
-
-# Konfigurationsdatei
-DEFAULT_CONFIG_FILE="$DEFAULT_DIR_CONF/fotobox-config.ini"
-
-# Backend Service 
-SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
-SYSTEMD_DST="/etc/systemd/system/fotobox-backend.service"
 
 # ===========================================================================
 # Hilfsfunktionen zur Einbindung externer Skript-Ressourcen
@@ -312,6 +312,12 @@ bind_resource() {
     return 0  # Erfolgreich geladen
 }
 
+# load_resources
+load_resources_debug_0001="[DEBUG] load_resources: Starte Prüfung aller benötigten Ressourcen"
+load_resources_debug_0002="[DEBUG] load_resources: Versuche %s einzubinden ..."
+load_resources_debug_0003="[DEBUG] load_resources: Fehler beim Laden von %s, erstelle Fallback-Funktionen"
+load_resources_debug_0004="[DEBUG] load_resources: Fallback-Funktion für %s wurde erstellt"
+
 load_resources() {
     # -----------------------------------------------------------------------
     # Funktion: Prüfung und Einbindung aller benötigten Skript-Ressourcen
@@ -320,98 +326,101 @@ load_resources() {
     # -----------------------------------------------------------------------
     local result=0
     
-    debug_output "chk_resources: Starte Prüfung aller benötigten Ressourcen"
+    debug_output "$(printf "$load_resources_debug_0001")"
     
     # 1. manage_folders.sh einbinden
-    debug_output "chk_resources: Versuche manage_folders.sh einzubinden"
+    debug_output "$(printf "$load_resources_debug_0002" "manage_folders.sh")"
     bind_resource "MANAGE_FOLDERS_LOADED" "$SCRIPT_DIR" "manage_folders.sh"
     if [ $? -ne 0 ]; then
-        debug_output "chk_resources: Fehler beim Laden von manage_folders.sh, erstelle Fallback-Funktionen"
-        echo "Fehler: manage_folders.sh konnte nicht geladen werden."
+        debug_output "$(printf "$load_resources_debug_0003" "manage_folders.sh")"
 
         # Minimale Implementierung, falls manage_folders.sh nicht verfügbar ist
         get_log_dir() {
             local dir="./logs"
-            debug_output "get_log_dir (Fallback): Versuche Logverzeichnis '$dir' zu erstellen"
+            debug_output "[DEBUG] get_log_dir (Fallback): Versuche Logverzeichnis '$dir' zu erstellen"
             
             # Versuche Standardverzeichnis zu erstellen
             mkdir -p "$dir" 2>/dev/null
             
             # Fallback-Mechanismus, wenn Standardverzeichnis nicht erstellt werden kann
             if [ ! -d "$dir" ]; then
-                debug_output "get_log_dir (Fallback): Standardverzeichnis '$dir' nicht erstellbar, versuche Alternativen"
+                debug_output "[DEBUG] get_log_dir (Fallback): Standardverzeichnis '$dir' nicht erstellbar, versuche Alternativen"
                 # Fallback 1: Temporäres Verzeichnis
                 if [ -w "/tmp" ]; then
-                    debug_output "get_log_dir (Fallback): Verwende /tmp/fotobox_logs"
-                    echo "Standard-Logverzeichnis nicht verfügbar, nutze /tmp/fotobox_logs" >&2
+                    debug_output "[DEBUG] get_log_dir (Fallback): Verwende /tmp/fotobox_logs"
                     dir="/tmp/fotobox_logs"
                     mkdir -p "$dir" 2>/dev/null
                 # Fallback 2: Aktuelles Verzeichnis
                 elif [ -w "." ]; then
-                    debug_output "get_log_dir (Fallback): Verwende ./fotobox_logs"
-                    echo "Standard-Logverzeichnis nicht verfügbar, nutze ./fotobox_logs" >&2
+                    debug_output "[DEBUG] get_log_dir (Fallback): Verwende ./fotobox_logs"
                     dir="./fotobox_logs"
                     mkdir -p "$dir" 2>/dev/null
                 else
-                    debug_output "get_log_dir (Fallback): Konnte kein schreibbares Logverzeichnis finden"
-                    echo "Fehler: Konnte kein schreibbares Logverzeichnis finden oder erstellen." >&2
+                    debug_output "[DEBUG] get_log_dir (Fallback): Konnte kein schreibbares Logverzeichnis finden"
                     return 1
                 fi
             fi
-            
-            # Teste Schreibrecht für das Logverzeichnis
-            debug_output "get_log_dir (Fallback): Teste Schreibrechte für Verzeichnis '$dir'"
-            if ! touch "$dir/test_log.tmp" 2>/dev/null; then
-                debug_output "get_log_dir (Fallback): Keine Schreibrechte im Verzeichnis '$dir'"
-                echo "Fehler: Keine Schreibrechte im Logverzeichnis $dir" >&2
-                return 1
-            fi
-            rm -f "$dir/test_log.tmp" 2>/dev/null
-            
-            debug_output "get_log_dir (Fallback): Verwende Logverzeichnis '$dir'"
+            # Erfolgreich erstelltes oder vorhandenes Verzeichnis zurückgeben
+            debug_output "[DEBUG] get_log_dir (Fallback): Verwende Logverzeichnis '$dir'"
             echo "$dir"
         }
 
         result=0 # kein Fehler, da Fallback-Funktion vorhanden
-        debug_output "chk_resources: Fallback-Funktion für manage_folders.sh wurde erstellt"
+        debug_output "$(printf "$load_resources_debug_0004" "manage_folders.sh")"
     fi
     
     # 2. manage_files.sh einbinden
-    debug_output "chk_resources: Versuche manage_files.sh einzubinden"
+    debug_output "$(printf "$load_resources_debug_0002" "manage_files.sh")"
     bind_resource "MANAGE_FILES_LOADED" "$SCRIPT_DIR" "manage_files.sh"
     if [ $? -ne 0 ]; then
-        debug_output "chk_resources: Fehler beim Laden von manage_files.sh, erstelle Fallback-Funktionen"
-        echo "Fehler: manage_files.sh konnte nicht geladen werden."
+        debug_output "$(printf "$load_resources_debug_0003" "manage_files.sh")"
         result=1
+
+        # Fallback-Funktion für manage_files.sh
+        get_log_file() {
+            local log_file="$(get_log_dir)/$(date '+%Y-%m-%d')_fotobox.log"
+            debug_output "[DEBUG] get_log_file (Fallback): Verwende Logdatei '$log_file'"
+            
+            # Teste Schreibrecht für die Logdatei
+            if ! touch "$log_file" 2>/dev/null; then
+                debug_output "[DEBUG] get_log_file (Fallback): Keine Schreibrechte für Logdatei '$log_file'"
+                return 1
+            fi
+            
+            echo "$log_file"
+        }
+
+        result=0 # kein Fehler, da Fallback-Funktion vorhanden
+        debug_output "$(printf "$load_resources_debug_0004" "manage_files.sh")"
     fi
 
     # 3. manage_logging.sh einbinden
-    debug_output "chk_resources: Versuche manage_logging.sh einzubinden"
+    debug_output "$(printf "$load_resources_debug_0002" "manage_logging.sh")"
     bind_resource "MANAGE_LOGGING_LOADED" "$SCRIPT_DIR" "manage_logging.sh"
     if [ $? -ne 0 ]; then
-        debug_output "chk_resources: Fehler beim Laden von manage_logging.sh, erstelle Fallback-Funktionen"
+        debug_output "$(printf "$load_resources_debug_0003" "manage_logging.sh")"
         echo "Fehler: manage_logging.sh konnte nicht geladen werden."
         
         # Fallback für Logging bereitstellen mit erweiterten Funktionen
         log() {
             local LOG_FILE="$(get_log_dir)/$(date '+%Y-%m-%d')_fotobox.log"
-            debug_output "log (Fallback): Schreibe Log in Datei '$LOG_FILE'"
+            debug_output "[DEBUG] log (Fallback): Schreibe Log in Datei '$LOG_FILE'"
 
             # Wenn get_log_file verfügbar ist, verwenden wir diese Funktion
             if type get_log_file &>/dev/null; then
                 LOG_FILE=$(get_log_file)
-                debug_output "log (Fallback): Verwende get_log_file, Logdatei ist nun '$LOG_FILE'"
+                debug_output "[DEBUG] log (Fallback): Verwende get_log_file, Logdatei ist nun '$LOG_FILE'"
             fi
             
             if [ -z "$1" ]; then
                 # Bei leerem Parameter: Rotation simulieren
-                debug_output "log (Fallback): Leerer Parameter, führe Log-Rotation aus"
+                debug_output "[DEBUG] log (Fallback): Leerer Parameter, führe Log-Rotation aus"
                 touch "$LOG_FILE" 2>/dev/null
                 return
             fi
             echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG_FILE"
         }
-        
+                
         # Erweiterte Ausgabefunktionen mit konsistenter Formatierung
         print_step() { 
             debug_output "print_step (Fallback): $*"
@@ -515,69 +524,64 @@ load_resources() {
                 log "DEBUG: $*"
             fi
         }
-        
+
         result=0 # kein Fehler, da Fallback-Funktion vorhanden
-        debug_output "chk_resources: Fallback-Funktionen für manage_logging.sh wurden erstellt"
+        debug_output "load_resources: Fallback-Funktionen für manage_logging.sh wurden erstellt"
     fi
     
     # 4. manage_nginx.sh einbinden
-    debug_output "chk_resources: Versuche manage_nginx.sh einzubinden"
+    debug_output "load_resources: Versuche manage_nginx.sh einzubinden"
     bind_resource "MANAGE_NGINX_LOADED" "$SCRIPT_DIR" "manage_nginx.sh"
     if [ $? -ne 0 ]; then
-        debug_output "chk_resources: Fehler beim Laden von manage_nginx.sh"
-        echo "Fehler: manage_nginx.sh konnte nicht geladen werden."
+        debug_output "load_resources: Fehler beim Laden von manage_nginx.sh"
         result=1
     fi
 
     # 5. manage_https.sh einbinden
-    debug_output "chk_resources: Versuche manage_https.sh einzubinden"
+    debug_output "load_resources: Versuche manage_https.sh einzubinden"
     bind_resource "MANAGE_HTTPS_LOADED" "$SCRIPT_DIR" "manage_https.sh"
     if [ $? -ne 0 ]; then
-        debug_output "chk_resources: Fehler beim Laden von manage_https.sh"
-        echo "Fehler: manage_https.sh konnte nicht geladen werden."
+        debug_output "load_resources: Fehler beim Laden von manage_https.sh"
         result=1
     fi
 
     # 6. manage_firewall.sh einbinden
-    debug_output "chk_resources: Versuche manage_firewall.sh einzubinden"
+    debug_output "load_resources: Versuche manage_firewall.sh einzubinden"
     bind_resource "MANAGE_FIREWALL_LOADED" "$SCRIPT_DIR" "manage_firewall.sh"
     if [ $? -ne 0 ]; then
-        debug_output "chk_resources: Fehler beim Laden von manage_firewall.sh"
-        echo "Fehler: manage_firewall.sh konnte nicht geladen werden."
+        debug_output "load_resources: Fehler beim Laden von manage_firewall.sh"
         result=1
     fi
 
     # 7. manage_python_env.sh einbinden
-    debug_output "chk_resources: Versuche manage_python_env.sh einzubinden"
+    debug_output "load_resources: Versuche manage_python_env.sh einzubinden"
     bind_resource "MANAGE_PYTHON_ENV_LOADED" "$SCRIPT_DIR" "manage_python_env.sh"
     if [ $? -ne 0 ]; then
-        debug_output "chk_resources: Fehler beim Laden von manage_python_env.sh"
-        echo "Fehler: manage_python_env.sh konnte nicht geladen werden."
+        debug_output "load_resources: Fehler beim Laden von manage_python_env.sh"
         result=1
     fi
 
     # 8. manage_backend_service.sh einbinden
-    debug_output "chk_resources: Versuche manage_backend_service.sh einzubinden"
+    debug_output "load_resources: Versuche manage_backend_service.sh einzubinden"
     bind_resource "MANAGE_BACKEND_SERVICE_LOADED" "$SCRIPT_DIR" "manage_backend_service.sh"
     if [ $? -ne 0 ]; then
-        debug_output "chk_resources: Fehler beim Laden von manage_backend_service.sh"
-        echo "Fehler: manage_backend_service.sh konnte nicht geladen werden."
+        debug_output "load_resources: Fehler beim Laden von manage_backend_service.sh"
         result=1
     fi
 
-    debug_output "chk_resources: Prüfung aller Ressourcen abgeschlossen mit Ergebnis: $result"
+    debug_output "load_resources: Prüfung aller Ressourcen abgeschlossen mit Ergebnis: $result"
     return $result
 }
 
 # check_module
-check_module_debug_0001="Prüfe Modul '%s'"
-check_module_debug_0002="Prüfe Guard-Variable: '%s'"
-check_module_debug_0003="Guard-Variable '%s' ist korrekt gesetzt (%s=%s)"
-check_module_debug_0004="Guard-Variable '%s' ist NICHT korrekt gesetzt (%s=%s)"
-check_module_debug_0005="Prüfe Pfad-Variable: '%s'"
-check_module_debug_0006="Pfad-Variable '%s' ist korrekt definiert (%s=%s)"
-check_module_debug_0007="Pfad-Variable '%s' ist NICHT korrekt definiert (%s=%s)"
-check_module_debug_0008="Modul '%s' wurde korrekt geladen"
+check_module_debug_0001="[DEBUG] check_module: Prüfe Modul '%s'"
+check_module_debug_0002="[DEBUG] check_module: Prüfe Guard-Variable: '%s'"
+check_module_debug_0003="[DEBUG] check_module: Guard-Variable '%s' ist korrekt gesetzt (%s=%s)"
+check_module_debug_0004="[DEBUG] check_module: Guard-Variable '%s' ist NICHT korrekt gesetzt (%s=%s)"
+check_module_debug_0005="[DEBUG] check_module: Prüfe Pfad-Variable: '%s'"
+check_module_debug_0006="[DEBUG] check_module: Pfad-Variable '%s' ist korrekt definiert (%s=%s)"
+check_module_debug_0007="[DEBUG] check_module: Pfad-Variable '%s' ist NICHT korrekt definiert (%s=%s)"
+check_module_debug_0008="[DEBUG] check_module: Modul '%s' wurde korrekt geladen"
 
 check_module_log_0001="Guard-Variable '%s' ist NICHT korrekt gesetzt (%s=%s)"
 check_module_log_0002="Pfad-Variable '%s' ist NICHT korrekt definiert (%s=%s)"
@@ -629,12 +633,12 @@ check_module() {
 }
 
 # check_all_modules_loaded
-check_all_modules_loaded_debug_0001="Prüfe Status aller Module"
-check_all_modules_loaded_debug_0002="Keine Module (manage_*.sh) im Verzeichnis %s gefunden"
-check_all_modules_loaded_debug_0003="Skriptverzeichnis %s existiert nicht"
-check_all_modules_loaded_debug_0004="Ergebnis - Gesamt: %d, Geladen: %d, Fehlerhaft: %d"
-check_all_modules_loaded_debug_0005="Alle Module wurden erfolgreich geladen."
-check_all_modules_loaded_debug_0006="Folgende Module konnten nicht korrekt geladen werden: '%s'"    
+check_all_modules_loaded_debug_0001="[DEBUG] check_all_modules_loaded: Prüfe Status aller Module"
+check_all_modules_loaded_debug_0002="[DEBUG] check_all_modules_loaded: Keine Module (manage_*.sh) im Verzeichnis %s gefunden"
+check_all_modules_loaded_debug_0003="[DEBUG] check_all_modules_loaded: Skriptverzeichnis %s existiert nicht"
+check_all_modules_loaded_debug_0004="[DEBUG] check_all_modules_loaded: Ergebnis - Gesamt: %d, Geladen: %d, Fehlerhaft: %d"
+check_all_modules_loaded_debug_0005="[DEBUG] check_all_modules_loaded: Alle Module wurden erfolgreich geladen."
+check_all_modules_loaded_debug_0006="[DEBUG] check_all_modules_loaded: Folgende Module konnten nicht korrekt geladen werden: '%s'"
 
 check_all_modules_loaded() {
     # -----------------------------------------------------------------------
@@ -707,12 +711,12 @@ check_all_modules_loaded() {
 # Hauptteil des Skripts: Ressourcen laden und Module überprüfen
 # ===========================================================================
 # Initialisieren aller Ressourcen
-debug_output "load_resources: Initialisiere alle Ressourcen"
+debug_output "[DEBUG] lib_core.sh: Initialisieren und Laden aller Ressourcen"
 
 # Versuche, alle benötigten Ressourcen zu laden
 load_resources
 if [ $? -ne 0 ]; then
-    debug_output "load_resources: Fehler beim Laden der Ressourcen, Abbruch"
+    debug_output "[DEBUG] lib_core.sh: Fehler beim Laden der Ressourcen, Abbruch"
     echo "Fehler: Einige Ressourcen konnten nicht geladen werden. Bitte überprüfen Sie die Fehlermeldungen."
     exit 1
 fi
