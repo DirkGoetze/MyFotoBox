@@ -52,11 +52,11 @@ test_function() {
     # Führe die Funktion mit den übergebenen Parametern aus
     set +e  # Deaktiviere Fehlerabbruch
     if [ ${#params[@]} -gt 0 ]; then
-        echo "→ [DEBUG] test_function: Führe aus: ${!module_path_var_upper} $function_name ${params[*]}"
+        echo "  → [DEBUG] test_function: Führe aus: ${!module_path_var_upper} $function_name ${params[*]}"
         output=$("${!module_path_var_upper}" "$function_name" "${params[@]}" 2>&1)
         result=$?
     else
-        echo "→ [DEBUG] test_function: Führe aus: ${!module_path_var_upper} $function_name"
+        echo "  → [DEBUG] test_function: Führe aus: ${!module_path_var_upper} $function_name"
         output=$("${!module_path_var_upper}" "$function_name" 2>&1)
         result=$?
     fi
