@@ -243,7 +243,7 @@ debug() {
     # .........  $3 = optional: Funktionsname
     if [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ]; then
         local msg="$1"
-        local mode="${2:-LOG}"
+        local mode="${2:-CLI}"
         local func="${3:-${FUNCNAME[1]}}"
         case "$mode" in
             CLI)
@@ -251,18 +251,6 @@ debug() {
                 ;;
             JSON)
                 echo "{\"debug\":true, \"function\":\"$func\", \"message\":\"$msg\"}"
-                ;;
-            LOG|*)
-                # Direkt in die Logdatei schreiben statt log() aufzurufen
-                local LOG_FILE
-                LOG_FILE="$("$manage_files_sh" get_log_file)"
-                if [ -f "$LOG_FILE" ] && [ -w "$LOG_FILE" ]; then
-                    echo "$(date "+%Y-%m-%d %H:%M:%S") DEBUG[$func]: $msg" >> "$LOG_FILE" 2>/dev/null || {
-                        echo "FEHLER: Konnte Debug-Nachricht nicht in $LOG_FILE schreiben!" >&2
-                    }
-                else
-                    echo "DEBUG[$func]: $msg" >&2
-                fi
                 ;;
         esac
     fi
