@@ -387,6 +387,11 @@ print_debug() {
         local content="$*"
         local debug_marker="  → [DEBUG]"
 
+        echo -n ""  # Leere Zeile für bessere Lesbarkeit
+        echo "--------------------------------------------------------------"
+        echo -e "content: $content"
+        echo "--------------------------------------------------------------"
+
         # Einfacher Fall: Normale Debug-Ausgabe ohne Verschachtelung
         if [[ "$content" != *"$debug_marker"* ]]; then
             echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $content"
