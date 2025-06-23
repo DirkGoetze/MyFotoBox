@@ -327,17 +327,17 @@ bind_resource() {
         return 1
     fi
 
-    # Setze die Guard-Variable auf 1, um anzuzeigen, dass die Ressource geladen wurde
-    eval "$guard_var_name=1"
-    export "$guard_var_name"  # Exportiere die Variable, damit sie global verfügbar ist
-    debug_output "$(printf "$bind_resource_debug_0009" "${resource_name%.sh}" "$guard_var_name")"
-
     # Setze die Path-Variable, um den Pfad zur Ressource global verfügbar zu machen
     local path_var="${resource_name%.sh}_sh"
     path_var="${path_var^^}"  # Konvertiere gesamten Variablennamen in Großbuchstaben
     eval "$path_var=\"$resource_file\""
     export "$path_var"  # Exportiere die Variable, damit sie global verfügbar ist
     debug_output "$(printf "$bind_resource_debug_0010" "${resource_name%.sh}" "$path_var")"
+
+    # Setze die Guard-Variable auf 1, um anzuzeigen, dass die Ressource geladen wurde
+    eval "$guard_var_name=1"
+    export "$guard_var_name"  # Exportiere die Variable, damit sie global verfügbar ist
+    debug_output "$(printf "$bind_resource_debug_0009" "${resource_name%.sh}" "$guard_var_name")"
 
     # Prüfe ob das Laden erfolgreich war
     if ! check_module "$resource_name"; then
