@@ -401,3 +401,21 @@ print_debug() {
     fi
 
 }
+
+# Falls das Skript direkt aufgerufen wird
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    # Wenn Parameter übergeben wurden
+    if [ $# -gt 0 ]; then
+        # Erste Parameter ist die aufzurufende Funktion
+        function_name="$1"
+        # Prüfen ob die Funktion existiert
+        if declare -f "$function_name" > /dev/null; then
+            # Funktion mit restlichen Parametern aufrufen
+            "$function_name" "${@:2}"
+            exit $?
+        else
+            echo "Funktion '$function_name' nicht gefunden!" >&2
+            exit 1
+        fi
+    fi
+fi
