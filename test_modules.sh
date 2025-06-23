@@ -16,8 +16,8 @@ set +e  # Deaktiviere strict mode für die Initialisierung
 # Erweiterte Testfunktion für flexible Modulaufrufe und Ergebnisanalyse
 test_function() {
     # Parameter verarbeiten
-    local module_path_var="$1"        # Name der Modul-Pfad-Variable (z.B. MANAGE_FOLDERS_SH)
-    local module_path_var_upper="${module_path_var^^}"  # Großbuchstaben erzwingen
+    local module_path_var="$1"        # Name der Modul-Pfad-Variable (z.B. manage_folders_sh)
+    local module_path_var_upper="${module_path_var^^}"  # Wandelt nur den Variablennamen in Großbuchstaben um
     local function_name="$2"          # Name der zu testenden Funktion
     local params=("${@:3}")           # Alle weiteren Parameter für die Funktion
 
