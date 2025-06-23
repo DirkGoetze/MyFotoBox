@@ -15,6 +15,10 @@ set +e  # Deaktiviere strict mode für die Initialisierung
 
 # test_function
 test_function_debug_0001="Test Funktion: %s"
+test_function_debug_0002="Parameter: %s"
+test_function_debug_0003="Fehler: Modul nicht verfügbar! Variable: %s, Pfad: %s"
+test_function_debug_0004="Fehler: Funktion '%s' wurde nicht gefunden"
+test_function_debug_0005="Funktion '%s' in Modul %s gefunden"
 
 test_function() {
     # Erweiterte Testfunktion für flexible Modulaufrufe und Ergebnisanalyse
@@ -27,24 +31,21 @@ test_function() {
     debug "$(printf "$test_function_debug_0001" "$function_name")" "CLI" "test_function"
 
     # DEBUG: Informationen über den Aufruf
-    echo -e "\n→ [DEBUG] test_function: Teste Funktion '$function_name'"
-    echo "→ [DEBUG] test_function: Parameter: ${params[*]}"
+    debug "$(printf "$test_function_debug_0002" "${params[*]}")" "CLI" "test_function"
 
     # Prüfe, ob das Modul verfügbar ist
     if [ -z "${!module_path_var_upper}" ] || [ ! -f "${!module_path_var_upper}" ]; then
-        echo "→ [DEBUG] test_function: Modul nicht verfügbar. Variable: $module_path_var_upper, Pfad: ${!module_path_var_upper:-nicht gesetzt}"
-        echo "❌ Die Funktion $function_name konnte nicht getestet werden: Modul nicht verfügbar."
+        debug "$(printf "$test_function_debug_0003" "$module_path_var_upper" "${!module_path_var_upper:-nicht gesetzt}")" "CLI" "test_function"
         return 1
     fi
     
     # Prüfe, ob die Funktion existiert (bereits geladen)
     if ! declare -f "$function_name" > /dev/null 2>&1; then
-        echo "→ [DEBUG] test_function: Funktion '$function_name' wurde nicht gefunden"
-        echo "❌ Die Funktion $function_name konnte nicht getestet werden: Funktion nicht geladen."
+        debug "$(printf "$test_function_debug_0004" "$function_name")" "CLI" "test_function"
         return 2
     fi
     
-    echo "→ [DEBUG] test_function: Funktion '$function_name' gefunden"
+    debug "$(printf "$test_function_debug_0005" "$function_name" "${!module_path_var_upper}")" "CLI" "test_function"
     
     # Führe die Funktion aus und erfasse Rückgabewert und Ausgabe
     local output
