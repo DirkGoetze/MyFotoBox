@@ -217,9 +217,6 @@ check_module_debug_0005="check_module: Prüfe Pfad-Variable"
 check_module_debug_0006="check_module: Pfad-Variable '%s' ist korrekt definiert (%s)"
 check_module_debug_0007="check_module: Pfad-Variable '%s' ist NICHT korrekt definiert (%s)"
 check_module_debug_0008="check_module: Modul '%s' wurde korrekt geladen"
-check_module_log_0001="Guard-Variable '%s' ist NICHT korrekt gesetzt (%s=%s)"
-check_module_log_0002="Pfad-Variable '%s' ist NICHT korrekt definiert (%s=%s)"
-check_module_log_0003="Modul '%s' wurde korrekt geladen (%s=%s)"
 
 check_module() {
     # -----------------------------------------------------------------------
@@ -247,7 +244,6 @@ check_module() {
         debug_output "$(printf "$check_module_debug_0003" "$guard_var" "${!guard_var:-nicht gesetzt}")"
     else
         debug_output "$(printf "$check_module_debug_0004" "$guard_var" "${!guard_var:-nicht gesetzt}")"
-        log "$(printf "$check_module_log_0001" "$module_name" "$guard_var" "${!guard_var:-nicht gesetzt}")"
         return 1  # Guard nicht OK
     fi
 
@@ -257,7 +253,6 @@ check_module() {
         debug_output "$(printf "$check_module_debug_0006" "$path_var" "${!path_var}")"
     else
         debug_output "$(printf "$check_module_debug_0007" "$path_var" "${!path_var:-nicht gesetzt}")"
-        log "$(printf "$check_module_log_0002" "$module_name" "$path_var" "${!path_var:-nicht gesetzt}")"
         return 2  # Pfad nicht OK
     fi
 
@@ -280,13 +275,9 @@ bind_resource_debug_0010="bind_resource: '%s' geladen, Pfad-Variable '%s' gesetz
 bind_resource_debug_0011="bind_resource: Fehler - Modul '%s' konnte nicht korrekt geladen werden"
 bind_resource_debug_0012="bind_resource: ✅ SUCCESS: Ressource '%s' erfolgreich geladen"
 bind_resource_debug_0013="bind_resource: ------------------------------------------------------"
-bind_resource_log_0001="bind_resource: Ressource '%s' bereits geladen, überspringe"
-bind_resource_log_0002="bind_resource: Fehler - Verzeichnis '%s' nicht gefunden oder nicht lesbar"
-bind_resource_log_0003="bind_resource: Fehler - Die Datei '%s' existiert nicht oder ist nicht lesbar"
-bind_resource_log_0004="bind_resource: Fehler - Konnte '%s' nicht laden (Status: %d)"
-bind_resource_log_0005="bind_resource: Ressource '%s' geladen, Guard-Variable '%s'' gesetzt"
-bind_resource_log_0006="bind_resource: Ressource '%s' geladen, Pfad-Variable '%s' gesetzt"
-bind_resource_log_0007="bind_resource: Ressource '%s' erfolgreich geladen"
+bind_resource_log_0001="bind_resource: Fehler - Verzeichnis '%s' nicht gefunden oder nicht lesbar"
+bind_resource_log_0002="bind_resource: Fehler - Die Datei '%s' existiert nicht oder ist nicht lesbar"
+bind_resource_log_0003="bind_resource: Fehler - Konnte '%s' nicht laden (Status: %d)"
 
 bind_resource() {
     # -----------------------------------------------------------------------
@@ -307,7 +298,6 @@ bind_resource() {
     local guard_var_name="${base_name^^}_LOADED"  # erzwinge Großbuchstaben für Guard-Variable
     if [ "$(eval echo \$$guard_var_name)" -eq 1 ]; then
         debug_output "$(printf "$bind_resource_debug_0002" "$base_name")"
-        log "$(printf "$bind_resource_log_0001" "$base_name")"
         return 0  # Bereits geladen, alles OK
     fi
         
@@ -315,7 +305,7 @@ bind_resource() {
     debug_output "$(printf "$bind_resource_debug_0003" "$SCRIPT_DIR")"
     if [ ! -d "$SCRIPT_DIR" ] || [ ! -r "$SCRIPT_DIR" ]; then
         debug_output "$(printf "$bind_resource_debug_0004" "$SCRIPT_DIR")"
-        log "$(printf "$bind_resource_log_0002" "$SCRIPT_DIR")"
+        echo "$(printf "$bind_resource_log_0001" "$SCRIPT_DIR")"
         return 2
     fi
     
@@ -323,7 +313,7 @@ bind_resource() {
     debug_output "$(printf "$bind_resource_debug_0005" "$resource_file")"
     if [ ! -f "$resource_file" ] || [ ! -r "$resource_file" ]; then
         debug_output "$(printf "$bind_resource_debug_0006" "$resource_file")"
-        log "$(printf "$bind_resource_log_0003" "$resource_file")"
+        echo "$(printf "$bind_resource_log_0002" "$resource_file")"
         return 1
     fi
     
@@ -333,7 +323,7 @@ bind_resource() {
     local source_result=$?
     if [ $source_result -ne 0 ]; then
         debug_output "$(printf "$bind_resource_debug_0008" "${resource_name%.sh}" "$source_result")"
-        log "$(printf "$bind_resource_log_0004" "${resource_name%.sh}" "$source_result")"
+        echo "$(printf "$bind_resource_log_0003" "${resource_name%.sh}" "$source_result")"
         return 1
     fi
 
@@ -352,14 +342,13 @@ bind_resource() {
     # Prüfe ob das Laden erfolgreich war
     if ! check_module "$resource_name"; then
         debug_output "$(printf "$bind_resource_debug_0011" "$resource_name")"
-        log "$(printf "$bind_resource_log_0004" "${resource_name%.sh}" "$source_result")"
+        echo "$(printf "$bind_resource_log_0003" "${resource_name%.sh}" "$source_result")"
         return 1
     fi
 
     # Wenn wir hier ankommen, war alles erfolgreich
     debug_output "$(printf "$bind_resource_debug_0012" "$resource_name")"
     debug_output "$(printf "$bind_resource_debug_0013")"
-    log "$(printf "$bind_resource_log_0007" "${resource_name%.sh}")"
     return 0  # Erfolgreich geladen
 }
 
@@ -634,7 +623,7 @@ debug_output "lib_core.sh: Initialisieren und Laden aller Ressourcen"
 # Versuche, alle benötigten Ressourcen zu laden
 load_resources
 if [ $? -ne 0 ]; then
-    debug_output "[DEBUG] lib_core.sh: Fehler beim Laden der Ressourcen, Abbruch"
+    debug_output "lib_core.sh: Fehler beim Laden der Ressourcen, Abbruch"
     echo "Fehler: Einige Ressourcen konnten nicht geladen werden. Bitte überprüfen Sie die Fehlermeldungen."
     exit 1
 fi
