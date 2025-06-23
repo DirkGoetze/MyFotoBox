@@ -145,8 +145,17 @@ echo "-------------------------------------------------------------------------"
 echo "Test der Funktionen in manage_folders.sh"
 echo "-------------------------------------------------------------------------"
 
+# Zeige alle verfügbaren Funktionen in manage_folders.sh
+echo "Alle im Skript verfügbaren Funktionen:"
+declare -F | grep -E '(get_|bind_|check_|log_)'
+
 # Test: get_install_dir
 test_function "manage_folders_sh" "get_install_dir"
+echo "Test direkter Aufruf:"
+"$MANAGE_FOLDERS_SH" get_install_dir
+echo "Status: $?"
+
+exit
 
 # Test: get_backend_dir
 test_function "manage_folders_sh" "get_backend_dir"
@@ -163,7 +172,6 @@ test_function "manage_folders_sh" "get_venv_dir"
 # Test: get_pip_path
 test_function "manage_folders_sh" "get_pip_path"
 
-exit
 
 # Test: get_template_dir
 echo -n "Test get_template_dir: "
