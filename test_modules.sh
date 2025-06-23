@@ -18,9 +18,10 @@ test_function() {
     local result=$1
     local function_name=$2
     local expected_result=$3
+    local function_output="${4:-}"
 
     if [ "$result" -eq "$expected_result" ]; then
-        echo "✅ Die Funktion $function_name wurde erfolgreich ausgeführt."
+        echo "✅ Die Funktion $function_name wurde erfolgreich ausgeführt ($result). Rückgabe: $function_output"
     else
         echo "❌ Die Funktion $function_name ist fehlgeschlagen. Ergebnis: $result, Erwartet: $expected_result"
     fi
@@ -85,11 +86,7 @@ echo "-------------------------------------------------------------------------"
 # Test: get_install_dir
 echo -n "Test get_install_dir: "
 install_dir="$("$MANAGE_FOLDERS_SH" "get_install_dir")"
-if [ -n "$install_dir" ]; then
-    echo "✅ Die Funktion get_install_dir wurde erfolgreich ausgeführt. Ergebnis: $install_dir"
-else
-    echo "❌ Die Funktion get_install_dir ist fehlgeschlagen."
-fi
+test_function $install_dir "get_install_dir" 0
 
 # Test: get_backend_dir
 echo -n "Test get_backend_dir: "
