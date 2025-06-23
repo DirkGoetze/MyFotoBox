@@ -84,7 +84,7 @@ echo "-------------------------------------------------------------------------"
 
 # Test: get_install_dir
 echo -n "Test get_install_dir: "
-install_dir="$("$MANAGE_FOLDERS_SH" get_install_dir)"
+install_dir="$("$MANAGE_FOLDERS_SH" "get_install_dir")"
 if [ -n "$install_dir" ]; then
     echo "✅ Die Funktion get_install_dir wurde erfolgreich ausgeführt. Ergebnis: $install_dir"
 else
