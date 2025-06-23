@@ -313,10 +313,11 @@ bind_resource() {
 }
 
 # load_resources
-load_resources_debug_0001="[DEBUG] load_resources: Starte Prüfung aller benötigten Ressourcen"
-load_resources_debug_0002="[DEBUG] load_resources: Versuche %s einzubinden ..."
-load_resources_debug_0003="[DEBUG] load_resources: Fehler beim Laden von %s, erstelle Fallback-Funktionen"
-load_resources_debug_0004="[DEBUG] load_resources: Fallback-Funktion für %s wurde erstellt"
+load_resources_debug_0001="load_resources: Starte Prüfung aller benötigten Ressourcen"
+load_resources_debug_0002="load_resources: Versuche %s einzubinden ..."
+load_resources_debug_0003="load_resources: Fehler beim Laden von %s, erstelle Fallback-Funktionen"
+load_resources_debug_0004="load_resources: Fallback-Funktion für %s wurde erstellt"
+load_resources_debug_0005="load_resources: Prüfung aller Ressourcen abgeschlossen mit Ergebnis: %d"
 
 load_resources() {
     # -----------------------------------------------------------------------
@@ -526,50 +527,50 @@ load_resources() {
         }
 
         result=0 # kein Fehler, da Fallback-Funktion vorhanden
-        debug_output "load_resources: Fallback-Funktionen für manage_logging.sh wurden erstellt"
+        debug_output "$(printf "$load_resources_debug_0004" "manage_logging.sh")"
     fi
     
     # 4. manage_nginx.sh einbinden
-    debug_output "load_resources: Versuche manage_nginx.sh einzubinden"
+    debug_output "$(printf "$load_resources_debug_0002" "manage_nginx.sh")"
     bind_resource "MANAGE_NGINX_LOADED" "$SCRIPT_DIR" "manage_nginx.sh"
     if [ $? -ne 0 ]; then
-        debug_output "load_resources: Fehler beim Laden von manage_nginx.sh"
+        debug_output "$(printf "$load_resources_debug_0003" "manage_nginx.sh")"
         result=1
     fi
 
     # 5. manage_https.sh einbinden
-    debug_output "load_resources: Versuche manage_https.sh einzubinden"
+    debug_output "$(printf "$load_resources_debug_0002" "manage_https.sh")"
     bind_resource "MANAGE_HTTPS_LOADED" "$SCRIPT_DIR" "manage_https.sh"
     if [ $? -ne 0 ]; then
-        debug_output "load_resources: Fehler beim Laden von manage_https.sh"
+        debug_output "$(printf "$load_resources_debug_0003" "manage_https.sh")"
         result=1
     fi
 
     # 6. manage_firewall.sh einbinden
-    debug_output "load_resources: Versuche manage_firewall.sh einzubinden"
+    debug_output "$(printf "$load_resources_debug_0002" "manage_firewall.sh")"
     bind_resource "MANAGE_FIREWALL_LOADED" "$SCRIPT_DIR" "manage_firewall.sh"
     if [ $? -ne 0 ]; then
-        debug_output "load_resources: Fehler beim Laden von manage_firewall.sh"
+        debug_output "$(printf "$load_resources_debug_0003" "manage_firewall.sh")"
         result=1
     fi
 
     # 7. manage_python_env.sh einbinden
-    debug_output "load_resources: Versuche manage_python_env.sh einzubinden"
+    debug_output "$(printf "$load_resources_debug_0002" "manage_python_env.sh")"
     bind_resource "MANAGE_PYTHON_ENV_LOADED" "$SCRIPT_DIR" "manage_python_env.sh"
     if [ $? -ne 0 ]; then
-        debug_output "load_resources: Fehler beim Laden von manage_python_env.sh"
+        debug_output "$(printf "$load_resources_debug_0003" "manage_python_env.sh")"
         result=1
     fi
 
     # 8. manage_backend_service.sh einbinden
-    debug_output "load_resources: Versuche manage_backend_service.sh einzubinden"
+    debug_output "$(printf "$load_resources_debug_0002" "manage_backend_service.sh")"
     bind_resource "MANAGE_BACKEND_SERVICE_LOADED" "$SCRIPT_DIR" "manage_backend_service.sh"
     if [ $? -ne 0 ]; then
-        debug_output "load_resources: Fehler beim Laden von manage_backend_service.sh"
+        debug_output "$(printf "$load_resources_debug_0003" "manage_backend_service.sh")"
         result=1
     fi
 
-    debug_output "load_resources: Prüfung aller Ressourcen abgeschlossen mit Ergebnis: $result"
+    debug_output "$(printf "$load_resources_debug_0005" "$result")"
     return $result
 }
 
@@ -711,7 +712,7 @@ check_all_modules_loaded() {
 # Hauptteil des Skripts: Ressourcen laden und Module überprüfen
 # ===========================================================================
 # Initialisieren aller Ressourcen
-debug_output "[DEBUG] lib_core.sh: Initialisieren und Laden aller Ressourcen"
+debug_output "lib_core.sh: Initialisieren und Laden aller Ressourcen"
 
 # Versuche, alle benötigten Ressourcen zu laden
 load_resources

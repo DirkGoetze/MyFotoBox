@@ -399,7 +399,11 @@ print_debug() {
     # -----------------------------------------------------------------------
     # Funktion: Gibt eine Debug-Ausgabe in Cyan aus (nur, wenn DEBUG aktiv)
     # Parameter: $* = Debugtext
-    echo -e "${COLOR_CYAN}  → ${COLOR_RESET}$*"
+    if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ] || [ "${DEBUG_MOD:-0}" = "1" ]; then
+        echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $*"
+        log "DEBUG: $*"
+    fi
+
 }
 
 # ===========================================================================
