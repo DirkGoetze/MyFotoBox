@@ -385,7 +385,7 @@ print_debug() {
     # Parameter: $* = Debugtext
     if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ] || [ "${DEBUG_MOD:-0}" = "1" ]; then
         local content="$*"
-        local debug_marker="→ [DEBUG]"
+        local debug_marker="  → [DEBUG]"
 
         # Einfacher Fall: Normale Debug-Ausgabe ohne Verschachtelung
         if [[ "$content" != *"$debug_marker"* ]]; then
@@ -394,57 +394,45 @@ print_debug() {
         fi
         
         # Komplexer Fall: Debug-Ausgabe enthält bereits Debug-Marker
-        # Extrahiere den ersten Teil bis zum ersten DEBUG-Marker
-        local prefix=""
         
-        # Suche den Beginn des ersten Debug-Markers
-        if [[ "$content" =~ ^(.*)"$debug_marker" ]]; then
-            # BASH_REMATCH[1] enthält alles vor dem ersten Debug-Marker
-            prefix="${BASH_REMATCH[1]}"
-        fi
-        
-        # Teile den Content in Zeilen
+        # 1. Teile den Content in Zeilen auf und speichere in Array
         local IFS=$'\n'
         local lines=($content)
         
-        # Ergebnisvariablen
-        local debug_lines=()
-        local result_lines=()
+        # 2. Extrahiere Präfix aus dem ersten Array-Eintrag
+        local prefix=""
+        local first_line="${lines[0]}"
         
-        # Flag für die Unterscheidung zwischen Debug-Zeilen und Ergebniszeilen
-        local in_debug=false
-        local found_result=false
+        if [[ "$first_line" == *"$debug_marker"* ]]; then
+            # Suche die Position des Debug-Markers in der ersten Zeile
+            local marker_pos="${first_line%%$debug_marker*}"
+            if [ -n "$marker_pos" ]; then
+                # Extrahiere den Präfix
+                prefix="$marker_pos"
+            fi
+        fi
         
-        # Durchlaufe alle Zeilen und kategorisiere sie
+        # 3. Extrahiere Ergebnistext aus dem letzten Array-Eintrag
+        local result_text="${lines[-1]}"
+        
+        # Entferne den letzten Eintrag aus dem Array, wenn es mindestens 2 Einträge gibt
+        if [ ${#lines[@]} -gt 1 ]; then
+            unset 'lines[-1]'
+        fi
+        
+        # 4. Ausgabe aller Debug-Zeilen
         for line in "${lines[@]}"; do
             if [[ "$line" == *"$debug_marker"* ]]; then
-                # Debug-Zeile gefunden
-                debug_lines+=("$line")
-                in_debug=true
-            else
-                # Keine Debug-Zeile
-                if [ -n "$line" ]; then
-                    # Wenn kein Debug-Marker in der Zeile und die Zeile nicht leer ist
-                    result_lines+=("$line")
-                    in_debug=false
-                    found_result=true
-                fi
+                # Wenn die Zeile einen Debug-Marker enthält, gib sie direkt aus
+                echo -e "$line"
             fi
         done
         
-        # Debug-Zeilen direkt ausgeben (ohne zusätzliche Formatierung)
-        for line in "${debug_lines[@]}"; do
-            echo -e "$line"
-        done
+        # 5. Ausgabe der ursprünglichen Nachricht mit dem extrahierten Präfix
+        # Entferne führenden Leerraum vor dem Präfix, falls vorhanden
+        prefix=$(echo "$prefix" | sed 's/^[[:space:]]*//')
         
-        # Wenn es nicht-debug-Zeilen gibt, diese als normales Ergebnis ausgeben
-        if [ ${#result_lines[@]} -gt 0 ]; then
-            # Verarbeite alle Ergebniszeilen als eine zusammenhängende Nachricht
-            local result_text=$(printf "%s\n" "${result_lines[@]}")
-            # Entferne führenden Leerraum vor dem Präfix, falls vorhanden
-            prefix=$(echo "$prefix" | sed 's/^[[:space:]]*//')
-            # Gib das Ergebnis mit Debug-Präfix aus
-            echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${result_text}"
-        fi
+        # Gib das Ergebnis mit dem Debug-Präfix aus
+        echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${result_text}"
     fi
 }
