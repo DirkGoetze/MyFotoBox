@@ -13,15 +13,18 @@ set -e  # Beende bei Fehlern
 set -u  # Beende bei Verwendung nicht gesetzter Variablen
 set +e  # Deaktiviere strict mode für die Initialisierung
 
-# Erweiterte Testfunktion für flexible Modulaufrufe und Ergebnisanalyse
+# test_function
+test_function_debug_0001="Test Funktion: %s"
+
 test_function() {
+    # Erweiterte Testfunktion für flexible Modulaufrufe und Ergebnisanalyse
     # Parameter verarbeiten
     local module_path_var="$1"        # Name der Modul-Pfad-Variable (z.B. manage_folders_sh)
     local module_path_var_upper="${module_path_var^^}"  # Wandelt nur den Variablennamen in Großbuchstaben um
     local function_name="$2"          # Name der zu testenden Funktion
     local params=("${@:3}")           # Alle weiteren Parameter für die Funktion
 
-    echo -n "Test $function_name: "
+    debug "$(printf "$test_function_debug_0001" "$function_name")" "CLI" "test_function"
 
     # DEBUG: Informationen über den Aufruf
     echo -e "\n→ [DEBUG] test_function: Teste Funktion '$function_name'"
