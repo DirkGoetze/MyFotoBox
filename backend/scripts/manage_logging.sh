@@ -400,6 +400,7 @@ print_debug() {
         # Finde die Position des ersten DEBUG-Markers
         local marker_pos=$(echo -n "$content" | grep -b -o "$debug_marker" | head -1 | cut -d':' -f1)
         
+        echo "DEBUG-Marker gefunden bei Position: $marker_pos"
         if [ -n "$marker_pos" ] && [ "$marker_pos" -gt 0 ]; then
             # Es gibt einen Text vor dem ersten DEBUG-Marker
             prefix="${content:0:$marker_pos}"
