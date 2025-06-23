@@ -397,7 +397,7 @@ print_debug() {
         # Einrückung erstellen (2 Leerzeichen pro Stufe)
         for ((i=0; i<$call_depth; i++)); do
             indent="$indent  "
-        fi
+        done
         
         echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET}${indent}$*"
     fi
