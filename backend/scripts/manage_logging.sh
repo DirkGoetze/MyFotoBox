@@ -403,8 +403,10 @@ print_debug() {
         if [ -n "$marker_pos" ] && [ "$marker_pos" -gt 0 ]; then
             # Es gibt einen Text vor dem ersten DEBUG-Marker
             prefix="${content:0:$marker_pos}"
+            echo "$prefix"
             # Entferne den Prefix aus dem Content
             content="${content:$marker_pos}"
+            echo "$content"
         fi
         
         # Zeilen in einem Array speichern
