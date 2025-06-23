@@ -209,14 +209,14 @@ check_param() {
 # ggf. weitere Guard-Variablen hier hinzufügen
 
 # check_module
-check_module_debug_0001="[DEBUG] check_module: Prüfe Modul '%s'"
-check_module_debug_0002="[DEBUG] check_module: Prüfe Guard-Variable: '%s'"
-check_module_debug_0003="[DEBUG] check_module: Guard-Variable '%s' ist korrekt gesetzt (%s=%s)"
-check_module_debug_0004="[DEBUG] check_module: Guard-Variable '%s' ist NICHT korrekt gesetzt (%s=%s)"
-check_module_debug_0005="[DEBUG] check_module: Prüfe Pfad-Variable: '%s'"
-check_module_debug_0006="[DEBUG] check_module: Pfad-Variable '%s' ist korrekt definiert (%s=%s)"
-check_module_debug_0007="[DEBUG] check_module: Pfad-Variable '%s' ist NICHT korrekt definiert (%s=%s)"
-check_module_debug_0008="[DEBUG] check_module: Modul '%s' wurde korrekt geladen"
+check_module_debug_0001="check_module: Prüfe Modul '%s'"
+check_module_debug_0002="check_module: Prüfe Guard-Variable: '%s'"
+check_module_debug_0003="check_module: Guard-Variable '%s' ist korrekt gesetzt (%s=%s)"
+check_module_debug_0004="check_module: Guard-Variable '%s' ist NICHT korrekt gesetzt (%s=%s)"
+check_module_debug_0005="check_module: Prüfe Pfad-Variable: '%s'"
+check_module_debug_0006="check_module: Pfad-Variable '%s' ist korrekt definiert (%s=%s)"
+check_module_debug_0007="check_module: Pfad-Variable '%s' ist NICHT korrekt definiert (%s=%s)"
+check_module_debug_0008="check_module: Modul '%s' wurde korrekt geladen"
 check_module_log_0001="Guard-Variable '%s' ist NICHT korrekt gesetzt (%s=%s)"
 check_module_log_0002="Pfad-Variable '%s' ist NICHT korrekt definiert (%s=%s)"
 check_module_log_0003="Modul '%s' wurde korrekt geladen (%s=%s)"
