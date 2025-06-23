@@ -384,30 +384,6 @@ print_debug() {
     # Funktion: Gibt eine Debug-Ausgabe in Cyan aus (nur, wenn DEBUG aktiv)
     # Parameter: $* = Debugtext
     if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ] || [ "${DEBUG_MOD:-0}" = "1" ]; then
-        # Bestimme Einrückung basierend auf der Aufruftiefe
-        local call_depth=$(( ${#BASH_SOURCE[@]} - 2 ))
-        local indent=""
-        
-        # Mindestens Stufe 1 für bessere Lesbarkeit
-        if [ $call_depth -lt 1 ]; then call_depth=1; fi
-        
-        # Maximal 5 Stufen einrücken
-        if [ $call_depth -gt 5 ]; then call_depth=5; fi
-        
-        # Einrückung erstellen (2 Leerzeichen pro Stufe)
-        for ((i=0; i<$call_depth; i++)); do
-            indent="$indent  "
-        done
-        
-        # Behandlung mehrzeiliger Ausgaben - Zeilen aufteilen und einzeln formatieren
-        if [[ "$*" == *$'\n'* ]]; then
-            # Wenn Zeilenumbrüche vorhanden sind
-            echo "$*" | while IFS= read -r line; do
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET}${indent}$line"
-            done
-        else
-            # Einfache einzeilige Ausgabe
-            echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET}${indent}$*"
-        fi
+        echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $*"
     fi
 }
