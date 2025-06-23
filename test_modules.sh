@@ -141,9 +141,10 @@ declare -F | grep -E '(get_|bind_|check_|log_)'
 
 # Test: get_install_dir
 test_function "manage_folders_sh" "get_install_dir"
-echo "Test direkter Aufruf:"
+
+debug "Test direkter Aufruf: get_install_dir" "CLI" "test_function"
 get_install_dir
-echo "Status: $?"
+debug "Status: $?" "CLI" "test_function"
 
 exit
 
