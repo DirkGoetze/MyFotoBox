@@ -210,12 +210,12 @@ check_param() {
 
 # check_module
 check_module_debug_0001="check_module: Prüfe Modul '%s'"
-check_module_debug_0002="check_module: Prüfe Guard-Variable: '%s'"
-check_module_debug_0003="check_module: Guard-Variable '%s' ist korrekt gesetzt (%s=%s)"
-check_module_debug_0004="check_module: Guard-Variable '%s' ist NICHT korrekt gesetzt (%s=%s)"
-check_module_debug_0005="check_module: Prüfe Pfad-Variable: '%s'"
-check_module_debug_0006="check_module: Pfad-Variable '%s' ist korrekt definiert (%s=%s)"
-check_module_debug_0007="check_module: Pfad-Variable '%s' ist NICHT korrekt definiert (%s=%s)"
+check_module_debug_0002="check_module: Prüfe Guard-Variable"
+check_module_debug_0003="check_module: Guard-Variable '%s' ist korrekt gesetzt (%s)"
+check_module_debug_0004="check_module: Guard-Variable '%s' ist NICHT korrekt gesetzt (%s)"
+check_module_debug_0005="check_module: Prüfe Pfad-Variable"
+check_module_debug_0006="check_module: Pfad-Variable '%s' ist korrekt definiert (%s)"
+check_module_debug_0007="check_module: Pfad-Variable '%s' ist NICHT korrekt definiert (%s)"
 check_module_debug_0008="check_module: Modul '%s' wurde korrekt geladen"
 check_module_log_0001="Guard-Variable '%s' ist NICHT korrekt gesetzt (%s=%s)"
 check_module_log_0002="Pfad-Variable '%s' ist NICHT korrekt definiert (%s=%s)"
@@ -239,12 +239,12 @@ check_module() {
     local path_var="${base_name^^}_SH"
 
     # Debug-Ausgabe
-    debug_output "$(printf "$check_module_debug_0001" "$module_name")"
+    debug_output "$(printf "$check_module_debug_0001" "$(basename "${module_name%.sh}" | tr '[:lower:]' '[:upper:]')")"
 
     # Prüfe Guard-Variable
-    debug_output "$(printf "$check_module_debug_0002" "$guard_var")"
+    debug_output "$(printf "$check_module_debug_0002")"
     if [ -n "${!guard_var:-}" ] && [ ${!guard_var} -eq 1 ]; then
-        debug_output "$(printf "$check_module_debug_0003" "$guard_var")"
+        debug_output "$(printf "$check_module_debug_0003" "$guard_var" "${!guard_var:-nicht gesetzt}")"
     else
         debug_output "$(printf "$check_module_debug_0004" "$guard_var" "${!guard_var:-nicht gesetzt}")"
         log "$(printf "$check_module_log_0001" "$module_name" "$guard_var" "${!guard_var:-nicht gesetzt}")"
@@ -252,7 +252,7 @@ check_module() {
     fi
 
     # Prüfe Pfad-Variable
-    debug_output "$(printf "$check_module_debug_0005" "$path_var")"
+    debug_output "$(printf "$check_module_debug_0005")"
     if [ -n "${!path_var:-}" ] && [ -f "${!path_var}" ]; then
         debug_output "$(printf "$check_module_debug_0006" "$path_var" "${!path_var}")"
     else
@@ -305,26 +305,26 @@ bind_resource() {
     fi
     
     # Ressource laden
-    debug_output "bind_resource: Lade Ressource '$resource_name'"
+    debug_output "bind_resource: Lade '${resource_name%.sh}'"
     source "$resource_file"    
     local source_result=$?
     if [ $source_result -ne 0 ]; then
-        debug_output "bind_resource: Fehler beim Laden von '$resource_name' (Status: $source_result)"
-        echo "Fehler: Konnte '$resource_name' nicht laden."
+        debug_output "bind_resource: Fehler beim Laden von '${resource_name%.sh}' (Status: $source_result)"
+        echo "Fehler: Konnte '${resource_name%.sh}' nicht laden."
         return 1
     fi
 
     # Setze die Guard-Variable auf 1, um anzuzeigen, dass die Ressource geladen wurde
     eval "$guard_var_name=1"
     export "$guard_var_name"  # Exportiere die Variable, damit sie global verfügbar ist
-    debug_output "bind_resource: Ressource '$resource_name' erfolgreich geladen, Guard-Variable '$guard_var_name' gesetzt"
+    debug_output "bind_resource: '${resource_name%.sh}' geladen, Guard-Variable '$guard_var_name' gesetzt"
 
     # Setze die Path-Variable, um den Pfad zur Ressource global verfügbar zu machen
     local path_var="${resource_name%.sh}_sh"
     path_var="${path_var^^}"  # Konvertiere gesamten Variablennamen in Großbuchstaben
     eval "$path_var=\"$resource_file\""
     export "$path_var"  # Exportiere die Variable, damit sie global verfügbar ist
-    debug_output "bind_resource: Ressource '$resource_name' erfolgreich geladen und Pfad-Variable '$path_var' gesetzt"
+    debug_output "bind_resource: '${resource_name%.sh}' geladen, Pfad-Variable '$path_var' gesetzt"
     
     # Prüfe ob das Laden erfolgreich war
     if ! check_module "$resource_name"; then
