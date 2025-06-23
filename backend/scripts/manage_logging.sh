@@ -397,57 +397,53 @@ print_debug() {
         # Extrahiere den ersten Teil bis zum ersten DEBUG-Marker
         local prefix=""
         
-        # Finde die Position des ersten DEBUG-Markers
-        local marker_pos=$(echo -n "$content" | grep -b -o "$debug_marker" | head -1 | cut -d':' -f1)
-        
-        echo "DEBUG-Marker gefunden bei Position: $marker_pos"
-        if [ -n "$marker_pos" ] && [ "$marker_pos" -gt 0 ]; then
-            # Es gibt einen Text vor dem ersten DEBUG-Marker
-            prefix="${content:0:$marker_pos}"
-            echo "$prefix"
-            # Entferne den Prefix aus dem Content
-            content="${content:$marker_pos}"
-            echo "$content"
+        # Suche den Beginn des ersten Debug-Markers
+        if [[ "$content" =~ ^(.*)"$debug_marker" ]]; then
+            # BASH_REMATCH[1] enthält alles vor dem ersten Debug-Marker
+            prefix="${BASH_REMATCH[1]}"
         fi
         
-        # Zeilen in einem Array speichern
-        local lines
-        mapfile -t lines <<< "$content"
+        # Teile den Content in Zeilen
+        local IFS=$'\n'
+        local lines=($content)
         
         # Ergebnisvariablen
         local debug_lines=()
         local result_lines=()
-        local in_debug_section=true
         
-        # Durchlaufe alle Zeilen
+        # Flag für die Unterscheidung zwischen Debug-Zeilen und Ergebniszeilen
+        local in_debug=false
+        local found_result=false
+        
+        # Durchlaufe alle Zeilen und kategorisiere sie
         for line in "${lines[@]}"; do
             if [[ "$line" == *"$debug_marker"* ]]; then
                 # Debug-Zeile gefunden
                 debug_lines+=("$line")
-                in_debug_section=true
-            elif [[ "$line" == "" ]]; then
-                # Leere Zeile überspringen
-                continue
+                in_debug=true
             else
                 # Keine Debug-Zeile
-                if $in_debug_section; then
-                    # Erste Nicht-Debug-Zeile - wechsle den Modus
-                    in_debug_section=false
+                if [ -n "$line" ]; then
+                    # Wenn kein Debug-Marker in der Zeile und die Zeile nicht leer ist
+                    result_lines+=("$line")
+                    in_debug=false
+                    found_result=true
                 fi
-                
-                # Alle Nicht-Debug-Zeilen sammeln (Ergebnis)
-                result_lines+=("$line")
             fi
         done
         
-        # Debug-Zeilen ausgeben
+        # Debug-Zeilen direkt ausgeben (ohne zusätzliche Formatierung)
         for line in "${debug_lines[@]}"; do
             echo -e "$line"
         done
         
-        # Wenn es Ergebniszeilen gibt, diese mit dem Präfix kombinieren und ausgeben
+        # Wenn es nicht-debug-Zeilen gibt, diese als normales Ergebnis ausgeben
         if [ ${#result_lines[@]} -gt 0 ]; then
+            # Verarbeite alle Ergebniszeilen als eine zusammenhängende Nachricht
             local result_text=$(printf "%s\n" "${result_lines[@]}")
+            # Entferne führenden Leerraum vor dem Präfix, falls vorhanden
+            prefix=$(echo "$prefix" | sed 's/^[[:space:]]*//')
+            # Gib das Ergebnis mit Debug-Präfix aus
             echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${result_text}"
         fi
     fi
