@@ -62,6 +62,9 @@ echo "-------------------------------------------------------------------------"
 echo "Test für das Laden aller Module zentral über lib_core.sh"
 echo "-------------------------------------------------------------------------"
 
+# Setze den Pfad zum Skriptverzeichnis
+TEST_SCRIPT_DIR="/opt/fotobox/backend/scripts"
+
 # Debug-Ausgabe zum Anzeigen der vorhandenen Dateien
 echo "---------------------------------------------------------------------------"
 echo "Vorhandene Dateien im Skriptverzeichnis:"
