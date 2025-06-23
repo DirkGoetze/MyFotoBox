@@ -335,6 +335,7 @@ bind_resource() {
 
     # Wenn wir hier ankommen, war alles erfolgreich
     debug_output "bind_resource: Ressource '$resource_name' erfolgreich geladen"
+    debug_output "bind_resource: ------------------------------------------------------"
     return 0  # Erfolgreich geladen
 }
 
