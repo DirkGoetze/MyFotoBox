@@ -24,26 +24,26 @@ test_function() {
     echo -n "Test $function_name: "
 
     # DEBUG: Informationen über den Aufruf
-    echo -e "\n→ [DEBUG] test_function: Teste Funktion '$function_name' aus Modul '${!module_path_var_upper}'"
-    echo "→ [DEBUG] test_function: Parameter: ${params[*]}"
+    echo -e "\n  → [DEBUG] test_function: Teste Funktion '$function_name' aus Modul '${!module_path_var_upper}'"
+    echo "  → [DEBUG] test_function: Parameter: ${params[*]}"
 
     # Prüfe, ob das Modul verfügbar ist
     if [ -z "${!module_path_var_upper}" ] || [ ! -f "${!module_path_var_upper}" ]; then
-        echo "→ [DEBUG] test_function: ❌ Modul nicht verfügbar. Variable: $module_path_var_upper, Pfad: ${!module_path_var_upper:-nicht gesetzt}"
+        echo "  → [DEBUG] test_function: Modul nicht verfügbar. Variable: $module_path_var_upper, Pfad: ${!module_path_var_upper:-nicht gesetzt}"
         echo "❌ Die Funktion $function_name konnte nicht getestet werden: Modul nicht verfügbar."
         return 1
     fi
     
-    echo "→ [DEBUG] test_function: ✅ Modul gefunden: '${!module_path_var_upper}'"
+    echo "  → [DEBUG] test_function: Modul gefunden: '${!module_path_var_upper}'"
     
     # Prüfe, ob die Funktion im Modul existiert
     if ! grep -q "^$function_name[[:space:]]*()[[:space:]]*{" "${!module_path_var_upper}" 2>/dev/null; then
-        echo "→ [DEBUG] test_function: ❌ Funktion '$function_name' wurde im Modul nicht gefunden"
+        echo "  → [DEBUG] test_function: Funktion '$function_name' wurde im Modul nicht gefunden"
         echo "❌ Die Funktion $function_name konnte nicht getestet werden: Funktion nicht im Modul gefunden."
         return 2
     fi
     
-    echo "→ [DEBUG] test_function: ✅ Funktion '$function_name' im Modul gefunden"
+    echo "  → [DEBUG] test_function: Funktion '$function_name' im Modul gefunden"
     
     # Führe die Funktion aus und erfasse Rückgabewert und Ausgabe
     local output
@@ -63,11 +63,11 @@ test_function() {
     set -e  # Reaktiviere Fehlerabbruch
     
     # Zeige Ergebnisse
-    echo "→ [DEBUG] test_function: Rückgabewert: $result"
+    echo "  → [DEBUG] test_function: Rückgabewert: $result"
     if [ -n "$output" ]; then
-        echo "→ [DEBUG] test_function: Ausgabe: $output"
+        echo "  → [DEBUG] test_function: Ausgabe: $output"
     else
-        echo "→ [DEBUG] test_function: Keine Ausgabe"
+        echo "  → [DEBUG] test_function: Keine Ausgabe"
     fi
     
     # Zeige Ergebnis in Format "ERFOLG/FEHLER"
