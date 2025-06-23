@@ -411,10 +411,12 @@ print_debug() {
                 prefix="$marker_pos"
             fi
         fi
-        
+        echo "DEBUG-PREFIX: $prefix"
+
         # 3. Extrahiere Ergebnistext aus dem letzten Array-Eintrag
         local result_text="${lines[-1]}"
-        
+        echo "DEBUG-RESULT: $result_text"
+
         # Entferne den letzten Eintrag aus dem Array, wenn es mindestens 2 Einträge gibt
         if [ ${#lines[@]} -gt 1 ]; then
             unset 'lines[-1]'
