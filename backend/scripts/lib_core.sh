@@ -150,7 +150,7 @@ trace_output() {
 }
 
 # check_param
-check_param_debug_0001="Parameterprüfung durch Funktion '%s' in Modul '%s': %s"
+check_param_debug_0001="check_param: Parameterprüfung für [%s:%s()] Parameter: %s"
 check_param_debug_0002="Parameter '%s' in Funktion '%s' des Moduls '%s' ist leer oder nicht gesetzt"
 check_param_log_0001="check_param: Parameter '%s' fehlt in Funktion '%s' des Moduls '%s'"
 
@@ -178,15 +178,17 @@ check_param() {
     else
         module_name="lib_core"  # Fallback, wenn BASH_SOURCE nicht verfügbar
     fi
+    # Konvertiere in Großbuchstaben für Konsistenz
+    module_name=$(echo "$module_name" | tr '[:lower:]' '[:upper:]')
 
     # Debugging-Ausgabe für die Modul-Identifikation
-    debug "$(printf "$check_param_debug_0001" "$calling_function" "$module_name" "$param_name")" "CLI" "check_param"
+    debug "$(printf "$check_param_debug_0001" "$module_name" "$calling_function" "$param_name")" "CLI" "check_param"
 
     # Überprüfen, ob ein Parameter übergeben wurde
     if [ -z "$param" ]; then
         # Parameter ist leer oder nicht gesetzt
         debug "$(printf "$check_param_debug_0002" "$param_name" "$calling_function" "$module_name")" "CLI" "check_param"
-        log "$(printf "$check_param_log_0001" "$param_name" "$calling_function" "$module_name")" "check_param" "$module_name"
+        #log "$(printf "$check_param_log_0001" "$param_name" "$calling_function" "$module_name")" "check_param" "$module_name"
         return 1
     fi
   
