@@ -406,6 +406,7 @@ print_debug() {
         if [[ "$first_line" == *"$debug_marker"* ]]; then
             # Suche die Position des Debug-Markers in der ersten Zeile
             local marker_pos="${first_line%%$debug_marker*}"
+            echo "DEBUG-MARKER-POS: $marker_pos"
             if [ -n "$marker_pos" ]; then
                 # Extrahiere den Präfix
                 prefix="$marker_pos"
