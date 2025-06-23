@@ -154,6 +154,15 @@ test_function "manage_folders_sh" "get_backend_dir"
 # Test: get_script_dir
 test_function "manage_folders_sh" "get_script_dir"
 
+# Test: get_python_path
+test_function "manage_folders_sh" "get_python_path"
+
+# Test: get_venv_dir
+test_function "manage_folders_sh" "get_venv_dir"
+
+# Test: get_pip_path
+test_function "manage_folders_sh" "get_pip_path"
+
 exit
 
 # Test: get_template_dir
