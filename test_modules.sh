@@ -13,21 +13,6 @@ set -e  # Beende bei Fehlern
 set -u  # Beende bei Verwendung nicht gesetzter Variablen
 set +e  # Deaktiviere strict mode für die Initialisierung
 
-# Hilfsfunktion zum Prüfen des Moduls
-check_load_status() {
-    local module_name="$1"
-    local var_name="$2"
-    
-    # Prüfen ob die Modul-Variable gesetzt ist
-    if [ -n "${!var_name:-}" ] && [ ${!var_name} -eq 1 ]; then
-        echo "✅ Modul $module_name ist korrekt geladen (${var_name}=1)"
-        return 0
-    else
-        echo "❌ Modul $module_name ist NICHT korrekt geladen (${var_name}=${!var_name:-nicht gesetzt})"
-        return 1
-    fi
-}
-
 # Hilfsfunktion zur Überprüfung der Test-Ergebnisse
 test_function() {
     local result=$1
@@ -62,153 +47,6 @@ call_module_function() {
     fi
 }
 
-# Hilfsfunktion zur Überprüfung der Modulpfade
-check_module_path() {
-    local module_var="$1"
-    local expected_name="$2"
-    
-    if [ -n "${!module_var}" ] && [ -f "${!module_var}" ]; then
-        echo "✅ Modulpfad-Variable $module_var ist korrekt definiert: ${!module_var}"
-        return 0
-    else
-        echo "❌ Modulpfad-Variable $module_var ist NICHT korrekt definiert: ${!module_var:-nicht gesetzt}"
-        return 1
-    fi
-}
-
-# Verarbeitete Variablen im Test-Skript:
-# TEST_CURRENT_DIR - Aktuelles Verzeichnis beim Start des Tests
-# TEST_SCRIPT_DIR  - Verzeichnis, in dem sich die Backend-Skripte befinden
-# 
-# Diese Variablen sind vom Testskript reserviert und zur Vermeidung von Kollisionen
-# mit den zu testenden Modulen uniquifiziert. Die Module verwenden ihre eigenen
-# Variablen wie SCRIPT_DIR, BASH_DIR usw., die durch das Testskript nicht
-# beschädigt werden.
-
-# -------------------------------
-# Automatischer Test aller Module
-# -------------------------------
-echo
-echo "-------------------------------------------------------------------------"
-echo "Automatische Überprüfung aller gefundenen Module"
-echo "-------------------------------------------------------------------------"
-
-# Alle Guard-Variablen finden und prüfen
-echo "Überprüfung des Ladestatus aller Module (Guard-Variablen):"
-all_guards_ok=true
-module_count=0
-modules_loaded=0
-modules_failed=0
-failed_modules=""
-
-# Finde alle MANAGE_*_LOADED Variablen
-for var in $(compgen -v MANAGE_*_LOADED); do
-    module_count=$((module_count + 1))
-    module_name=$(echo "$var" | sed 's/_LOADED//' | tr '[:upper:]' '[:lower:]')
-    module_name="${module_name#manage_}.sh"
-    
-    if [ "${!var}" -eq 1 ]; then
-        echo "✅ $var=1 : $module_name ist korrekt geladen"
-        modules_loaded=$((modules_loaded + 1))
-    else
-        echo "❌ $var=${!var} : $module_name ist NICHT korrekt geladen"
-        all_guards_ok=false
-        modules_failed=$((modules_failed + 1))
-        failed_modules+=" $module_name"
-    fi
-done
-
-echo
-echo "Überprüfung der Modulpfad-Variablen für alle erkannten Module:"
-all_paths_ok=true
-
-# Finde alle manage_*_sh Variablen
-for var in $(compgen -v manage_*_sh); do
-    if [ -n "${!var}" ] && [ -f "${!var}" ]; then
-        echo "✅ $var=${!var} : Pfad existiert"
-    else
-        echo "❌ $var=${!var:-nicht gesetzt} : Pfad fehlt oder ist ungültig"
-        all_paths_ok=false
-    fi
-done
-
-# Zusammenfassung der automatischen Überprüfung
-echo
-echo "Zusammenfassung des automatischen Modultests:"
-echo "Gesamt: $module_count Module, Geladen: $modules_loaded, Fehlerhaft: $modules_failed"
-
-if $all_guards_ok; then
-    echo "✅ Alle Guard-Variablen sind korrekt gesetzt (MANAGE_*_LOADED=1)"
-else
-    echo "❌ Einige Guard-Variablen sind nicht korrekt gesetzt: $failed_modules"
-fi
-
-if $all_paths_ok; then
-    echo "✅ Alle Modulpfad-Variablen sind korrekt definiert"
-else
-    echo "❌ Einige Modulpfad-Variablen fehlen oder zeigen auf nicht existierende Dateien"
-fi
-
-# HINWEIS: DEBUG-Modus wird manuell aktiviert
-# Die Funktion enable_debug_for_module wurde entfernt, da der Debug-Modus 
-# manuell gesetzt wird. Um den Debug-Modus zu aktivieren:
-# 1. Setze DEBUG_MOD_LOCAL=1 in den jeweiligen Skriptdateien oder
-# 2. Exportiere DEBUG_MOD_GLOBAL=1 vor dem Skriptaufruf
-
-# Skriptpfad für korrekte Ausführung aus dem Root-Verzeichnis
-TEST_CURRENT_DIR=$(pwd)
-TEST_SCRIPT_DIR="$TEST_CURRENT_DIR/backend/scripts"
-
-# Verbesserte Skriptpfaderkennung 
-if [ ! -d "$TEST_SCRIPT_DIR" ]; then
-    echo "Warnung: Standard-Skriptpfad nicht gefunden, suche nach Alternativen..."
-    
-    # Alternative 1: Prüfe, ob wir direkt im scripts-Verzeichnis sind
-    if [ -f "./lib_core.sh" ] && [ -f "./manage_folders.sh" ] && [ -f "./manage_files.sh" ]; then
-        TEST_SCRIPT_DIR="."
-        echo "Skriptverzeichnis gefunden: aktuelles Verzeichnis"
-    
-    # Alternative 2: Prüfe, ob wir bereits im backend-Verzeichnis sind
-    elif [ -d "./scripts" ] && [ -f "./scripts/lib_core.sh" ]; then
-        TEST_SCRIPT_DIR="./scripts"
-        echo "Skriptverzeichnis gefunden: $TEST_SCRIPT_DIR"
-    
-    # Alternative 3: Prüfe Standard-Installationspfade
-    elif [ -d "/opt/fotobox/backend/scripts" ]; then
-        TEST_SCRIPT_DIR="/opt/fotobox/backend/scripts"
-        echo "Skriptverzeichnis gefunden: $TEST_SCRIPT_DIR"
-        
-    # Alternative 4: Suche nach lib_core.sh im System
-    else
-        echo "Führe systemweite Suche nach lib_core.sh durch..."
-        # Finde alle lib_core.sh Dateien im System
-        core_files=$(find /opt -name "lib_core.sh" 2>/dev/null)
-        
-        if [ -n "$core_files" ]; then
-            # Verwende den ersten gefundenen Pfad
-            first_file=$(echo "$core_files" | head -n 1)
-            TEST_SCRIPT_DIR=$(dirname "$first_file")
-            echo "Skriptverzeichnis gefunden durch Suche: $TEST_SCRIPT_DIR"
-        else
-            echo "FEHLER: Skriptverzeichnis konnte nicht gefunden werden."
-            echo "Bitte führen Sie dieses Skript aus dem Root-Verzeichnis des Fotobox-Projekts aus."
-            exit 1
-        fi
-    fi
-fi
-
-# Überprüfe, ob lib_core.sh vorhanden ist (die anderen Module werden
-# über das zentrale Ladesystem von lib_core.sh geladen)
-if [ ! -f "$TEST_SCRIPT_DIR/lib_core.sh" ]; then
-    echo "FEHLER: lib_core.sh fehlt im Verzeichnis: $TEST_SCRIPT_DIR"
-    echo "Vorhandene Dateien im Skriptverzeichnis:"
-    ls -la "$TEST_SCRIPT_DIR"
-    exit 1
-fi
-
-# Aktiviere Debug-Modus für alle Tests
-export DEBUG_MOD_LOCAL=1
-
 # Informiere über Strategie
 echo "==========================================================================="
 echo "           Test der Module lib_core.sh, manage_folders.sh,"
@@ -216,47 +54,57 @@ echo "                 manage_files.sh und manage_logging.sh"
 echo "         mit aktiviertem Debug-Modus (DEBUG_MOD_LOCAL=1)"
 echo "==========================================================================="
 echo
-echo "Test lädt alle Module zentral über lib_core.sh"
 
-# Laden der erforderlichen Module
-echo "Lade Module aus Verzeichnis: $TEST_SCRIPT_DIR"
+# -------------------------------
+# Test der core_lib.sh Funktionen
+# -------------------------------
+echo "-------------------------------------------------------------------------"
+echo "Test für das Laden aller Module zentral über lib_core.sh"
+echo "-------------------------------------------------------------------------"
 
 # Debug-Ausgabe zum Anzeigen der vorhandenen Dateien
+echo "---------------------------------------------------------------------------"
 echo "Vorhandene Dateien im Skriptverzeichnis:"
 ls -la "$TEST_SCRIPT_DIR"
 
-# Setze SCRIPT_DIR für lib_core.sh
-export SCRIPT_DIR="$TEST_SCRIPT_DIR"
+# Laden der erforderlichen Module
+echo
+echo "---------------------------------------------------------------------------"
+echo "Lade Module aus Verzeichnis: $TEST_SCRIPT_DIR"
 
 # Lade lib_core.sh, was automatisch alle anderen Module laden sollte
+echo
 echo -n "Lade lib_core.sh für zentrale Modulladelogik... "
 if [ ! -f "$TEST_SCRIPT_DIR/lib_core.sh" ]; then
-    echo "FEHLER: lib_core.sh nicht gefunden!"
+    echo "❌ ERROR: lib_core.sh nicht gefunden!"
     exit 1
+else
+    echo "✅ SUCCES: lib_core.sh wurde erfolgreich geladen."
 fi
 
 # Lade das zentrale Modul lib_core.sh
+echo
+echo "---------------------------------------------------------------------------"
+echo "Versuche lib_core.sh und alle anderen Module zu laden..."
 source "$TEST_SCRIPT_DIR/lib_core.sh"
 if [ $? -eq 0 ]; then
-    echo "Erfolg."
-    echo "Modul lib_core.sh wurde geladen und sollte alle anderen Module mitgeladen haben."
+    echo "✅ SUCCES: Modul lib_core.sh wurde geladen und sollte alle anderen Module mitgeladen haben."
 else
-    echo "FEHLER beim Laden von lib_core.sh"
+    echo "❌ FEHLER: Beim Laden von lib_core.sh ist ein Fehler aufgetreten."
     exit 1
 fi
 
 # Überprüfe, ob alle Module geladen wurden
 echo
-echo "Überprüfe, ob alle Module geladen wurden:"
+echo "---------------------------------------------------------------------------"
+echo "Überprüfe, ob alle Module geladen wurden (interne Funktion check_all_modules_loaded) ..."
 check_all_modules_loaded
-
-# Überprüfe, ob alle Modulpfad-Variablen definiert wurden
-echo
-echo "Überprüfe, ob alle Modulpfad-Variablen definiert wurden:"
-check_module_path "manage_folders_sh" "manage_folders.sh"
-check_module_path "manage_files_sh" "manage_files.sh"
-check_module_path "manage_logging_sh" "manage_logging.sh"
-echo
+if [ $? -ne 0 ]; then
+    echo "❌ FEHLER: Es wurden nicht alle Module korrekt geladen!"
+    exit 1
+else
+    echo "✅ SUCCES: Alle Module wurden erfolgreich geladen."
+fi
 
 # -------------------------------
 # Test der manage_folders.sh Funktionen

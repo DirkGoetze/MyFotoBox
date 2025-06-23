@@ -569,51 +569,118 @@ load_resources() {
     return $result
 }
 
+# check_module
+check_module_debug_0001="Prüfe Modul '%s'"
+check_module_debug_0002="Prüfe Guard-Variable: '%s'"
+check_module_debug_0003="Guard-Variable '%s' ist korrekt gesetzt (%s=%s)"
+check_module_debug_0004="Guard-Variable '%s' ist NICHT korrekt gesetzt (%s=%s)"
+check_module_debug_0005="Prüfe Pfad-Variable: '%s'"
+check_module_debug_0006="Pfad-Variable '%s' ist korrekt definiert (%s=%s)"
+check_module_debug_0007="Pfad-Variable '%s' ist NICHT korrekt definiert (%s=%s)"
+check_module_debug_0008="Modul '%s' wurde korrekt geladen"
+
+check_module_log_0001="Guard-Variable '%s' ist NICHT korrekt gesetzt (%s=%s)"
+check_module_log_0002="Pfad-Variable '%s' ist NICHT korrekt definiert (%s=%s)"
+check_module_log_0003="Modul '%s' wurde korrekt geladen (%s=%s)"
+
 check_module() {
     # -----------------------------------------------------------------------
-    # Funktion: Überprüft, ob ein einzelnes Modul korrekt geladen wurde
-    # Parameter: $1 - Name der Guard-Variable (z.B. "MANAGE_FOLDERS_LOADED")
-    #            $2 - Name des Moduls für die Ausgabe
-    # Rückgabe: 0 = OK, 1 = Fehler (nicht geladen)
+    # Funktion: Überprüft, ob das übergebene Modul korrekt geladen wurde
+    # Parameter: $1 - Dateiname des Moduls
+    # Rückgabe: 0 = OK, 
+    # ........  1 = Guard-Variable des Moduls ist nicht 1
+    # ........  2 = Pfadvariable des Moduls ist nicht gesetzt
     # -----------------------------------------------------------------------
-    local guard_var="$1"
-    local module_name="$2"
+    local module_name="$1"
     
-    if [ "$(eval echo \$$guard_var)" -ne 1 ]; then
-        debug_output "check_module: Modul '$module_name' wurde nicht korrekt geladen (${guard_var}=$(eval echo \$$guard_var))"
-        return 1
+    # Extrahiere den Basisnamen ohne .sh Endung für die Variablennamen
+    local base_name=$(basename "$module_name" .sh)
+    
+    # Erstelle die Namen für Guard- und Pfadvariable
+    local guard_var="MANAGE_${base_name^^}_LOADED"
+    local path_var="${base_name}_sh"
+    
+    # Debug-Ausgabe
+    debug_output "$(printf "$check_module_debug_0001" "$module_name")"
+
+    # Prüfe Guard-Variable
+    debug_output "$(printf "$check_module_debug_0002" "$guard_var")"
+    if [ -n "${!guard_var:-}" ] && [ ${!guard_var} -eq 1 ]; then
+        debug_output "$(printf "$check_module_debug_0003" "$guard_var")"
     else
-        debug_output "check_module: Modul '$module_name' erfolgreich geladen"
-        return 0
+        debug_output "$(printf "$check_module_debug_0004" "$guard_var" "${!guard_var:-nicht gesetzt}")"
+        log "$(printf "$check_module_log_0001" "$module_name" "$guard_var" "${!guard_var:-nicht gesetzt}")"
+        return 1  # Guard nicht OK
     fi
+
+    # Prüfe Pfad-Variable
+    debug_output "$(printf "$check_module_debug_0005" "$path_var")"
+    if [ -n "${!path_var:-}" ] && [ -f "${!path_var}" ]; then
+        debug_output "$(printf "$check_module_debug_0006" "$path_var" "${!path_var}")"
+    else
+        debug_output "$(printf "$check_module_debug_0007" "$path_var" "${!path_var:-nicht gesetzt}")"
+        log "$(printf "$check_module_log_0002" "$module_name" "$path_var" "${!path_var:-nicht gesetzt}")"
+        return 2  # Pfad nicht OK
+    fi
+
+    # Wenn wir hier ankommen, sind beide Prüfungen erfolgreich
+    debug_output "$(printf "$check_module_debug_0008" "$module_name")"
+    return 0  # Erfolg
 }
+
+# check_all_modules_loaded
+check_all_modules_loaded_debug_0001="Prüfe Status aller Module"
+check_all_modules_loaded_debug_0002="Keine Module (manage_*.sh) im Verzeichnis %s gefunden"
+check_all_modules_loaded_debug_0003="Skriptverzeichnis %s existiert nicht"
+check_all_modules_loaded_debug_0004="Ergebnis - Gesamt: %d, Geladen: %d, Fehlerhaft: %d"
+check_all_modules_loaded_debug_0005="Alle Module wurden erfolgreich geladen."
+check_all_modules_loaded_debug_0006="Folgende Module konnten nicht korrekt geladen werden: '%s'"    
 
 check_all_modules_loaded() {
     # -----------------------------------------------------------------------
     # Funktion: Überprüft, ob alle Module korrekt geladen wurden
     # Parameter: keine
-    # Rückgabe: 0 = Alles OK, 1 = Mindestens ein Modul fehlerhaft geladen
+    # Rückgabe: 0 = Alles OK
+    # ........  1 = Mindestens ein Modul fehlerhaft geladen
     # -----------------------------------------------------------------------
     local all_loaded=true
     local module_count=0
     local modules_loaded=0
     local modules_failed=0
     local failed_modules=""
+
+    debug_output "$(printf "$check_all_modules_loaded_debug_0001")"
+
+    # Automatische Erkennung aller manage_*.sh Module im Skriptverzeichnis
+    local script_dir="${SCRIPT_DIR:-$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")}"
+    local module_files
     
-    debug_output "check_all_modules_loaded: Prüfe Status aller Module"
+    # Finde alle manage_*.sh Dateien im Skriptverzeichnis
+    if [ -d "$script_dir" ]; then
+        module_files=$(find "$script_dir" -maxdepth 1 -name "manage_*.sh" -type f 2>/dev/null)
+        
+        if [ -z "$module_files" ]; then
+            debug_output "$(printf "$check_all_modules_loaded_debug_0002" "$script_dir")"
+            return 1
+        fi
+        
+        # Prüfe jedes gefundene Modul
+        for module_path in $module_files; do
+            local module_name=$(basename "$module_path")
+            debug_output "$(printf "$check_all_modules_loaded_debug_0005" "$module_name")"
+
+            # Prüfe Modul mit der überarbeiteten check_module Funktion
+            if ! check_module "$module_name"; then
+                all_loaded=false
+                failed_modules+=" $module_name"
+            fi
+        done
+    else
+        debug_output "$(printf "$check_all_modules_loaded_debug_0003" "$script_dir")"
+        return 1
+    fi
     
-    # Alle bekannten Module prüfen
-    check_module "MANAGE_FOLDERS_LOADED" "manage_folders.sh" || { all_loaded=false; failed_modules+=" manage_folders.sh"; }
-    check_module "MANAGE_FILES_LOADED" "manage_files.sh" || { all_loaded=false; failed_modules+=" manage_files.sh"; }
-    check_module "MANAGE_LOGGING_LOADED" "manage_logging.sh" || { all_loaded=false; failed_modules+=" manage_logging.sh"; }
-    check_module "MANAGE_NGINX_LOADED" "manage_nginx.sh" || { all_loaded=false; failed_modules+=" manage_nginx.sh"; }
-    check_module "MANAGE_HTTPS_LOADED" "manage_https.sh" || { all_loaded=false; failed_modules+=" manage_https.sh"; }
-    check_module "MANAGE_FIREWALL_LOADED" "manage_firewall.sh" || { all_loaded=false; failed_modules+=" manage_firewall.sh"; }
-    check_module "MANAGE_PYTHON_ENV_LOADED" "manage_python_env.sh" || { all_loaded=false; failed_modules+=" manage_python_env.sh"; }
-    check_module "MANAGE_BACKEND_SERVICE_LOADED" "manage_backend_service.sh" || { all_loaded=false; failed_modules+=" manage_backend_service.sh"; }
-    # Weitere Module hier hinzufügen, wenn sie Teil des Systems sind
-    
-    # Modulstatistik ausgeben
+    # Modulstatistik vorbereiten
     for var in $(compgen -v MANAGE_*_LOADED); do
         module_count=$((module_count + 1))
         if [ "${!var}" -eq 1 ]; then
@@ -623,19 +690,19 @@ check_all_modules_loaded() {
         fi
     done
     
-    debug_output "check_all_modules_loaded: Ergebnis - Gesamt: $module_count, Geladen: $modules_loaded, Fehlerhaft: $modules_failed"
-    
+    # Modulstatistik ausgeben
+    debug_output "$(printf "check_all_modules_loaded: Ergebnis - Gesamt: %d, Geladen: %d, Fehlerhaft: %d" "$module_count" "$modules_loaded" "$modules_failed")"
+
     if $all_loaded; then
         if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ]; then
-            echo -e "${COLOR_GREEN}Alle Module wurden erfolgreich geladen.${COLOR_RESET}"
+            debug_output "$(printf "$check_all_modules_loaded_debug_0005")"
         fi
         return 0
     else
-        echo -e "${COLOR_RED}Folgende Module konnten nicht korrekt geladen werden:${COLOR_RESET}${failed_modules}"
+        debug_output "$(printf "$check_all_modules_loaded_debug_0006" "$failed_modules")"
         return 1
     fi
 }
-
 # ===========================================================================
 # Hauptteil des Skripts: Ressourcen laden und Module überprüfen
 # ===========================================================================
