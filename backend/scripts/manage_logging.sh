@@ -399,50 +399,35 @@ print_debug() {
         local IFS=$'\n'
         local lines=($content)
         
-        # 2. Identifiziere den Präfix und die nachfolgenden Debug-Zeilen
+        # 2. Extrahiere Präfix aus dem ersten Array-Eintrag
         local prefix=""
-        local result_text=""
-        local debug_lines=()
-        
-        # Extrahiere den Präfix - alles vor dem ersten Debug-Marker in der ersten Zeile
         local first_line="${lines[0]}"
+        
         if [[ "$first_line" == *"$debug_marker"* ]]; then
-            # Der Präfix ist alles vor dem Debug-Marker
             prefix="${first_line%%$debug_marker*}"
-        else
-            # Falls die erste Zeile keinen Debug-Marker enthält, ist sie komplett der Präfix
-            prefix="$first_line"
+        fi
+        echo "DEBUG-PREFIX: $prefix"
+
+        # 3. Extrahiere Ergebnistext aus dem letzten Array-Eintrag
+        local result_text="${lines[-1]}"
+        echo "DEBUG-RESULT: $result_text"
+
+        # Entferne den letzten Eintrag aus dem Array, wenn es mindestens 2 Einträge gibt
+        if [ ${#lines[@]} -gt 1 ]; then
+            unset 'lines[-1]'
         fi
         
-        # Der letzte Eintrag im Array ist normalerweise das Ergebnis
-        result_text="${lines[-1]}"
-        
-        # Wenn das Ergebnis einen Debug-Marker enthält, ist es keine separate Ergebniszeile
-        if [[ "$result_text" == *"$debug_marker"* ]]; then
-            result_text=""
-        fi
-        
-        # Sammle alle Debug-Zeilen (außer der letzten, falls sie das Ergebnis ist)
-        for ((i=0; i<${#lines[@]}; i++)); do
-            local line="${lines[$i]}"
-            # Wenn es nicht die letzte Zeile ist oder die letzte Zeile ein Debug-Marker enthält
-            if [[ $i -lt $(( ${#lines[@]} - 1 )) || "$line" == *"$debug_marker"* ]]; then
-                if [[ "$line" == *"$debug_marker"* ]]; then
-                    debug_lines+=("$line")
-                fi
+        # 4. Ausgabe aller Debug-Zeilen
+        for line in "${lines[@]}"; do
+            if [[ "$line" == *"$debug_marker"* ]]; then
+                # Wenn die Zeile einen Debug-Marker enthält, gib sie direkt aus
+                echo -e "$line"
             fi
         done
         
-        # Gib alle gesammelten Debug-Zeilen aus
-        for line in "${debug_lines[@]}"; do
-            echo -e "$line"
-        done
-        
-        # Entferne zusätzliche Debug-Ausgaben der Funktion selbst
-        prefix=$(echo "$prefix" | sed 's/^DEBUG-[A-Z-]*: *//')
-        
-        # Bereinige den Präfix von Leerzeichen am Anfang und Ende
-        prefix=$(echo "$prefix" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+        # 5. Ausgabe der ursprünglichen Nachricht mit dem extrahierten Präfix
+        # Entferne führenden Leerraum vor dem Präfix, falls vorhanden
+        prefix=$(echo "$prefix" | sed 's/^[[:space:]]*//')
         
         # Gib das Ergebnis mit dem Debug-Präfix aus
         echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${result_text}"
