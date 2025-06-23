@@ -95,15 +95,15 @@ get_config_file() {
     # Bestimmen des Ordnerpfads basierend auf der Kategorie
     case "$category" in
         "nginx")
-            folder_path="$("$manage_folders_sh" get_nginx_conf_dir)"
+            folder_path="$("$MANAGE_FOLDERS_SH" get_nginx_conf_dir)"
             file_ext=".conf"
             ;;
         "camera")
-            folder_path="$("$manage_folders_sh" get_camera_conf_dir)"
+            folder_path="$("$MANAGE_FOLDERS_SH" get_camera_conf_dir)"
             file_ext=".json"
             ;;
         "system")
-            folder_path="$("$manage_folders_sh" get_conf_dir)"
+            folder_path="$("$MANAGE_FOLDERS_SH" get_conf_dir)"
             file_ext=".inf"
             ;;
         *)
@@ -151,7 +151,7 @@ get_template_file() {
     
     # Ermitteln des Template-Basisordners für das Modul
     local template_dir
-    template_dir="$("$manage_folders_sh" get_template_dir "$modul")"
+    template_dir="$("$MANAGE_FOLDERS_SH" get_template_dir "$modul")"
     
     if [ $? -ne 0 ] || [ -z "$template_dir" ]; then
         log "$(printf "$get_template_file_log_0002" "$modul" "$name")" "get_template_file"
@@ -235,7 +235,7 @@ get_log_file() {
     debug "$(printf "$get_log_file_debug_0001" "$component")" "CLI" "get_log_file"
 
     # Verzeichnis abrufen und Dateinamen generieren
-    log_dir="$("$manage_folders_sh" get_log_dir)"
+    log_dir="$("$MANAGE_FOLDERS_SH" get_log_dir)"
     echo "${log_dir}/$(date +%Y-%m-%d)_${component}.log"
 }
 
@@ -258,7 +258,7 @@ get_temp_file() {
     debug "$(printf "$get_temp_file_debug_0001" "$prefix" "$suffix")" "CLI" "get_temp_file"
 
     # Temporäres Verzeichnis abrufen und Dateinamen generieren
-    temp_dir="$("$manage_folders_sh" get_temp_dir)"
+    temp_dir="$("$MANAGE_FOLDERS_SH" get_temp_dir)"
     echo "${temp_dir}/${prefix}_$(date +%Y%m%d%H%M%S)_$RANDOM$suffix"
 }
 
@@ -284,7 +284,7 @@ get_backup_file() {
     if ! check_param "$component" "component"; then return 1; fi
     
     # Backup-Verzeichnis abrufen und Dateinamen generieren
-    backup_dir="$("$manage_folders_sh" get_backup_dir)"
+    backup_dir="$("$MANAGE_FOLDERS_SH" get_backup_dir)"
     echo "${backup_dir}/$(date +%Y-%m-%d)_${component}${extension}"
 }
 
@@ -308,7 +308,7 @@ get_backup_meta_file() {
     if ! check_param "$component" "component"; then return 1; fi
     
     # Backup-Verzeichnis abrufen und Dateinamen generieren
-    backup_dir="$("$manage_folders_sh" get_backup_dir)"
+    backup_dir="$("$MANAGE_FOLDERS_SH" get_backup_dir)"
     echo "${backup_dir}/$(date +%Y-%m-%d)_${component}.meta.json"
 }
 
@@ -338,10 +338,10 @@ get_image_file() {
     # Bild-Verzeichnis abrufen
     case "$type" in
         "original")
-            folder_path="$("$manage_folders_sh" get_photos_dir)"
+            folder_path="$("$MANAGE_FOLDERS_SH" get_photos_dir)"
             ;;
         "thumbnail")
-            folder_path="$("$manage_folders_sh" get_thumbnails_dir)"
+            folder_path="$("$MANAGE_FOLDERS_SH" get_thumbnails_dir)"
             ;;
         *)
             debug "$(printf "$get_image_file_debug_0002" "$type")" "CLI" "get_image_file"
@@ -397,7 +397,7 @@ get_system_file() {
     case "$file_type" in
         "nginx")
             # Pfad für Nginx-Konfigurationsdateien
-            system_folder=$("$manage_folders_sh" get_nginx_systemdir)
+            system_folder=$("$MANAGE_FOLDERS_SH" get_nginx_systemdir)
             if [ $? -ne 0 ]; then
                 log "$get_system_file_log_0001" "get_system_file" "manage_files"
                 debug "$get_system_file_log_0001" "get_system_file" "manage_files"
@@ -414,7 +414,7 @@ get_system_file() {
             ;;
         "systemd")
             # Pfad für Systemd-Dienste
-            system_folder=$("$manage_folders_sh" get_systemd_systemdir)
+            system_folder=$("$MANAGE_FOLDERS_SH" get_systemd_systemdir)
             if [ $? -ne 0 ]; then
                 log "$get_system_file_log_0003" "get_system_file" "manage_files"
                 debug "$get_system_file_log_0003" "get_system_file" "manage_files"
@@ -431,7 +431,7 @@ get_system_file() {
             ;;
         "ssl_cert")
             # Pfad für SSL-Zertifikate
-            system_folder=$("$manage_folders_sh" get_ssl_cert_systemdir)
+            system_folder=$("$MANAGE_FOLDERS_SH" get_ssl_cert_systemdir)
             if [ $? -ne 0 ]; then
                 log "$get_system_file_log_0005" "get_system_file" "manage_files"
                 debug "$get_system_file_log_0005" "get_system_file" "manage_files"
@@ -448,7 +448,7 @@ get_system_file() {
             ;;
         "ssl_key")
             # Pfad für SSL-Schlüsseldateien
-            system_folder=$("$manage_folders_sh" get_ssl_key_systemdir)
+            system_folder=$("$MANAGE_FOLDERS_SH" get_ssl_key_systemdir)
             if [ $? -ne 0 ]; then
                 log "$get_system_file_log_0007" "get_system_file" "manage_files"
                 debug "$get_system_file_log_0007" "get_system_file" "manage_files"
@@ -545,7 +545,7 @@ create_empty_file() {
     fi
   
     # Verzeichnis für die Datei erstellen
-    "$manage_folders_sh" create_directory "$(dirname "$full_filename")"
+    "$MANAGE_FOLDERS_SH" create_directory "$(dirname "$full_filename")"
     touch "$full_filename"
 
     if [ $? -eq 0 ]; then

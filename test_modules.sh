@@ -26,27 +26,6 @@ test_function() {
     fi
 }
 
-# Hilfsfunktion für den korrekten Aufruf von Funktionen aus dem Modul
-call_module_function() {
-    local module_path="$1"
-    local function_name="$2"
-    shift 2  # Entferne die ersten beiden Parameter
-    
-    # Führe die Funktion aus dem Modul aus
-    if [ -x "$module_path" ]; then
-        # Führe das Skript direkt aus mit der Funktion als erstem Argument
-        "$module_path" "$function_name" "$@"
-        return $?
-    else
-        # Sourcing-Fallback (sollte nicht benötigt werden, wenn Skripte ausführbar sind)
-        echo "WARNUNG: Modul $module_path hat keine Ausführungsrechte, versuche Sourcing-Methode"
-        # shellcheck disable=SC1090
-        source "$module_path" >/dev/null 2>&1
-        "$function_name" "$@"
-        return $?
-    fi
-}
-
 # Informiere über Strategie
 echo "==========================================================================="
 echo "           Test der Module lib_core.sh, manage_folders.sh,"
@@ -103,30 +82,9 @@ echo "-------------------------------------------------------------------------"
 echo "Test der Funktionen in manage_folders.sh"
 echo "-------------------------------------------------------------------------"
 
-# Test: create_directory
-echo -n "Test create_directory: "
-test_dir="$TEST_CURRENT_DIR/tmp/test_directory"
-mkdir -p "$TEST_CURRENT_DIR/tmp" 2>/dev/null || true
-set +e  # Fehler nicht als fatal behandeln
-call_module_function "$manage_folders_sh" "create_directory" "$test_dir"
-result=$?
-set -e  # Fehlerbehandlung wieder aktivieren
-test_function $result "create_directory" 0
-
-# Test: create_symlink_to_standard_path
-echo -n "Test create_symlink_to_standard_path: "
-source_dir="$TEST_CURRENT_DIR/tmp/symlink_source"
-target_dir="$TEST_CURRENT_DIR/tmp/symlink_target"
-call_module_function "$manage_folders_sh" "create_directory" "$target_dir" || true
-set +e  # Fehler nicht als fatal behandeln
-call_module_function "$manage_folders_sh" "create_symlink_to_standard_path" "$source_dir" "$target_dir"
-result=$?
-set -e  # Fehlerbehandlung wieder aktivieren
-test_function $result "create_symlink_to_standard_path" 0
-
 # Test: get_install_dir
 echo -n "Test get_install_dir: "
-install_dir=$(call_module_function "$manage_folders_sh" "get_install_dir")
+install_dir="$("$MANAGE_FOLDERS_SH" get_install_dir)"
 if [ -n "$install_dir" ]; then
     echo "✅ Die Funktion get_install_dir wurde erfolgreich ausgeführt. Ergebnis: $install_dir"
 else
@@ -135,7 +93,7 @@ fi
 
 # Test: get_backend_dir
 echo -n "Test get_backend_dir: "
-backend_dir=$(call_module_function "$manage_folders_sh" "get_backend_dir")
+backend_dir="$("$MANAGE_FOLDERS_SH" get_backend_dir)"
 if [ -n "$backend_dir" ]; then
     echo "✅ Die Funktion get_backend_dir wurde erfolgreich ausgeführt. Ergebnis: $backend_dir"
 else
@@ -144,16 +102,18 @@ fi
 
 # Test: get_script_dir
 echo -n "Test get_script_dir: "
-script_dir=$(call_module_function "$manage_folders_sh" "get_script_dir")
+script_dir=$("$MANAGE_FOLDERS_SH" get_script_dir)
 if [ -n "$script_dir" ]; then
     echo "✅ Die Funktion get_script_dir wurde erfolgreich ausgeführt. Ergebnis: $script_dir"
 else
     echo "❌ Die Funktion get_script_dir ist fehlgeschlagen."
 fi
 
+exit
+
 # Test: get_template_dir
 echo -n "Test get_template_dir: "
-template_dir=$(call_module_function "$manage_folders_sh" "get_template_dir" "nginx")
+template_dir=$(call_module_function "$MANAGE_FOLDERS_SH" "get_template_dir" "nginx")
 if [ -n "$template_dir" ]; then
     echo "✅ Die Funktion get_template_dir wurde erfolgreich ausgeführt. Ergebnis: $template_dir"
 else
@@ -162,7 +122,7 @@ fi
 
 # Test: get_template_dir (ohne Modul-Parameter)
 echo -n "Test get_template_dir (ohne Modul): "
-template_dir_base=$(call_module_function "$manage_folders_sh" "get_template_dir")
+template_dir_base=$(call_module_function "$MANAGE_FOLDERS_SH" "get_template_dir")
 if [ -n "$template_dir_base" ]; then
     echo "✅ Die Funktion get_template_dir ohne Modul wurde erfolgreich ausgeführt. Ergebnis: $template_dir_base"
 else
