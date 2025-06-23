@@ -437,8 +437,3 @@ reset_firewall() {
     print_success "Fotobox-Firewall-Regeln wurden entfernt"
     return 0
 }
-
-# ===========================================================================
-# Abschluss: Markiere dieses Modul als geladen
-# ===========================================================================
-MANAGE_FIREWALL_LOADED=1

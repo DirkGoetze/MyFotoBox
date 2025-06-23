@@ -49,6 +49,3 @@ DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 # ===========================================================================
 
 # ... Funktionsimplementierung folgt ...
-
-# Markiere dieses Modul als geladen
-MANAGE_PYTHON_ENV_LOADED=1

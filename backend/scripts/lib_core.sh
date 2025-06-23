@@ -125,53 +125,6 @@ SYSTEMD_DST="/etc/systemd/system/fotobox-backend.service"
 # Allgemeine Hilfsfunktionen für alle Skripte
 # ===========================================================================
 
-define_module_paths() {
-    # -----------------------------------------------------------------------
-    # define_module_paths
-    # -----------------------------------------------------------------------
-    # Funktion: Definiert Konstanten für die Pfade zu allen Modulen für externe Aufrufe
-    # Parameter: keine
-    # Rückgabewert: 0 bei Erfolg, 1 bei Fehler
-    # -----------------------------------------------------------------------
-    local script_dir="$DEFAULT_DIR_BACKEND_SCRIPTS"
-    local prefix="manage_"
-    local suffix=".sh"
-    
-    # Stelle sicher, dass SCRIPT_DIR gesetzt ist
-    : "${SCRIPT_DIR:=$script_dir}"
-    
-    debug "Definiere Modulpfade für externe Aufrufe..." "CLI" "define_module_paths"
-    
-    # Finde alle manage_*.sh Dateien im Skriptverzeichnis
-    local module_files
-    if [ -d "$SCRIPT_DIR" ]; then
-        module_files=$(find "$SCRIPT_DIR" -maxdepth 1 -name "${prefix}*${suffix}" -type f 2>/dev/null)
-        
-        if [ -z "$module_files" ]; then
-            echo "WARNUNG: Keine Module (${prefix}*${suffix}) im Verzeichnis $SCRIPT_DIR gefunden" >&2
-            return 1
-        fi
-        
-        # Exportiere einen Pfadvariable für jedes Modul
-        for module_path in $module_files; do
-            local module_name=$(basename "$module_path" "$suffix")
-            local var_name="${module_name}_sh"
-            
-            # Definiere die Variable global
-            eval "$var_name=\"$module_path\""
-            export "$var_name"
-            
-            debug "Modul-Pfad definiert: $var_name=$module_path" "CLI" "define_module_paths"
-        done
-        
-        debug "Alle Modulpfade wurden erfolgreich definiert" "CLI" "define_module_paths"
-        return 0
-    else
-        echo "FEHLER: Skriptverzeichnis $SCRIPT_DIR existiert nicht" >&2
-        return 1
-    fi
-}
-
 # Hilfsfunktion für Debug-Ausgaben (wird vor dem Laden von manage_logging.sh verwendet)
 debug_output() {
     # Diese Funktion entscheidet, ob print_debug (falls geladen) oder echo verwendet wird
@@ -255,6 +208,64 @@ check_param() {
 : "${MANAGE_BACKEND_SERVICE_LOADED:=0}"
 # ggf. weitere Guard-Variablen hier hinzufügen
 
+# check_module
+check_module_debug_0001="[DEBUG] check_module: Prüfe Modul '%s'"
+check_module_debug_0002="[DEBUG] check_module: Prüfe Guard-Variable: '%s'"
+check_module_debug_0003="[DEBUG] check_module: Guard-Variable '%s' ist korrekt gesetzt (%s=%s)"
+check_module_debug_0004="[DEBUG] check_module: Guard-Variable '%s' ist NICHT korrekt gesetzt (%s=%s)"
+check_module_debug_0005="[DEBUG] check_module: Prüfe Pfad-Variable: '%s'"
+check_module_debug_0006="[DEBUG] check_module: Pfad-Variable '%s' ist korrekt definiert (%s=%s)"
+check_module_debug_0007="[DEBUG] check_module: Pfad-Variable '%s' ist NICHT korrekt definiert (%s=%s)"
+check_module_debug_0008="[DEBUG] check_module: Modul '%s' wurde korrekt geladen"
+check_module_log_0001="Guard-Variable '%s' ist NICHT korrekt gesetzt (%s=%s)"
+check_module_log_0002="Pfad-Variable '%s' ist NICHT korrekt definiert (%s=%s)"
+check_module_log_0003="Modul '%s' wurde korrekt geladen (%s=%s)"
+
+check_module() {
+    # -----------------------------------------------------------------------
+    # Funktion: Überprüft, ob das übergebene Modul korrekt geladen wurde
+    # Parameter: $1 - Dateiname des Moduls
+    # Rückgabe: 0 = OK, 
+    # ........  1 = Guard-Variable des Moduls ist nicht 1
+    # ........  2 = Pfadvariable des Moduls ist nicht gesetzt
+    # -----------------------------------------------------------------------
+    local module_name="$1"
+    
+    # Extrahiere den Basisnamen ohne .sh Endung für die Variablennamen
+    local base_name=$(basename "$module_name" .sh)
+    
+    # Erstelle die Namen für Guard- und Pfadvariable
+    local guard_var="MANAGE_${base_name^^}_LOADED"
+    local path_var="${base_name}_sh"
+    
+    # Debug-Ausgabe
+    debug_output "$(printf "$check_module_debug_0001" "$module_name")"
+
+    # Prüfe Guard-Variable
+    debug_output "$(printf "$check_module_debug_0002" "$guard_var")"
+    if [ -n "${!guard_var:-}" ] && [ ${!guard_var} -eq 1 ]; then
+        debug_output "$(printf "$check_module_debug_0003" "$guard_var")"
+    else
+        debug_output "$(printf "$check_module_debug_0004" "$guard_var" "${!guard_var:-nicht gesetzt}")"
+        log "$(printf "$check_module_log_0001" "$module_name" "$guard_var" "${!guard_var:-nicht gesetzt}")"
+        return 1  # Guard nicht OK
+    fi
+
+    # Prüfe Pfad-Variable
+    debug_output "$(printf "$check_module_debug_0005" "$path_var")"
+    if [ -n "${!path_var:-}" ] && [ -f "${!path_var}" ]; then
+        debug_output "$(printf "$check_module_debug_0006" "$path_var" "${!path_var}")"
+    else
+        debug_output "$(printf "$check_module_debug_0007" "$path_var" "${!path_var:-nicht gesetzt}")"
+        log "$(printf "$check_module_log_0002" "$module_name" "$path_var" "${!path_var:-nicht gesetzt}")"
+        return 2  # Pfad nicht OK
+    fi
+
+    # Wenn wir hier ankommen, sind beide Prüfungen erfolgreich
+    debug_output "$(printf "$check_module_debug_0008" "$module_name")"
+    return 0  # Erfolg
+}
+
 bind_resource() {
     # -----------------------------------------------------------------------
     # Funktion: Vereinfachte Version zum Laden von Skript-Ressourcen
@@ -291,23 +302,35 @@ bind_resource() {
     fi
     
     # Ressource laden
-    debug_output "bind_resource: Lade Ressource '$resource_file'"
-    source "$resource_file"
     local source_result=$?
-    
+
+    debug_output "bind_resource: Lade Ressource '$resource_file'"
+    source "$resource_file"    
     if [ $source_result -ne 0 ]; then
         debug_output "bind_resource: Fehler beim Laden von '$resource_file' (Status: $source_result)"
         echo "Fehler: Konnte '$resource_name' nicht laden."
         return 1
     fi
+
+    # Setze die Guard-Variable auf 1, um anzuzeigen, dass die Ressource geladen wurde
+    eval "$guard_var_name=1"
+    export "$guard_var_name"  # Exportiere die Variable, damit sie global verfügbar ist
+    debug_output "bind_resource: Ressource '$resource_name' erfolgreich geladen, Guard-Variable '$guard_var_name' gesetzt"
+
+    # Setze die Path-Variable, um den Pfad zur Ressource global verfügbar zu machen
+    local path_var="${resource_name%.sh}_sh"
+    eval "$path_var=\"$resource_file\""
+    export "$path_var"  # Exportiere die Variable, damit sie global verfügbar ist
+    debug_output "bind_resource: Ressource '$resource_name' erfolgreich geladen und Pfad-Variable '$path_var' gesetzt"
     
-    # Prüfen ob die Guard-Variable wirklich auf 1 gesetzt wurde (durch das Skript selbst)
-    if [ "$(eval echo \$$guard_var_name)" -ne 1 ]; then
-        debug_output "bind_resource: Warnung - Das Modul '$resource_name' hat seine Guard-Variable nicht auf 1 gesetzt"
-        echo "Warnung: Das Modul '$resource_name' hat seine Guard-Variable nicht auf 1 gesetzt."
-        eval "$guard_var_name=1"  # Sicherstellen, dass die Guard-Variable gesetzt ist
+    # Prüfe ob das Laden erfolgreich war
+    if ! check_module "$resource_name"; then
+        debug_output "bind_resource: Fehler - Modul '$resource_name' konnte nicht korrekt geladen werden"
+        echo "Fehler: Modul '$resource_name' konnte nicht korrekt geladen werden."
+        return 1
     fi
-    
+
+    # Wenn wir hier ankommen, war alles erfolgreich
     debug_output "bind_resource: Ressource '$resource_name' erfolgreich geladen"
     return 0  # Erfolgreich geladen
 }
@@ -574,140 +597,6 @@ load_resources() {
     return $result
 }
 
-# check_module
-check_module_debug_0001="[DEBUG] check_module: Prüfe Modul '%s'"
-check_module_debug_0002="[DEBUG] check_module: Prüfe Guard-Variable: '%s'"
-check_module_debug_0003="[DEBUG] check_module: Guard-Variable '%s' ist korrekt gesetzt (%s=%s)"
-check_module_debug_0004="[DEBUG] check_module: Guard-Variable '%s' ist NICHT korrekt gesetzt (%s=%s)"
-check_module_debug_0005="[DEBUG] check_module: Prüfe Pfad-Variable: '%s'"
-check_module_debug_0006="[DEBUG] check_module: Pfad-Variable '%s' ist korrekt definiert (%s=%s)"
-check_module_debug_0007="[DEBUG] check_module: Pfad-Variable '%s' ist NICHT korrekt definiert (%s=%s)"
-check_module_debug_0008="[DEBUG] check_module: Modul '%s' wurde korrekt geladen"
-
-check_module_log_0001="Guard-Variable '%s' ist NICHT korrekt gesetzt (%s=%s)"
-check_module_log_0002="Pfad-Variable '%s' ist NICHT korrekt definiert (%s=%s)"
-check_module_log_0003="Modul '%s' wurde korrekt geladen (%s=%s)"
-
-check_module() {
-    # -----------------------------------------------------------------------
-    # Funktion: Überprüft, ob das übergebene Modul korrekt geladen wurde
-    # Parameter: $1 - Dateiname des Moduls
-    # Rückgabe: 0 = OK, 
-    # ........  1 = Guard-Variable des Moduls ist nicht 1
-    # ........  2 = Pfadvariable des Moduls ist nicht gesetzt
-    # -----------------------------------------------------------------------
-    local module_name="$1"
-    
-    # Extrahiere den Basisnamen ohne .sh Endung für die Variablennamen
-    local base_name=$(basename "$module_name" .sh)
-    
-    # Erstelle die Namen für Guard- und Pfadvariable
-    local guard_var="MANAGE_${base_name^^}_LOADED"
-    local path_var="${base_name}_sh"
-    
-    # Debug-Ausgabe
-    debug_output "$(printf "$check_module_debug_0001" "$module_name")"
-
-    # Prüfe Guard-Variable
-    debug_output "$(printf "$check_module_debug_0002" "$guard_var")"
-    if [ -n "${!guard_var:-}" ] && [ ${!guard_var} -eq 1 ]; then
-        debug_output "$(printf "$check_module_debug_0003" "$guard_var")"
-    else
-        debug_output "$(printf "$check_module_debug_0004" "$guard_var" "${!guard_var:-nicht gesetzt}")"
-        log "$(printf "$check_module_log_0001" "$module_name" "$guard_var" "${!guard_var:-nicht gesetzt}")"
-        return 1  # Guard nicht OK
-    fi
-
-    # Prüfe Pfad-Variable
-    debug_output "$(printf "$check_module_debug_0005" "$path_var")"
-    if [ -n "${!path_var:-}" ] && [ -f "${!path_var}" ]; then
-        debug_output "$(printf "$check_module_debug_0006" "$path_var" "${!path_var}")"
-    else
-        debug_output "$(printf "$check_module_debug_0007" "$path_var" "${!path_var:-nicht gesetzt}")"
-        log "$(printf "$check_module_log_0002" "$module_name" "$path_var" "${!path_var:-nicht gesetzt}")"
-        return 2  # Pfad nicht OK
-    fi
-
-    # Wenn wir hier ankommen, sind beide Prüfungen erfolgreich
-    debug_output "$(printf "$check_module_debug_0008" "$module_name")"
-    return 0  # Erfolg
-}
-
-# check_all_modules_loaded
-check_all_modules_loaded_debug_0001="[DEBUG] check_all_modules_loaded: Prüfe Status aller Module"
-check_all_modules_loaded_debug_0002="[DEBUG] check_all_modules_loaded: Keine Module (manage_*.sh) im Verzeichnis %s gefunden"
-check_all_modules_loaded_debug_0003="[DEBUG] check_all_modules_loaded: Skriptverzeichnis %s existiert nicht"
-check_all_modules_loaded_debug_0004="[DEBUG] check_all_modules_loaded: Ergebnis - Gesamt: %d, Geladen: %d, Fehlerhaft: %d"
-check_all_modules_loaded_debug_0005="[DEBUG] check_all_modules_loaded: Alle Module wurden erfolgreich geladen."
-check_all_modules_loaded_debug_0006="[DEBUG] check_all_modules_loaded: Folgende Module konnten nicht korrekt geladen werden: '%s'"
-
-check_all_modules_loaded() {
-    # -----------------------------------------------------------------------
-    # Funktion: Überprüft, ob alle Module korrekt geladen wurden
-    # Parameter: keine
-    # Rückgabe: 0 = Alles OK
-    # ........  1 = Mindestens ein Modul fehlerhaft geladen
-    # -----------------------------------------------------------------------
-    local all_loaded=true
-    local module_count=0
-    local modules_loaded=0
-    local modules_failed=0
-    local failed_modules=""
-
-    debug_output "$(printf "$check_all_modules_loaded_debug_0001")"
-
-    # Automatische Erkennung aller manage_*.sh Module im Skriptverzeichnis
-    local script_dir="${SCRIPT_DIR:-$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")}"
-    local module_files
-    
-    # Finde alle manage_*.sh Dateien im Skriptverzeichnis
-    if [ -d "$script_dir" ]; then
-        module_files=$(find "$script_dir" -maxdepth 1 -name "manage_*.sh" -type f 2>/dev/null)
-        
-        if [ -z "$module_files" ]; then
-            debug_output "$(printf "$check_all_modules_loaded_debug_0002" "$script_dir")"
-            return 1
-        fi
-        
-        # Prüfe jedes gefundene Modul
-        for module_path in $module_files; do
-            local module_name=$(basename "$module_path")
-            debug_output "$(printf "$check_all_modules_loaded_debug_0005" "$module_name")"
-
-            # Prüfe Modul mit der überarbeiteten check_module Funktion
-            if ! check_module "$module_name"; then
-                all_loaded=false
-                failed_modules+=" $module_name"
-            fi
-        done
-    else
-        debug_output "$(printf "$check_all_modules_loaded_debug_0003" "$script_dir")"
-        return 1
-    fi
-    
-    # Modulstatistik vorbereiten
-    for var in $(compgen -v MANAGE_*_LOADED); do
-        module_count=$((module_count + 1))
-        if [ "${!var}" -eq 1 ]; then
-            modules_loaded=$((modules_loaded + 1))
-        else
-            modules_failed=$((modules_failed + 1))
-        fi
-    done
-    
-    # Modulstatistik ausgeben
-    debug_output "$(printf "check_all_modules_loaded: Ergebnis - Gesamt: %d, Geladen: %d, Fehlerhaft: %d" "$module_count" "$modules_loaded" "$modules_failed")"
-
-    if $all_loaded; then
-        if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ]; then
-            debug_output "$(printf "$check_all_modules_loaded_debug_0005")"
-        fi
-        return 0
-    else
-        debug_output "$(printf "$check_all_modules_loaded_debug_0006" "$failed_modules")"
-        return 1
-    fi
-}
 # ===========================================================================
 # Hauptteil des Skripts: Ressourcen laden und Module überprüfen
 # ===========================================================================
@@ -721,9 +610,3 @@ if [ $? -ne 0 ]; then
     echo "Fehler: Einige Ressourcen konnten nicht geladen werden. Bitte überprüfen Sie die Fehlermeldungen."
     exit 1
 fi
-
-# Definiere Pfade für externe Modulaufrufe
-define_module_paths || echo "WARNUNG: Einige Modul-Pfade konnten nicht definiert werden" >&2
-
-# Überprüfen, ob alle Module korrekt geladen wurden
-check_all_modules_loaded

@@ -1636,8 +1636,3 @@ improved_nginx_install() {
     log_or_json "$mode" "success" "$improved_nginx_install_txt_0010" 0
     return 0
 }
-
-# ===========================================================================
-# Abschluss: Markiere dieses Modul als geladen
-# ===========================================================================
-MANAGE_NGINX_LOADED=1

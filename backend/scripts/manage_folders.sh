@@ -1885,9 +1885,3 @@ get_ssl_key_systemdir() {
     echo ""
     return 1
 }
-
-# ===========================================================================
-# Abschluss: Markiere dieses Modul als geladen
-# ===========================================================================
-MANAGE_FOLDERS_LOADED=1
-
