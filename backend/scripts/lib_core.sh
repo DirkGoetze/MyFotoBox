@@ -235,9 +235,9 @@ check_module() {
     local base_name=$(basename "$module_name" .sh)
     
     # Erstelle die Namen für Guard- und Pfadvariable
-    local guard_var="MANAGE_${base_name^^}_LOADED"
-    local path_var="${base_name}_sh"
-    
+    local guard_var="${base_name^^}_LOADED"
+    local path_var="${base_name^^}_SH"
+
     # Debug-Ausgabe
     debug_output "$(printf "$check_module_debug_0001" "$module_name")"
 
@@ -269,32 +269,35 @@ check_module() {
 bind_resource() {
     # -----------------------------------------------------------------------
     # Funktion: Vereinfachte Version zum Laden von Skript-Ressourcen
-    # Parameter: $1 = Name der Guard-Variable (z.B. "MANAGE_FOLDERS_LOADED")
-    # .........  $2 = Pfad zur Ressource (z.B. "$SCRIPT_DIR")
-    # .........  $3 = Name der benötigten Ressource (z.B. "manage_folders.sh")
+    # Parameter: $1 = Name der benötigten Ressource (z.B. "manage_folders.sh")
     # Rückgabe: 0 = OK, 1 = Ressource nicht verfügbar, 2 = Verzeichnis nicht verfügbar
     # -----------------------------------------------------------------------
-    local guard_var_name="$1"
-    local resource_path="$2"
-    local resource_name="$3"
-    local resource_file="$resource_path/$resource_name"
+    local resource_name="$1"
+    local resource_file="$SCRIPT_DIR/$resource_name"
     
+    if [ -z "$resource_name" ]; then
+        echo "Fehler: Ressource-Name ist leer."
+        return 1
+    fi
+
     # Prüfen, ob die Ressource bereits geladen ist
+    local base_name="${resource_name%.sh}"    
+    local guard_var_name="${base_name^^}_LOADED"  # erzwinge Großbuchstaben für Guard-Variable
     if [ "$(eval echo \$$guard_var_name)" -eq 1 ]; then
         debug_output "bind_resource: Ressource '$resource_name' bereits geladen"
         return 0  # Bereits geladen, alles OK
     fi
-    
-    debug_output "bind_resource: Versuche Ressource zu laden - '$resource_name'"
-    
+        
     # Prüfung des Ressourcen-Verzeichnisses
-    if [ ! -d "$resource_path" ] || [ ! -r "$resource_path" ]; then
-        debug_output "bind_resource: Fehler - Verzeichnis '$resource_path' nicht gefunden oder nicht lesbar"
-        echo "Fehler: Verzeichnis '$resource_path' nicht gefunden oder nicht lesbar."
+    debug_output "bind_resource: Suche Ressourcenverzeichnis: '$SCRIPT_DIR'"
+    if [ ! -d "$SCRIPT_DIR" ] || [ ! -r "$SCRIPT_DIR" ]; then
+        debug_output "bind_resource: Fehler - Verzeichnis '$SCRIPT_DIR' nicht gefunden oder nicht lesbar"
+        echo "Fehler: Verzeichnis '$SCRIPT_DIR' nicht gefunden oder nicht lesbar."
         return 2
     fi
     
     # Prüfen, ob die Ressourcendatei existiert und lesbar ist
+    debug_output "bind_resource: Versuche Ressource zu laden: '$resource_file'"
     if [ ! -f "$resource_file" ] || [ ! -r "$resource_file" ]; then
         debug_output "bind_resource: Fehler - Die Datei '$resource_file' existiert nicht oder ist nicht lesbar"
         echo "Fehler: Die Datei '$resource_file' existiert nicht oder ist nicht lesbar."
@@ -302,12 +305,11 @@ bind_resource() {
     fi
     
     # Ressource laden
-    local source_result=$?
-
-    debug_output "bind_resource: Lade Ressource '$resource_file'"
+    debug_output "bind_resource: Lade Ressource '$resource_name'"
     source "$resource_file"    
+    local source_result=$?
     if [ $source_result -ne 0 ]; then
-        debug_output "bind_resource: Fehler beim Laden von '$resource_file' (Status: $source_result)"
+        debug_output "bind_resource: Fehler beim Laden von '$resource_name' (Status: $source_result)"
         echo "Fehler: Konnte '$resource_name' nicht laden."
         return 1
     fi
@@ -319,6 +321,7 @@ bind_resource() {
 
     # Setze die Path-Variable, um den Pfad zur Ressource global verfügbar zu machen
     local path_var="${resource_name%.sh}_sh"
+    path_var="${path_var^^}"  # Konvertiere gesamten Variablennamen in Großbuchstaben
     eval "$path_var=\"$resource_file\""
     export "$path_var"  # Exportiere die Variable, damit sie global verfügbar ist
     debug_output "bind_resource: Ressource '$resource_name' erfolgreich geladen und Pfad-Variable '$path_var' gesetzt"
@@ -354,7 +357,7 @@ load_resources() {
     
     # 1. manage_folders.sh einbinden
     debug_output "$(printf "$load_resources_debug_0002" "manage_folders.sh")"
-    bind_resource "MANAGE_FOLDERS_LOADED" "$SCRIPT_DIR" "manage_folders.sh"
+    bind_resource "manage_folders.sh"
     if [ $? -ne 0 ]; then
         debug_output "$(printf "$load_resources_debug_0003" "manage_folders.sh")"
 
@@ -395,7 +398,7 @@ load_resources() {
     
     # 2. manage_files.sh einbinden
     debug_output "$(printf "$load_resources_debug_0002" "manage_files.sh")"
-    bind_resource "MANAGE_FILES_LOADED" "$SCRIPT_DIR" "manage_files.sh"
+    bind_resource "manage_files.sh"
     if [ $? -ne 0 ]; then
         debug_output "$(printf "$load_resources_debug_0003" "manage_files.sh")"
         result=1
@@ -420,7 +423,7 @@ load_resources() {
 
     # 3. manage_logging.sh einbinden
     debug_output "$(printf "$load_resources_debug_0002" "manage_logging.sh")"
-    bind_resource "MANAGE_LOGGING_LOADED" "$SCRIPT_DIR" "manage_logging.sh"
+    bind_resource "manage_logging.sh"
     if [ $? -ne 0 ]; then
         debug_output "$(printf "$load_resources_debug_0003" "manage_logging.sh")"
         echo "Fehler: manage_logging.sh konnte nicht geladen werden."
@@ -555,7 +558,7 @@ load_resources() {
     
     # 4. manage_nginx.sh einbinden
     debug_output "$(printf "$load_resources_debug_0002" "manage_nginx.sh")"
-    bind_resource "MANAGE_NGINX_LOADED" "$SCRIPT_DIR" "manage_nginx.sh"
+    bind_resource "manage_nginx.sh"
     if [ $? -ne 0 ]; then
         debug_output "$(printf "$load_resources_debug_0003" "manage_nginx.sh")"
         result=1
@@ -563,7 +566,7 @@ load_resources() {
 
     # 5. manage_https.sh einbinden
     debug_output "$(printf "$load_resources_debug_0002" "manage_https.sh")"
-    bind_resource "MANAGE_HTTPS_LOADED" "$SCRIPT_DIR" "manage_https.sh"
+    bind_resource "manage_https.sh"
     if [ $? -ne 0 ]; then
         debug_output "$(printf "$load_resources_debug_0003" "manage_https.sh")"
         result=1
@@ -571,7 +574,7 @@ load_resources() {
 
     # 6. manage_firewall.sh einbinden
     debug_output "$(printf "$load_resources_debug_0002" "manage_firewall.sh")"
-    bind_resource "MANAGE_FIREWALL_LOADED" "$SCRIPT_DIR" "manage_firewall.sh"
+    bind_resource "manage_firewall.sh"
     if [ $? -ne 0 ]; then
         debug_output "$(printf "$load_resources_debug_0003" "manage_firewall.sh")"
         result=1
@@ -579,7 +582,7 @@ load_resources() {
 
     # 7. manage_python_env.sh einbinden
     debug_output "$(printf "$load_resources_debug_0002" "manage_python_env.sh")"
-    bind_resource "MANAGE_PYTHON_ENV_LOADED" "$SCRIPT_DIR" "manage_python_env.sh"
+    bind_resource "manage_python_env.sh"
     if [ $? -ne 0 ]; then
         debug_output "$(printf "$load_resources_debug_0003" "manage_python_env.sh")"
         result=1
@@ -587,7 +590,7 @@ load_resources() {
 
     # 8. manage_backend_service.sh einbinden
     debug_output "$(printf "$load_resources_debug_0002" "manage_backend_service.sh")"
-    bind_resource "MANAGE_BACKEND_SERVICE_LOADED" "$SCRIPT_DIR" "manage_backend_service.sh"
+    bind_resource "manage_backend_service.sh"
     if [ $? -ne 0 ]; then
         debug_output "$(printf "$load_resources_debug_0003" "manage_backend_service.sh")"
         result=1
