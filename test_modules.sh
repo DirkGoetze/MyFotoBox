@@ -146,7 +146,7 @@ echo "Test der Funktionen in manage_folders.sh"
 echo "-------------------------------------------------------------------------"
 
 # Test: get_install_dir
-test_function "$MANAGE_FOLDERS_SH" "get_install_dir" 
+test_function $MANAGE_FOLDERS_SH "get_install_dir" 
 
 # Test: get_backend_dir
 echo -n "Test get_backend_dir: "
