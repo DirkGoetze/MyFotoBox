@@ -384,43 +384,6 @@ print_debug() {
     # Funktion: Gibt eine Debug-Ausgabe in Cyan aus (nur, wenn DEBUG aktiv)
     # Parameter: $* = Debugtext
     if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ] || [ "${DEBUG_MOD:-0}" = "1" ]; then
-        local content="$*"
-        local debug_prefix="${COLOR_CYAN}  → [DEBUG]${COLOR_RESET}"
-        
-        # Prüfen, ob die Nachricht bereits Debug-Ausgaben enthält
-        if [[ "$content" == *"→ [DEBUG]"* ]]; then
-            # Die Nachricht enthält bereits Debug-Ausgaben
-            # Wir teilen sie in Zeilen auf und verarbeiten jede separat
-            
-            # Erster Teil: Extrahiere die normale Nachricht (wenn vorhanden)
-            local prefix_part=""
-            local debug_part=""
-            local result_part=""
-            
-            # Teile die Nachricht in Zeilen
-            IFS=$'\n' read -d '' -ra lines <<< "$content"
-            
-            # Verarbeite jede Zeile
-            for line in "${lines[@]}"; do
-                if [[ "$line" == *"→ [DEBUG]"* ]]; then
-                    # Dies ist eine eingebettete Debug-Zeile, direkt ausgeben
-                    echo -e "$line"
-                else
-                    # Dies ist eine normale Ausgabezeile
-                    if [ -n "$line" ]; then
-                        # Normales Ergebnis am Ende der Debug-Ausgaben
-                        result_part="$line"
-                    fi
-                fi
-            done
-            
-            # Gib das finale Ergebnis aus, wenn es existiert
-            if [ -n "$result_part" ]; then
-                echo -e "$debug_prefix $result_part"
-            fi
-        else
-            # Normale Debug-Ausgabe ohne verschachtelte Debug-Meldungen
-            echo -e "$debug_prefix $content"
-        fi
+        echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $*"
     fi
 }
