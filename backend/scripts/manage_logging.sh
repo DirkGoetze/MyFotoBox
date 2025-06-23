@@ -385,7 +385,6 @@ print_debug() {
     # Parameter: $* = Debugtext
     if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ] || [ "${DEBUG_MOD:-0}" = "1" ]; then
         echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $*"
-        # log "DEBUG: $*"
     fi
 
 }
