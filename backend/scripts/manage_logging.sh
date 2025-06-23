@@ -169,10 +169,8 @@ log() {
     #   Programm), in der der Fehler aufgetreten ist, als verpflichtender 
     #   Parameter an log() übergeben werden.
     local LOG_FILE
-    LOG_FILE="$("$manage_files_sh" get_log_file)"
+    LOG_FILE="$("$MANAGE_FILES_SH" get_log_file)"
     local msg="$1"
-    local func="$2"
-    local file="$3"
 
     # Entferne den debug-Aufruf, der die Rekursion verursachen könnte
     # debug "log() aufgerufen mit: msg='$msg', func='$func', file='$file'"
@@ -208,6 +206,8 @@ log() {
         fi
 
         # Fehlerfall: Funktionsname und ggf. Dateiname erzwingen
+        local func
+        local file
         if [[ "$msg" == ERROR:* ]]; then
             if [ -z "$func" ]; then
                 func="${FUNCNAME[1]}"
