@@ -146,25 +146,13 @@ echo "Test der Funktionen in manage_folders.sh"
 echo "-------------------------------------------------------------------------"
 
 # Test: get_install_dir
-test_function $MANAGE_FOLDERS_SH "get_install_dir" 
+test_function "manage_folders_sh" "get_install_dir"
 
 # Test: get_backend_dir
-echo -n "Test get_backend_dir: "
-backend_dir="$("$MANAGE_FOLDERS_SH" get_backend_dir)"
-if [ -n "$backend_dir" ]; then
-    echo "✅ Die Funktion get_backend_dir wurde erfolgreich ausgeführt. Ergebnis: $backend_dir"
-else
-    echo "❌ Die Funktion get_backend_dir ist fehlgeschlagen."
-fi
+test_function "manage_folders_sh" "get_backend_dir"
 
 # Test: get_script_dir
-echo -n "Test get_script_dir: "
-script_dir=$("$MANAGE_FOLDERS_SH" get_script_dir)
-if [ -n "$script_dir" ]; then
-    echo "✅ Die Funktion get_script_dir wurde erfolgreich ausgeführt. Ergebnis: $script_dir"
-else
-    echo "❌ Die Funktion get_script_dir ist fehlgeschlagen."
-fi
+test_function "manage_folders_sh" "get_script_dir"
 
 exit
 
