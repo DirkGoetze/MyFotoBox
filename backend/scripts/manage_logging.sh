@@ -384,6 +384,73 @@ print_debug() {
     # Funktion: Gibt eine Debug-Ausgabe in Cyan aus (nur, wenn DEBUG aktiv)
     # Parameter: $* = Debugtext
     if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ] || [ "${DEBUG_MOD:-0}" = "1" ]; then
-        echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $*"
+        local content="$*"
+        local debug_marker="  → [DEBUG]"
+        
+        # Prüfen, ob die Nachricht bereits Debug-Ausgaben enthält
+        if [[ "$content" == *"$debug_marker"* ]]; then
+            # Die Nachricht enthält bereits Debug-Ausgaben
+            
+            # Extrahiere den Präfix (Teil vor dem ersten Debug-Marker)
+            local prefix_part=""
+            local remaining_text="$content"
+            
+            # Finde die Position des ersten Debug-Markers
+            local first_marker_pos=$(echo "$content" | grep -b -o "$debug_marker" | head -1 | cut -d':' -f1)
+            
+            if [ -n "$first_marker_pos" ]; then
+                # Extrahiere den Präfix, falls vorhanden
+                if [ "$first_marker_pos" -gt 0 ]; then
+                    prefix_part="${content:0:$first_marker_pos}"
+                    # Entferne den Präfix aus dem verbleibenden Text
+                    remaining_text="${content:$first_marker_pos}"
+                fi
+            fi
+            
+            # Array für alle Debug-Zeilen erstellen
+            local debug_lines=()
+            local result_part=""
+            
+            # Teile in Zeilen
+            IFS=$'\n' read -d '' -ra lines <<< "$remaining_text"
+            
+            # Flag, um zu erkennen, ob wir nach Debug-Zeilen suchen
+            local collecting_debug=true
+            
+            # Verarbeite jede Zeile
+            for line in "${lines[@]}"; do
+                if $collecting_debug && [[ "$line" == *"$debug_marker"* ]]; then
+                    # Dies ist eine Debug-Zeile
+                    debug_lines+=("$line")
+                else
+                    # Keine Debug-Zeile mehr, wechsle in den Ergebnis-Sammel-Modus
+                    collecting_debug=false
+                    
+                    # Füge diese und alle verbleibenden Zeilen zum Ergebnis hinzu
+                    if [ -n "$line" ]; then
+                        if [ -n "$result_part" ]; then
+                            result_part="$result_part
+$line"
+                        else
+                            result_part="$line"
+                        fi
+                    fi
+                fi
+            done
+            
+            # Gib alle Debug-Zeilen direkt aus
+            for line in "${debug_lines[@]}"; do
+                echo -e "$line"
+            done
+            
+            # Wenn wir ein Ergebnis haben, kombiniere es mit dem Präfix und gib es aus
+            if [ -n "$result_part" ] || [ -n "$prefix_part" ]; then
+                local final_result="${prefix_part}${result_part}"
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $final_result"
+            fi
+        else
+            # Normale Debug-Ausgabe ohne verschachtelte Meldungen
+            echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $content"
+        fi
     fi
 }
