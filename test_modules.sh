@@ -19,6 +19,10 @@ test_function_debug_0002="Parameter: %s"
 test_function_debug_0003="Fehler: Modul nicht verfügbar! Variable: %s, Pfad: %s"
 test_function_debug_0004="Fehler: Funktion '%s' wurde nicht gefunden"
 test_function_debug_0005="Funktion '%s' in Modul %s gefunden"
+test_function_debug_0006="Führe Funktion '%s' aus mit Parametern: %s"
+test_function_debug_0007="Führe Funktion '%s' aus"
+test_function_debug_0008="Rückgabewert: %d, Ausgabe: %s"
+test_function_debug_0009="Ergebnis: %s"
 
 test_function() {
     # Erweiterte Testfunktion für flexible Modulaufrufe und Ergebnisanalyse
@@ -44,9 +48,9 @@ test_function() {
         debug "$(printf "$test_function_debug_0004" "$function_name")" "CLI" "test_function"
         return 2
     fi
-    
-    debug "$(printf "$test_function_debug_0005" "$function_name" "${!module_path_var_upper}")" "CLI" "test_function"
-    
+
+    debug "$(printf "$test_function_debug_0005" "$function_name" "$module_path_var_upper")" "CLI" "test_function"
+
     # Führe die Funktion aus und erfasse Rückgabewert und Ausgabe
     local output
     local result
@@ -54,23 +58,21 @@ test_function() {
     # Führe die Funktion DIREKT mit den übergebenen Parametern aus
     set +e  # Deaktiviere Fehlerabbruch
     if [ ${#params[@]} -gt 0 ]; then
-        echo "→ [DEBUG] test_function: Führe direkt aus: $function_name ${params[*]}"
+        debug "$(printf "$test_function_debug_0006" "$function_name" "${params[*]}")" "CLI" "test_function"
         output=$("$function_name" "${params[@]}" 2>&1)
         result=$?
     else
-        echo "→ [DEBUG] test_function: Führe direkt aus: $function_name"
+        debug "$(printf "$test_function_debug_0007" "$function_name")" "CLI" "test_function"
         output=$("$function_name" 2>&1)
         result=$?
     fi
     set -e  # Reaktiviere Fehlerabbruch
     
     # Rest der Funktion bleibt gleich...
-    # Zeige Ergebnisse
-    echo "→ [DEBUG] test_function: Rückgabewert: $result"
     if [ -n "$output" ]; then
-        echo "→ [DEBUG] test_function: Ausgabe: $output"
+        debug "$(printf "$test_function_debug_0008" "$result" "$output")" "CLI" "test_function"
     else
-        echo "→ [DEBUG] test_function: Keine Ausgabe"
+        debug "$(printf "$test_function_debug_0009" "$result")" "CLI" "test_function"
     fi
     
     # Zeige Ergebnis in Format "ERFOLG/FEHLER"
