@@ -665,10 +665,8 @@ get_backup_dir() {
 
 # get_nginx_backup_dir
 get_nginx_backup_dir_debug_0001="Ermittle NGINX-Backup-Verzeichnis"
-get_nginx_backup_dir_debug_0002="Verwende bereits definiertes BACKUP_DIR_NGINX: %s"
-get_nginx_backup_dir_debug_0003="Prüfe Standard- und Fallback-Pfade für NGINX-Backup-Verzeichnis"
-get_nginx_backup_dir_debug_0004="Verwende Pfad für NGINX-Backup-Verzeichnis: %s"
-get_nginx_backup_dir_debug_0005="Fallback für NGINX-Backup-Verzeichnis: %s"
+get_nginx_backup_dir_debug_0002="Verwendeter Pfad für NGINX-Backup-Verzeichnis: %s"
+get_nginx_backup_dir_debug_0003="Alle Pfade für NGINX-Backup-Verzeichnis fehlgeschlagen"
 
 get_nginx_backup_dir() {
     # -----------------------------------------------------------------------
@@ -679,88 +677,54 @@ get_nginx_backup_dir() {
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     local dir
-    local backup_dir
-    
-    # Zuerst das generelle Backup-Verzeichnis ermitteln
-    backup_dir=$(get_backup_dir)
-    
-    # Prüfen, ob BACKUP_DIR_NGINX bereits gesetzt ist
+
+    # Prüfen, ob BACKUP_DIR_NGINX bereits gesetzt ist (z.B. vom install.sh)
     debug "$get_nginx_backup_dir_debug_0001" "CLI" "get_nginx_backup_dir"
-    if [ -n "$BACKUP_DIR_NGINX" ] && [ -d "$BACKUP_DIR_NGINX" ]; then
-        debug "$(printf "$get_nginx_backup_dir_debug_0002" "$BACKUP_DIR_NGINX")" "CLI" "get_nginx_backup_dir"
-        create_directory "$BACKUP_DIR_NGINX" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
-        echo "$BACKUP_DIR_NGINX"
-        return 0
-    fi
-    
-    # Verwende die in lib_core definierten Pfade
-    debug "$get_nginx_backup_dir_debug_0003" "CLI" "get_nginx_backup_dir"
-    dir=$(get_folder_path "$DEFAULT_DIR_BACKUP_NGINX" "$FALLBACK_DIR_BACKUP_NGINX" 1)
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$BACKUP_DIR_NGINX" "$DEFAULT_DIR_BACKUP_NGINX" "$FALLBACK_DIR_BACKUP_NGINX" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_nginx_backup_dir_debug_0004" "$dir")" "CLI" "get_nginx_backup_dir"
-        # Setze restriktivere Berechtigungen für das Backup-Verzeichnis (nur Besitzer und Gruppe haben Zugriff)
-        create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
+        debug "$(printf "$get_nginx_backup_dir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
-    
-    # Als Fallback ein Unterverzeichnis im allgemeinen Backup-Verzeichnis verwenden
-    dir="$backup_dir/nginx"
-    debug "$(printf "$get_nginx_backup_dir_debug_0005" "$dir")" "CLI" "get_nginx_backup_dir"
-    # Setze restriktivere Berechtigungen für das Backup-Verzeichnis (nur Besitzer und Gruppe haben Zugriff)
-    create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
-    echo "$dir"
-    return 0
+
+    debug "$get_nginx_backup_dir_debug_0003"
+    echo ""
+    return 1
 }
 
 # get_https_backup_dir
-get_https_backup_dir_debug_0001="Ermittle HTTPS-Backup-Verzeichnis"
-get_https_backup_dir_debug_0002="Verwende bereits definiertes BACKUP_DIR_HTTPS: %s"
-get_https_backup_dir_debug_0003="Prüfe Standard- und Fallback-Pfade für HTTPS-Backup-Verzeichnis"
-get_https_backup_dir_debug_0004="Verwende Pfad für HTTPS-Backup-Verzeichnis: %s"
-get_https_backup_dir_debug_0005="Fallback für HTTPS-Backup-Verzeichnis: %s"
+get_https_backup_dir_debug_0001="Ermittle https-Backup-Verzeichnis"
+get_https_backup_dir_debug_0002="Verwendeter Pfad für https-Backup-Verzeichnis: %s"
+get_https_backup_dir_debug_0003="Alle Pfade für https-Backup-Verzeichnis fehlgeschlagen"
 
 get_https_backup_dir() {
     # -----------------------------------------------------------------------
     # get_https_backup_dir
     # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zum HTTPS-Backup-Verzeichnis zurück
+    # Funktion: Gibt den Pfad zum https-Backup-Verzeichnis zurück
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     local dir
-    local backup_dir
-    
-    # Zuerst das generelle Backup-Verzeichnis ermitteln
-    backup_dir=$(get_backup_dir)
 
-    # Prüfen, ob BACKUP_DIR_HTTPS bereits gesetzt ist
+    # Prüfen, ob BACKUP_DIR_HTTPS bereits gesetzt ist (z.B. vom install.sh)
     debug "$get_https_backup_dir_debug_0001" "CLI" "get_https_backup_dir"
-    if [ -n "$BACKUP_DIR_HTTPS" ] && [ -d "$BACKUP_DIR_HTTPS" ]; then
-        debug "$(printf "$get_https_backup_dir_debug_0002" "$BACKUP_DIR_HTTPS")" "CLI" "get_https_backup_dir"
-        create_directory "$BACKUP_DIR_HTTPS" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
-        echo "$BACKUP_DIR_HTTPS"
-        return 0
-    fi
-    
-    # Verwende die in lib_core definierten Pfade
-    debug "$get_https_backup_dir_debug_0003" "CLI" "get_https_backup_dir"
-    dir=$(get_folder_path "$DEFAULT_DIR_BACKUP_HTTPS" "$FALLBACK_DIR_BACKUP_HTTPS" 1)
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$BACKUP_DIR_HTTPS" "$DEFAULT_DIR_BACKUP_HTTPS" "$FALLBACK_DIR_BACKUP_HTTPS" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_https_backup_dir_debug_0004" "$dir")" "CLI" "get_https_backup_dir"
-        # Setze restriktivere Berechtigungen für das Backup-Verzeichnis (nur Besitzer und Gruppe haben Zugriff)
-        create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
+        debug "$(printf "$get_https_backup_dir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
-    
-    # Als Fallback ein Unterverzeichnis im allgemeinen Backup-Verzeichnis verwenden
-    dir="$backup_dir/https"
-    debug "$(printf "$get_https_backup_dir_debug_0005" "$dir")" "CLI" "get_https_backup_dir"
-    # Setze restriktivere Berechtigungen für das Backup-Verzeichnis (nur Besitzer und Gruppe haben Zugriff)
-    create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "750" || true
-    echo "$dir"
-    return 0
+
+    debug "$get_https_backup_dir_debug_0003"
+    echo ""
+    return 1
 }
 
 # ---------------------------------------------------------------------------
