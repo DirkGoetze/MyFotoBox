@@ -1443,7 +1443,7 @@ get_nginx_systemdir() {
     debug "$get_nginx_systemdir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
-    dir=$(get_folder_path "$SYSTEM_PATH_NGINX" "$DEFAULT_DIR_CONF_NGINX" "$FALLBACK_DIR_CONF_NGINX" 0 0)
+    dir=$(get_folder_path "$SYSTEM_PATH_NGINX" "$DEFAULT_DIR_CONF_NGINX" "$FALLBACK_DIR_CONF_NGINX" 1 0)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_nginx_systemdir_debug_0002" "$dir")"
         echo "$dir"
@@ -1456,10 +1456,9 @@ get_nginx_systemdir() {
 }
 
 # get_systemd_systemdir
-get_systemd_systemdir_debug_0001="Prüfe Standard-systemd-Systemverzeichnis: %s"
-get_systemd_systemdir_debug_0002="Verwende Standard-systemd-Systemverzeichnis: %s"
-get_systemd_systemdir_debug_0003="Standard-systemd-Systemverzeichnis nicht verfügbar, verwende Fallback: %s"
-get_systemd_systemdir_debug_0004="Fallback-systemd-Systemverzeichnis nicht verfügbar, verwende: %s"
+get_systemd_systemdir_debug_0001="INFO: Ermittle systemd-Verzeichnis"
+get_systemd_systemdir_debug_0002="SUCCESS: Verwendeter Pfad für systemd-Verzeichnis: %s"
+get_systemd_systemdir_debug_0003="ERROR: Alle Pfade für systemd-Verzeichnis fehlgeschlagen"
 
 get_systemd_systemdir() {
     # -----------------------------------------------------------------------
@@ -1469,30 +1468,20 @@ get_systemd_systemdir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    local primary_folder="$SYSTEM_PATH_SYSTEMD"
-    local secondary_folder="$("$manage_folders_sh" get_conf_dir)"
+   local dir
 
-    # Standardpfad verwenden
-    dir="$primary_folder"
-    debug "$(printf "$get_systemd_systemdir_debug_0001" "$dir")" "CLI" "get_systemd_systemdir"
-    if [ -d "$dir" ]; then
-        create_directory "$dir" || true
-        debug "$(printf "$get_systemd_systemdir_debug_0002" "$dir")" "CLI" "get_systemd_systemdir"
+    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_systemd_systemdir_debug_0001"
+
+    # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
+    dir=$(get_folder_path "$SYSTEM_PATH_SYSTEMD" "$DEFAULT_DIR_CONF_SYSTEMD" "$FALLBACK_DIR_CONF_SYSTEMD" 1 0)
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_systemd_systemdir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
-    
-    # Fallback auf alternatives Verzeichnis
-    dir="$secondary_folder"
-    debug "$(printf "$get_systemd_systemdir_debug_0003" "$dir")" "CLI" "get_systemd_systemdir"
-    if [ -d "$dir" ]; then
-        create_directory "$dir" || true
-        debug "$(printf "$get_systemd_systemdir_debug_0004" "$dir")" "CLI" "get_systemd_systemdir"
-        echo "$dir"
-        return 0
-    fi
-    
-    # Fehler: Kein systemd-Systemverzeichnis gefunden
+
+    debug "$get_systemd_systemdir_debug_0003"
     echo ""
     return 1
 }

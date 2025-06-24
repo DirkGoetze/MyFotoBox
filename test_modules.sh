@@ -287,6 +287,11 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_nginx_systemdir                                                   |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_nginx_systemdir"
+# Test: get_systemd_systemdir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_systemd_systemdir                                                   |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_systemd_systemdir"
 
 exit
 
