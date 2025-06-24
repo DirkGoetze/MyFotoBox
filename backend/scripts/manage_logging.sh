@@ -394,18 +394,6 @@ print_debug() {
         fi
         
         # Komplexer Fall: Debug-Ausgabe enthält bereits Debug-Marker
-        echo -n ""  # Leere Zeile für bessere Lesbarkeit
-        echo "--------------------------------------------------------------"
-        echo -e "content: $content"
-        echo "--------------------------------------------------------------"
-        if [[ "$content" == *"$debug_marker"* ]]; then
-            prefix="${content%%$debug_marker*}"
-            debug_content="${content#*$prefix}"  # Der Rest inklusive Debug-Marker
-            
-            echo "Präfix: '$prefix'"
-            echo "Debug-Teil: '$debug_content'"
-        fi
-        echo "--------------------------------------------------------------"
         
         # 1. Teile den Content in Zeilen auf und speichere in Array
         local IFS=$'\n'
@@ -414,7 +402,20 @@ print_debug() {
         # 2. Extrahiere Präfix aus dem ersten Array-Eintrag
         local prefix=""
         local first_line="${lines[0]}"
-        
+
+        echo -n ""  # Leere Zeile für bessere Lesbarkeit
+        echo "--------------------------------------------------------------"
+        echo -e "first_line: $first_line"
+        echo "--------------------------------------------------------------"
+        if [[ "$first_line" == *"$debug_marker"* ]]; then
+            prefix="${first_line%%$debug_marker*}" # Alles vor dem Debug-Marker
+            content="${first_line#*$prefix}"  # Der Rest inklusive Debug-Marker
+            
+            echo "Präfix: '$prefix'"
+            echo "Debug-Teil: '$content'"
+        fi
+        echo "--------------------------------------------------------------"
+
         if [[ "$first_line" == *"$debug_marker"* ]]; then
             prefix="${first_line%%$debug_marker*}"
         fi
