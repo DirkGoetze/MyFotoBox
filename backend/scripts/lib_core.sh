@@ -211,14 +211,14 @@ check_param() {
 # ggf. weitere Guard-Variablen hier hinzufügen
 
 # check_module
-check_module_debug_0001="check_module: Prüfe Modul '%s'"
-check_module_debug_0002="check_module: Prüfe Guard-Variable"
-check_module_debug_0003="check_module: Guard-Variable '%s' ist korrekt gesetzt (%s)"
-check_module_debug_0004="check_module: Guard-Variable '%s' ist NICHT korrekt gesetzt (%s)"
-check_module_debug_0005="check_module: Prüfe Pfad-Variable"
-check_module_debug_0006="check_module: Pfad-Variable '%s' ist korrekt definiert (%s)"
-check_module_debug_0007="check_module: Pfad-Variable '%s' ist NICHT korrekt definiert (%s)"
-check_module_debug_0008="check_module: Modul '%s' wurde korrekt geladen"
+check_module_debug_0001="[check_module] INFO: Prüfe Modul '%s'"
+check_module_debug_0002="[check_module] INFO: Prüfe Guard-Variable"
+check_module_debug_0003="[check_module] INFO: Guard-Variable '%s' ist korrekt gesetzt (%s)"
+check_module_debug_0004="[check_module] ERROR: Guard-Variable '%s' ist NICHT korrekt gesetzt (%s)"
+check_module_debug_0005="[check_module] INFO: Prüfe Pfad-Variable"
+check_module_debug_0006="[check_module] INFO: Pfad-Variable '%s' ist korrekt definiert (%s)"
+check_module_debug_0007="[check_module] ERROR: Pfad-Variable '%s' ist NICHT korrekt definiert (%s)"
+check_module_debug_0008="[check_module] SUCCESS: Modul '%s' wurde korrekt geladen"
 
 check_module() {
     # -----------------------------------------------------------------------
@@ -264,22 +264,22 @@ check_module() {
 }
 
 # bind_resource
-bind_resource_debug_0001="bind_resource: Starte Einbindung der Ressource '%s'"
-bind_resource_debug_0002="bind_resource: Ressource '%s' bereits geladen, überspringe"
-bind_resource_debug_0003="bind_resource: Suche Ressourcenverzeichnis: '%s'"
-bind_resource_debug_0004="bind_resource: Fehler - Verzeichnis '%s' nicht gefunden oder nicht lesbar"
-bind_resource_debug_0005="bind_resource: Versuche Ressource zu laden: '%s'"
-bind_resource_debug_0006="bind_resource: Fehler - Die Datei '%s' existiert nicht oder ist nicht lesbar"
-bind_resource_debug_0007="bind_resource: Lade '%s'"
-bind_resource_debug_0008="bind_resource: Fehler beim Laden von '%s' (Status: %d)"
-bind_resource_debug_0009="bind_resource: %s geladen, Pfad-Variable '%s' gesetzt"
-bind_resource_debug_0010="bind_resource: %s geladen, Guard-Variable '%s' gesetzt"
-bind_resource_debug_0011="bind_resource: Fehler - Modul '%s' konnte nicht korrekt geladen werden"
-bind_resource_debug_0012="bind_resource: ✅ SUCCESS: Modul '%s' erfolgreich geladen"
-bind_resource_debug_0013="bind_resource: ------------------------------------------------------"
-bind_resource_log_0001="bind_resource: Fehler - Verzeichnis '%s' nicht gefunden oder nicht lesbar"
-bind_resource_log_0002="bind_resource: Fehler - Die Datei '%s' existiert nicht oder ist nicht lesbar"
-bind_resource_log_0003="bind_resource: Fehler - Konnte '%s' nicht laden (Status: %d)"
+bind_resource_debug_0001="[bind_resource] INFO: Starte Einbindung der Ressource '%s'"
+bind_resource_debug_0002="[bind_resource] INFO: Ressource '%s' bereits geladen, überspringe"
+bind_resource_debug_0003="[bind_resource] INFO: Suche Ressourcenverzeichnis: '%s'"
+bind_resource_debug_0004="[bind_resource] ERROR: Verzeichnis '%s' nicht gefunden oder nicht lesbar"
+bind_resource_debug_0005="[bind_resource] INFO: Versuche Ressource zu laden: '%s'"
+bind_resource_debug_0006="[bind_resource] ERROR: Die Datei '%s' existiert nicht oder ist nicht lesbar"
+bind_resource_debug_0007="[bind_resource] INFO: Lade '%s'"
+bind_resource_debug_0008="[bind_resource] ERROR: Fehler beim Laden von '%s' (Status: %d)"
+bind_resource_debug_0009="[bind_resource] INFO: Modul '%s' geladen, Pfad-Variable '%s' gesetzt"
+bind_resource_debug_0010="[bind_resource] INFO: Modul '%s' geladen, Guard-Variable '%s' gesetzt"
+bind_resource_debug_0011="[bind_resource] ERROR: Fehler - Modul '%s' konnte nicht korrekt geladen werden"
+bind_resource_debug_0012="[bind_resource] SUCCESS: Modul '%s' erfolgreich geladen"
+bind_resource_debug_0013="[bind_resource] ------------------------------------------------------"
+bind_resource_log_0001="[bind_resource] ERROR: Verzeichnis '%s' nicht gefunden oder nicht lesbar"
+bind_resource_log_0002="[bind_resource] ERROR: Die Datei '%s' existiert nicht oder ist nicht lesbar"
+bind_resource_log_0003="[bind_resource] ERROR: Konnte '%s' nicht laden (Status: %d)"
 
 bind_resource() {
     # -----------------------------------------------------------------------
@@ -355,11 +355,11 @@ bind_resource() {
 }
 
 # load_resources
-load_resources_debug_0001="load_resources: Starte Prüfung aller benötigten Ressourcen"
-load_resources_debug_0002="load_resources: Versuche %s einzubinden ..."
-load_resources_debug_0003="load_resources: Fehler beim Laden von %s, erstelle Fallback-Funktionen"
-load_resources_debug_0004="load_resources: Fallback-Funktion für %s wurde erstellt"
-load_resources_debug_0005="load_resources: Prüfung aller Ressourcen abgeschlossen mit Ergebnis: %d"
+load_resources_debug_0001="[load_resources] INFO: Starte Prüfung aller benötigten Ressourcen"
+load_resources_debug_0002="[load_resources] INFO: Versuche %s einzubinden ..."
+load_resources_debug_0003="[load_resources] ERROR: Fehler beim Laden von %s, erstelle Fallback-Funktionen"
+load_resources_debug_0004="[load_resources] INFO: Fallback-Funktion für %s wurde erstellt"
+load_resources_debug_0005="[load_resources] INFO: Prüfung aller Ressourcen abgeschlossen mit Ergebnis: %d"
 
 load_resources() {
     # -----------------------------------------------------------------------

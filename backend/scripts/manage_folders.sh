@@ -397,10 +397,8 @@ get_backend_dir() {
 
 # get_script_dir
 get_script_dir_debug_0001="Ermittle Backend-Skript-Verzeichnis"
-get_script_dir_debug_0002="Verwende bereits definiertes BASH_DIR: %s"
-get_script_dir_debug_0003="Prüfe Standard-Pfad für Backend-Skript-Verzeichnis"
-get_script_dir_debug_0004="Verwende Standard-Pfad für Backend-Skript-Verzeichnis: %s"
-get_script_dir_debug_0005="Versuche Backend-Skript-Verzeichnis über Installationsverzeichnis zu ermitteln: %s"
+get_script_dir_debug_0002="Verwendeter Pfad für Backend-Skript-Verzeichnis: %s"
+get_script_dir_debug_0003="Alle Pfade für Backend-Skript-Verzeichnis fehlgeschlagen"
 
 get_script_dir() {
     # -----------------------------------------------------------------------
@@ -413,43 +411,18 @@ get_script_dir() {
     # HINWEIS: Diese Funktion verwendet nun die zentrale Definition von SCRIPT_DIR aus lib_core.sh
     
     debug "$get_script_dir_debug_0001" "CLI" "get_script_dir"
-    
-    # Gebe die zentrale Definition zurück (definiert in lib_core.sh)
-    if [ -n "$SCRIPT_DIR" ] && [ -d "$SCRIPT_DIR" ]; then
-        debug "$(printf "$get_script_dir_debug_0002" "$SCRIPT_DIR")" "CLI" "get_script_dir"
-        create_directory "$SCRIPT_DIR" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
-        
-        # Wenn das definierte Verzeichnis nicht dem Standard entspricht, erstelle einen Symlink
-        if [ "$SCRIPT_DIR" != "$DEFAULT_DIR_BACKEND_SCRIPTS" ]; then
-            create_symlink_to_standard_path "$DEFAULT_DIR_BACKEND_SCRIPTS" "$SCRIPT_DIR" || true
-        fi
-        
-        echo "$SCRIPT_DIR"
-        return 0
-    fi
-    
-    # Alternativfall, wenn SCRIPT_DIR nicht gesetzt oder ungültig ist
-    debug "$get_script_dir_debug_0003" "CLI" "get_script_dir"
-    local dir="$DEFAULT_DIR_BACKEND_SCRIPTS"
-    if [ -d "$dir" ]; then
-        debug "$(printf "$get_script_dir_debug_0004" "$dir")" "CLI" "get_script_dir"
-        create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+
+    # Verwende die in 'lib_core' definierten Pfade
+    dir=$(get_folder_path "$SCRIPT_DIR" "$DEFAULT_DIR_BACKEND_SCRIPTS" "$FALLBACK_DIR_BACKEND_SCRIPTS" 1 1)    
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_script_dir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
-    
-    # Wenn das Verzeichnis nicht existiert, versuchen wir es über das Installationsverzeichnis zu ermitteln
-    local install_dir
-    install_dir=$(get_install_dir)
-    dir="$install_dir/backend/scripts"
-    debug "$(printf "$get_script_dir_debug_0005" "$dir")" "CLI" "get_script_dir"
-    create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
-    
-    # Versuche einen Symlink vom Standard-Pfad zu erstellen, wenn der Fallback verwendet wird
-    create_symlink_to_standard_path "$standard_path" "$dir" || true
-    
-    echo "$dir"
-    return 0
+
+    debug "$get_script_dir_debug_0003"
+    echo ""
+    return 1
 }
 
 # set_script_permissions
