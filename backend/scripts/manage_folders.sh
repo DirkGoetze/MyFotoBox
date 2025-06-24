@@ -1150,7 +1150,7 @@ get_photos_gallery_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$FRONTEND_PHOTOS_GALLERY_DIR" "$DEFAULT_DIR_FRONTEND_PHOTOS_GALLERY" "$FALLBACK_DIR_FRONTEND_PHOTOS_GALLERY" 1 1)
+    dir=$(get_folder_path "$FRONTEND_PHOTOS_THUMBNAILS_DIR" "$DEFAULT_DIR_FRONTEND_PHOTOS_THUMBNAILS" "$FALLBACK_DIR_FRONTEND_PHOTOS_THUMBNAILS" 1 1)
 
     # Basis-Verzeichnis konnte nicht erzeugt werden
     if [ -z "$dir" ]; then
