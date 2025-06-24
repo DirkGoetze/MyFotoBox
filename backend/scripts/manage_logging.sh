@@ -411,10 +411,17 @@ print_debug() {
             # prefix="${first_line%%$debug_marker*}" # Alles vor dem Debug-Marker
             # content="${first_line#*$prefix}"  # Der Rest inklusive Debug-Marker
 
-        if [[ "$first_line" =~ ^(.*?)($debug_marker.*)$ ]]; then
-            prefix="${BASH_REMATCH[1]}"
-            content="${BASH_REMATCH[2]}"
+        #if [[ "$first_line" =~ ^(.*?)($debug_marker.*)$ ]]; then
+        #    prefix="${BASH_REMATCH[1]}"
+        #    content="${BASH_REMATCH[2]}"
 
+        if [[ "$first_line" == *"$debug_marker"* ]]; then
+            # Präfix extrahieren - alles vor dem Debug-Marker
+            prefix="${first_line%%$debug_marker*}"
+            
+            # Debug-Teil extrahieren - vom Debug-Marker bis zum Ende
+            content="${first_line:${#prefix}}"
+            
             echo "Präfix.......: '$prefix'"
             echo "Neue Zeile...: '$content'"
         fi
