@@ -167,7 +167,7 @@ debug_output() {
         if [ "${MANAGE_LOGGING_LOADED:-0}" = "1" ] && type print_debug &>/dev/null; then
             print_debug "$message"
         else
-            echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $message"
+            echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $message" >&2
         fi
     fi
 }
@@ -647,7 +647,7 @@ load_resources() {
         print_debug() { 
             debug_output "print_debug (Fallback): $*"
             if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ] || [ "${DEBUG_MOD:-0}" = "1" ]; then
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $*"
+                echo -e "${COLOR_CYAN}  → [DEBUG Fallback]${COLOR_RESET} $*" >&2
                 log "DEBUG: $*"
             fi
         }
