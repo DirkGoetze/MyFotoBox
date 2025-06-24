@@ -386,7 +386,9 @@ print_debug() {
     # Parameter: $* = Debugtext
     if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ] || [ "${DEBUG_MOD:-0}" = "1" ]; then
         local content="$*"
-        
+        echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $content"
+        exit 0
+    
         # Einfacher Fall: Keine verschachtelten Debug-Ausgaben
         if [[ "$content" != *"[DEBUG]"* ]]; then
             #echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $content"
