@@ -449,7 +449,7 @@ print_debug() {
         
         # 4. Gib alle Debug-Zeilen direkt aus
         for line in "${debug_lines[@]}"; do
-            echo -e "$line"
+            echo -e "  →  $line"
         done
         
         # 5. Gib das Ergebnis mit dem extrahierten Präfix aus, wenn nicht leer
