@@ -473,13 +473,13 @@ print_debug() {
         if [ -n "$result_text" ]; then
             #echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${result_text}"
             if [[ "$result_text" == *"INFO:"* ]]; then
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${COLOR_RESET}${result_text}${COLOR_RESET}"
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_RESET}${prefix}${result_text}${COLOR_RESET}"
             elif [[ "$result_text" == *"WARN:"* ]]; then
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${COLOR_YELLOW}${result_text}${COLOR_RESET}"
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_YELLOW}${prefix}${result_text}${COLOR_RESET}"
             elif [[ "$result_text" == *"SUCCESS:"* ]]; then
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${COLOR_GREEN}${result_text}${COLOR_RESET}"
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_GREEN}${prefix}${result_text}${COLOR_RESET}"
             elif [[ "$result_text" == *"ERROR:"* ]]; then
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${COLOR_RED}${result_text}${COLOR_RESET}"
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_RED}${prefix}${result_text}${COLOR_RESET}"
             else
                 echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${result_text}"
             fi
