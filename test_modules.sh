@@ -207,11 +207,11 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_nginx_conf_dir                                            |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_nginx_conf_dir"
-# Test: get_get_template_dir
+# Test: get_template_dir
 echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_get_template_dir (ohne Modul)                               |"
+echo "| Test: get_template_dir (ohne Modul)                               |"
 echo "+-----------------------------------------------------------------------+"
-test_function "manage_folders_sh" "get_get_template_dir"
+test_function "manage_folders_sh" "get_template_dir"
 # Test: get_template_dir
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_template_dir (mit Modul)                                |"
