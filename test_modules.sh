@@ -166,6 +166,12 @@ echo "| Test: get_venv_dir       |"
 echo "+-----------------------------+"
 test_function "manage_folders_sh" "get_venv_dir"
 
+# Test: get_python_path
+echo "+-----------------------------+"
+echo "| Test: get_python_path       |"
+echo "+-----------------------------+"
+test_function "manage_folders_sh" "get_python_path"
+
 # Test: get_pip_path
 echo "+-----------------------------+"
 echo "| Test: get_pip_path       |"

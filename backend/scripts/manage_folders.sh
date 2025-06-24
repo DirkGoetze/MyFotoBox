@@ -485,6 +485,56 @@ get_venv_dir() {
     return 1
 }
 
+# get_python_path
+get_python_path_debug_0001="INFO: Ermittle Pfad zum Python-Interpreter"
+get_python_path_debug_0002="SUCCESS: Verwendeter Pfad zum Python-Interpreter: %s"
+get_python_path_debug_0003="ERROR: Ermittlung des Python-Interpreter fehlgeschlagen. Python scheint nicht installiert zu sein!"
+
+get_python_path() {
+    # -----------------------------------------------------------------------
+    # get_python_path
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Python-Interpreter zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Python-Interpreter oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+ 
+    # Eröffnungsmeldung
+    debug "$get_python_path_debug_0001"
+    
+    # Python-Interpreter-Pfad ermitteln und setzen
+    if [ -x "$DEFAULT_DIR_PYTHON" ]; then
+        # Verwende Standard-Python-Pfad, wenn ausführbar
+        : "${PYTHON_EXEC:=$DEFAULT_DIR_PYTHON}"
+        debug "$(printf "$get_python_path_debug_0002" "$PYTHON_EXEC")"
+        echo "$PYTHON_EXEC"
+        return 0
+    elif [ -x "$FALLBACK_DIR_PYTHON" ]; then
+        # Verwende Fallback-Python-Pfad, wenn ausführbar
+        : "${PYTHON_EXEC:=$FALLBACK_DIR_PYTHON}"
+        debug "$(printf "$get_python_path_debug_0002" "$PYTHON_EXEC")"
+        echo "$PYTHON_EXEC"
+        return 0
+    elif command -v python3 &>/dev/null; then
+        # Verwende System-Python3, wenn verfügbar
+        : "${PYTHON_EXEC:=$(command -v python3)}"
+        debug "$(printf "$get_python_path_debug_0002" "$PYTHON_EXEC")"
+        echo "$PYTHON_EXEC"
+        return 0
+    elif command -v python &>/dev/null; then
+        # Verwende System-Python, als letzten Fallback
+        : "${PYTHON_EXEC:=$(command -v python)}"
+        debug "$(printf "$get_python_path_debug_0002" "$PYTHON_EXEC")"
+        echo "$PYTHON_EXEC"
+        return 0
+    else
+        # Fehlerfall: Kein Python gefunden
+        debug "$get_python_path_debug_0009" "CLI" "get_python_path"
+        echo ""
+        return 1
+    fi
+}
+
 # get_pip_path
 get_pip_path_debug_0001="Ermittle Pfad zur pip-Binary"
 get_pip_path_debug_0002="Verwende Unix/Linux pip-Pfad: %s"
@@ -515,15 +565,7 @@ get_pip_path() {
         echo "$pip_path"
         return 0
     fi
-    
-    # Windows-Pfad prüfen
-    pip_path="$venv_dir/Scripts/pip.exe"
-    if [ -f "$pip_path" ]; then
-        debug "$(printf "$get_pip_path_debug_0003" "$pip_path")" "CLI" "get_pip_path"
-        echo "$pip_path"
-        return 0
-    fi
-    
+        
     # Python-Pfade ermitteln für python -m pip Fallback
     local python_path="$venv_dir/bin/python3"
     if [ ! -f "$python_path" ]; then
