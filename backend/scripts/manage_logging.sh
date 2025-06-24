@@ -398,8 +398,15 @@ print_debug() {
         echo "--------------------------------------------------------------"
         echo -e "content: $content"
         echo "--------------------------------------------------------------"
-
-
+        if [[ "$content" == *"$debug_marker"* ]]; then
+            prefix="${content%%$debug_marker*}"
+            debug_content="${content#*$prefix}"  # Der Rest inklusive Debug-Marker
+            
+            echo "Präfix: '$prefix'"
+            echo "Debug-Teil: '$debug_content'"
+        fi
+        echo "--------------------------------------------------------------"
+        
         # 1. Teile den Content in Zeilen auf und speichere in Array
         local IFS=$'\n'
         local lines=($content)
