@@ -159,8 +159,8 @@ create_symlink_to_standard_path() {
 # create_directory
 create_directory_debug_0001="INFO: Verzeichnis '%s' existiert nicht, wird erstellt"
 create_directory_debug_0002="ERROR: Fehler beim Erstellen von '%s'"
-create_directory_debug_0003="WARN: Warnung! <chown> für '%s' fehlgeschlagen, fahre fort"
-create_directory_debug_0004="WARN: Warnung! <chmod> für '%s' fehlgeschlagen, fahre fort"
+create_directory_debug_0003="WARN: Warnung! <chown> '%s:%s' für '%s' fehlgeschlagen, Eigentümer nicht geändert"
+create_directory_debug_0004="WARN: Warnung! <chmod> '%s' für '%s' fehlgeschlagen, Berechtigungen nicht geändert"
 create_directory_debug_0005="INFO: Verzeichnis '%s' erfolgreich vorbereitet"
 # create_directory_log_0001="ERROR: create_directory: Kein Verzeichnis angegeben"
 # create_directory_log_0002="ERROR: Fehler beim Erstellen des Verzeichnisses %s"
@@ -205,13 +205,13 @@ create_directory() {
     # Berechtigungen setzen
     chown "$user:$group" "$dir" 2>/dev/null || {
         # log "$(printf "$create_directory_log_0004" "$dir")" "create_directory"
-        debug "$(printf "$create_directory_debug_0003" "$dir")" "CLI" "create_directory"
+        debug "$(printf "$create_directory_debug_0003" "$user" "$group" "$dir")" "CLI" "create_directory"
         # Fehler beim chown ist kein kritischer Fehler
     }
 
     chmod "$mode" "$dir" 2>/dev/null || {
         # log "$(printf "$create_directory_log_0004" "$dir")" "create_directory"
-        debug "$(printf "$create_directory_debug_0004" "$dir")" "CLI" "create_directory"
+        debug "$(printf "$create_directory_debug_0004" "$mode" "$dir")" "CLI" "create_directory"
         # Fehler beim chmod ist kein kritischer Fehler
     }
 
@@ -366,11 +366,8 @@ get_install_dir() {
 
 # get_backend_dir
 get_backend_dir_debug_0001="Ermittle Backend-Verzeichnis"
-get_backend_dir_debug_0002="Verwende bereits definiertes BACKEND_DIR: %s"
-get_backend_dir_debug_0003="Prüfe Standard-Backend-Verzeichnis: %s"
-get_backend_dir_debug_0004="Verwende Standard-Backend-Verzeichnis: %s"
-get_backend_dir_debug_0005="Standard-Backend-Verzeichnis nicht verfügbar, verwende Fallback: %s"
-get_backend_dir_debug_0006="Fallback-Backend-Verzeichnis nicht verfügbar, verwende: %s"
+get_backend_dir_debug_0002="Verwendeter Pfad für Backend-Verzeichnis: %s"
+get_backend_dir_debug_0003="Alle Pfade für Backend-Verzeichnis fehlgeschlagen"
 
 get_backend_dir() {
     # -----------------------------------------------------------------------
@@ -384,39 +381,18 @@ get_backend_dir() {
         
     # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
     debug "$get_backend_dir_debug_0001" "CLI" "get_backend_dir"
-    if [ -n "$BACKEND_DIR" ] && [ -d "$BACKEND_DIR" ]; then
-        debug "$(printf "$get_backend_dir_debug_0002" "$BACKEND_DIR")" "CLI" "get_backend_dir"
-        create_directory "$BACKEND_DIR" || true
-        echo "$BACKEND_DIR"
-        return 0
-    fi
-    
-    # Standardpfad verwenden
-    dir="$DEFAULT_DIR_BACKEND"
-    debug "$(printf "$get_backend_dir_debug_0003" "$dir")" "CLI" "get_backend_dir"
-    if [ -d "$dir" ]; then
-        create_directory "$dir" || true
-        debug "$(printf "$get_backend_dir_debug_0004" "$dir")" "CLI" "get_backend_dir"
+
+    # Verwende die in 'lib_core' definierten Pfade
+    dir=$(get_folder_path "$BACKEND_DIR" "$DEFAULT_DIR_BACKEND" "$FALLBACK_DIR_BACKEND" 1 1)    
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_backend_dir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
-    
-    # Fallback auf alternatives Verzeichnis
-    dir="$FALLBACK_DIR_BACKEND"
-    debug "$(printf "$get_backend_dir_debug_0005" "$dir")" "CLI" "get_backend_dir"
-    create_directory "$dir" || true
-    
-    # Als letzten Ausweg, ein Unterverzeichnis des Install-Verzeichnisses verwenden
-    if [ ! -d "$dir" ]; then
-        local install_dir
-        install_dir=$(get_install_dir)
-        dir="$install_dir/backend"
-        debug "$(printf "$get_backend_dir_debug_0006" "$dir")" "CLI" "get_backend_dir"
-        create_directory "$dir" || true
-    fi
-    
-    echo "$dir"
-    return 0
+
+    debug "$get_backend_dir_debug_0003"
+    echo ""
+    return 1
 }
 
 # get_script_dir
