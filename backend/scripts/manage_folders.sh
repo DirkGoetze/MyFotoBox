@@ -1227,22 +1227,9 @@ get_frontend_picture_dir() {
 # ---------------------------------------------------------------------------
 
 # get_log_dir
-get_log_dir_debug_0001="Ermittle Log-Verzeichnis"
-get_log_dir_debug_0002="Verwende bereits definiertes LOG_DIR: %s"
-get_log_dir_debug_0003="Prüfe Standard-Logverzeichnis: %s"
-get_log_dir_debug_0004="Verwende Standard-Logverzeichnis: %s"
-get_log_dir_debug_0005="Standard-Logverzeichnis nicht verfügbar, prüfe Fallback-Optionen"
-get_log_dir_debug_0006="Verwende Fallback 1: %s"
-get_log_dir_debug_0007="Verwende Fallback 2: %s"
-get_log_dir_debug_0008="Verwende Fallback 3: %s"
-get_log_dir_debug_0009="Fehler: Keine Schreibrechte im Logverzeichnis %s"
-get_log_dir_debug_0010="Fehler: Auch Fallback-Logverzeichnis %s nicht schreibbar"
-get_log_dir_debug_0011="Fehler: Kein schreibbares Logverzeichnis gefunden"
-get_log_dir_debug_0012="Warnung: Logverzeichnis konnte nicht erstellt werden, verwende aktuelles Verzeichnis"
-get_log_dir_debug_0013="Entferne vorhandenes Verzeichnis /var/log/fotobox"
-get_log_dir_debug_0014="Symlink /var/log/fotobox zeigt auf %s, wird auf %s geändert"
-get_log_dir_debug_0015="Symlink /var/log/fotobox zeigt bereits korrekt auf %s"
-get_log_dir_debug_0016="Erstelle Symlink in /var/log/fotobox zu %s"
+get_log_dir_debug_0001="INFO: Ermittle Log-Verzeichnis"
+get_log_dir_debug_0002="SUCCESS: Verwendeter Pfad für Log-Verzeichnis: %s"
+get_log_dir_debug_0003="ERROR: Alle Pfade für Log-Verzeichnis fehlgeschlagen"
 
 get_log_dir() {
     # ------------------------------------------------------------------------------
@@ -1252,115 +1239,23 @@ get_log_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # ------------------------------------------------------------------------------
-    local logdir
-    local found_dir=0
-        
-    # Prüfen, ob LOG_DIR bereits gesetzt ist (z.B. vom install.sh)
-    debug "$get_log_dir_debug_0001" "CLI" "get_log_dir"
-    if [ -n "$LOG_DIR" ] && [ -d "$LOG_DIR" ]; then
-        debug "$(printf "$get_log_dir_debug_0002" "$LOG_DIR")" "CLI" "get_log_dir" >/dev/null 2>&1
-        create_directory "$LOG_DIR" || true
-        logdir="$LOG_DIR"
-        found_dir=1
+    local dir
+
+    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_log_dir_debug_0001"
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$LOG_DIR" "$DEFAULT_DIR_LOG" "$FALLBACK_DIR_LOG" 1 1)
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_log_dir_debug_0002" "$dir")"
+        echo "$dir"
+        return 0
     fi
 
-    # Wenn kein Verzeichnis gefunden wurde, exakt die gleiche Logik wie in get_log_path
-    if [ $found_dir -eq 0 ]; then
-        logdir="$DEFAULT_DIR_LOG"
-        debug "$(printf "$get_log_dir_debug_0003" "$logdir")" "CLI" "get_log_dir" >/dev/null 2>&1
-        if [ -d "$logdir" ] || mkdir -p "$logdir" 2>/dev/null; then
-            create_directory "$logdir" || true
-            debug "$(printf "$get_log_dir_debug_0004" "$logdir")" "CLI" "get_log_dir" >/dev/null 2>&1
-            found_dir=1
-        fi
-    fi
-
-    # Fallback-Kette wie in get_log_path, wenn kein Verzeichnis gefunden wurde
-    if [ $found_dir -eq 0 ]; then
-        debug "$get_log_dir_debug_0005" "CLI" "get_log_dir" >/dev/null 2>&1
-        if [ -w "/var/log" ]; then
-            logdir="$FALLBACK_DIR_LOG"
-            debug "$(printf "$get_log_dir_debug_0006" "$logdir")" "CLI" "get_log_dir" >/dev/null 2>&1
-            create_directory "$logdir" || true
-            found_dir=1
-        elif [ -w "/tmp" ]; then
-            logdir="$FALLBACK_DIR_LOG_2"
-            debug "$(printf "$get_log_dir_debug_0007" "$logdir")" "CLI" "get_log_dir" >/dev/null 2>&1
-            create_directory "$logdir" || true
-            found_dir=1
-        else
-            logdir="$FALLBACK_DIR_LOG_3"
-            debug "$(printf "$get_log_dir_debug_0008" "$logdir")" "CLI" "get_log_dir" >/dev/null 2>&1
-            create_directory "$logdir" || true
-            found_dir=1
-        fi
-    fi
-    
-    # Teste Schreibrecht für das Logverzeichnis - stellen wir sicher, dass es existiert
-    if [ ! -d "$logdir" ]; then
-        mkdir -p "$logdir" 2>/dev/null || true
-    fi
-    
-    # Prüfe explizit, ob das Verzeichnis existiert, bevor wir die Datei erstellen
-    if [ -d "$logdir" ]; then
-        if ! touch "$logdir/test_log.tmp" 2>/dev/null; then
-            echo "$(printf "$get_log_dir_debug_0009" "$logdir")" >&2
-            # Versuche Fallback zu /tmp
-            if [ -w "/tmp" ] && [ "$logdir" != "$FALLBACK_DIR_LOG_2" ]; then
-                logdir="$FALLBACK_DIR_LOG_2"
-                mkdir -p "$logdir" 2>/dev/null || true
-                if [ -d "$logdir" ] && ! touch "$logdir/test_log.tmp" 2>/dev/null; then
-                    echo "$(printf "$get_log_dir_debug_0010" "$logdir")" >&2
-                    return 1
-                fi
-                rm -f "$logdir/test_log.tmp" 2>/dev/null || true
-            else
-                # Als letztes Mittel das aktuelle Verzeichnis verwenden
-                logdir="."
-                if ! touch "./test_log.tmp" 2>/dev/null; then
-                    echo "$get_log_dir_debug_0011" >&2
-                    return 1
-                fi
-                rm -f "./test_log.tmp" 2>/dev/null || true
-            fi
-        else
-            rm -f "$logdir/test_log.tmp" 2>/dev/null || true
-        fi
-    else
-        # Verzeichnis konnte nicht erstellt werden, verwende aktuelles Verzeichnis
-        echo "$get_log_dir_debug_0012" >&2
-        logdir="."
-    fi
-    
-    # Als letzter Schritt: Symlink setzen, unabhängig davon, wie das Verzeichnis ermittelt wurde
-    # Dies ist wichtig, um sicherzustellen, dass der Symlink immer auf das tatsächlich verwendete Verzeichnis zeigt
-    if [ "$(id -u)" = "0" ] && [ -w "/var/log" ]; then
-        # Prüfen, ob das Ziel ein Verzeichnis ist (kein Symlink)
-        if [ -d "/var/log/fotobox" ] && [ ! -L "/var/log/fotobox" ]; then
-            debug "$get_log_dir_debug_0013" "CLI" "get_log_dir" >/dev/null 2>&1
-            rm -rf /var/log/fotobox 2>/dev/null || true
-        fi
-        
-        # Wenn /var/log/fotobox ein Symlink ist, der auf einen anderen Pfad als $logdir zeigt, korrigiere ihn
-        if [ -L "/var/log/fotobox" ]; then
-            local current_target
-            current_target=$(readlink -f "/var/log/fotobox")
-            if [ "$current_target" != "$logdir" ]; then
-                debug "$(printf "$get_log_dir_debug_0014" "$current_target" "$logdir")" "CLI" "get_log_dir" >/dev/null 2>&1
-                rm -f /var/log/fotobox 2>/dev/null || true
-            else
-                debug "$(printf "$get_log_dir_debug_0015" "$logdir")" "CLI" "get_log_dir" >/dev/null 2>&1
-                echo "$logdir"
-                return 0
-            fi
-        fi
-        
-        debug "$(printf "$get_log_dir_debug_0016" "$logdir")" "CLI" "get_log_dir" >/dev/null 2>&1
-        ln -sf "$logdir" /var/log/fotobox
-    fi
-    
-    echo "$logdir"
-    return 0
+    debug "$get_log_dir_debug_0003"
+    echo ""
+    return 1
 }
 
 # ---------------------------------------------------------------------------
@@ -1368,18 +1263,9 @@ get_log_dir() {
 # ---------------------------------------------------------------------------
 
 # get_tmp_dir
-get_tmp_dir_debug_0001="Ermittle temporäres Verzeichnis"
-get_tmp_dir_debug_0002="Verwende bereits definiertes TMP_DIR: %s"
-get_tmp_dir_debug_0003="Prüfe Standard-Temp-Verzeichnis: %s"
-get_tmp_dir_debug_0004="Verwende Standard-Temp-Verzeichnis: %s"
-get_tmp_dir_debug_0005="Standard-Temp-Verzeichnis nicht verfügbar, prüfe Fallback-Optionen"
-get_tmp_dir_debug_0006="Verwende Fallback im Log-Verzeichnis: %s"
-get_tmp_dir_debug_0007="Verwende Fallback-System-Temp: %s"
-get_tmp_dir_debug_0008="Verwende Systemverzeichnis /tmp als letzte Option"
-get_tmp_dir_debug_0009="Entferne vorhandenes Verzeichnis /tmp/fotobox"
-get_tmp_dir_debug_0010="Symlink /tmp/fotobox zeigt auf %s, wird auf %s geändert"
-get_tmp_dir_debug_0011="Symlink /tmp/fotobox zeigt bereits korrekt auf %s"
-get_tmp_dir_debug_0012="Erstelle Symlink in /tmp/fotobox zu %s"
+get_tmp_dir_debug_0001="INFO: Ermittle temporäres Verzeichnis"
+get_tmp_dir_debug_0002="SUCCESS: Verwendeter Pfad für temporäres Verzeichnis: %s"
+get_tmp_dir_debug_0003="ERROR: Alle Pfade für temporäres Verzeichnis fehlgeschlagen"
 
 get_tmp_dir() {
     # -----------------------------------------------------------------------
@@ -1389,90 +1275,23 @@ get_tmp_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    local tmpdir
-    local found_dir=0
-    
-    debug "$get_tmp_dir_debug_0001" "CLI" "get_tmp_dir" >/dev/null 2>&1
-    
-    # Prüfen, ob TMP_DIR bereits gesetzt ist (z.B. vom install.sh)
-    if [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ]; then
-        debug "$(printf "$get_tmp_dir_debug_0002" "$TMP_DIR")" "CLI" "get_tmp_dir" >/dev/null 2>&1
-        create_directory "$TMP_DIR" || true
-        tmpdir="$TMP_DIR"
-        found_dir=1
+    local dir
+
+    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_tmp_dir_debug_0001"
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$TMP_DIR" "$DEFAULT_DIR_TMP" "$FALLBACK_DIR_TMP" 1 1)
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_tmp_dir_debug_0002" "$dir")"
+        echo "$dir"
+        return 0
     fi
-    
-    # Wenn kein Verzeichnis gefunden wurde, den Standardpfad verwenden
-    if [ $found_dir -eq 0 ]; then
-        tmpdir="$DEFAULT_DIR_TMP"
-        debug "$(printf "$get_tmp_dir_debug_0003" "$tmpdir")" "CLI" "get_tmp_dir" >/dev/null 2>&1
-        
-        if [ -d "$tmpdir" ] || mkdir -p "$tmpdir" 2>/dev/null; then
-            create_directory "$tmpdir" || true
-            debug "$(printf "$get_tmp_dir_debug_0004" "$tmpdir")" "CLI" "get_tmp_dir" >/dev/null 2>&1
-            found_dir=1
-        fi
-    fi
-    
-    # Fallback-Optionen, wenn das Standardverzeichnis nicht verfügbar ist
-    if [ $found_dir -eq 0 ]; then
-        debug "$get_tmp_dir_debug_0005" "CLI" "get_tmp_dir" >/dev/null 2>&1
-        
-        # Fallback auf das Projekt-Log-Verzeichnis
-        tmpdir="$(get_log_dir)/tmp"
-        if mkdir -p "$tmpdir" 2>/dev/null; then
-            debug "$(printf "$get_tmp_dir_debug_0006" "$tmpdir")" "CLI" "get_tmp_dir" >/dev/null 2>&1
-            create_directory "$tmpdir" || true
-            found_dir=1
-        fi
-    fi
-    
-    if [ $found_dir -eq 0 ]; then
-        # Fallback auf System-temp
-        tmpdir="$FALLBACK_DIR_TMP" # /tmp/fotobox_tmp
-        if mkdir -p "$tmpdir" 2>/dev/null; then
-            debug "$(printf "$get_tmp_dir_debug_0007" "$tmpdir")" "CLI" "get_tmp_dir" >/dev/null 2>&1
-            create_directory "$tmpdir" || true
-            found_dir=1
-        fi
-    fi
-    
-    if [ $found_dir -eq 0 ]; then
-        # Als absolute Notlösung: Verwende /tmp direkt
-        tmpdir="/tmp"
-        debug "$get_tmp_dir_debug_0008" "CLI" "get_tmp_dir" >/dev/null 2>&1
-        found_dir=1
-    fi
-    
-    # Als letzter Schritt: Symlink setzen, unabhängig davon, wie das Verzeichnis ermittelt wurde
-    # Dies ist wichtig, um sicherzustellen, dass der Symlink immer auf das tatsächlich verwendete Verzeichnis zeigt
-    if [ "$(id -u)" = "0" ] && [ -w "/tmp" ]; then
-        # Prüfen, ob das Ziel ein Verzeichnis ist (kein Symlink)
-        if [ -d "/tmp/fotobox" ] && [ ! -L "/tmp/fotobox" ]; then
-            debug "$get_tmp_dir_debug_0009" "CLI" "get_tmp_dir" >/dev/null 2>&1
-            rm -rf /tmp/fotobox 2>/dev/null || true
-        fi
-        
-        # Wenn /tmp/fotobox ein Symlink ist, der auf einen anderen Pfad als $tmpdir zeigt, korrigiere ihn
-        if [ -L "/tmp/fotobox" ]; then
-            local current_target
-            current_target=$(readlink -f "/tmp/fotobox")
-            if [ "$current_target" != "$tmpdir" ]; then
-                debug "$(printf "$get_tmp_dir_debug_0010" "$current_target" "$tmpdir")" "CLI" "get_tmp_dir" >/dev/null 2>&1
-                rm -f /tmp/fotobox 2>/dev/null || true
-            else
-                debug "$(printf "$get_tmp_dir_debug_0011" "$tmpdir")" "CLI" "get_tmp_dir" >/dev/null 2>&1
-                echo "$tmpdir"
-                return 0
-            fi
-        fi
-        
-        debug "$(printf "$get_tmp_dir_debug_0012" "$tmpdir")" "CLI" "get_tmp_dir" >/dev/null 2>&1
-        ln -sf "$tmpdir" /tmp/fotobox
-    fi
-    
-    echo "$tmpdir"
-    return 0
+
+    debug "$get_tmp_dir_debug_0003"
+    echo ""
+    return 1
 }
 
 # get_template_dir
