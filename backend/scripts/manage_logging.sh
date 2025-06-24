@@ -386,8 +386,6 @@ print_debug() {
     # Parameter: $* = Debugtext
     if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ] || [ "${DEBUG_MOD:-0}" = "1" ]; then
         local content="$*"
-        echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $content" >&2
-        return 0
     
         # Einfacher Fall: Keine verschachtelten Debug-Ausgaben
         if [[ "$content" != *"[DEBUG]"* ]]; then
@@ -412,6 +410,7 @@ print_debug() {
             return 0
         fi
         
+        return 0
         # Komplexer Fall: Debug-Ausgabe enthält bereits Debug-Marker
         
         # 1. Teile den Content in Zeilen auf und speichere in Array
