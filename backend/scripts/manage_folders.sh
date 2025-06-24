@@ -1115,7 +1115,7 @@ get_photos_originals_dir() {
     
     # Wenn der Eventname leer ist nach der Bereinigung, verwende "event" als Fallback
     if [ -z "$clean_event_name" ]; then
-        clean_event_name="event_$(date +%Y%m%d_%H%M%S)"
+        clean_event_name="event_$(date +%Y-%m-%d)"
     fi
     
     # Erstelle das Event-Unterverzeichnis
