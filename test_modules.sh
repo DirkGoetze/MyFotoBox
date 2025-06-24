@@ -76,11 +76,11 @@ test_function() {
     if [ -n "$output" ]; then
         debug "$(printf "$test_function_debug_0008" "$output")"
         debug "$(printf "$test_function_debug_0009" "$result")"
-        echo "INFO: Ausgabe der Funktion '$function_name': $output"
-        echo "INFO: Rückgabewert der Funktion '$function_name': $result"
+        echo "✅ SUCCES: Ausgabe der Funktion '$function_name': $output"
+        echo "✅ SUCCES: Rückgabewert der Funktion '$function_name': $result"
     else
         debug "$(printf "$test_function_debug_0009" "$result")"
-        echo "INFO: Keine Ausgabe von Funktion '$function_name', Rückgabewert: $result"
+        echo "✅ SUCCES: Keine Ausgabe von Funktion '$function_name', Rückgabewert: $result"
     fi
         
     # Gib den originalen Rückgabewert der getesteten Funktion zurück
