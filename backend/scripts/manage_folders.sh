@@ -157,18 +157,17 @@ create_symlink_to_standard_path() {
 }
 
 # create_directory
-create_directory_debug_0001="Kein Verzeichnis angegeben"
-create_directory_debug_0002="Verzeichnis %s existiert nicht, wird erstellt"
-create_directory_debug_0003="Fehler beim Erstellen von %s"
-create_directory_debug_0004="Warnung: chown für %s fehlgeschlagen, fahre fort"
-create_directory_debug_0005="Warnung: chmod für %s fehlgeschlagen, fahre fort"
-create_directory_debug_0006="Verzeichnis %s erfolgreich vorbereitet"
-create_directory_log_0001="ERROR: create_directory: Kein Verzeichnis angegeben"
-create_directory_log_0002="ERROR: Fehler beim Erstellen des Verzeichnisses %s"
-create_directory_log_0003="INFO: Verzeichnis %s wurde erstellt"
-create_directory_log_0004="WARN: Fehler beim Setzen der Berechtigungen für %s"
-create_directory_log_0005="INFO: Verzeichnis %s erfolgreich vorbereitet"
-create_directory_log_0006="ERROR: Verzeichnis %s konnte nicht korrekt vorbereitet werden"
+create_directory_debug_0001="INFO: Verzeichnis '%s' existiert nicht, wird erstellt"
+create_directory_debug_0002="ERROR: Fehler beim Erstellen von '%s'"
+create_directory_debug_0003="WARN: Warnung! <chown> für '%s' fehlgeschlagen, fahre fort"
+create_directory_debug_0004="WARN: Warnung! <chmod> für '%s' fehlgeschlagen, fahre fort"
+create_directory_debug_0005="INFO: Verzeichnis '%s' erfolgreich vorbereitet"
+# create_directory_log_0001="ERROR: create_directory: Kein Verzeichnis angegeben"
+# create_directory_log_0002="ERROR: Fehler beim Erstellen des Verzeichnisses %s"
+# create_directory_log_0003="INFO: Verzeichnis %s wurde erstellt"
+# create_directory_log_0004="WARN: Fehler beim Setzen der Berechtigungen für %s"
+# create_directory_log_0005="INFO: Verzeichnis %s erfolgreich vorbereitet"
+# create_directory_log_0006="ERROR: Verzeichnis %s konnte nicht korrekt vorbereitet werden"
 
 create_directory() {
     # -----------------------------------------------------------------------
@@ -194,10 +193,10 @@ create_directory() {
 
     # Verzeichnis erstellen, falls es nicht existiert
     if [ ! -d "$dir" ]; then
-        debug "$(printf "$create_directory_debug_0002" "$dir")" "CLI" "create_directory"
+        debug "$(printf "$create_directory_debug_0001" "$dir")" "CLI" "create_directory"
         mkdir -p "$dir" || {
             # log "$(printf "$create_directory_log_0002" "$dir")" "create_directory"
-            debug "$(printf "$create_directory_debug_0003" "$dir")" "CLI" "create_directory"
+            debug "$(printf "$create_directory_debug_0002" "$dir")" "CLI" "create_directory"
             return 1
         }
         # log "$(printf "$create_directory_log_0003" "$dir")"
@@ -206,20 +205,20 @@ create_directory() {
     # Berechtigungen setzen
     chown "$user:$group" "$dir" 2>/dev/null || {
         # log "$(printf "$create_directory_log_0004" "$dir")" "create_directory"
-        debug "$(printf "$create_directory_debug_0004" "$dir")" "CLI" "create_directory"
+        debug "$(printf "$create_directory_debug_0003" "$dir")" "CLI" "create_directory"
         # Fehler beim chown ist kein kritischer Fehler
     }
 
     chmod "$mode" "$dir" 2>/dev/null || {
         # log "$(printf "$create_directory_log_0004" "$dir")" "create_directory"
-        debug "$(printf "$create_directory_debug_0005" "$dir")" "CLI" "create_directory"
+        debug "$(printf "$create_directory_debug_0004" "$dir")" "CLI" "create_directory"
         # Fehler beim chmod ist kein kritischer Fehler
     }
 
     # Überprüfen, ob das Verzeichnis existiert und lesbar ist
     if [ -d "$dir" ] && [ -r "$dir" ]; then
         # log "$(printf "$create_directory_log_0005" "$dir")" "create_directory"
-        debug "$(printf "$create_directory_debug_0006" "$dir")" "CLI" "create_directory"
+        debug "$(printf "$create_directory_debug_0005" "$dir")" "CLI" "create_directory"
         return 0
     else
         # log "$(printf "$create_directory_log_0006" "$dir")" "create_directory"
@@ -228,19 +227,19 @@ create_directory() {
 }
 
 # get_folder_path
-get_folder_path_debug_0001="Prüfe Ordner-Pfade: Systempfad=%s, Standardpfad=%s, Fallback=%s"
-get_folder_path_debug_0002="Systempfad auf Vorhandensein, Rechte und Eigentümer prüfen: %s"
-get_folder_path_debug_0003="Systempfad ok, verwende Systempfad: %s"
-get_folder_path_debug_0004="Standardpfad auf Vorhandensein, Rechte und Eigentümer prüfen: %s"
-get_folder_path_debug_0005="Standardpfad ok, verwende Standardpfad: %s"
-get_folder_path_debug_0006="Fallback-Pfad auf Vorhandensein, Rechte und Eigentümer prüfen: %s"
-get_folder_path_debug_0007="Fallback-Pfad ok, verwende Fallback-Pfad: %s"
-get_folder_path_debug_0008="Versuche Symlink von %s zu %s zu erstellen"
-get_folder_path_debug_0009="Symlink-Erstellung fehlgeschlagen, fahre trotzdem fort"
-get_folder_path_debug_0010="Verwende Root-Verzeichnis als letzten Fallback: %s"
-get_folder_path_debug_0011="Root-Verzeichnis ok, verwende Root-Verzeichnis: %s"
-get_folder_path_debug_0012="Kein gültiger Pfad für die Ordnererstellung verfügbar, alle Versuche fehlgeschlagen"
-get_folder_path_log_0001="ERROR: Kein gültiger Pfad für die Ordnererstellung verfügbar"
+get_folder_path_debug_0001="INFO: Prüfe Ordner-Pfade: Systempfad='%s', Standardpfad='%s', Fallbackpfad='%s'"
+get_folder_path_debug_0002="INFO: Systempfad (Exist, Rights und User) prüfen: %s"
+get_folder_path_debug_0003="SUCCESS: Systempfad ok, verwende Systempfad: %s"
+get_folder_path_debug_0004="INFO: Standardpfad (Exist, Rights und User) prüfen: %s"
+get_folder_path_debug_0005="SUCCESS: Standardpfad ok, verwende Standardpfad: %s"
+get_folder_path_debug_0006="INFO: Fallback-Pfad (Exist, Rights und User) prüfen: %s"
+get_folder_path_debug_0007="SUCCESS: Fallback-Pfad ok, verwende Fallback-Pfad: %s"
+get_folder_path_debug_0008="INFO: Versuche Symlink von %s zu %s zu erstellen"
+get_folder_path_debug_0009="WARN: Symlink-Erstellung fehlgeschlagen, fahre trotzdem fort"
+get_folder_path_debug_0010="INFO: Verwende Root-Verzeichnis als letzten Fallback: %s"
+get_folder_path_debug_0011="SUCCESS: Root-Verzeichnis ok, verwende Root-Verzeichnis: %s"
+get_folder_path_debug_0012="ERROR: Kein gültiger Pfad für die Ordnererstellung verfügbar, alle Versuche fehlgeschlagen"
+# get_folder_path_log_0001="ERROR: Kein gültiger Pfad für die Ordnererstellung verfügbar"
 
 get_folder_path() {
     # -----------------------------------------------------------------------
