@@ -31,63 +31,14 @@ echo "SCRIPT_DIR=$SCRIPT_DIR"
 export MODULE_LOAD_MODE=1
 
 if [ -f "$SCRIPT_DIR/lib_core.sh" ]; then
-    # Direkt core-Bibliothek einbinden, ohne sofort alle Module zu laden
+    # Direkt core-Bibliothek einbinden, um alle Module zu laden
     echo "Lade lib_core.sh..."
     source "$SCRIPT_DIR/lib_core.sh"
-    echo "lib_core.sh geladen."
-    
-    # Jetzt alle Ressourcen explizit laden - vermeidet rekursives Laden
-    # durch direkten Aufruf von chk_resources statt load_core_resources
-    if type chk_resources &>/dev/null; then
-        # Direkte Ausgabe für Debugging nur wenn Debug-Modus aktiv
-        if [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ]; then
-            echo "TRACE: Direkte Ausführung von chk_resources aus install.sh" >&2
-        fi
-        # Setze Variable, um rekursive Aufrufe zu verhindern
-        CORE_RESOURCES_LOADING=1
-        # Führe Ressourcenprüfung aus
-        chk_resources
-        result=$?
-        CORE_RESOURCES_LOADING=0
-        
-        echo "Ressourcenprüfung abgeschlossen mit Code $result"
-        
-        # Überprüfe, ob die Ausgabe-Funktionen verfügbar sind
-        if ! type print_warning &>/dev/null || ! type print_info &>/dev/null; then
-            echo "WARNUNG: Ausgabefunktionen nicht verfügbar, erzeuge erneut Fallbacks" >&2
-            # Explizites Laden der Fallback-Funktionen erzwingen
-            MANAGE_LOGGING_LOADED=0  # Zurücksetzen für erneutes Laden
-            chk_resources  # Erneut Ressourcen prüfen und Fallbacks erzeugen
-        fi
-        
-        if [ $result -ne 0 ]; then
-            echo "KRITISCHER FEHLER: Die Kernressourcen konnten nicht geladen werden." >&2
-            echo "Die Installation scheint beschädigt zu sein. Bitte führen Sie eine Reparatur durch." >&2
-            exit 1
-        fi
-        
-        echo "Initialisierung der Ressourcen erfolgreich abgeschlossen."
+    if [ $? -eq 0 ]; then
+        echo "✅ SUCCES: Modul lib_core.sh wurde geladen und sollte alle anderen Module mitgeladen haben."
     else
-        echo "WARNUNG: chk_resources Funktion nicht gefunden, einfache Fallbacks werden verwendet" >&2
-        # Einfache Fallback-Funktionen definieren
-        if ! type print_info &>/dev/null; then
-            print_info() { echo -e "\033[0;36m[INFO]\033[0m $*"; }
-        fi
-        if ! type print_warning &>/dev/null; then
-            print_warning() { echo -e "\033[0;33m[WARNUNG]\033[0m $*" >&2; }
-        fi
-        if ! type print_error &>/dev/null; then
-            print_error() { echo -e "\033[0;31m[FEHLER]\033[0m $*" >&2; }
-        fi
-        if ! type print_success &>/dev/null; then
-            print_success() { echo -e "\033[0;32m[OK]\033[0m $*"; }
-        fi
-        if ! type debug &>/dev/null; then
-            debug() { if [ "${DEBUG_MOD_LOCAL:-0}" -eq 1 ] || [ "${DEBUG_MOD_GLOBAL:-0}" -eq 1 ]; then echo -e "\033[0;35m[DEBUG]\033[0m $*" >&2; fi; }
-        fi
-        if ! type log &>/dev/null; then
-            log() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $*" >> "${LOG_FILE:-/tmp/fotobox_install.log}"; }
-        fi
+        echo "❌ FEHLER: Beim Laden von lib_core.sh ist ein Fehler aufgetreten."
+        exit 1
     fi
 fi
 
