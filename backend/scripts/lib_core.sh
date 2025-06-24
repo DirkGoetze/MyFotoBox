@@ -150,9 +150,9 @@ trace_output() {
 }
 
 # check_param
-check_param_debug_0001="Parameterprüfung für [%s:%s()] Parameter: %s"
-check_param_debug_0002="Parameter '%s' in Funktion '%s' des Moduls '%s' ist leer oder nicht gesetzt"
-check_param_log_0001="check_param: Parameter '%s' fehlt in Funktion '%s' des Moduls '%s'"
+check_param_debug_0001="INFO: Parameterprüfung für [%s:%s()] Parameter: %s"
+check_param_debug_0002="ERROR: Parameter '%s' in Funktion '%s' des Moduls '%s' ist leer oder nicht gesetzt"
+#check_param_log_0001="check_param: Parameter '%s' fehlt in Funktion '%s' des Moduls '%s'"
 
 check_param() {
     # -----------------------------------------------------------------------
