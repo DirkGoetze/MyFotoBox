@@ -193,10 +193,10 @@ create_directory() {
 
     # Verzeichnis erstellen, falls es nicht existiert
     if [ ! -d "$dir" ]; then
-        debug "$(printf "$create_directory_debug_0001" "$dir")" "CLI" "create_directory"
+        debug "$(printf "$create_directory_debug_0001" "$dir")"
         mkdir -p "$dir" || {
             # log "$(printf "$create_directory_log_0002" "$dir")" "create_directory"
-            debug "$(printf "$create_directory_debug_0002" "$dir")" "CLI" "create_directory"
+            debug "$(printf "$create_directory_debug_0002" "$dir")"
             return 1
         }
         # log "$(printf "$create_directory_log_0003" "$dir")"
@@ -205,20 +205,20 @@ create_directory() {
     # Berechtigungen setzen
     chown "$user:$group" "$dir" 2>/dev/null || {
         # log "$(printf "$create_directory_log_0004" "$dir")" "create_directory"
-        debug "$(printf "$create_directory_debug_0003" "$user" "$group" "$dir")" "CLI" "create_directory"
+        debug "$(printf "$create_directory_debug_0003" "$user" "$group" "$dir")"
         # Fehler beim chown ist kein kritischer Fehler
     }
 
     chmod "$mode" "$dir" 2>/dev/null || {
         # log "$(printf "$create_directory_log_0004" "$dir")" "create_directory"
-        debug "$(printf "$create_directory_debug_0004" "$mode" "$dir")" "CLI" "create_directory"
+        debug "$(printf "$create_directory_debug_0004" "$mode" "$dir")"
         # Fehler beim chmod ist kein kritischer Fehler
     }
 
     # Überprüfen, ob das Verzeichnis existiert und lesbar ist
     if [ -d "$dir" ] && [ -r "$dir" ]; then
         # log "$(printf "$create_directory_log_0005" "$dir")" "create_directory"
-        debug "$(printf "$create_directory_debug_0005" "$dir")" "CLI" "create_directory"
+        debug "$(printf "$create_directory_debug_0005" "$dir")"
         return 0
     else
         # log "$(printf "$create_directory_log_0006" "$dir")" "create_directory"
@@ -1116,7 +1116,7 @@ get_photos_originals_dir() {
 
     # Debug-Ausgabe des exakten Pfads
     debug "Event-Verzeichnis wird erstellt: '$event_dir'"
-    
+
     if create_directory "$event_dir"; then
         debug "$(printf "$get_photos_originals_dir_debug_0004" "$event_dir")"
         echo "$event_dir"

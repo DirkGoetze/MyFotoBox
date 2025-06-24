@@ -386,7 +386,7 @@ print_debug() {
     # Parameter: $* = Debugtext
     if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ] || [ "${DEBUG_MOD:-0}" = "1" ]; then
         local content="$*"
-        echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $content"
+        echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $content" >&2
         exit 0
     
         # Einfacher Fall: Keine verschachtelten Debug-Ausgaben
@@ -395,19 +395,19 @@ print_debug() {
             # Farbliche Hervorhebung basierend auf Schlüsselwörtern
             if [[ "$content" == *"INFO:"* ]]; then
                 # Info-Stil (Standard/Reset-Farbe)
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_RESET}$content${COLOR_RESET}"
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_RESET}$content${COLOR_RESET}" >&2
             elif [[ "$content" == *"WARN:"* ]]; then
                 # Warnungs-Stil (gelb)
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_YELLOW}$content${COLOR_RESET}"
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_YELLOW}$content${COLOR_RESET}" >&2
             elif [[ "$content" == *"SUCCESS:"* ]]; then
                 # Erfolgs-Stil (grün)
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_GREEN}$content${COLOR_RESET}"
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_GREEN}$content${COLOR_RESET}" >&2
             elif [[ "$content" == *"ERROR:"* ]]; then
                 # Fehler-Stil (rot)
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_RED}$content${COLOR_RESET}"
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_RED}$content${COLOR_RESET}" >&2
             else
                 # Standard Debug-Ausgabe ohne Farbakzente
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $content"
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $content" >&2
             fi
             return 0
         fi
