@@ -418,6 +418,13 @@ print_debug() {
                 
                 # Entferne führende und nachfolgende Whitespaces vom Präfix
                 prefix=$(echo "$prefix" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+                prefix=$(echo "$prefix" | sed $'s/\033\\[[0-9;]*[a-zA-Z]//g')
+
+                # Ersetze die erste Zeile im Array mit nur dem Teil nach dem Präfix
+                # Damit wird verhindert, dass der Präfix doppelt erscheint
+                local rest_of_line="${first_line:$arrow_pos}"
+                rest_of_line=$(echo "$rest_of_line" | sed $'s/\033\\[[0-9;]*[a-zA-Z]//g')
+                lines[0]="$rest_of_line"
             fi
         fi
         
