@@ -171,25 +171,89 @@ echo "| Test: get_pip_path       |"
 echo "+-----------------------------+"
 test_function "manage_folders_sh" "get_pip_path"
 
-exit
+# Test: get_backup_dir
+echo "+-----------------------------+"
+echo "| Test: get_backup_dir       |"
+echo "+-----------------------------+"
+test_function "manage_folders_sh" "get_backup_dir"
 
-# Test: get_template_dir
-echo -n "Test get_template_dir: "
-template_dir=$(call_module_function "$MANAGE_FOLDERS_SH" "get_template_dir" "nginx")
-if [ -n "$template_dir" ]; then
-    echo "✅ Die Funktion get_template_dir wurde erfolgreich ausgeführt. Ergebnis: $template_dir"
-else
-    echo "❌ Die Funktion get_template_dir ist fehlgeschlagen."
-fi
+# Test: get_nginx_backup_dir
+echo "+-----------------------------+"
+echo "| Test: get_nginx_backup_dir |"
+echo "+-----------------------------+"
+test_function "manage_folders_sh" "get_nginx_backup_dir"
 
-# Test: get_template_dir (ohne Modul-Parameter)
-echo -n "Test get_template_dir (ohne Modul): "
-template_dir_base=$(call_module_function "$MANAGE_FOLDERS_SH" "get_template_dir")
-if [ -n "$template_dir_base" ]; then
-    echo "✅ Die Funktion get_template_dir ohne Modul wurde erfolgreich ausgeführt. Ergebnis: $template_dir_base"
-else
-    echo "❌ Die Funktion get_template_dir ohne Modul ist fehlgeschlagen."
-fi
+# Test: get_https_backup_dir
+echo "+-----------------------------+"
+echo "| Test: get_https_backup_dir  |"
+echo "+-----------------------------+"
+test_function "manage_folders_sh" "get_https_backup_dir"
+
+# Test: get_config_dir
+echo "+-----------------------------+"
+echo "| Test: get_config_dir       |"
+echo "+-----------------------------+"
+test_function "manage_folders_sh" "get_config_dir"
+
+# Test: get_https_conf_dir
+echo "+-----------------------------+"
+echo "| Test: get_https_conf_dir   |"
+echo "+-----------------------------+"
+test_function "manage_folders_sh" "get_https_conf_dir"
+
+# Test: get_camera_conf_dir
+echo "+-----------------------------+"
+echo "| Test: get_camera_conf_dir   |"
+echo "+-----------------------------+"
+test_function "manage_folders_sh" "get_camera_conf_dir"
+
+# Test: get_data_dir
+echo "+-----------------------------+"
+echo "| Test: get_data_dir         |"
+echo "+-----------------------------+"
+test_function "manage_folders_sh" "get_data_dir"
+
+# Test: get_frontend_dir
+echo "+-----------------------------+"
+echo "| Test: get_frontend_dir     |"
+echo "+-----------------------------+"
+test_function "manage_folders_sh" "get_frontend_dir"
+
+# Test: get_frontend_css_dir
+echo "+-----------------------------+"
+echo "| Test: get_frontend_css_dir  |"
+echo "+-----------------------------+"
+test_function "manage_folders_sh" "get_frontend_css_dir"
+
+# Test: get_frontend_fonts_dir
+echo "+-----------------------------+"
+echo "| Test: get_frontend_fonts_dir |"
+echo "+-----------------------------+"
+test_function "manage_folders_sh" "get_frontend_fonts_dir"
+
+# Test: get_frontend_js_dir
+echo "+-----------------------------+"
+echo "| Test: get_frontend_js_dir   |"
+echo "+-----------------------------+"
+test_function "manage_folders_sh" "get_frontend_js_dir"
+
+# Test: get_photos_dir
+echo "+-----------------------------+"
+echo "| Test: get_photos_dir       |"
+echo "+-----------------------------+"
+test_function "manage_folders_sh" "get_photos_dir"
+
+# Test: get_photos_original_dir
+echo "+-----------------------------+"
+echo "| Test: get_photos_original_dir |"
+echo "+-----------------------------+"
+test_function "manage_folders_sh" "get_photos_original_dir"
+
+# Test: get_photos_originals_dir
+echo "+-----------------------------+"
+echo "| Test: get_photos_originals_dir |"
+echo "+-----------------------------+"
+test_function "manage_folders_sh" "get_photos_originals_dir" "Mein Event"
 
 # -------------------------------
 # Test der manage_files.sh Funktionen
