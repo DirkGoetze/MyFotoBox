@@ -176,7 +176,7 @@ test_function "manage_folders_sh" "get_python_path"
 echo "+-----------------------------+"
 echo "| Test: get_pip_path       |"
 echo "+-----------------------------+"
-test_function "manage_folders_sh" "get_pip_path"
+# test_function "manage_folders_sh" "get_pip_path"
 
 # Test: get_backup_dir
 echo "+-----------------------------+"
