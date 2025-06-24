@@ -393,19 +393,19 @@ print_debug() {
             # Farbliche Hervorhebung basierend auf Schlüsselwörtern
             if [[ "$content" == *"INFO:"* ]]; then
                 # Info-Stil (Standard/Reset-Farbe)
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_RESET}$content${COLOR_RESET}" >&2
+                echo -e "${COLOR_CYAN}  → [DEBUG manage]${COLOR_RESET} ${COLOR_RESET}$content${COLOR_RESET}" >&2
             elif [[ "$content" == *"WARN:"* ]]; then
                 # Warnungs-Stil (gelb)
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_YELLOW}$content${COLOR_RESET}" >&2
+                echo -e "${COLOR_CYAN}  → [DEBUG manage]${COLOR_RESET} ${COLOR_YELLOW}$content${COLOR_RESET}" >&2
             elif [[ "$content" == *"SUCCESS:"* ]]; then
                 # Erfolgs-Stil (grün)
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_GREEN}$content${COLOR_RESET}" >&2
+                echo -e "${COLOR_CYAN}  → [DEBUG manage]${COLOR_RESET} ${COLOR_GREEN}$content${COLOR_RESET}" >&2
             elif [[ "$content" == *"ERROR:"* ]]; then
                 # Fehler-Stil (rot)
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_RED}$content${COLOR_RESET}" >&2
+                echo -e "${COLOR_CYAN}  → [DEBUG manage]${COLOR_RESET} ${COLOR_RED}$content${COLOR_RESET}" >&2
             else
                 # Standard Debug-Ausgabe ohne Farbakzente
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $content" >&2
+                echo -e "${COLOR_CYAN}  → [DEBUG manage]${COLOR_RESET} $content" >&2
             fi
             return 0
         fi

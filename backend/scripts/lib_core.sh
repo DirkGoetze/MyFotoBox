@@ -167,7 +167,7 @@ debug_output() {
         if [ "${MANAGE_LOGGING_LOADED:-0}" = "1" ] && type print_debug &>/dev/null; then
             print_debug "$message"
         else
-            echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $message" >&2
+            echo -e "${COLOR_CYAN}  → [DEBUG output]${COLOR_RESET} $message" >&2
         fi
     fi
 }
