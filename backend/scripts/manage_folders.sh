@@ -1105,18 +1105,8 @@ get_photos_originals_dir() {
     # Event-Name validieren und bereinigen
     debug "$(printf "$get_photos_originals_dir_debug_0003" "$event_name")"
     
-    # Eventname bereinigen: Entferne ungültige Zeichen, ersetze Leerzeichen mit Unterstrichen
-    local clean_event_name
-    
-    # 1. Entferne alles außer Buchstaben, Zahlen, Unterstriche, Bindestriche und Punkte
-    # 2. Ersetze Leerzeichen durch Unterstriche
-    # 3. Entferne führende und nachfolgende Punkte, Bindestriche und Unterstriche
-    clean_event_name=$(echo "$event_name" | tr -cd 'a-zA-Z0-9_-. ' | tr ' ' '_' | sed 's/^[_.-]*//;s/[_.-]*$//')
-    
-    # Wenn der Eventname leer ist nach der Bereinigung, verwende "event" als Fallback
-    if [ -z "$clean_event_name" ]; then
-        clean_event_name="event_$(date +%Y-%m-%d)"
-    fi
+    # Verwende die Helferfunktion für die Bereinigung
+    local clean_event_name=$(get_clean_foldername "$event_name")
     
     # Erstelle das Event-Unterverzeichnis
     local event_dir="${dir}/${clean_event_name}"

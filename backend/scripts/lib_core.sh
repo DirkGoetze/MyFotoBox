@@ -228,6 +228,52 @@ check_param() {
     return 0
 }
 
+# get_clean_foldername
+get_clean_foldername_debug_0001="INFO: Bereinige Name '%s' für Verwendung als Verzeichnisname"
+get_clean_foldername_debug_0002="INFO: Name wurde zu '%s' bereinigt"
+get_clean_foldername_debug_0003="WARN: Bereinigter Name wäre leer, verwende Standardnamen: %s"
+
+get_clean_foldername() {
+    # -----------------------------------------------------------------------
+    # get_clean_foldername
+    # -----------------------------------------------------------------------
+    # Funktion: Bereinigt einen String für die Verwendung als Verzeichnisname
+    # Parameter: $1 - Zu bereinigender String
+    #            $2 - (Optional) Standardname, falls der bereinigte String leer ist
+    #                 Default: "YYYY-MM-DD_event"
+    # Rückgabe: Bereinigter String als Verzeichnisname geeignet
+    # -----------------------------------------------------------------------
+    local input_name="$1"
+    local default_name="${2:-$(date +%Y-%m-%d)_event}"
+    
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$get_clean_foldername_debug_0001" "$input_name")" "CLI" "get_clean_foldername"
+    
+    # Prüfen, ob ein Name übergeben wurde
+    if [ -z "$input_name" ]; then
+        debug "$(printf "$get_clean_foldername_debug_0003" "$default_name")" "CLI" "get_clean_foldername"
+        echo "$default_name"
+        return 0
+    fi
+    
+    # 1. Entferne alles außer Buchstaben, Zahlen, Unterstriche, Bindestriche und Punkte
+    # 2. Ersetze Leerzeichen durch Unterstriche
+    # 3. Entferne führende und nachfolgende Punkte, Bindestriche und Unterstriche
+    local clean_name
+    clean_name=$(echo "$input_name" | tr -cd 'a-zA-Z0-9_-. ' | tr ' ' '_' | sed 's/^[_.-]*//;s/[_.-]*$//')
+    
+    # Wenn der bereinigte Name leer ist, verwende den Standardnamen
+    if [ -z "$clean_name" ]; then
+        debug "$(printf "$get_clean_foldername_debug_0003" "$default_name")" "CLI" "get_clean_foldername"
+        echo "$default_name"
+        return 0
+    fi
+    
+    debug "$(printf "$get_clean_foldername_debug_0002" "$clean_name")" "CLI" "get_clean_foldername"
+    echo "$clean_name"
+    return 0
+}
+
 # ===========================================================================
 # Hilfsfunktionen zur Einbindung externer Skript-Ressourcen
 # ===========================================================================
