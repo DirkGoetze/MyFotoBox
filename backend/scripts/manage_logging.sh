@@ -407,10 +407,11 @@ print_debug() {
         echo "--------------------------------------------------------------"
         echo "Gesamte Zeile: '$first_line'"
         echo "--------------------------------------------------------------"
-        if [[ "$first_line" == *"$debug_marker"* ]]; then
+        #if [[ "$first_line" == *"$debug_marker"* ]]; then
             # prefix="${first_line%%$debug_marker*}" # Alles vor dem Debug-Marker
             # content="${first_line#*$prefix}"  # Der Rest inklusive Debug-Marker
 
+        if [[ "$first_line" =~ ^(.*?)($debug_marker.*)$ ]]; then
             prefix="${BASH_REMATCH[1]}"
             content="${BASH_REMATCH[2]}"
 
