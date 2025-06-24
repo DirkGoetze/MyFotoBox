@@ -247,29 +247,42 @@ get_clean_foldername() {
     local default_name="${2:-$(date +%Y-%m-%d)_event}"
     
     # Debug-Ausgabe eröffnen
-    debug "$(printf "$get_clean_foldername_debug_0001" "$input_name")" "CLI" "get_clean_foldername"
+    debug "$(printf "$get_clean_foldername_debug_0001" "$input_name")"
     
     # Prüfen, ob ein Name übergeben wurde
     if [ -z "$input_name" ]; then
-        debug "$(printf "$get_clean_foldername_debug_0003" "$default_name")" "CLI" "get_clean_foldername"
+        debug "$(printf "$get_clean_foldername_debug_0003" "$default_name")"
         echo "$default_name"
         return 0
     fi
     
-    # 1. Entferne alles außer Buchstaben, Zahlen, Unterstriche, Bindestriche und Punkte
-    # 2. Ersetze Leerzeichen durch Unterstriche
-    # 3. Entferne führende und nachfolgende Punkte, Bindestriche und Unterstriche
+    # Die Bereinigungslogik in einzelne Schritte aufteilen für bessere Nachvollziehbarkeit
+    
+    # 1. Nur erlaubte Zeichen beibehalten: Buchstaben, Zahlen, Unterstriche, Bindestriche, Punkte und Leerzeichen
+    local filtered_name
+    filtered_name=$(echo "$input_name" | tr -cd 'a-zA-Z0-9_-. ')
+    
+    # 2. Leerzeichen durch Unterstriche ersetzen
+    local spaces_replaced
+    spaces_replaced=$(echo "$filtered_name" | tr ' ' '_')
+    
+    # 3. Führende und nachfolgende Sonderzeichen entfernen
     local clean_name
-    clean_name=$(echo "$input_name" | tr -cd 'a-zA-Z0-9_-. ' | tr ' ' '_' | sed 's/^[_.-]*//;s/[_.-]*$//')
-    print_info "$clean_name"
+    clean_name=$(echo "$spaces_replaced" | sed 's/^[_.-]*//;s/[_.-]*$//')
+    
+    # Debug für jeden Schritt
+    debug "Schritt 1 (Filterung): '$filtered_name'"
+    debug "Schritt 2 (Leerzeichen): '$spaces_replaced'"
+    debug "Schritt 3 (Trimming): '$clean_name'"
+    
     # Wenn der bereinigte Name leer ist, verwende den Standardnamen
     if [ -z "$clean_name" ]; then
-        debug "$(printf "$get_clean_foldername_debug_0003" "$default_name")" "CLI" "get_clean_foldername"
+        debug "$(printf "$get_clean_foldername_debug_0003" "$default_name")"
         echo "$default_name"
         return 0
     fi
     
-    debug "$(printf "$get_clean_foldername_debug_0002" "$clean_name")" "CLI" "get_clean_foldername"
+    debug "$(printf "$get_clean_foldername_debug_0002" "$clean_name")"
     echo "$clean_name"
     return 0
 }
