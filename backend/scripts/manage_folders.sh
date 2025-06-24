@@ -812,7 +812,7 @@ get_https_conf_dir() {
     local dir
 
     # Prüfen, ob CONF_DIR bereits gesetzt ist (z.B. vom install.sh)
-    debug "$get_nginx_conf_dir_debug_0001"
+    debug "$get_https_conf_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
@@ -830,10 +830,8 @@ get_https_conf_dir() {
 
 # get_camera_conf_dir
 get_camera_conf_dir_debug_0001="Ermittle Kamera-Konfigurations-Verzeichnis"
-get_camera_conf_dir_debug_0002="Verwende bereits definiertes CONF_DIR_CAMERA: %s"
-get_camera_conf_dir_debug_0003="Prüfe Standard- und Fallback-Pfade für Kamera-Konfigurations-Verzeichnis"
-get_camera_conf_dir_debug_0004="Verwende Pfad für Kamera-Konfigurations-Verzeichnis: %s"
-get_camera_conf_dir_debug_0005="Fallback für Kamera-Konfigurations-Verzeichnis: %s"
+get_camera_conf_dir_debug_0002="Verwendeter Pfad für Kamera-Konfigurations-Verzeichnis: %s"
+get_camera_conf_dir_debug_0003="Alle Pfade für Kamera-Konfigurations-Verzeichnis fehlgeschlagen"
 
 get_camera_conf_dir() {
     # -----------------------------------------------------------------------
@@ -846,51 +844,22 @@ get_camera_conf_dir() {
     # Extras...: Erstellt bei Bedarf einen Symlink vom Standardpfad
     # -----------------------------------------------------------------------
     local dir
-    local config_dir
-    local standard_path="$DEFAULT_DIR_CONF_CAMERA"
-        
-    # Zuerst den übergeordneten Konfigurationsordner ermitteln
-    config_dir=$(get_config_dir)
 
-    # Prüfen, ob CONF_DIR_CAMERA bereits gesetzt ist
-    debug "$get_camera_conf_dir_debug_0001" "CLI" "get_camera_conf_dir"
-    if [ -n "$CONF_DIR_CAMERA" ] && [ -d "$CONF_DIR_CAMERA" ]; then
-        debug "$(printf "$get_camera_conf_dir_debug_0002" "$CONF_DIR_CAMERA")" "CLI" "get_camera_conf_dir"
-        # Setze explizit die Standard-Berechtigungen (755)
-        create_directory "$CONF_DIR_CAMERA" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
-        
-        # Wenn das definierte Verzeichnis nicht dem Standard entspricht, erstelle einen Symlink
-        if [ "$CONF_DIR_CAMERA" != "$standard_path" ]; then
-            create_symlink_to_standard_path "$standard_path" "$CONF_DIR_CAMERA" || true
-        fi
-        
-        echo "$CONF_DIR_CAMERA"
-        return 0
-    fi
-    
-    # Verwende die in lib_core definierten Pfade
-    debug "$get_camera_conf_dir_debug_0003" "CLI" "get_camera_conf_dir"
-    # Symlink-Erstellung ist jetzt in get_folder_path integriert
-    dir=$(get_folder_path "$DEFAULT_DIR_CONF_CAMERA" "$FALLBACK_DIR_CONF_CAMERA" 1 1)
+    # Prüfen, ob CONF_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_camera_conf_dir_debug_0001"
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$CONF_DIR_CAMERA" "$DEFAULT_DIR_CONF_CAMERA" "$FALLBACK_DIR_CONF_CAMERA" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_camera_conf_dir_debug_0004" "$dir")" "CLI" "get_camera_conf_dir"
-        # Setze explizit die Standard-Berechtigungen (755)
-        create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+        debug "$(printf "$get_camera_conf_dir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
-    
-    # Als Fallback ein Unterverzeichnis im Konfigurations-Verzeichnis verwenden
-    dir="$config_dir/cameras"
-    debug "$(printf "$get_camera_conf_dir_debug_0005" "$dir")" "CLI" "get_camera_conf_dir"
-    # Setze explizit die Standard-Berechtigungen (755)
-    create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
-    
-    # Versuche einen Symlink vom Standard-Pfad zu erstellen, wenn der Fallback verwendet wird
-    create_symlink_to_standard_path "$standard_path" "$dir" || true
-    
-    echo "$dir"
-    return 0
+
+    debug "$get_camera_conf_dir_debug_0003"
+    echo ""
+    return 1
 }
 
 # ---------------------------------------------------------------------------
