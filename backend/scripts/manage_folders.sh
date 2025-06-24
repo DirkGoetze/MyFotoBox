@@ -764,34 +764,36 @@ get_config_dir() {
     return 1
 }
 
-# get_nginx_conf_dir
-get_nginx_conf_dir_debug_0001="INFO: Ermittle NGINX-Konfigurations-Verzeichnis"
-get_nginx_conf_dir_debug_0002="SUCCESS: Verwendeter Pfad für NGINX-Konfigurations-Verzeichnis: %s"
-get_nginx_conf_dir_debug_0003="ERROR: Alle Pfade für NGINX-Konfigurations-Verzeichnis fehlgeschlagen"
+# get_camera_conf_dir
+get_camera_conf_dir_debug_0001="INFO: Ermittle Kamera-Konfigurations-Verzeichnis"
+get_camera_conf_dir_debug_0002="SUCCESS: Verwendeter Pfad für Kamera-Konfigurations-Verzeichnis: %s"
+get_camera_conf_dir_debug_0003="ERROR: Alle Pfade für Kamera-Konfigurations-Verzeichnis fehlgeschlagen"
 
-get_nginx_conf_dir() {
+get_camera_conf_dir() {
     # -----------------------------------------------------------------------
-    # get_nginx_conf_dir
+    # get_camera_conf_dir
     # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zum NGINX-Konfigurationsverzeichnis zurück
+    # Funktion: Gibt den Pfad zum Kamera-Konfigurationsverzeichnis zurück
+    # .........  und stellt sicher, dass es existiert
     # Parameter: keine
-    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # Rückgabe.: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # Extras...: Erstellt bei Bedarf einen Symlink vom Standardpfad
     # -----------------------------------------------------------------------
     local dir
 
     # Prüfen, ob CONF_DIR bereits gesetzt ist (z.B. vom install.sh)
-    debug "$get_nginx_conf_dir_debug_0001"
+    debug "$get_camera_conf_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$CONF_DIR_NGINX" "$DEFAULT_DIR_CONF_NGINX" "$FALLBACK_DIR_CONF_NGINX" 1 1)    
+    dir=$(get_folder_path "$CONF_DIR_CAMERA" "$DEFAULT_DIR_CONF_CAMERA" "$FALLBACK_DIR_CONF_CAMERA" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_nginx_conf_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_camera_conf_dir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
 
-    debug "$get_nginx_conf_dir_debug_0003"
+    debug "$get_camera_conf_dir_debug_0003"
     echo ""
     return 1
 }
@@ -828,38 +830,103 @@ get_https_conf_dir() {
     return 1
 }
 
-# get_camera_conf_dir
-get_camera_conf_dir_debug_0001="INFO: Ermittle Kamera-Konfigurations-Verzeichnis"
-get_camera_conf_dir_debug_0002="SUCCESS: Verwendeter Pfad für Kamera-Konfigurations-Verzeichnis: %s"
-get_camera_conf_dir_debug_0003="ERROR: Alle Pfade für Kamera-Konfigurations-Verzeichnis fehlgeschlagen"
+# get_nginx_conf_dir
+get_nginx_conf_dir_debug_0001="INFO: Ermittle NGINX-Konfigurations-Verzeichnis"
+get_nginx_conf_dir_debug_0002="SUCCESS: Verwendeter Pfad für NGINX-Konfigurations-Verzeichnis: %s"
+get_nginx_conf_dir_debug_0003="ERROR: Alle Pfade für NGINX-Konfigurations-Verzeichnis fehlgeschlagen"
 
-get_camera_conf_dir() {
+get_nginx_conf_dir() {
     # -----------------------------------------------------------------------
-    # get_camera_conf_dir
+    # get_nginx_conf_dir
     # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zum Kamera-Konfigurationsverzeichnis zurück
-    # .........  und stellt sicher, dass es existiert
+    # Funktion: Gibt den Pfad zum NGINX-Konfigurationsverzeichnis zurück
     # Parameter: keine
-    # Rückgabe.: Pfad zum Verzeichnis oder leerer String bei Fehler
-    # Extras...: Erstellt bei Bedarf einen Symlink vom Standardpfad
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     local dir
 
     # Prüfen, ob CONF_DIR bereits gesetzt ist (z.B. vom install.sh)
-    debug "$get_camera_conf_dir_debug_0001"
+    debug "$get_nginx_conf_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$CONF_DIR_CAMERA" "$DEFAULT_DIR_CONF_CAMERA" "$FALLBACK_DIR_CONF_CAMERA" 1 1)    
+    dir=$(get_folder_path "$CONF_DIR_NGINX" "$DEFAULT_DIR_CONF_NGINX" "$FALLBACK_DIR_CONF_NGINX" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_camera_conf_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_nginx_conf_dir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
 
-    debug "$get_camera_conf_dir_debug_0003"
+    debug "$get_nginx_conf_dir_debug_0003"
     echo ""
     return 1
+}
+
+# get_template_dir
+get_template_dir_debug_0001="INFO: Ermittle Template-Verzeichnis"
+get_template_dir_debug_0002="SUCCESS: Verwendeter Pfad für Template-Verzeichnis: %s"
+get_template_dir_debug_0003="INFO: Modulname: '%s', prüfe Verzeichniseignung"
+get_template_dir_debug_0004="SUCCESS: Verwendeter Pfad für Modul-spezifisches Template-Verzeichnis: %s"
+get_template_dir_debug_0005="ERROR: Alle Pfade für Template-Verzeichnis fehlgeschlagen"
+get_template_dir_debug_0006="ERROR: Fehler beim Erstellen des Modul-spezifisches Verzeichnisses: %s, Fallback auf Basis-Verzeichnis: %s"
+
+get_template_dir() {
+    # -----------------------------------------------------------------------
+    # get_template_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einem Template-Verzeichnis in der konfigurierten
+    # ......... Template-Struktur zurück.
+    # Parameter: $1 - (Optional) Name des Moduls (Unterverzeichnis im templates-Ordner)
+    # .......... Wenn nicht angegeben, wird der Pfad zum Template-Basisordner zurückgegeben
+    # Rückgabe.: Pfad zum Template-Verzeichnis oder zum Template-Basisordner bei fehlendem Modul-Parameter
+    # .......... Exit-Code 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    local modul_name="${1:-}"
+    local dir
+        
+    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_template_dir_debug_0001"
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$CONF_DIR_TEMPLATES" "$DEFAULT_DIR_CONF_TEMPLATES" "$FALLBACK_DIR_CONF_TEMPLATES" 1 1)
+
+    # Basis-Verzeichnis konnte nicht erzeugt werden
+    if [ -z "$dir" ]; then
+        debug "$(printf "$get_template_dir_debug_0005")"
+        echo ""
+        return 1
+    fi
+
+    # Wenn kein Eventname übergeben wurde, gib das Basis-Verzeichnis zurück
+    if [ -z "$modul_name" ]; then
+        debug "$(printf "$get_template_dir_debug_0002" "$dir")"
+        echo "$dir"
+        return 0
+    fi
+
+    # Event-Name validieren und bereinigen
+    debug "$(printf "$get_template_dir_debug_0003" "$event_name")"
+    
+    # Verwende die Helferfunktion für die Bereinigung
+    local clean_modul_name=$(get_clean_foldername "$modul_name")
+    
+    # Erstelle das Event-Unterverzeichnis
+    # Stellen Sie sicher, dass dir keine abschließenden Slashes hat
+    dir=${dir%/}        
+    local modul_dir="${dir}/${clean_modul_name}"
+
+     if create_directory "$modul_dir"; then
+        debug "$(printf "$get_template_dir_debug_0004" "$modul_dir")"
+        echo "$modul_dir"
+        return 0
+    else
+        debug "$(printf "$get_template_dir_debug_0006" "$modul_dir" "$dir")"
+        # Fallback auf das Basis-Verzeichnis bei Fehler
+        debug "$(printf "$get_template_dir_debug_0002" "$dir")"
+        echo "$dir"
+        return 0
+    fi
 }
 
 # ---------------------------------------------------------------------------
@@ -1294,69 +1361,6 @@ get_tmp_dir() {
     return 1
 }
 
-# get_template_dir
-get_template_dir_debug_0001="Ermittle Template-Verzeichnis"
-get_template_dir_debug_0002="Verwende bereits definiertes CONF_DIR_TEMPLATES: %s"
-get_template_dir_debug_0003="Prüfe Standard-Template-Verzeichnis"
-get_template_dir_debug_0004="Verwende Template-Verzeichnis: %s"
-get_template_dir_debug_0005="Kein Modul-Parameter angegeben, gebe Template-Basisordner zurück"
-get_template_dir_debug_0006="Template-Pfad mit Modul wird erstellt: %s"
-get_template_dir_log_0001="INFO: Kein Modul angegeben, verwende Template-Basisordner"
-get_template_dir_log_0002="INFO: Template-Verzeichnis gefunden: %s"
-get_template_dir_log_0003="INFO: Verwende Template-Unterordner: %s für Modul: %s"
-
-get_template_dir() {
-    # -----------------------------------------------------------------------
-    # get_template_dir
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zu einem Template-Verzeichnis in der konfigurierten
-    # ......... Template-Struktur zurück.
-    # Parameter: $1 - (Optional) Name des Moduls (Unterverzeichnis im templates-Ordner)
-    # .......... Wenn nicht angegeben, wird der Pfad zum Template-Basisordner zurückgegeben
-    # Rückgabe.: Pfad zum Template-Verzeichnis oder zum Template-Basisordner bei fehlendem Modul-Parameter
-    # .......... Exit-Code 0 bei Erfolg, 1 bei Fehler
-    # -----------------------------------------------------------------------
-    local modul="$1"
-    local config_dir
-    local templates_dir
-    local template_path
-    
-    debug "$get_template_dir_debug_0001" "CLI" "get_template_dir"
-    
-    # Zuerst den übergeordneten Konfigurationsordner ermitteln
-    config_dir="$(get_config_dir)"
-    
-    # Prüfen, ob CONF_DIR_TEMPLATES bereits gesetzt ist
-    if [ -n "$CONF_DIR_TEMPLATES" ] && [ -d "$CONF_DIR_TEMPLATES" ]; then
-        debug "$(printf "$get_template_dir_debug_0002" "$CONF_DIR_TEMPLATES")" "CLI" "get_template_dir"
-        create_directory "$CONF_DIR_TEMPLATES" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
-        templates_dir="$CONF_DIR_TEMPLATES"
-    else
-        # Standard-Templates-Verzeichnis verwenden
-        debug "$get_template_dir_debug_0003" "CLI" "get_template_dir"
-        templates_dir="${config_dir}/templates"
-        create_directory "$templates_dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
-    fi
-    
-    debug "$(printf "$get_template_dir_debug_0004" "$templates_dir")" "CLI" "get_template_dir"
-    
-    # Wenn kein Modul-Parameter übergeben wurde, gebe den Template-Basisordner zurück
-    if ! check_param "$modul" "modul" &>/dev/null; then
-        template_path="$templates_dir"
-    else
-        # Vollständigen Template-Pfad mit Modul erstellen
-        template_path="$templates_dir/${modul}"
-        debug "$(printf "$get_template_dir_debug_0006" "$template_path")" "CLI" "get_template_dir"
-        log "$(printf "$get_template_dir_log_0003" "$template_path" "$modul")" "get_template_dir"
-        
-        # Verzeichnis erstellen, wenn es noch nicht existiert
-        create_directory "$template_path" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
-    fi
-    
-    echo "$template_path"
-    return 0
-}
-
 # ---------------------------------------------------------------------------
 # Verzeichnis Struktur sicherstellen
 # ---------------------------------------------------------------------------
@@ -1376,7 +1380,7 @@ ensure_folder_structure() {
     # .........  1 = Fehler bei einem kritischen Verzeichnis
     # Extras...: Erstellt Hauptverzeichnisse, Unterverzeichnisse und setzt Berechtigungen
     # -----------------------------------------------------------------------
-    debug "$ensure_folder_structure_debug_0001" "CLI" "ensure_folder_structure"
+    debug "$ensure_folder_structure_debug_0001"
     
     # Hauptverzeichnisse erstellen
     get_install_dir >/dev/null || return 1
@@ -1412,7 +1416,7 @@ ensure_folder_structure() {
     # Setze Ausführbarkeitsrechte für Skripte
     set_script_permissions || true
     
-    debug "$ensure_folder_structure_debug_0002" "CLI" "ensure_folder_structure"
+    debug "$ensure_folder_structure_debug_0002"
     return 0
 }
 
@@ -1421,10 +1425,9 @@ ensure_folder_structure() {
 # ===========================================================================
 
 # get_nginx_systemdir
-get_nginx_systemdir_debug_0001="Prüfe Standard-NGINX-Systemverzeichnis: %s"
-get_nginx_systemdir_debug_0002="Verwende Standard-NGINX-Systemverzeichnis: %s"
-get_nginx_systemdir_debug_0003="Standard-NGINX-Systemverzeichnis nicht verfügbar, verwende Fallback: %s"
-get_nginx_systemdir_debug_0004="Fallback-NGINX-Systemverzeichnis nicht verfügbar, verwende: %s"
+get_nginx_systemdir_debug_0001="INFO: Ermittle NGINX-Systemverzeichnis"
+get_nginx_systemdir_debug_0002="SUCCESS: Verwendeter Pfad für NGINX-Systemverzeichnis: %s"
+get_nginx_systemdir_debug_0003="ERROR: Alle Pfade für NGINX-Systemverzeichnis fehlgeschlagen"
 
 get_nginx_systemdir() {
     # -----------------------------------------------------------------------
@@ -1434,30 +1437,20 @@ get_nginx_systemdir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    local primary_folder="$SYSTEM_PATH_NGINX"
-    local secondary_folder="$("$manage_folders_sh" get_nginx_conf_dir)"
+    local dir
 
-    # Standardpfad verwenden
-    dir="$primary_folder"
-    debug "$(printf "$get_nginx_systemdir_debug_0001" "$dir")" "CLI" "get_nginx_systemdir"
-    if [ -d "$dir" ]; then
-        create_directory "$dir" || true
-        debug "$(printf "$get_nginx_systemdir_debug_0002" "$dir")" "CLI" "get_nginx_systemdir"
+    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_nginx_systemdir_debug_0001"
+
+    # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
+    dir=$(get_folder_path "$SYSTEM_PATH_NGINX" "$SYSTEM_PATH_NGINX" "$(get_nginx_conf_dir)" 0 0)
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_nginx_systemdir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
-    
-    # Fallback auf alternatives Verzeichnis
-    dir="$secondary_folder"
-    debug "$(printf "$get_nginx_systemdir_debug_0003" "$dir")" "CLI" "get_nginx_systemdir"
-    if [ -d "$dir" ]; then
-        create_directory "$dir" || true
-        debug "$(printf "$get_nginx_systemdir_debug_0004" "$dir")" "CLI" "get_nginx_systemdir"
-        echo "$dir"
-        return 0
-    fi
-    
-    # Fehler: Kein NGINX-Systemverzeichnis gefunden
+
+    debug "$get_nginx_systemdir_debug_0003"
     echo ""
     return 1
 }

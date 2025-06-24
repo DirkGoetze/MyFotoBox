@@ -192,16 +192,31 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_config_dir                                                  |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_config_dir"
-# Test: get_https_conf_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_https_conf_dir                                              |"
-echo "+-----------------------------------------------------------------------+"
-test_function "manage_folders_sh" "get_https_conf_dir"
 # Test: get_camera_conf_dir
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_camera_conf_dir                                             |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_camera_conf_dir"
+# Test: get_https_conf_dir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_https_conf_dir                                              |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_https_conf_dir"
+# Test: get_nginx_conf_dir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_nginx_conf_dir                                            |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_nginx_conf_dir"
+# Test: get_get_template_dir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_get_template_dir (ohne Modul)                               |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_get_template_dir"
+# Test: get_get_template_dir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_get_template_dir (mit Modul)                                |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_get_template_dir" "nginx"
 # Test: get_data_dir
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_data_dir                                                    |"
@@ -267,6 +282,11 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_tmp_dir                                                     |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_tmp_dir"
+# Test: get_nginx_systemdir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_nginx_systemdir                                                   |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_nginx_systemdir"
 
 exit
 
