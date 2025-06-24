@@ -385,7 +385,7 @@ print_debug() {
     # Parameter: $* = Debugtext
     if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ] || [ "${DEBUG_MOD:-0}" = "1" ]; then
         local content="$*"
-        local debug_marker="  → [DEBUG]"
+        local debug_marker="→ [DEBUG]"
 
         # Einfacher Fall: Normale Debug-Ausgabe ohne Verschachtelung
         if [[ "$content" != *"$debug_marker"* ]]; then
@@ -415,13 +415,21 @@ print_debug() {
         #    prefix="${BASH_REMATCH[1]}"
         #    content="${BASH_REMATCH[2]}"
 
-        if [[ "$first_line" == *"$debug_marker"* ]]; then
-            # Präfix extrahieren - alles vor dem Debug-Marker
-            prefix="${first_line%%$debug_marker*}"
+        #if [[ "$first_line" == *"$debug_marker"* ]]; then
+        #    # Präfix extrahieren - alles vor dem Debug-Marker
+        #    prefix="${first_line%%$debug_marker*}"
             
             # Debug-Teil extrahieren - vom Debug-Marker bis zum Ende
+        #    content="${first_line:${#prefix}}"
+
+        # Nutze regulären Ausdruck für robustere Erkennung
+        if [[ "$first_line" =~ ([^→]*)→[[:space:]]*\[DEBUG\].* ]]; then
+            # Präfix ist alles vor dem "→"
+            prefix="${BASH_REMATCH[1]}"
+            # Content ist alles ab dem "→"
             content="${first_line:${#prefix}}"
             
+            echo "Debug-Marker: |${debug_marker}|"
             echo "Präfix.......: '$prefix'"
             echo "Neue Zeile...: '$content'"
         fi
