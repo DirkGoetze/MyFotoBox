@@ -244,21 +244,7 @@ debug() {
     if [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ]; then
         local msg="$1"
         local mode="${2:-CLI}"
-        #local func="${3:-${FUNCNAME[1]}}"
-
-        # Vollständigen Aufrufstapel erfassen
-        local call_chain=""
-        local i=1
-        while [ "${FUNCNAME[$i]}" != "" ]; do
-            if [ -z "$call_chain" ]; then
-                call_chain="${FUNCNAME[$i]}"
-            else
-                call_chain="${call_chain} < ${FUNCNAME[$i]}"
-            fi
-            ((i++))
-        done
-        # Verwende den Aufrufstapel oder den übergebenen Funktionsnamen
-        local func="${3:-$call_chain}"
+        local func="${3:-${FUNCNAME[1]}}"
 
         case "$mode" in
             CLI)
