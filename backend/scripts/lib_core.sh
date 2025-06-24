@@ -257,24 +257,16 @@ get_clean_foldername() {
     fi
     
     # Die Bereinigungslogik in einzelne Schritte aufteilen für bessere Nachvollziehbarkeit
-    
-    # 1. Nur erlaubte Zeichen beibehalten: Buchstaben, Zahlen, Unterstriche, Bindestriche, Punkte und Leerzeichen
+    # 1. Nur erlaubte Zeichen beibehalten 
     local filtered_name
-    filtered_name=$(echo "$input_name" | tr -cd 'a-zA-Z0-9_-. ')
-    
-    # 2. Leerzeichen durch Unterstriche ersetzen
-    local spaces_replaced
-    spaces_replaced=$(echo "$filtered_name" | tr ' ' '_')
-    
-    # 3. Führende und nachfolgende Sonderzeichen entfernen
-    local clean_name
-    clean_name=$(echo "$spaces_replaced" | sed 's/^[_.-]*//;s/[_.-]*$//')
-    
-    # Debug für jeden Schritt
+    filtered_name=$(echo "$input_name" | tr -d "[:cntrl:][:punct:]" | tr -s "[:space:]" "_")
     debug "Schritt 1 (Filterung): '$filtered_name'"
-    debug "Schritt 2 (Leerzeichen): '$spaces_replaced'"
-    debug "Schritt 3 (Trimming): '$clean_name'"
     
+    # 2. Führende und nachfolgende Unterstriche entfernen
+    local clean_name
+    clean_name=$(echo "$filtered_name" | sed 's/^[_]*//;s/[_]*$//')
+    debug "Schritt 2 (Trimming): '$clean_name'"
+        
     # Wenn der bereinigte Name leer ist, verwende den Standardnamen
     if [ -z "$clean_name" ]; then
         debug "$(printf "$get_clean_foldername_debug_0003" "$default_name")"
