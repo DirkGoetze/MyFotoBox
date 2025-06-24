@@ -410,7 +410,6 @@ print_debug() {
             return 0
         fi
         
-        return 0
         # Komplexer Fall: Debug-Ausgabe enthält bereits Debug-Marker
         
         # 1. Teile den Content in Zeilen auf und speichere in Array
@@ -468,22 +467,22 @@ print_debug() {
         
         # 4. Gib alle Debug-Zeilen direkt aus
         for line in "${debug_lines[@]}"; do
-            echo -e "${COLOR_CYAN}  →${COLOR_RESET} $line"
+            echo -e "${COLOR_CYAN}  →${COLOR_RESET} $line" >&2
         done
         
         # 5. Gib das Ergebnis mit dem extrahierten Präfix aus, wenn nicht leer
         if [ -n "$result_text" ]; then
             #echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${result_text}"
             if [[ "$result_text" == *"INFO:"* ]]; then
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_RESET}${prefix}${result_text}${COLOR_RESET}"
+                echo -e "${COLOR_CYAN}  → [DEBUG multi]${COLOR_RESET} ${COLOR_RESET}${prefix}${result_text}${COLOR_RESET}" >&2
             elif [[ "$result_text" == *"WARN:"* ]]; then
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_YELLOW}${prefix}${result_text}${COLOR_RESET}"
+                echo -e "${COLOR_CYAN}  → [DEBUG multi]${COLOR_RESET} ${COLOR_YELLOW}${prefix}${result_text}${COLOR_RESET}" >&2
             elif [[ "$result_text" == *"SUCCESS:"* ]]; then
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_GREEN}${prefix}${result_text}${COLOR_RESET}"
+                echo -e "${COLOR_CYAN}  → [DEBUG multi]${COLOR_RESET} ${COLOR_GREEN}${prefix}${result_text}${COLOR_RESET}" >&2
             elif [[ "$result_text" == *"ERROR:"* ]]; then
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_RED}${prefix}${result_text}${COLOR_RESET}"
+                echo -e "${COLOR_CYAN}  → [DEBUG multi]${COLOR_RESET} ${COLOR_RED}${prefix}${result_text}${COLOR_RESET}" >&2
             else
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${result_text}"
+                echo -e "${COLOR_CYAN}  → [DEBUG multi]${COLOR_RESET} ${prefix}${result_text}" >&2
             fi
         fi
     fi
