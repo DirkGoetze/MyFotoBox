@@ -766,10 +766,8 @@ get_config_dir() {
 
 # get_nginx_conf_dir
 get_nginx_conf_dir_debug_0001="Ermittle NGINX-Konfigurations-Verzeichnis"
-get_nginx_conf_dir_debug_0002="Verwende bereits definiertes CONF_DIR_NGINX: %s" 
-get_nginx_conf_dir_debug_0003="Prüfe Standard- und Fallback-Pfade für NGINX-Konfigurations-Verzeichnis"
-get_nginx_conf_dir_debug_0004="Verwende Pfad für NGINX-Konfigurations-Verzeichnis: %s"
-get_nginx_conf_dir_debug_0005="Fallback für NGINX-Konfigurations-Verzeichnis: %s"
+get_nginx_conf_dir_debug_0002="Verwendeter Pfad für NGINX-Konfigurations-Verzeichnis: %s"
+get_nginx_conf_dir_debug_0003="Alle Pfade für NGINX-Konfigurations-Verzeichnis fehlgeschlagen"
 
 get_nginx_conf_dir() {
     # -----------------------------------------------------------------------
@@ -780,47 +778,28 @@ get_nginx_conf_dir() {
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     local dir
-    local config_dir
-        
-    # Zuerst den übergeordneten Konfigurationsordner ermitteln
-    config_dir=$(get_config_dir)
-    
-    # Prüfen, ob CONF_DIR_NGINX bereits gesetzt ist
-    debug "$get_nginx_conf_dir_debug_0001" "CLI" "get_nginx_conf_dir"
-    if [ -n "$CONF_DIR_NGINX" ] && [ -d "$CONF_DIR_NGINX" ]; then
-        debug "$(printf "$get_nginx_conf_dir_debug_0002" "$CONF_DIR_NGINX")" "CLI" "get_nginx_conf_dir"
-        # Setze explizit die Standard-Berechtigungen (755)
-        create_directory "$CONF_DIR_NGINX" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
-        echo "$CONF_DIR_NGINX"
-        return 0
-    fi
-    
-    # Verwende die in lib_core definierten Pfade
-    debug "$get_nginx_conf_dir_debug_0003" "CLI" "get_nginx_conf_dir"
-    dir=$(get_folder_path "$DEFAULT_DIR_CONF_NGINX" "$FALLBACK_DIR_CONF_NGINX" 1)
+
+    # Prüfen, ob CONF_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_nginx_conf_dir_debug_0001"
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$CONF_DIR_NGINX" "$DEFAULT_DIR_CONF_NGINX" "$FALLBACK_DIR_CONF_NGINX" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_nginx_conf_dir_debug_0004" "$dir")" "CLI" "get_nginx_conf_dir"
-        # Setze explizit die Standard-Berechtigungen (755)
-        create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+        debug "$(printf "$get_nginx_conf_dir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
-    
-    # Als Fallback ein Unterverzeichnis im Konfigurations-Verzeichnis verwenden
-    dir="$config_dir/nginx"
-    debug "$(printf "$get_nginx_conf_dir_debug_0005" "$dir")" "CLI" "get_nginx_conf_dir"
-    # Setze explizit die Standard-Berechtigungen (755)
-    create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
-    echo "$dir"
-    return 0
+
+    debug "$get_nginx_conf_dir_debug_0003"
+    echo ""
+    return 1
 }
 
 # get_https_conf_dir
 get_https_conf_dir_debug_0001="Ermittle HTTPS-Konfigurations-Verzeichnis"
-get_https_conf_dir_debug_0002="Verwende bereits definiertes CONF_DIR_HTTPS: %s" 
-get_https_conf_dir_debug_0003="Prüfe Standard- und Fallback-Pfade für HTTPS-Konfigurations-Verzeichnis"
-get_https_conf_dir_debug_0004="Verwende Pfad für HTTPS-Konfigurations-Verzeichnis: %s"
-get_https_conf_dir_debug_0005="Fallback für HTTPS-Konfigurations-Verzeichnis: %s"
+get_https_conf_dir_debug_0002="Verwendeter Pfad für HTTPS-Konfigurations-Verzeichnis: %s"
+get_https_conf_dir_debug_0003="Alle Pfade für HTTPS-Konfigurations-Verzeichnis fehlgeschlagen"
 
 get_https_conf_dir() {
     # -----------------------------------------------------------------------
@@ -831,39 +810,22 @@ get_https_conf_dir() {
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     local dir
-    local config_dir
-        
-    # Zuerst den übergeordneten Konfigurationsordner ermitteln
-    config_dir=$(get_config_dir)
 
-    # Prüfen, ob CONF_DIR_HTTPS bereits gesetzt ist
-    debug "$get_https_conf_dir_debug_0001" "CLI" "get_https_conf_dir"
-    if [ -n "$CONF_DIR_HTTPS" ] && [ -d "$CONF_DIR_HTTPS" ]; then
-        debug "$(printf "$get_https_conf_dir_debug_0002" "$CONF_DIR_HTTPS")" "CLI" "get_https_conf_dir"
-        # Setze explizit die Standard-Berechtigungen (755)
-        create_directory "$CONF_DIR_HTTPS" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
-        echo "$CONF_DIR_HTTPS"
-        return 0
-    fi
-    
-    # Verwende die in lib_core definierten Pfade
-    debug "$get_https_conf_dir_debug_0003" "CLI" "get_https_conf_dir"
-    dir=$(get_folder_path "$DEFAULT_DIR_CONF_HTTPS" "$FALLBACK_DIR_CONF_HTTPS" 1)
+    # Prüfen, ob CONF_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_nginx_conf_dir_debug_0001"
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$CONF_DIR_HTTPS" "$DEFAULT_DIR_CONF_HTTPS" "$FALLBACK_DIR_CONF_HTTPS" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_https_conf_dir_debug_0004" "$dir")" "CLI" "get_https_conf_dir"
-        # Setze explizit die Standard-Berechtigungen (755)
-        create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
+        debug "$(printf "$get_https_conf_dir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
-    
-    # Als Fallback ein Unterverzeichnis im Konfigurations-Verzeichnis verwenden
-    dir="$config_dir/https"
-    debug "$(printf "$get_https_conf_dir_debug_0005" "$dir")" "CLI" "get_https_conf_dir"
-    # Setze explizit die Standard-Berechtigungen (755)
-    create_directory "$dir" "$DEFAULT_USER" "$DEFAULT_GROUP" "$DEFAULT_MODE" || true
-    echo "$dir"
-    return 0
+
+    debug "$get_https_conf_dir_debug_0003"
+    echo ""
+    return 1
 }
 
 # get_camera_conf_dir
