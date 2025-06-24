@@ -633,9 +633,9 @@ get_pip_path() {
 # ---------------------------------------------------------------------------
 
 # get_backup_dir
-get_backup_dir_debug_0001="Ermittle Backup-Verzeichnis"
-get_backup_dir_debug_0002="Verwendeter Pfad für Backup-Verzeichnis: %s"
-get_backup_dir_debug_0003="Alle Pfade für Backup-Verzeichnis fehlgeschlagen"
+get_backup_dir_debug_0001="INFO: Ermittle Backup-Verzeichnis"
+get_backup_dir_debug_0002="SUCCESS: Verwendeter Pfad für Backup-Verzeichnis: %s"
+get_backup_dir_debug_0003="ERROR: Alle Pfade für Backup-Verzeichnis fehlgeschlagen"
 
 get_backup_dir() {
     # -----------------------------------------------------------------------
@@ -665,9 +665,9 @@ get_backup_dir() {
 }
 
 # get_nginx_backup_dir
-get_nginx_backup_dir_debug_0001="Ermittle NGINX-Backup-Verzeichnis"
-get_nginx_backup_dir_debug_0002="Verwendeter Pfad für NGINX-Backup-Verzeichnis: %s"
-get_nginx_backup_dir_debug_0003="Alle Pfade für NGINX-Backup-Verzeichnis fehlgeschlagen"
+get_nginx_backup_dir_debug_0001="INFO: Ermittle NGINX-Backup-Verzeichnis"
+get_nginx_backup_dir_debug_0002="SUCCESS: Verwendeter Pfad für NGINX-Backup-Verzeichnis: %s"
+get_nginx_backup_dir_debug_0003="ERROR: Alle Pfade für NGINX-Backup-Verzeichnis fehlgeschlagen"
 
 get_nginx_backup_dir() {
     # -----------------------------------------------------------------------
@@ -697,9 +697,9 @@ get_nginx_backup_dir() {
 }
 
 # get_https_backup_dir
-get_https_backup_dir_debug_0001="Ermittle https-Backup-Verzeichnis"
-get_https_backup_dir_debug_0002="Verwendeter Pfad für https-Backup-Verzeichnis: %s"
-get_https_backup_dir_debug_0003="Alle Pfade für https-Backup-Verzeichnis fehlgeschlagen"
+get_https_backup_dir_debug_0001="INFO: Ermittle https-Backup-Verzeichnis"
+get_https_backup_dir_debug_0002="SUCCESS: Verwendeter Pfad für https-Backup-Verzeichnis: %s"
+get_https_backup_dir_debug_0003="ERROR: Alle Pfade für https-Backup-Verzeichnis fehlgeschlagen"
 
 get_https_backup_dir() {
     # -----------------------------------------------------------------------
@@ -733,9 +733,9 @@ get_https_backup_dir() {
 # ---------------------------------------------------------------------------
 
 # get_config_dir
-get_config_dir_debug_0001="Ermittle Konfigurations-Verzeichnis"
-get_config_dir_debug_0002="Verwendeter Pfad für Konfigurations-Verzeichnis: %s"
-get_config_dir_debug_0003="Alle Pfade für Konfigurations-Verzeichnis fehlgeschlagen"
+get_config_dir_debug_0001="INFO: Ermittle Konfigurations-Verzeichnis"
+get_config_dir_debug_0002="SUCCESS: Verwendeter Pfad für Konfigurations-Verzeichnis: %s"
+get_config_dir_debug_0003="ERROR: Alle Pfade für Konfigurations-Verzeichnis fehlgeschlagen"
 
 get_config_dir() {
     # -----------------------------------------------------------------------
@@ -765,9 +765,9 @@ get_config_dir() {
 }
 
 # get_nginx_conf_dir
-get_nginx_conf_dir_debug_0001="Ermittle NGINX-Konfigurations-Verzeichnis"
-get_nginx_conf_dir_debug_0002="Verwendeter Pfad für NGINX-Konfigurations-Verzeichnis: %s"
-get_nginx_conf_dir_debug_0003="Alle Pfade für NGINX-Konfigurations-Verzeichnis fehlgeschlagen"
+get_nginx_conf_dir_debug_0001="INFO: Ermittle NGINX-Konfigurations-Verzeichnis"
+get_nginx_conf_dir_debug_0002="SUCCESS: Verwendeter Pfad für NGINX-Konfigurations-Verzeichnis: %s"
+get_nginx_conf_dir_debug_0003="ERROR: Alle Pfade für NGINX-Konfigurations-Verzeichnis fehlgeschlagen"
 
 get_nginx_conf_dir() {
     # -----------------------------------------------------------------------
@@ -797,9 +797,9 @@ get_nginx_conf_dir() {
 }
 
 # get_https_conf_dir
-get_https_conf_dir_debug_0001="Ermittle HTTPS-Konfigurations-Verzeichnis"
-get_https_conf_dir_debug_0002="Verwendeter Pfad für HTTPS-Konfigurations-Verzeichnis: %s"
-get_https_conf_dir_debug_0003="Alle Pfade für HTTPS-Konfigurations-Verzeichnis fehlgeschlagen"
+get_https_conf_dir_debug_0001="INFO: Ermittle HTTPS-Konfigurations-Verzeichnis"
+get_https_conf_dir_debug_0002="SUCCESS: Verwendeter Pfad für HTTPS-Konfigurations-Verzeichnis: %s"
+get_https_conf_dir_debug_0003="ERROR: Alle Pfade für HTTPS-Konfigurations-Verzeichnis fehlgeschlagen"
 
 get_https_conf_dir() {
     # -----------------------------------------------------------------------
@@ -829,9 +829,9 @@ get_https_conf_dir() {
 }
 
 # get_camera_conf_dir
-get_camera_conf_dir_debug_0001="Ermittle Kamera-Konfigurations-Verzeichnis"
-get_camera_conf_dir_debug_0002="Verwendeter Pfad für Kamera-Konfigurations-Verzeichnis: %s"
-get_camera_conf_dir_debug_0003="Alle Pfade für Kamera-Konfigurations-Verzeichnis fehlgeschlagen"
+get_camera_conf_dir_debug_0001="INFO: Ermittle Kamera-Konfigurations-Verzeichnis"
+get_camera_conf_dir_debug_0002="SUCCESS: Verwendeter Pfad für Kamera-Konfigurations-Verzeichnis: %s"
+get_camera_conf_dir_debug_0003="ERROR: Alle Pfade für Kamera-Konfigurations-Verzeichnis fehlgeschlagen"
 
 get_camera_conf_dir() {
     # -----------------------------------------------------------------------
@@ -867,9 +867,9 @@ get_camera_conf_dir() {
 # ---------------------------------------------------------------------------
 
 # get_data_dir
-get_data_dir_debug_0001="Ermittle Daten-Verzeichnis"
-get_data_dir_debug_0002="Verwendeter Pfad für Daten-Verzeichnis: %s"
-get_data_dir_debug_0003="Alle Pfade für Daten-Verzeichnis fehlgeschlagen"
+get_data_dir_debug_0001="INFO: Ermittle Daten-Verzeichnis"
+get_data_dir_debug_0002="SUCCESS: Verwendeter Pfad für Daten-Verzeichnis: %s"
+get_data_dir_debug_0003="ERROR: Alle Pfade für Daten-Verzeichnis fehlgeschlagen"
 
 get_data_dir() {
     # -----------------------------------------------------------------------
@@ -903,9 +903,9 @@ get_data_dir() {
 # ---------------------------------------------------------------------------
 
 # get_frontend_dir
-get_frontend_dir_debug_0001="Ermittle Frontend-Verzeichnis"
-get_frontend_dir_debug_0002="Verwendeter Pfad für Frontend-Verzeichnis: %s"
-get_frontend_dir_debug_0003="Alle Pfade für Frontend-Verzeichnis fehlgeschlagen"
+get_frontend_dir_debug_0001="INFO: Ermittle Frontend-Verzeichnis"
+get_frontend_dir_debug_0002="SUCCESS: Verwendeter Pfad für Frontend-Verzeichnis: %s"
+get_frontend_dir_debug_0003="ERROR: Alle Pfade für Frontend-Verzeichnis fehlgeschlagen"
 
 get_frontend_dir() {
     # -----------------------------------------------------------------------
@@ -935,9 +935,9 @@ get_frontend_dir() {
 }
 
 # get_frontend_css_dir
-get_frontend_css_dir_debug_0001="Ermittle Frontend-CSS-Verzeichnis"
-get_frontend_css_dir_debug_0002="Verwendeter Pfad für Frontend-CSS-Verzeichnis: %s"
-get_frontend_css_dir_debug_0003="Alle Pfade für Frontend-CSS-Verzeichnis fehlgeschlagen"
+get_frontend_css_dir_debug_0001="INFO: Ermittle Frontend-CSS-Verzeichnis"
+get_frontend_css_dir_debug_0002="SUCCESS: Verwendeter Pfad für Frontend-CSS-Verzeichnis: %s"
+get_frontend_css_dir_debug_0003="ERROR: Alle Pfade für Frontend-CSS-Verzeichnis fehlgeschlagen"
 
 get_frontend_css_dir() {
     # -----------------------------------------------------------------------
@@ -967,9 +967,9 @@ get_frontend_css_dir() {
 }
 
 # get_frontend_fonts_dir
-get_frontend_fonts_dir_debug_0001="Ermittle Frontend-Fonts-Verzeichnis"
-get_frontend_fonts_dir_debug_0002="Verwendeter Pfad für Frontend-Fonts-Verzeichnis: %s"
-get_frontend_fonts_dir_debug_0003="Alle Pfade für Frontend-Fonts-Verzeichnis fehlgeschlagen"
+get_frontend_fonts_dir_debug_0001="INFO: Ermittle Frontend-Fonts-Verzeichnis"
+get_frontend_fonts_dir_debug_0002="SUCCESS: Verwendeter Pfad für Frontend-Fonts-Verzeichnis: %s"
+get_frontend_fonts_dir_debug_0003="ERROR: Alle Pfade für Frontend-Fonts-Verzeichnis fehlgeschlagen"
 
 get_frontend_fonts_dir() {
     # -----------------------------------------------------------------------
@@ -999,9 +999,9 @@ get_frontend_fonts_dir() {
 }
 
 # get_frontend_js_dir
-get_frontend_js_dir_debug_0001="Ermittle Frontend-JavaScript-Verzeichnis"
-get_frontend_js_dir_debug_0002="Verwendeter Pfad für Frontend-JavaScript-Verzeichnis: %s"
-get_frontend_js_dir_debug_0003="Alle Pfade für Frontend-JavaScript-Verzeichnis fehlgeschlagen"
+get_frontend_js_dir_debug_0001="INFO: Ermittle Frontend-JavaScript-Verzeichnis"
+get_frontend_js_dir_debug_0002="SUCCESS: Verwendeter Pfad für Frontend-JavaScript-Verzeichnis: %s"
+get_frontend_js_dir_debug_0003="ERROR: Alle Pfade für Frontend-JavaScript-Verzeichnis fehlgeschlagen"
 
 get_frontend_js_dir() {
     # -----------------------------------------------------------------------
@@ -1031,9 +1031,9 @@ get_frontend_js_dir() {
 }
 
 # get_photos_dir
-get_photos_dir_debug_0001="Ermittle Fotos-Verzeichnis"
-get_photos_dir_debug_0002="Verwendeter Pfad für Fotos-Verzeichnis: %s"
-get_photos_dir_debug_0003="Alle Pfade für Fotos-Verzeichnis fehlgeschlagen"
+get_photos_dir_debug_0001="INFO: Ermittle Fotos-Verzeichnis"
+get_photos_dir_debug_0002="SUCCESS: Verwendeter Pfad für Fotos-Verzeichnis: %s"
+get_photos_dir_debug_0003="ERROR: Alle Pfade für Fotos-Verzeichnis fehlgeschlagen"
 
 get_photos_dir() {
     # -----------------------------------------------------------------------
@@ -1063,12 +1063,12 @@ get_photos_dir() {
 }
 
 # get_photos_originals_dir
-get_photos_originals_dir_debug_0001="Ermittle Original-Fotos-Verzeichnis"
-get_photos_originals_dir_debug_0002="Verwendeter Pfad für Original-Fotos-Verzeichnis: %s"
-get_photos_originals_dir_debug_0003="Eventname: '%s', prüfe Verzeichniseignung"
-get_photos_originals_dir_debug_0004="Verwendeter Pfad für Event-spezifisches Original-Fotos-Verzeichnis: %s"
-get_photos_originals_dir_debug_0005="Alle Pfade für Original-Fotos-Verzeichnis fehlgeschlagen"
-get_photos_originals_dir_debug_0006="Fehler beim Erstellen des Event-spezifischen Verzeichnisses: %s, Fallback auf Basis-Verzeichnis: %s"
+get_photos_originals_dir_debug_0001="INFO: Ermittle Original-Fotos-Verzeichnis"
+get_photos_originals_dir_debug_0002="SUCCESS: Verwendeter Pfad für Original-Fotos-Verzeichnis: %s"
+get_photos_originals_dir_debug_0003="INFO: Eventname: '%s', prüfe Verzeichniseignung"
+get_photos_originals_dir_debug_0004="SUCCESS: Verwendeter Pfad für Event-spezifisches Original-Fotos-Verzeichnis: %s"
+get_photos_originals_dir_debug_0005="ERROR: Alle Pfade für Original-Fotos-Verzeichnis fehlgeschlagen"
+get_photos_originals_dir_debug_0006="ERROR: Fehler beim Erstellen des Event-spezifischen Verzeichnisses: %s, Fallback auf Basis-Verzeichnis: %s"
 
 get_photos_originals_dir() {
     # -----------------------------------------------------------------------
@@ -1108,14 +1108,10 @@ get_photos_originals_dir() {
     # Verwende die Helferfunktion für die Bereinigung
     local clean_event_name=$(get_clean_foldername "$event_name")
     
-    # Stellen Sie sicher, dass dir keine abschließenden Slashes hat
-    dir=${dir%/}
-        
     # Erstelle das Event-Unterverzeichnis
+    # Stellen Sie sicher, dass dir keine abschließenden Slashes hat
+    dir=${dir%/}        
     local event_dir="${dir}/${clean_event_name}"
-
-    # Debug-Ausgabe des exakten Pfads
-    debug "Event-Verzeichnis wird erstellt: '$event_dir'"
 
     if create_directory "$event_dir"; then
         debug "$(printf "$get_photos_originals_dir_debug_0004" "$event_dir")"
@@ -1131,12 +1127,12 @@ get_photos_originals_dir() {
 }
 
 # get_photos_gallery_dir
-get_photos_gallery_dir_debug_0001="Ermittle Galerie(Thumbnail)-Verzeichnis"
-get_photos_gallery_dir_debug_0002="Verwendeter Pfad für Galerie(Thumbnail)-Verzeichnis: %s"
-get_photos_gallery_dir_debug_0003="Eventname: '%s', prüfe Verzeichniseignung"
-get_photos_gallery_dir_debug_0004="Verwendeter Pfad für Event-spezifisches Galerie(Thumbnail)-Verzeichnis: %s"
-get_photos_gallery_dir_debug_0005="Alle Pfade für Galerie(Thumbnail)-Verzeichnis fehlgeschlagen"
-get_photos_gallery_dir_debug_0006="Fehler beim Erstellen des Event-spezifischen Verzeichnisses: %s, Fallback auf Basis-Verzeichnis: %s"
+get_photos_gallery_dir_debug_0001="INFO: Ermittle Galerie(Thumbnail)-Verzeichnis"
+get_photos_gallery_dir_debug_0002="SUCCESS: Verwendeter Pfad für Galerie(Thumbnail)-Verzeichnis: %s"
+get_photos_gallery_dir_debug_0003="INFO: Eventname: '%s', prüfe Verzeichniseignung"
+get_photos_gallery_dir_debug_0004="SUCCESS: Verwendeter Pfad für Event-spezifisches Galerie(Thumbnail)-Verzeichnis: %s"
+get_photos_gallery_dir_debug_0005="ERROR: Alle Pfade für Galerie(Thumbnail)-Verzeichnis fehlgeschlagen"
+get_photos_gallery_dir_debug_0006="ERROR: Fehler beim Erstellen des Event-spezifischen Verzeichnisses: %s, Fallback auf Basis-Verzeichnis: %s"
 
 get_photos_gallery_dir() {
     # -----------------------------------------------------------------------
@@ -1146,7 +1142,7 @@ get_photos_gallery_dir() {
     # Parameter: $1 - (Optional) Name des Events
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    local event_name="$1"
+    local event_name="${1:-}"
     local dir
         
     # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
@@ -1172,21 +1168,13 @@ get_photos_gallery_dir() {
 
     # Event-Name validieren und bereinigen
     debug "$(printf "$get_photos_gallery_dir_debug_0003" "$event_name")"
-
-    # Eventname bereinigen: Entferne ungültige Zeichen, ersetze Leerzeichen mit Unterstrichen
-    local clean_event_name
     
-    # 1. Entferne alles außer Buchstaben, Zahlen, Unterstriche, Bindestriche und Punkte
-    # 2. Ersetze Leerzeichen durch Unterstriche
-    # 3. Entferne führende und nachfolgende Punkte, Bindestriche und Unterstriche
-    clean_event_name=$(echo "$event_name" | tr -cd 'a-zA-Z0-9_-. ' | tr ' ' '_' | sed 's/^[_.-]*//;s/[_.-]*$//')
-    
-    # Wenn der Eventname leer ist nach der Bereinigung, verwende "event" als Fallback
-    if [ -z "$clean_event_name" ]; then
-        clean_event_name="event_$(date +%Y%m%d_%H%M%S)"
-    fi
+    # Verwende die Helferfunktion für die Bereinigung
+    local clean_event_name=$(get_clean_foldername "$event_name")
     
     # Erstelle das Event-Unterverzeichnis
+    # Stellen Sie sicher, dass dir keine abschließenden Slashes hat
+    dir=${dir%/}        
     local event_dir="${dir}/${clean_event_name}"
 
      if create_directory "$event_dir"; then
@@ -1203,9 +1191,9 @@ get_photos_gallery_dir() {
 }
 
 # get_frontend_picture_dir
-get_frontend_picture_dir_debug_0001="Ermittle Frontend-Bilder-Verzeichnis"
-get_frontend_picture_dir_debug_0002="Verwendeter Pfad für Frontend-Bilder-Verzeichnis: %s"
-get_frontend_picture_dir_debug_0003="Alle Pfade für Frontend-Bilder-Verzeichnis fehlgeschlagen"
+get_frontend_picture_dir_debug_0001="INFO: Ermittle Frontend-Bilder-Verzeichnis"
+get_frontend_picture_dir_debug_0002="SUCCESS: Verwendeter Pfad für Frontend-Bilder-Verzeichnis: %s"
+get_frontend_picture_dir_debug_0003="ERROR: Alle Pfade für Frontend-Bilder-Verzeichnis fehlgeschlagen"
 
 get_frontend_picture_dir() {
     # -----------------------------------------------------------------------
