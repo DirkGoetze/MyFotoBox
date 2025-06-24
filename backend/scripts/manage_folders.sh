@@ -906,7 +906,7 @@ get_template_dir() {
     fi
 
     # Event-Name validieren und bereinigen
-    debug "$(printf "$get_template_dir_debug_0003" "$event_name")"
+    debug "$(printf "$get_template_dir_debug_0003" "$modul_name")"
     
     # Verwende die Helferfunktion für die Bereinigung
     local clean_modul_name=$(get_clean_foldername "$modul_name")
