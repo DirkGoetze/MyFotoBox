@@ -471,7 +471,18 @@ print_debug() {
         
         # 5. Gib das Ergebnis mit dem extrahierten Präfix aus, wenn nicht leer
         if [ -n "$result_text" ]; then
-            echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${result_text}"
+            #echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${result_text}"
+            if [[ "$result_text" == *"INFO:"* ]]; then
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${COLOR_RESET}${result_text}${COLOR_RESET}"
+            elif [[ "$result_text" == *"WARN:"* ]]; then
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${COLOR_YELLOW}${result_text}${COLOR_RESET}"
+            elif [[ "$result_text" == *"SUCCESS:"* ]]; then
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${COLOR_GREEN}${result_text}${COLOR_RESET}"
+            elif [[ "$result_text" == *"ERROR:"* ]]; then
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${COLOR_RED}${result_text}${COLOR_RESET}"
+            else
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${result_text}"
+            fi
         fi
     fi
 }
