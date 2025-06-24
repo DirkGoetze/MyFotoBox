@@ -140,7 +140,7 @@ echo "-------------------------------------------------------------------------"
 
 # Zeige alle verfügbaren Funktionen in manage_folders.sh
 # echo "Alle im Skript verfügbaren Funktionen:"
-# declare -F | grep -E '(get_|bind_|check_|log_)'
+declare -F | grep -E '(get_|set_|bind_|check_|log_)'
 
 # Test: get_install_dir
 echo "+-----------------------------+"
