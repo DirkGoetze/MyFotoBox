@@ -415,6 +415,7 @@ print_debug() {
             echo "Debug-Teil: '$content'"
         fi
         echo "--------------------------------------------------------------"
+        echo ""  # Leere Zeile für bessere Lesbarkeit
 
         if [[ "$first_line" == *"$debug_marker"* ]]; then
             prefix="${first_line%%$debug_marker*}"
