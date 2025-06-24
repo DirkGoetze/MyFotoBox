@@ -457,11 +457,8 @@ set_script_permissions() {
 
 # get_venv_dir
 get_venv_dir_debug_0001="Ermittle 'Python Virtual Environment' Verzeichnis"
-get_venv_dir_debug_0002="Verwende bereits definiertes BACKEND_VENV_DIR: %s"
-get_venv_dir_debug_0003="Prüfe Standard-VENV-Verzeichnis: %s"
-get_venv_dir_debug_0004="Verwende Standard-VENV-Verzeichnis: %s"
-get_venv_dir_debug_0005="Standard-VENV-Verzeichnis nicht verfügbar, verwende Fallback: %s"
-get_venv_dir_debug_0006="Fallback-VENV-Verzeichnis nicht verfügbar, verwende: %s"
+get_venv_dir_debug_0002="Verwendeter Pfad für 'Python Virtual Environment' Verzeichnis: %s"
+get_venv_dir_debug_0003="Alle Pfade für 'Python Virtual Environment' Verzeichnis fehlgeschlagen"
 
 get_venv_dir() {
     # -----------------------------------------------------------------------
@@ -475,41 +472,17 @@ get_venv_dir() {
     
     debug "$get_venv_dir_debug_0001" "CLI" "get_venv_dir"
     
-    # Prüfen, ob BACKEND_VENV_DIR bereits gesetzt ist (z.B. vom install.sh)
-    if [ -n "$BACKEND_VENV_DIR" ] && [ -d "$BACKEND_VENV_DIR" ]; then
-        debug "$(printf "$get_venv_dir_debug_0002" "$BACKEND_VENV_DIR")" "CLI" "get_venv_dir"
-        create_directory "$BACKEND_VENV_DIR" || true
-        echo "$BACKEND_VENV_DIR"
-        return 0
-    fi
-    
-    # Standardpfad verwenden
-    dir="$DEFAULT_DIR_BACKEND_VENV"
-    debug "$(printf "$get_venv_dir_debug_0003" "$dir")" "CLI" "get_venv_dir"
-    
-    if [ -d "$dir" ]; then
-        create_directory "$dir" || true
-        debug "$(printf "$get_venv_dir_debug_0004" "$dir")" "CLI" "get_venv_dir"
+    # Verwende die in 'lib_core' definierten Pfade
+    dir=$(get_folder_path "$BACKEND_VENV_DIR" "$DEFAULT_DIR_BACKEND_VENV" "$FALLBACK_DIR_BACKEND_VENV" 1 1)
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_venv_dir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
     
-    # Fallback auf alternatives Verzeichnis
-    dir="$FALLBACK_BACKEND_VENV_DIR"
-    debug "$(printf "$get_venv_dir_debug_0005" "$dir")" "CLI" "get_venv_dir"
-    create_directory "$dir" || true
-    
-    # Als letzten Ausweg, ein Unterverzeichnis im Backend-Verzeichnis verwenden
-    if [ ! -d "$dir" ]; then
-        local backend_dir
-        backend_dir=$(get_backend_dir)
-        dir="$backend_dir/venv"
-        debug "$(printf "$get_venv_dir_debug_0006" "$dir")" "CLI" "get_venv_dir"
-        create_directory "$dir" || true
-    fi
-    
-    echo "$dir"
-    return 0
+    debug "$get_venv_dir_debug_0003"
+    echo ""
+    return 1
 }
 
 # get_pip_path
