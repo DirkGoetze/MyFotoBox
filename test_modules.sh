@@ -227,17 +227,16 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_frontend_js_dir                                             |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_frontend_js_dir"
+# Test: get_photos_dir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_photos_dir                                                  |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_photos_dir"
 # Test: get_frontend_picture_dir
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_frontend_picture_dir                                        |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_frontend_picture_dir"
-
-# Test: get_photos_dir
-echo "+-----------------------------+"
-echo "| Test: get_photos_dir       |"
-echo "+-----------------------------+"
-test_function "manage_folders_sh" "get_photos_dir"
 
 # Test: get_photos_original_dir
 echo "+-----------------------------+"

@@ -1030,43 +1030,10 @@ get_frontend_js_dir() {
     return 1
 }
 
-# get_frontend_picture_dir
-get_frontend_picture_dir_debug_0001="Ermittle Frontend-Bilder-Verzeichnis"
-get_frontend_picture_dir_debug_0002="Verwendeter Pfad für Frontend-Bilder-Verzeichnis: %s"
-get_frontend_picture_dir_debug_0003="Alle Pfade für Frontend-Bilder-Verzeichnis fehlgeschlagen"
-
-get_frontend_picture_dir() {
-    # -----------------------------------------------------------------------
-    # get_frontend_picture_dir
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zum Bilder-Verzeichnis im Frontend zurück
-    # Parameter: keine
-    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
-    # -----------------------------------------------------------------------
-    local dir
-
-    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
-    debug "$get_frontend_picture_dir_debug_0001"
-
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$FRONTEND_PICTURE_DIR" "$DEFAULT_DIR_FRONTEND_PICTURE" "$FALLBACK_DIR_FRONTEND_PICTURE" 1 1)    
-    if [ -n "$dir" ]; then
-        debug "$(printf "$get_frontend_picture_dir_debug_0002" "$dir")"
-        echo "$dir"
-        return 0
-    fi
-
-    debug "$get_frontend_picture_dir_debug_0003"
-    echo ""
-    return 1
-}
-
 # get_photos_dir
 get_photos_dir_debug_0001="Ermittle Fotos-Verzeichnis"
-get_photos_dir_debug_0002="Prüfe Standard-Fotos-Verzeichnis: %s"
-get_photos_dir_debug_0003="Verwende Standard-Fotos-Verzeichnis: %s"
-get_photos_dir_debug_0004="Standard-Fotos-Verzeichnis nicht verfügbar, verwende Fallback: %s/photos"
+get_photos_dir_debug_0002="Verwendeter Pfad für Fotos-Verzeichnis: %s"
+get_photos_dir_debug_0003="Alle Pfade für Fotos-Verzeichnis fehlgeschlagen"
 
 get_photos_dir() {
     # -----------------------------------------------------------------------
@@ -1076,25 +1043,23 @@ get_photos_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    debug "$get_photos_dir_debug_0001" "CLI" "get_photos_dir"
-    
-    local frontend_dir
-    frontend_dir=$(get_frontend_dir)
-    
-    local photos_dir="$frontend_dir/photos"
-    debug "$(printf "$get_photos_dir_debug_0002" "$photos_dir")" "CLI" "get_photos_dir"
-    if create_directory "$photos_dir"; then
-        debug "$(printf "$get_photos_dir_debug_0003" "$photos_dir")" "CLI" "get_photos_dir"
-        echo "$photos_dir"
+    local dir
+
+    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_photos_dir_debug_0001"
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$FRONTEND_PHOTOS_DIR" "$DEFAULT_DIR_FRONTEND_PHOTOS" "$FALLBACK_DIR_FRONTEND_PHOTOS" 1 1)    
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_photos_dir_debug_0002" "$dir")"
+        echo "$dir"
         return 0
     fi
-    
-    # Fallback zum Datenverzeichnis
-    local data_dir
-    data_dir=$(get_data_dir)
-    debug "$(printf "$get_photos_dir_debug_0004" "$data_dir")" "CLI" "get_photos_dir"
-    echo "$data_dir/photos"
-    return 0
+
+    debug "$get_photos_dir_debug_0003"
+    echo ""
+    return 1
 }
 
 # get_photos_originals_dir
@@ -1194,38 +1159,37 @@ get_photos_gallery_dir() {
 }
 
 # get_frontend_picture_dir
-get_frontend_picture_dir_debug_0001="Ermittle Frontend-Picture-Verzeichnis"
-get_frontend_picture_dir_debug_0002="Prüfe Picture-Verzeichnis: %s"
-get_frontend_picture_dir_debug_0003="Verwende Picture-Verzeichnis: %s"
-get_frontend_picture_dir_debug_0004="Picture-Verzeichnis nicht verfügbar, verwende Fallback: %s"
+get_frontend_picture_dir_debug_0001="Ermittle Frontend-Bilder-Verzeichnis"
+get_frontend_picture_dir_debug_0002="Verwendeter Pfad für Frontend-Bilder-Verzeichnis: %s"
+get_frontend_picture_dir_debug_0003="Alle Pfade für Frontend-Bilder-Verzeichnis fehlgeschlagen"
 
 get_frontend_picture_dir() {
     # -----------------------------------------------------------------------
     # get_frontend_picture_dir
     # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zum Picture-Verzeichnis im Frontend zurück
+    # Funktion: Gibt den Pfad zum Bilder-Verzeichnis im Frontend zurück
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    local frontend_dir
-    debug "$get_frontend_picture_dir_debug_0001" "CLI" "get_frontend_picture_dir"
-    
-    # Hole das Frontend-Hauptverzeichnis
-    frontend_dir=$(get_frontend_dir)
-    local picture_dir="$frontend_dir/picture"
-    
-    debug "$(printf "$get_frontend_picture_dir_debug_0002" "$picture_dir")" "CLI" "get_frontend_picture_dir"
-    if create_directory "$picture_dir"; then
-        debug "$(printf "$get_frontend_picture_dir_debug_0003" "$picture_dir")" "CLI" "get_frontend_picture_dir"
-        echo "$picture_dir"
+    local dir
+
+    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_frontend_picture_dir_debug_0001"
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$FRONTEND_PICTURE_DIR" "$DEFAULT_DIR_FRONTEND_PICTURE" "$FALLBACK_DIR_FRONTEND_PICTURE" 1 1)    
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_frontend_picture_dir_debug_0002" "$dir")"
+        echo "$dir"
         return 0
     fi
-    
-    # Fallback direkt zum Frontend-Verzeichnis
-    debug "$(printf "$get_frontend_picture_dir_debug_0004" "$frontend_dir")" "CLI" "get_frontend_picture_dir"
-    echo "$frontend_dir"
+
+    debug "$get_frontend_picture_dir_debug_0003"
+    echo ""
     return 1
 }
+
 
 # ---------------------------------------------------------------------------
 # Log-Verzeichnis
