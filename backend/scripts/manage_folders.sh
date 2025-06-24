@@ -868,10 +868,8 @@ get_camera_conf_dir() {
 
 # get_data_dir
 get_data_dir_debug_0001="Ermittle Daten-Verzeichnis"
-get_data_dir_debug_0002="Verwende bereits definiertes DATA_DIR: %s"
-get_data_dir_debug_0003="Prüfe Standard- und Fallback-Pfade für Daten-Verzeichnis"
-get_data_dir_debug_0004="Verwende Pfad für Daten-Verzeichnis: %s"
-get_data_dir_debug_0005="Alle Pfade für Daten-Verzeichnis fehlgeschlagen, verwende %s/data"
+get_data_dir_debug_0002="Verwendeter Pfad für Daten-Verzeichnis: %s"
+get_data_dir_debug_0003="Alle Pfade für Daten-Verzeichnis fehlgeschlagen"
 
 get_data_dir() {
     # -----------------------------------------------------------------------
@@ -882,31 +880,22 @@ get_data_dir() {
     # Rückgabe: Pfad zum Datenverzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     local dir
-        
-    # Prüfen, ob DATA_DIR bereits gesetzt ist (z.B. vom install.sh)
-    debug "$get_data_dir_debug_0001" "CLI" "get_data_dir"
-    if [ -n "$DATA_DIR" ] && [ -d "$DATA_DIR" ]; then
-        debug "$(printf "$get_data_dir_debug_0002" "$DATA_DIR")" "CLI" "get_data_dir"
-        create_directory "$DATA_DIR" || true
-        echo "$DATA_DIR"
-        return 0
-    fi
-    
-    # Verwende die in dieser Datei definierten Pfade
-    debug "$get_data_dir_debug_0003" "CLI" "get_data_dir"
-    dir=$(get_folder_path "$DEFAULT_DIR_DATA" "$FALLBACK_DIR_DATA" 1)
+
+    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_data_dir_debug_0001" 
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$DATA_DIR" "$DEFAULT_DIR_DATA" "$FALLBACK_DIR_DATA" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_data_dir_debug_0004" "$dir")" "CLI" "get_data_dir"
+        debug "$(printf "$get_data_dir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
-    
-    # Als absoluten Notfall ein Unterverzeichnis des Installationsverzeichnisses verwenden
-    local install_dir
-    install_dir=$(get_install_dir)
-    debug "$(printf "$get_data_dir_debug_0005" "$install_dir")" "CLI" "get_data_dir"
-    echo "$install_dir/data"
-    return 0
+
+    debug "$get_data_dir_debug_0003"
+    echo ""
+    return 1
 }
 
 # ---------------------------------------------------------------------------
@@ -915,9 +904,8 @@ get_data_dir() {
 
 # get_frontend_dir
 get_frontend_dir_debug_0001="Ermittle Frontend-Verzeichnis"
-get_frontend_dir_debug_0002="Verwende bereits definiertes FRONTEND_DIR: %s"
-get_frontend_dir_debug_0003="Prüfe Standard-Frontend-Verzeichnis: %s"
-get_frontend_dir_debug_0004="Standard-Frontend-Verzeichnis nicht verfügbar, verwende Fallback: %s"
+get_frontend_dir_debug_0002="Verwendeter Pfad für Frontend-Verzeichnis: %s"
+get_frontend_dir_debug_0003="Alle Pfade für Frontend-Verzeichnis fehlgeschlagen"
 
 get_frontend_dir() {
     # -----------------------------------------------------------------------
@@ -929,31 +917,21 @@ get_frontend_dir() {
     # -----------------------------------------------------------------------
     local dir
         
-    # Prüfen, ob FRONTEND_DIR bereits gesetzt ist
-    debug "$get_frontend_dir_debug_0001" "CLI" "get_frontend_dir"
-    if [ -n "$FRONTEND_DIR" ] && [ -d "$FRONTEND_DIR" ]; then
-        debug "$(printf "$get_frontend_dir_debug_0002" "$FRONTEND_DIR")" "CLI" "get_frontend_dir"
-        create_directory "$FRONTEND_DIR" || true
-        echo "$FRONTEND_DIR"
-        return 0
-    fi
-    
-    # Standardpfad verwenden
-    dir="$DEFAULT_DIR_FRONTEND"
-    debug "$(printf "$get_frontend_dir_debug_0003" "$dir")" "CLI" "get_frontend_dir"
-    if [ -d "$dir" ]; then
-        create_directory "$dir" || true
+    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_frontend_dir_debug_0001" "CLI" "get_backend_dir"
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$FRONTEND_DIR" "$DEFAULT_DIR_FRONTEND" "$FALLBACK_DIR_FRONTEND" 1 1)    
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_frontend_dir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
-    
-    # Fallback auf Systemweb-Verzeichnis
-    dir="$FALLBACK_DIR_FRONTEND"
-    debug "$(printf "$get_frontend_dir_debug_0004" "$dir")" "CLI" "get_frontend_dir"
-    create_directory "$dir" || true
-    
-    echo "$dir"
-    return 0
+
+    debug "$get_frontend_dir_debug_0003"
+    echo ""
+    return 1
 }
 
 # get_frontend_css_dir

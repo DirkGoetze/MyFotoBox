@@ -202,17 +202,15 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_camera_conf_dir                                             |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_camera_conf_dir"
-
 # Test: get_data_dir
-echo "+-----------------------------+"
-echo "| Test: get_data_dir         |"
-echo "+-----------------------------+"
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_data_dir                                                    |"
+echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_data_dir"
-
 # Test: get_frontend_dir
-echo "+-----------------------------+"
-echo "| Test: get_frontend_dir     |"
-echo "+-----------------------------+"
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_frontend_dir                                                |"
+echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_frontend_dir"
 
 # Test: get_frontend_css_dir
