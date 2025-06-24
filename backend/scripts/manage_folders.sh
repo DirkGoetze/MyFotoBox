@@ -536,7 +536,7 @@ get_python_path() {
 }
 
 # get_pip_path
-get_pip_path_debug_0001="Ermittle Pfad zur pip-Binary"
+get_pip_path_debug_0001="INFO: Ermittle Pfad zur pip-Binary"
 get_pip_path_debug_0002="Verwende Unix/Linux pip-Pfad: %s"
 get_pip_path_debug_0003="Verwende Windows pip-Pfad: %s"
 get_pip_path_debug_0004="Verwende Python-Modul für pip: %s -m pip"
@@ -553,11 +553,8 @@ get_pip_path() {
     local venv_dir
     debug "$get_pip_path_debug_0001" "CLI" "get_pip_path"
     
-    # Hole das Virtual Environment-Verzeichnis
-    venv_dir=$(get_venv_dir)
-    
     # Standard-Unix/Linux-Pfad
-    local pip_path="$venv_dir/bin/pip"
+    local pip_path="$PIP_EXEC"
     
     # Prüfe, ob wir auf Unix/Linux oder Windows sind
     if [ -f "$pip_path" ]; then
@@ -567,7 +564,7 @@ get_pip_path() {
     fi
         
     # Python-Pfade ermitteln für python -m pip Fallback
-    local python_path="$venv_dir/bin/python3"
+    local python_path=$(get_python_path)
     if [ ! -f "$python_path" ]; then
         python_path="$venv_dir/bin/python"
     fi
