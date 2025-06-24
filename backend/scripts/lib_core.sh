@@ -183,7 +183,7 @@ trace_output() {
 }
 
 # check_param
-check_param_debug_0001="INFO: Parameterprüfung für [%s:%s()] Parameter: %s"
+check_param_debug_0001="INFO: Parameterprüfung für [%s:%s()] Parameter: %s:%s"
 check_param_debug_0002="ERROR: Parameter '%s' in Funktion '%s' des Moduls '%s' ist leer oder nicht gesetzt"
 #check_param_log_0001="check_param: Parameter '%s' fehlt in Funktion '%s' des Moduls '%s'"
 
@@ -215,7 +215,7 @@ check_param() {
     module_name=$(echo "$module_name" | tr '[:lower:]' '[:upper:]')
 
     # Debugging-Ausgabe für die Modul-Identifikation
-    debug "$(printf "$check_param_debug_0001" "$module_name" "$calling_function" "$param_name")" "CLI" "check_param"
+    debug "$(printf "$check_param_debug_0001" "$module_name" "$calling_function" "$param_name" "$param")" "CLI" "check_param"
 
     # Überprüfen, ob ein Parameter übergeben wurde
     if [ -z "$param" ]; then
