@@ -42,12 +42,14 @@ test_function() {
     # Prüfe, ob das Modul verfügbar ist
     if [ -z "${!module_path_var_upper}" ] || [ ! -f "${!module_path_var_upper}" ]; then
         debug "$(printf "$test_function_debug_0003" "$module_path_var_upper" "${!module_path_var_upper:-nicht gesetzt}")" "CLI" "test_function"
+        echo "❌ ERROR: Modul $module_path_var_upper nicht verfügbar oder Pfad ungültig!" &>2
         return 1
     fi
     
     # Prüfe, ob die Funktion existiert (bereits geladen)
     if ! declare -f "$function_name" > /dev/null 2>&1; then
         debug "$(printf "$test_function_debug_0004" "$function_name")"
+        echo "❌ ERROR: Funktion '$function_name' wurde nicht gefunden!" &>2
         return 2
     fi
 
@@ -74,8 +76,11 @@ test_function() {
     if [ -n "$output" ]; then
         debug "$(printf "$test_function_debug_0008" "$output")"
         debug "$(printf "$test_function_debug_0009" "$result")"
+        echo "INFO: Ausgabe der Funktion '$function_name': $output"
+        echo "INFO: Rückgabewert der Funktion '$function_name': $result"
     else
         debug "$(printf "$test_function_debug_0009" "$result")"
+        echo "INFO: Keine Ausgabe von Funktion '$function_name', Rückgabewert: $result"
     fi
         
     # Gib den originalen Rückgabewert der getesteten Funktion zurück
@@ -204,17 +209,17 @@ echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_https_conf_dir"
 # Test: get_nginx_conf_dir
 echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_nginx_conf_dir                                            |"
+echo "| Test: get_nginx_conf_dir                                              |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_nginx_conf_dir"
 # Test: get_template_dir
 echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_template_dir (ohne Modul)                               |"
+echo "| Test: get_template_dir (ohne Modul)                                   |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_template_dir"
 # Test: get_template_dir
 echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_template_dir (mit Modul)                                |"
+echo "| Test: get_template_dir (mit Modul)                                    |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_template_dir" "nginx"
 # Test: get_data_dir
@@ -259,12 +264,12 @@ echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_photos_originals_dir" "Mein Event"
 # Test: get_photos_gallery_dir
 echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_photos_gallery_dir (ohne Event)                            |"
+echo "| Test: get_photos_gallery_dir (ohne Event)                             |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_photos_gallery_dir"
 # Test: get_photos_originals_dir
 echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_photos_gallery_dir (mit Event)                            |"
+echo "| Test: get_photos_gallery_dir (mit Event)                              |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_photos_gallery_dir" "Mein Event"
 # Test: get_frontend_picture_dir
