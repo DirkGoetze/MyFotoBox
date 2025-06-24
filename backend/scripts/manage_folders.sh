@@ -380,7 +380,7 @@ get_backend_dir() {
     local dir
         
     # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
-    debug "$get_backend_dir_debug_0001" "CLI" "get_backend_dir"
+    debug "$get_backend_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
@@ -411,7 +411,8 @@ get_script_dir() {
     # -----------------------------------------------------------------------
     # HINWEIS: Diese Funktion verwendet nun die zentrale Definition von SCRIPT_DIR aus lib_core.sh
     
-    debug "$get_script_dir_debug_0001" "CLI" "get_script_dir"
+    # Prüfen, ob SCRIPT_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_script_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
@@ -472,7 +473,7 @@ get_venv_dir() {
     # -----------------------------------------------------------------------
     local dir
     
-    debug "$get_venv_dir_debug_0001" "CLI" "get_venv_dir"
+    debug "$get_venv_dir_debug_0001"
     
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
@@ -647,7 +648,7 @@ get_backup_dir() {
     local dir
 
     # Prüfen, ob BACKUP_DIR bereits gesetzt ist (z.B. vom install.sh)
-    debug "$get_backup_dir_debug_0001" "CLI" "get_backup_dir"
+    debug "$get_backup_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
@@ -679,7 +680,7 @@ get_nginx_backup_dir() {
     local dir
 
     # Prüfen, ob BACKUP_DIR_NGINX bereits gesetzt ist (z.B. vom install.sh)
-    debug "$get_nginx_backup_dir_debug_0001" "CLI" "get_nginx_backup_dir"
+    debug "$get_nginx_backup_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
@@ -711,7 +712,7 @@ get_https_backup_dir() {
     local dir
 
     # Prüfen, ob BACKUP_DIR_HTTPS bereits gesetzt ist (z.B. vom install.sh)
-    debug "$get_https_backup_dir_debug_0001" "CLI" "get_https_backup_dir"
+    debug "$get_https_backup_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
@@ -733,10 +734,8 @@ get_https_backup_dir() {
 
 # get_config_dir
 get_config_dir_debug_0001="Ermittle Konfigurations-Verzeichnis"
-get_config_dir_debug_0002="Verwende bereits definiertes CONF_DIR: %s"
-get_config_dir_debug_0003="Prüfe Standard- und Fallback-Pfade für Konfigurations-Verzeichnis" 
-get_config_dir_debug_0004="Verwende Pfad für Konfigurations-Verzeichnis: %s"
-get_config_dir_debug_0005="Alle Pfade für Konfigurations-Verzeichnis fehlgeschlagen, verwende %s/conf"
+get_config_dir_debug_0002="Verwendeter Pfad für Konfigurations-Verzeichnis: %s"
+get_config_dir_debug_0003="Alle Pfade für Konfigurations-Verzeichnis fehlgeschlagen"
 
 get_config_dir() {
     # -----------------------------------------------------------------------
@@ -747,31 +746,22 @@ get_config_dir() {
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     local dir
-        
+
     # Prüfen, ob CONF_DIR bereits gesetzt ist (z.B. vom install.sh)
-    debug "$get_config_dir_debug_0001" "CLI" "get_config_dir"
-    if [ -n "$CONF_DIR" ] && [ -d "$CONF_DIR" ]; then
-        debug "$(printf "$get_config_dir_debug_0002" "$CONF_DIR")" "CLI" "get_config_dir"
-        create_directory "$CONF_DIR" || true
-        echo "$CONF_DIR"
-        return 0
-    fi
-    
-    # Verwende die in dieser Datei definierten Pfade
-    debug "$get_config_dir_debug_0003" "CLI" "get_config_dir"
-    dir=$(get_folder_path "$DEFAULT_DIR_CONF" "$FALLBACK_DIR_CONF" 1)
+    debug "$get_config_dir_debug_0001"
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$CONF_DIR" "$DEFAULT_DIR_CONF" "$FALLBACK_DIR_CONF" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_config_dir_debug_0004" "$dir")" "CLI" "get_config_dir"
+        debug "$(printf "$get_config_dir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
-    
-    # Als absoluten Notfall ein Unterverzeichnis des Installationsverzeichnisses verwenden
-    local install_dir
-    install_dir=$(get_install_dir)
-    debug "$(printf "$get_config_dir_debug_0005" "$install_dir")" "CLI" "get_config_dir"
-    echo "$install_dir/conf"
-    return 0
+
+    debug "$get_config_dir_debug_0003"
+    echo ""
+    return 1
 }
 
 # get_nginx_conf_dir
