@@ -232,23 +232,33 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_photos_dir                                                  |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_photos_dir"
+# Test: get_photos_original_dir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_photos_original_dir (ohne Event)                            |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_photos_originals_dir"
+# Test: get_photos_originals_dir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_photos_originals_dir (mit Event)                            |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_photos_originals_dir" "Mein Event"
+# Test: get_photos_gallery_dir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_photos_gallery_dir (ohne Event)                            |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_photos_gallery_dir"
+# Test: get_photos_originals_dir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_photos_gallery_dir (mit Event)                            |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_photos_gallery_dir" "Mein Event"
 # Test: get_frontend_picture_dir
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_frontend_picture_dir                                        |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_frontend_picture_dir"
 
-# Test: get_photos_original_dir
-echo "+-----------------------------+"
-echo "| Test: get_photos_original_dir |"
-echo "+-----------------------------+"
-test_function "manage_folders_sh" "get_photos_original_dir"
-
-# Test: get_photos_originals_dir
-echo "+-----------------------------+"
-echo "| Test: get_photos_originals_dir |"
-echo "+-----------------------------+"
-test_function "manage_folders_sh" "get_photos_originals_dir" "Mein Event"
+exit
 
 # -------------------------------
 # Test der manage_files.sh Funktionen

@@ -1064,11 +1064,11 @@ get_photos_dir() {
 
 # get_photos_originals_dir
 get_photos_originals_dir_debug_0001="Ermittle Original-Fotos-Verzeichnis"
-get_photos_originals_dir_debug_0002="Prüfe Originals-Verzeichnis: %s"
-get_photos_originals_dir_debug_0003="Event-Name angegeben, prüfe Verzeichnis: %s"
-get_photos_originals_dir_debug_0004="Verwende Event-spezifisches Original-Fotos-Verzeichnis: %s"
-get_photos_originals_dir_debug_0005="Verwende Standard Original-Fotos-Verzeichnis: %s"
-get_photos_originals_dir_debug_0006="Originals-Verzeichnis nicht verfügbar, verwende Fallback: %s"
+get_photos_originals_dir_debug_0002="Verwendeter Pfad für Original-Fotos-Verzeichnis: %s"
+get_photos_originals_dir_debug_0003="Eventname: '%s', prüfe Verzeichniseignung"
+get_photos_originals_dir_debug_0004="Verwendeter Pfad für Event-spezifisches Original-Fotos-Verzeichnis: %s"
+get_photos_originals_dir_debug_0005="Alle Pfade für Original-Fotos-Verzeichnis fehlgeschlagen"
+get_photos_originals_dir_debug_0006="Fehler beim Erstellen des Event-spezifischen Verzeichnisses: %s, Fallback auf Basis-Verzeichnis: %s"
 
 get_photos_originals_dir() {
     # -----------------------------------------------------------------------
@@ -1079,83 +1079,131 @@ get_photos_originals_dir() {
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     local event_name="$1"
+    local dir
+        
+    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_photos_originals_dir_debug_0001"
 
-   # Überprüfung der Parameter
-    if ! check_param "$event_name" "event_name"; then return 1; fi
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$FRONTEND_PHOTOS_ORIGINAL_DIR" "$DEFAULT_DIR_FRONTEND_PHOTOS_ORIGINAL" "$FALLBACK_DIR_FRONTEND_PHOTOS_ORIGINAL" 1 1)    
 
-    debug "$get_photos_originals_dir_debug_0001" "CLI" "get_photos_originals_dir"
+    # Basis-Verzeichnis konnte nicht erzeugt werden
+    if [ -z "$dir" ]; then
+        debug "$(printf "$get_photos_originals_dir_debug_0005")"
+        echo ""
+        return 1
+    fi
+
+    # Wenn kein Eventname übergeben wurde, gib das Basis-Verzeichnis zurück
+    if [ -z "$event_name" ]; then
+        debug "$(printf "$get_photos_originals_dir_debug_0002" "$dir")"
+        echo "$dir"
+        return 0
+    fi
+
+    # Event-Name validieren und bereinigen
+    debug "$(printf "$get_photos_originals_dir_debug_0003" "$event_name")"
     
-    local photos_dir
-    photos_dir=$(get_photos_dir)
-    local originals_dir="$photos_dir/originals"
+    # Eventname bereinigen: Entferne ungültige Zeichen, ersetze Leerzeichen mit Unterstrichen
+    local clean_event_name
     
-    debug "$(printf "$get_photos_originals_dir_debug_0002" "$originals_dir")" "CLI" "get_photos_originals_dir"
-    if create_directory "$originals_dir"; then
-        if [ -n "$event_name" ]; then
-            local event_dir="$originals_dir/$event_name"
-            debug "$(printf "$get_photos_originals_dir_debug_0003" "$event_dir")" "CLI" "get_photos_originals_dir"
-            if create_directory "$event_dir"; then
-                debug "$(printf "$get_photos_originals_dir_debug_0004" "$event_dir")" "CLI" "get_photos_originals_dir"
-                echo "$event_dir"
-                return 0
-            fi
-        else
-            debug "$(printf "$get_photos_originals_dir_debug_0005" "$originals_dir")" "CLI" "get_photos_originals_dir"
-            echo "$originals_dir"
-            return 0
-        fi
+    # 1. Entferne alles außer Buchstaben, Zahlen, Unterstriche, Bindestriche und Punkte
+    # 2. Ersetze Leerzeichen durch Unterstriche
+    # 3. Entferne führende und nachfolgende Punkte, Bindestriche und Unterstriche
+    clean_event_name=$(echo "$event_name" | tr -cd 'a-zA-Z0-9_-. ' | tr ' ' '_' | sed 's/^[_.-]*//;s/[_.-]*$//')
+    
+    # Wenn der Eventname leer ist nach der Bereinigung, verwende "event" als Fallback
+    if [ -z "$clean_event_name" ]; then
+        clean_event_name="event_$(date +%Y%m%d_%H%M%S)"
     fi
     
-    # Fallback, wenn Event-Verzeichnis nicht erstellt werden konnte
-    debug "$(printf "$get_photos_originals_dir_debug_0006" "$photos_dir")" "CLI" "get_photos_originals_dir"
-    echo "$photos_dir"
-    return 0
+    # Erstelle das Event-Unterverzeichnis
+    local event_dir="${dir}/${clean_event_name}"
+
+     if create_directory "$event_dir"; then
+        debug "$(printf "$get_photos_originals_dir_debug_0004" "$event_dir")"
+        echo "$event_dir"
+        return 0
+    else
+        debug "$(printf "$get_photos_originals_dir_debug_0006" "$event_dir" "$dir")"
+        # Fallback auf das Basis-Verzeichnis bei Fehler
+        debug "$(printf "$get_photos_originals_dir_debug_0002" "$dir")"
+        echo "$dir"
+        return 0
+    fi
 }
 
 # get_photos_gallery_dir
-get_photos_gallery_dir_debug_0001="Ermittle Galerie-Verzeichnis"
-get_photos_gallery_dir_debug_0002="Prüfe Galerie-Verzeichnis: %s"
-get_photos_gallery_dir_debug_0003="Event-Name angegeben, prüfe Verzeichnis: %s"
-get_photos_gallery_dir_debug_0004="Verwende Event-spezifisches Galerie-Verzeichnis: %s"
-get_photos_gallery_dir_debug_0005="Verwende Standard Galerie-Verzeichnis: %s"
-get_photos_gallery_dir_debug_0006="Galerie-Verzeichnis nicht verfügbar, verwende Fallback: %s"
+get_photos_gallery_dir_debug_0001="Ermittle Galerie(Thumbnail)-Verzeichnis"
+get_photos_gallery_dir_debug_0002="Verwendeter Pfad für Galerie(Thumbnail)-Verzeichnis: %s"
+get_photos_gallery_dir_debug_0003="Eventname: '%s', prüfe Verzeichniseignung"
+get_photos_gallery_dir_debug_0004="Verwendeter Pfad für Event-spezifisches Galerie(Thumbnail)-Verzeichnis: %s"
+get_photos_gallery_dir_debug_0005="Alle Pfade für Galerie(Thumbnail)-Verzeichnis fehlgeschlagen"
+get_photos_gallery_dir_debug_0006="Fehler beim Erstellen des Event-spezifischen Verzeichnisses: %s, Fallback auf Basis-Verzeichnis: %s"
 
 get_photos_gallery_dir() {
     # -----------------------------------------------------------------------
     # get_photos_gallery_dir
     # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zum Galerie-Verzeichnis zurück
+    # Funktion: Gibt den Pfad zum Galerie(Thumbnail)-Verzeichnis zurück
     # Parameter: $1 - (Optional) Name des Events
-    # Rückgabe: Pfad zum Galerie-Verzeichnis oder leerer String bei Fehler
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     local event_name="$1"
-    debug "$get_photos_gallery_dir_debug_0001" "CLI" "get_photos_gallery_dir"
+    local dir
+        
+    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_photos_gallery_dir_debug_0001"
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$FRONTEND_PHOTOS_GALLERY_DIR" "$DEFAULT_DIR_FRONTEND_PHOTOS_GALLERY" "$FALLBACK_DIR_FRONTEND_PHOTOS_GALLERY" 1 1)
+
+    # Basis-Verzeichnis konnte nicht erzeugt werden
+    if [ -z "$dir" ]; then
+        debug "$(printf "$get_photos_gallery_dir_debug_0005")"
+        echo ""
+        return 1
+    fi
+
+    # Wenn kein Eventname übergeben wurde, gib das Basis-Verzeichnis zurück
+    if [ -z "$event_name" ]; then
+        debug "$(printf "$get_photos_gallery_dir_debug_0002" "$dir")"
+        echo "$dir"
+        return 0
+    fi
+
+    # Event-Name validieren und bereinigen
+    debug "$(printf "$get_photos_gallery_dir_debug_0003" "$event_name")"
+
+    # Eventname bereinigen: Entferne ungültige Zeichen, ersetze Leerzeichen mit Unterstrichen
+    local clean_event_name
     
-    local photos_dir
-    photos_dir=$(get_photos_dir)
-    local gallery_dir="$photos_dir/gallery"
+    # 1. Entferne alles außer Buchstaben, Zahlen, Unterstriche, Bindestriche und Punkte
+    # 2. Ersetze Leerzeichen durch Unterstriche
+    # 3. Entferne führende und nachfolgende Punkte, Bindestriche und Unterstriche
+    clean_event_name=$(echo "$event_name" | tr -cd 'a-zA-Z0-9_-. ' | tr ' ' '_' | sed 's/^[_.-]*//;s/[_.-]*$//')
     
-    debug "$(printf "$get_photos_gallery_dir_debug_0002" "$gallery_dir")" "CLI" "get_photos_gallery_dir"
-    if create_directory "$gallery_dir"; then
-        if [ -n "$event_name" ]; then
-            local event_dir="$gallery_dir/$event_name"
-            debug "$(printf "$get_photos_gallery_dir_debug_0003" "$event_dir")" "CLI" "get_photos_gallery_dir"
-            if create_directory "$event_dir"; then
-                debug "$(printf "$get_photos_gallery_dir_debug_0004" "$event_dir")" "CLI" "get_photos_gallery_dir"
-                echo "$event_dir"
-                return 0
-            fi
-        else
-            debug "$(printf "$get_photos_gallery_dir_debug_0005" "$gallery_dir")" "CLI" "get_photos_gallery_dir"
-            echo "$gallery_dir"
-            return 0
-        fi
+    # Wenn der Eventname leer ist nach der Bereinigung, verwende "event" als Fallback
+    if [ -z "$clean_event_name" ]; then
+        clean_event_name="event_$(date +%Y%m%d_%H%M%S)"
     fi
     
-    # Fallback, wenn Event-Verzeichnis nicht erstellt werden konnte
-    debug "$(printf "$get_photos_gallery_dir_debug_0006" "$photos_dir")" "CLI" "get_photos_gallery_dir"
-    echo "$photos_dir"
-    return 0
+    # Erstelle das Event-Unterverzeichnis
+    local event_dir="${dir}/${clean_event_name}"
+
+     if create_directory "$event_dir"; then
+        debug "$(printf "$get_photos_gallery_dir_debug_0004" "$event_dir")"
+        echo "$event_dir"
+        return 0
+    else
+        debug "$(printf "$get_photos_gallery_dir_debug_0006" "$event_dir" "$dir")"
+        # Fallback auf das Basis-Verzeichnis bei Fehler
+        debug "$(printf "$get_photos_gallery_dir_debug_0002" "$dir")"
+        echo "$dir"
+        return 0
+    fi
 }
 
 # get_frontend_picture_dir
@@ -1189,7 +1237,6 @@ get_frontend_picture_dir() {
     echo ""
     return 1
 }
-
 
 # ---------------------------------------------------------------------------
 # Log-Verzeichnis
