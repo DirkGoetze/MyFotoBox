@@ -261,7 +261,7 @@ get_clean_foldername() {
     # 3. Entferne führende und nachfolgende Punkte, Bindestriche und Unterstriche
     local clean_name
     clean_name=$(echo "$input_name" | tr -cd 'a-zA-Z0-9_-. ' | tr ' ' '_' | sed 's/^[_.-]*//;s/[_.-]*$//')
-    
+    print_info "$clean_name"
     # Wenn der bereinigte Name leer ist, verwende den Standardnamen
     if [ -z "$clean_name" ]; then
         debug "$(printf "$get_clean_foldername_debug_0003" "$default_name")" "CLI" "get_clean_foldername"
