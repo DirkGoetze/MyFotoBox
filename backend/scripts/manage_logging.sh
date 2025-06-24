@@ -404,9 +404,9 @@ print_debug() {
         local first_line="${lines[0]}"
 
         echo -n ""  # Leere Zeile für bessere Lesbarkeit
-        echo "--------------------------------------------------------------"
+        echo -n "--------------------------------------------------------------"
         echo -e "first_line: $first_line"
-        echo "--------------------------------------------------------------"
+        echo -n "--------------------------------------------------------------"
         if [[ "$first_line" == *"$debug_marker"* ]]; then
             prefix="${first_line%%$debug_marker*}" # Alles vor dem Debug-Marker
             content="${first_line#*$prefix}"  # Der Rest inklusive Debug-Marker
