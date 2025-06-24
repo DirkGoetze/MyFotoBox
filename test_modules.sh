@@ -212,24 +212,26 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_frontend_dir                                                |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_frontend_dir"
-
 # Test: get_frontend_css_dir
-echo "+-----------------------------+"
-echo "| Test: get_frontend_css_dir  |"
-echo "+-----------------------------+"
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_frontend_css_dir                                            |"
+echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_frontend_css_dir"
-
 # Test: get_frontend_fonts_dir
-echo "+-----------------------------+"
-echo "| Test: get_frontend_fonts_dir |"
-echo "+-----------------------------+"
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_frontend_fonts_dir                                          |"
+echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_frontend_fonts_dir"
-
 # Test: get_frontend_js_dir
-echo "+-----------------------------+"
-echo "| Test: get_frontend_js_dir   |"
-echo "+-----------------------------+"
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_frontend_js_dir                                             |"
+echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_frontend_js_dir"
+# Test: get_frontend_picture_dir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_frontend_picture_dir                                        |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_frontend_picture_dir"
 
 # Test: get_photos_dir
 echo "+-----------------------------+"

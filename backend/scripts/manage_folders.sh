@@ -936,9 +936,8 @@ get_frontend_dir() {
 
 # get_frontend_css_dir
 get_frontend_css_dir_debug_0001="Ermittle Frontend-CSS-Verzeichnis"
-get_frontend_css_dir_debug_0002="Prüfe CSS-Verzeichnis: %s"
-get_frontend_css_dir_debug_0003="Verwende CSS-Verzeichnis: %s"
-get_frontend_css_dir_debug_0004="CSS-Verzeichnis nicht verfügbar, verwende Fallback: %s"
+get_frontend_css_dir_debug_0002="Verwendeter Pfad für Frontend-CSS-Verzeichnis: %s"
+get_frontend_css_dir_debug_0003="Alle Pfade für Frontend-CSS-Verzeichnis fehlgeschlagen"
 
 get_frontend_css_dir() {
     # -----------------------------------------------------------------------
@@ -948,31 +947,29 @@ get_frontend_css_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    local frontend_dir
-    debug "$get_frontend_css_dir_debug_0001" "CLI" "get_frontend_css_dir"
-    
-    # Hole das Frontend-Hauptverzeichnis
-    frontend_dir=$(get_frontend_dir)
-    local css_dir="$frontend_dir/css"
-    
-    debug "$(printf "$get_frontend_css_dir_debug_0002" "$css_dir")" "CLI" "get_frontend_css_dir"
-    if create_directory "$css_dir"; then
-        debug "$(printf "$get_frontend_css_dir_debug_0003" "$css_dir")" "CLI" "get_frontend_css_dir"
-        echo "$css_dir"
+    local dir
+
+    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_frontend_css_dir_debug_0001" "CLI" "get_backend_dir"
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$FRONTEND_CSS_DIR" "$DEFAULT_DIR_FRONTEND_CSS" "$FALLBACK_DIR_FRONTEND_CSS" 1 1)    
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_frontend_css_dir_debug_0002" "$dir")"
+        echo "$dir"
         return 0
     fi
-    
-    # Fallback direkt zum Frontend-Verzeichnis
-    debug "$(printf "$get_frontend_css_dir_debug_0004" "$frontend_dir")" "CLI" "get_frontend_css_dir"
-    echo "$frontend_dir"
+
+    debug "$get_frontend_css_dir_debug_0003"
+    echo ""
     return 1
 }
 
 # get_frontend_fonts_dir
 get_frontend_fonts_dir_debug_0001="Ermittle Frontend-Fonts-Verzeichnis"
-get_frontend_fonts_dir_debug_0002="Prüfe Fonts-Verzeichnis: %s"
-get_frontend_fonts_dir_debug_0003="Verwende Fonts-Verzeichnis: %s"
-get_frontend_fonts_dir_debug_0004="Fonts-Verzeichnis nicht verfügbar, verwende Fallback: %s"
+get_frontend_fonts_dir_debug_0002="Verwendeter Pfad für Frontend-Fonts-Verzeichnis: %s"
+get_frontend_fonts_dir_debug_0003="Alle Pfade für Frontend-Fonts-Verzeichnis fehlgeschlagen"
 
 get_frontend_fonts_dir() {
     # -----------------------------------------------------------------------
@@ -982,31 +979,29 @@ get_frontend_fonts_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    local frontend_dir
-    debug "$get_frontend_fonts_dir_debug_0001" "CLI" "get_frontend_fonts_dir"
-    
-    # Hole das Frontend-Hauptverzeichnis
-    frontend_dir=$(get_frontend_dir)
-    local fonts_dir="$frontend_dir/fonts"
-    
-    debug "$(printf "$get_frontend_fonts_dir_debug_0002" "$fonts_dir")" "CLI" "get_frontend_fonts_dir"
-    if create_directory "$fonts_dir"; then
-        debug "$(printf "$get_frontend_fonts_dir_debug_0003" "$fonts_dir")" "CLI" "get_frontend_fonts_dir"
-        echo "$fonts_dir"
+    local dir
+
+    # Prüfen, ob FRONTEND_FONTS_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_frontend_fonts_dir_debug_0001" 
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$FRONTEND_FONTS_DIR" "$DEFAULT_DIR_FRONTEND_FONTS" "$FALLBACK_DIR_FRONTEND_FONTS" 1 1)    
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_frontend_fonts_dir_debug_0002" "$dir")"
+        echo "$dir"
         return 0
     fi
-    
-    # Fallback direkt zum Frontend-Verzeichnis
-    debug "$(printf "$get_frontend_fonts_dir_debug_0004" "$frontend_dir")" "CLI" "get_frontend_fonts_dir"
-    echo "$frontend_dir"
+
+    debug "$get_frontend_fonts_dir_debug_0003"
+    echo ""
     return 1
 }
 
 # get_frontend_js_dir
 get_frontend_js_dir_debug_0001="Ermittle Frontend-JavaScript-Verzeichnis"
-get_frontend_js_dir_debug_0002="Prüfe JavaScript-Verzeichnis: %s"
-get_frontend_js_dir_debug_0003="Verwende JavaScript-Verzeichnis: %s"
-get_frontend_js_dir_debug_0004="JavaScript-Verzeichnis nicht verfügbar, verwende Fallback: %s"
+get_frontend_js_dir_debug_0002="Verwendeter Pfad für Frontend-JavaScript-Verzeichnis: %s"
+get_frontend_js_dir_debug_0003="Alle Pfade für Frontend-JavaScript-Verzeichnis fehlgeschlagen"
 
 get_frontend_js_dir() {
     # -----------------------------------------------------------------------
@@ -1016,23 +1011,54 @@ get_frontend_js_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    local frontend_dir
-    debug "$get_frontend_js_dir_debug_0001" "CLI" "get_frontend_js_dir"
-    
-    # Hole das Frontend-Hauptverzeichnis
-    frontend_dir=$(get_frontend_dir)
-    local js_dir="$frontend_dir/js"
-    
-    debug "$(printf "$get_frontend_js_dir_debug_0002" "$js_dir")" "CLI" "get_frontend_js_dir"
-    if create_directory "$js_dir"; then
-        debug "$(printf "$get_frontend_js_dir_debug_0003" "$js_dir")" "CLI" "get_frontend_js_dir"
-        echo "$js_dir"
+    local dir
+
+    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_frontend_js_dir_debug_0001"
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$FRONTEND_JS_DIR" "$DEFAULT_DIR_FRONTEND_JS" "$FALLBACK_DIR_FRONTEND_JS" 1 1)    
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_frontend_js_dir_debug_0002" "$dir")"
+        echo "$dir"
         return 0
     fi
-    
-    # Fallback direkt zum Frontend-Verzeichnis
-    debug "$(printf "$get_frontend_js_dir_debug_0004" "$frontend_dir")" "CLI" "get_frontend_js_dir"
-    echo "$frontend_dir"
+
+    debug "$get_frontend_js_dir_debug_0003"
+    echo ""
+    return 1
+}
+
+# get_frontend_picture_dir
+get_frontend_picture_dir_debug_0001="Ermittle Frontend-Bilder-Verzeichnis"
+get_frontend_picture_dir_debug_0002="Verwendeter Pfad für Frontend-Bilder-Verzeichnis: %s"
+get_frontend_picture_dir_debug_0003="Alle Pfade für Frontend-Bilder-Verzeichnis fehlgeschlagen"
+
+get_frontend_picture_dir() {
+    # -----------------------------------------------------------------------
+    # get_frontend_picture_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Bilder-Verzeichnis im Frontend zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local dir
+
+    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_frontend_picture_dir_debug_0001"
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$FRONTEND_PICTURE_DIR" "$DEFAULT_DIR_FRONTEND_PICTURE" "$FALLBACK_DIR_FRONTEND_PICTURE" 1 1)    
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_frontend_picture_dir_debug_0002" "$dir")"
+        echo "$dir"
+        return 0
+    fi
+
+    debug "$get_frontend_picture_dir_debug_0003"
+    echo ""
     return 1
 }
 
