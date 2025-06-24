@@ -537,10 +537,12 @@ get_python_path() {
 
 # get_pip_path
 get_pip_path_debug_0001="INFO: Ermittle Pfad zur pip-Binary"
-get_pip_path_debug_0002="Verwende Unix/Linux pip-Pfad: %s"
-get_pip_path_debug_0003="Verwende Windows pip-Pfad: %s"
-get_pip_path_debug_0004="Verwende Python-Modul für pip: %s -m pip"
-get_pip_path_debug_0005="Kein pip im venv gefunden, fallback auf System-pip"
+get_pip_path_debug_0002="SUCCESS: Verwende Unix/Linux pip-Pfad: %s"
+get_pip_path_debug_0003="SUCCESS: Verwende Windows pip-Pfad: %s"
+get_pip_path_debug_0004="SUCCESS: Verwende Python-Modul für pip: %s -m pip"
+get_pip_path_debug_0005="INFO: Kein pip im venv gefunden, fallback auf System-pip"
+get_pip_path_debug_0006="SUCCESS: Verwende System-pip: %s"
+get_pip_path_debug_0007="ERROR: Keine pip-Installation gefunden"
 
 get_pip_path() {
     # -----------------------------------------------------------------------
@@ -548,41 +550,78 @@ get_pip_path() {
     # -----------------------------------------------------------------------
     # Funktion: Gibt den Pfad zur pip-Binary im Virtual Environment zurück
     # Parameter: keine
-    # Rückgabe: Pfad zur Verzeichnis oder leerer String bei Fehler
+    # Rückgabe: Pfad zur pip-Binary oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    debug "$get_pip_path_debug_0001"
+    
+    # 1. Prüfe, ob PIP_EXEC bereits korrekt gesetzt ist
+    if [ -n "$PIP_EXEC" ] && [ -f "$PIP_EXEC" ] && [ -x "$PIP_EXEC" ]; then
+        debug "$(printf "$get_pip_path_debug_0002" "$PIP_EXEC")"
+        echo "$PIP_EXEC"
+        return 0
+    fi
+    
+    # 2. Hole venv_dir mit bestehender Funktion
     local venv_dir
-    debug "$get_pip_path_debug_0001" "CLI" "get_pip_path"
+    venv_dir=$(get_venv_dir)
     
-    # Standard-Unix/Linux-Pfad
-    local pip_path="$PIP_EXEC"
-    
-    # Prüfe, ob wir auf Unix/Linux oder Windows sind
-    if [ -f "$pip_path" ]; then
-        debug "$(printf "$get_pip_path_debug_0002" "$pip_path")" "CLI" "get_pip_path"
+    # 3. Prüfe Standard-Unix/Linux-Pfade im venv
+    local pip_path="${venv_dir}/bin/pip3"
+    if [ -f "$pip_path" ] && [ -x "$pip_path" ]; then
+        debug "$(printf "$get_pip_path_debug_0002" "$pip_path")"
         echo "$pip_path"
         return 0
     fi
-        
-    # Python-Pfade ermitteln für python -m pip Fallback
-    local python_path=$(get_python_path)
-    if [ ! -f "$python_path" ]; then
-        python_path="$venv_dir/bin/python"
-    fi
-    if [ ! -f "$python_path" ]; then
-        python_path="$venv_dir/Scripts/python.exe"
-    fi
     
-    # Wenn Python existiert, können wir python -m pip verwenden
-    if [ -f "$python_path" ]; then
-        debug "$(printf "$get_pip_path_debug_0004" "$python_path")" "CLI" "get_pip_path"
-        echo "$python_path -m pip"
+    pip_path="${venv_dir}/bin/pip"
+    if [ -f "$pip_path" ] && [ -x "$pip_path" ]; then
+        debug "$(printf "$get_pip_path_debug_0002" "$pip_path")"
+        echo "$pip_path"
         return 0
     fi
     
-    # Als Fallback geben wir einfach "pip" zurück und hoffen, dass es im PATH ist
-    debug "$get_pip_path_debug_0005" "CLI" "get_pip_path"
-    echo "pip"
-    return 0
+    # 4. Prüfe Windows-Pfade im venv (für WSL oder Cygwin)
+    pip_path="${venv_dir}/Scripts/pip.exe"
+    if [ -f "$pip_path" ] && [ -x "$pip_path" ]; then
+        debug "$(printf "$get_pip_path_debug_0003" "$pip_path")"
+        echo "$pip_path"
+        return 0
+    fi
+    
+    # 5. Fallback: Python-Module pip verwenden
+    local python_path
+    python_path=$(get_python_path)
+    
+    if [ -n "$python_path" ] && [ -f "$python_path" ] && [ -x "$python_path" ]; then
+        # Prüfen, ob das Python-Modul pip verfügbar ist
+        if "$python_path" -c "import pip" &>/dev/null; then
+            debug "$(printf "$get_pip_path_debug_0004" "$python_path")"
+            echo "$python_path -m pip"
+            return 0
+        fi
+    fi
+    
+    # 6. Systemweite pip-Installation prüfen
+    debug "$get_pip_path_debug_0005"
+    
+    if command -v pip3 &>/dev/null; then
+        pip_path=$(command -v pip3)
+        debug "$(printf "$get_pip_path_debug_0006" "$pip_path")"
+        echo "$pip_path"
+        return 0
+    fi
+    
+    if command -v pip &>/dev/null; then
+        pip_path=$(command -v pip)
+        debug "$(printf "$get_pip_path_debug_0006" "$pip_path")"
+        echo "$pip_path"
+        return 0
+    fi
+    
+    # 7. Keine pip-Installation gefunden
+    debug "$get_pip_path_debug_0007"
+    echo ""
+    return 1
 }
 
 # ---------------------------------------------------------------------------
