@@ -347,15 +347,15 @@ get_install_dir() {
     debug "$get_install_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
-    dir=$(get_folder_path "$INSTALL_DIR" "$DEFAULT_DIR_INSTALL" "$FALLBACK_DIR_INSTALL" 0)
+    dir=$(get_folder_path "$INSTALL_DIR" "$DEFAULT_DIR_INSTALL" "$FALLBACK_DIR_INSTALL" 0 0)
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_install_dir_debug_0004" "$dir")"
+        debug "$(printf "$get_install_dir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
     
     # Als absoluten Notfall das aktuelle Verzeichnis verwenden
-    debug "$get_install_dir_debug_0005"
+    debug "$get_install_dir_debug_0003"
     echo "$(pwd)/fotobox"
     return 0
 }
@@ -383,6 +383,7 @@ get_backend_dir() {
     debug "$get_backend_dir_debug_0001" "CLI" "get_backend_dir"
 
     # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
     dir=$(get_folder_path "$BACKEND_DIR" "$DEFAULT_DIR_BACKEND" "$FALLBACK_DIR_BACKEND" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_backend_dir_debug_0002" "$dir")"
@@ -413,7 +414,8 @@ get_script_dir() {
     debug "$get_script_dir_debug_0001" "CLI" "get_script_dir"
 
     # Verwende die in 'lib_core' definierten Pfade
-    dir=$(get_folder_path "$SCRIPT_DIR" "$DEFAULT_DIR_BACKEND_SCRIPTS" "$FALLBACK_DIR_BACKEND_SCRIPTS" 1 1)    
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$SCRIPT_DIR" "$DEFAULT_DIR_BACKEND_SCRIPTS" "$FALLBACK_DIR_BACKEND_SCRIPTS" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_script_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -473,6 +475,7 @@ get_venv_dir() {
     debug "$get_venv_dir_debug_0001" "CLI" "get_venv_dir"
     
     # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
     dir=$(get_folder_path "$BACKEND_VENV_DIR" "$DEFAULT_DIR_BACKEND_VENV" "$FALLBACK_DIR_BACKEND_VENV" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_venv_dir_debug_0002" "$dir")"
@@ -630,10 +633,8 @@ get_pip_path() {
 
 # get_backup_dir
 get_backup_dir_debug_0001="Ermittle Backup-Verzeichnis"
-get_backup_dir_debug_0002="Verwende bereits definiertes BACKUP_DIR: %s"
-get_backup_dir_debug_0003="Prüfe Standard- und Fallback-Pfade für Backup-Verzeichnis"
-get_backup_dir_debug_0004="Verwende Pfad für Backup-Verzeichnis: %s"
-get_backup_dir_debug_0005="Alle Pfade für Backup-Verzeichnis fehlgeschlagen, verwende %s/backup"
+get_backup_dir_debug_0002="Verwendeter Pfad für Backup-Verzeichnis: %s"
+get_backup_dir_debug_0003="Alle Pfade für Backup-Verzeichnis fehlgeschlagen"
 
 get_backup_dir() {
     # -----------------------------------------------------------------------
@@ -644,31 +645,22 @@ get_backup_dir() {
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     local dir
-        
+
     # Prüfen, ob BACKUP_DIR bereits gesetzt ist (z.B. vom install.sh)
     debug "$get_backup_dir_debug_0001" "CLI" "get_backup_dir"
-    if [ -n "$BACKUP_DIR" ] && [ -d "$BACKUP_DIR" ]; then
-        debug "$(printf "$get_backup_dir_debug_0002" "$BACKUP_DIR")" "CLI" "get_backup_dir"
-        create_directory "$BACKUP_DIR" || true
-        echo "$BACKUP_DIR"
-        return 0
-    fi
-    
-    # Verwende die in dieser Datei definierten Pfade
-    debug "$get_backup_dir_debug_0003" "CLI" "get_backup_dir"
-    dir=$(get_folder_path "$DEFAULT_DIR_BACKUP" "$FALLBACK_DIR_BACKUP" 1)
+
+    # Verwende die in 'lib_core' definierten Pfade
+    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    dir=$(get_folder_path "$BACKUP_DIR" "$DEFAULT_DIR_BACKUP" "$FALLBACK_DIR_BACKUP" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_backup_dir_debug_0004" "$dir")" "CLI" "get_backup_dir"
+        debug "$(printf "$get_backup_dir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
-    
-    # Als absoluten Notfall ein Unterverzeichnis des Installationsverzeichnisses verwenden
-    local install_dir
-    install_dir=$(get_install_dir)
-    debug "$(printf "$get_backup_dir_debug_0005" "$install_dir")" "CLI" "get_backup_dir"
-    echo "$install_dir/backup"
-    return 0
+
+    debug "$get_backup_dir_debug_0003"
+    echo ""
+    return 1
 }
 
 # get_nginx_backup_dir
