@@ -14,16 +14,15 @@ set -u  # Beende bei Verwendung nicht gesetzter Variablen
 set +e  # Deaktiviere strict mode für die Initialisierung
 
 # test_function
-test_function_debug_0001="Test Funktion: %s"
-test_function_debug_0002="Parameter: %s"
-test_function_debug_0003="Fehler: Modul nicht verfügbar! Variable: %s, Pfad: %s"
-test_function_debug_0004="Fehler: Funktion '%s' wurde nicht gefunden"
-test_function_debug_0005="Funktion '%s' in Modul %s gefunden"
-test_function_debug_0006="Führe Funktion '%s' aus mit Parametern: %s"
-test_function_debug_0007="Führe Funktion '%s' aus"
-test_function_debug_0008="Ausgabe: %s"
-test_function_debug_0009="Rückgabewert: %d"
-test_function_debug_0010="Ergebnis: %s"
+test_function_debug_0001="INFO: Test Funktion: %s"
+test_function_debug_0002="INFO: Parameter: %s"
+test_function_debug_0003="ERROR: Modul nicht verfügbar! Variable: %s, Pfad: %s"
+test_function_debug_0004="ERROR: Funktion '%s' wurde nicht gefunden"
+test_function_debug_0005="INFO: Funktion '%s' in Modul %s gefunden"
+test_function_debug_0006="INFO: Führe Funktion '%s' aus mit Parametern: %s"
+test_function_debug_0007="INFO: Führe Funktion '%s' aus"
+test_function_debug_0008="INFO: Ausgabe: %s"
+test_function_debug_0009="INFO: Rückgabewert: %d"
 
 test_function() {
     # Erweiterte Testfunktion für flexible Modulaufrufe und Ergebnisanalyse
@@ -48,11 +47,11 @@ test_function() {
     
     # Prüfe, ob die Funktion existiert (bereits geladen)
     if ! declare -f "$function_name" > /dev/null 2>&1; then
-        debug "$(printf "$test_function_debug_0004" "$function_name")" "CLI" "test_function"
+        debug "$(printf "$test_function_debug_0004" "$function_name")"
         return 2
     fi
 
-    debug "$(printf "$test_function_debug_0005" "$function_name" "$module_path_var_upper")" "CLI" "test_function"
+    debug "$(printf "$test_function_debug_0005" "$function_name" "$module_path_var_upper")"
 
     # Führe die Funktion aus und erfasse Rückgabewert und Ausgabe
     local output
@@ -61,11 +60,11 @@ test_function() {
     # Führe die Funktion DIREKT mit den übergebenen Parametern aus
     set +e  # Deaktiviere Fehlerabbruch
     if [ ${#params[@]} -gt 0 ]; then
-        debug "$(printf "$test_function_debug_0006" "$function_name" "${params[*]}")" "CLI" "test_function"
+        debug "$(printf "$test_function_debug_0006" "$function_name" "${params[*]}")"
         output=$("$function_name" "${params[@]}" 2>&1)
         result=$?
     else
-        debug "$(printf "$test_function_debug_0007" "$function_name")" "CLI" "test_function"
+        debug "$(printf "$test_function_debug_0007" "$function_name")"
         output=$("$function_name" 2>&1)
         result=$?
     fi
@@ -73,10 +72,10 @@ test_function() {
     
     # Rest der Funktion bleibt gleich...
     if [ -n "$output" ]; then
-        debug "$(printf "$test_function_debug_0008" "$output")" "CLI" "test_function"
-        debug "$(printf "$test_function_debug_0009" "$result")" "CLI" "test_function"
+        debug "$(printf "$test_function_debug_0008" "$output")"
+        debug "$(printf "$test_function_debug_0009" "$result")"
     else
-        debug "$(printf "$test_function_debug_0010" "$result")" "CLI" "test_function"
+        debug "$(printf "$test_function_debug_0009" "$result")"
     fi
         
     # Gib den originalen Rückgabewert der getesteten Funktion zurück
