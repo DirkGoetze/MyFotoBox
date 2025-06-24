@@ -1078,7 +1078,7 @@ get_photos_originals_dir() {
     # Parameter: $1 - (Optional) Name des Events
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    local event_name="$1"
+    local event_name="${1:-}"
     local dir
         
     # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
