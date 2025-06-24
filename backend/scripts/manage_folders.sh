@@ -1443,7 +1443,7 @@ get_nginx_systemdir() {
     debug "$get_nginx_systemdir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
-    dir=$(get_folder_path "$SYSTEM_PATH_NGINX" "$SYSTEM_PATH_NGINX" "$(get_nginx_conf_dir)" 1 0)
+    dir=$(get_folder_path "$SYSTEM_PATH_NGINX" "$DEFAULT_DIR_CONF_NGINX" "$FALLBACK_DIR_CONF_NGINX" 0 0)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_nginx_systemdir_debug_0002" "$dir")"
         echo "$dir"
