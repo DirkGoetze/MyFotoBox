@@ -1108,10 +1108,16 @@ get_photos_originals_dir() {
     # Verwende die Helferfunktion für die Bereinigung
     local clean_event_name=$(get_clean_foldername "$event_name")
     
+    # Stellen Sie sicher, dass dir keine abschließenden Slashes hat
+    dir=${dir%/}
+        
     # Erstelle das Event-Unterverzeichnis
     local event_dir="${dir}/${clean_event_name}"
 
-     if create_directory "$event_dir"; then
+    # Debug-Ausgabe des exakten Pfads
+    debug "Event-Verzeichnis wird erstellt: '$event_dir'"
+    
+    if create_directory "$event_dir"; then
         debug "$(printf "$get_photos_originals_dir_debug_0004" "$event_dir")"
         echo "$event_dir"
         return 0
