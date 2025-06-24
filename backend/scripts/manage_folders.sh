@@ -200,7 +200,7 @@ create_directory() {
             debug "$(printf "$create_directory_debug_0003" "$dir")" "CLI" "create_directory"
             return 1
         }
-        log "$(printf "$create_directory_log_0003" "$dir")"
+        # log "$(printf "$create_directory_log_0003" "$dir")"
     fi
 
     # Berechtigungen setzen
@@ -228,14 +228,18 @@ create_directory() {
 }
 
 # get_folder_path
-get_folder_path_debug_0001="Prüfe Pfad: Standardpfad=%s, Fallback=%s"
-get_folder_path_debug_0002="Verwende Standardpfad: %s"
-get_folder_path_debug_0003="Standard-Pfad %s nicht verfügbar, versuche Fallback"
-get_folder_path_debug_0004="Verwende Fallback-Pfad: %s"
-get_folder_path_debug_0005="Versuche Symlink von %s zu %s zu erstellen"
-get_folder_path_debug_0006="Symlink-Erstellung fehlgeschlagen, fahre trotzdem fort"
-get_folder_path_debug_0007="Fallback-Pfad %s nicht verfügbar"
-get_folder_path_debug_0008="Verwende Root-Verzeichnis als letzten Fallback: %s"
+get_folder_path_debug_0001="Prüfe Ordner-Pfade: Systempfad=%s, Standardpfad=%s, Fallback=%s"
+get_folder_path_debug_0002="Systempfad auf Vorhandensein, Rechte und Eigentümer prüfen: %s"
+get_folder_path_debug_0003="Systempfad ok, verwende Systempfad: %s"
+get_folder_path_debug_0004="Standardpfad auf Vorhandensein, Rechte und Eigentümer prüfen: %s"
+get_folder_path_debug_0005="Standardpfad ok, verwende Standardpfad: %s"
+get_folder_path_debug_0006="Fallback-Pfad auf Vorhandensein, Rechte und Eigentümer prüfen: %s"
+get_folder_path_debug_0007="Fallback-Pfad ok, verwende Fallback-Pfad: %s"
+get_folder_path_debug_0008="Versuche Symlink von %s zu %s zu erstellen"
+get_folder_path_debug_0009="Symlink-Erstellung fehlgeschlagen, fahre trotzdem fort"
+get_folder_path_debug_0010="Verwende Root-Verzeichnis als letzten Fallback: %s"
+get_folder_path_debug_0011="Root-Verzeichnis ok, verwende Root-Verzeichnis: %s"
+get_folder_path_debug_0012="Kein gültiger Pfad für die Ordnererstellung verfügbar, alle Versuche fehlgeschlagen"
 get_folder_path_log_0001="ERROR: Kein gültiger Pfad für die Ordnererstellung verfügbar"
 
 get_folder_path() {
@@ -245,54 +249,66 @@ get_folder_path() {
     # Funktion: Hilfsfunktion zum Ermitteln und Erstellen eines Ordners mit 
     # .........  Fallback-Logik. Erstellt zusätzlich einen Symlink vom
     # .........  Standard-Pfad zum tatsächlich verwendeten Pfad, wenn möglich.
-    # Parameter: $1 - Standard-Pfad
-    # .........  $2 - Fallback-Pfad (falls Standard-Pfad nicht verfügbar)
-    # .........  $3 - (Optional) Fallback zum Projekthauptverzeichnis (1=ja, 0=nein, Default: 1)
-    # .........  $4 - (Optional) Symlink erstellen (1=ja, 0=nein, Default: 1)
+    # Parameter: $1 - System-Pfad oder bereits definierter Pfad
+    # .........  $2 - Standard-Pfad aus lib_core.sh
+    # .........  $3 - Fallback-Pfad (falls Standard-Pfad nicht verfügbar)
+    # .........  $4 - (Optional) Fallback zum Projekthauptverzeichnis (1=ja, 0=nein, Default: 1)
+    # .........  $5 - (Optional) Symlink erstellen (1=ja, 0=nein, Default: 1)
     # Rückgabe.: Den Pfad zum verfügbaren Ordner oder leeren String bei Fehler
     # Extras...: Implementiert eine mehrschichtige Fallback-Strategie
     # -----------------------------------------------------------------------
-    local standard_path="$1"
-    local fallback_path="$2"
-    local use_root_fallback="${3:-1}" # Standard: Ja, Root-Fallback verwenden
-    local create_symlink="${4:-1}"    # Standard: Ja, Symlink erstellen
+    local systemdef_path="$1" 
+    local standard_path="$2"
+    local fallback_path="$3"
+    local use_root_fallback="${4:-1}" # Standard: Ja, Root-Fallback verwenden
+    local create_symlink="${5:-1}"    # Standard: Ja, Symlink erstellen
     local actual_path=""
 
     # Überprüfung der Parameter
+    if ! check_param "$systemdef_path" "systemdef_path"; then return 1; fi
     if ! check_param "$standard_path" "standard_path"; then return 1; fi
     if ! check_param "$fallback_path" "fallback_path"; then return 1; fi
 
-    # Versuchen, den Standardpfad zu verwenden
-    debug "$(printf "$get_folder_path_debug_0001" "$standard_path" "$fallback_path")" "CLI" "get_folder_path"
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$get_folder_path_debug_0001" "$systemdef_path" "$standard_path" "$fallback_path")"
+
+    # Prüfen, ob Systempfad bereits gesetzt ist (z.B. vom install.sh)
+    debug "$(printf "$get_folder_path_debug_0002" "$systemdef_path")"
+    if create_directory "$systemdef_path"; then
+        debug "$(printf "$get_folder_path_debug_0003" "$systemdef_path")"
+        echo "$systemdef_path"
+        return 0
+    fi
+
+    # Prüfen ob der Standardpfad existiert oder erzeugt werden kann
+    debug "$(printf "$get_folder_path_debug_0004" "$standard_path")"
     if create_directory "$standard_path"; then
-        debug "$(printf "$get_folder_path_debug_0002" "$standard_path")" "CLI" "get_folder_path"
-        actual_path="$standard_path"
+        debug "$(printf "$get_folder_path_debug_0005" "$standard_path")"
+        echo "$standard_path"
+        return 0
     else
         # Versuchen, den Fallback-Pfad zu verwenden
-        debug "$(printf "$get_folder_path_debug_0003" "$standard_path")" "CLI" "get_folder_path"
+        debug "$(printf "$get_folder_path_debug_0006" "$standard_path")"
         if create_directory "$fallback_path"; then
-            debug "$(printf "$get_folder_path_debug_0004" "$fallback_path")" "CLI" "get_folder_path"
+            debug "$(printf "$get_folder_path_debug_0007" "$fallback_path")"
             actual_path="$fallback_path"
             
             # Wenn gewünscht und möglich, einen Symlink vom Standard-Pfad zum Fallback erstellen
             if [ "$create_symlink" -eq 1 ]; then
-                debug "$(printf "$get_folder_path_debug_0005" "$standard_path" "$fallback_path")" "CLI" "get_folder_path"
+                debug "$(printf "$get_folder_path_debug_0008" "$standard_path" "$fallback_path")"
                 create_symlink_to_standard_path "$standard_path" "$fallback_path" || {
-                    debug "$get_folder_path_debug_0006" "CLI" "get_folder_path"
-                    # Fehler beim Symlink ist kein kritischer Fehler
+                    debug "$get_folder_path_debug_0009"
                 }
             fi
         else
             # Als letzte Option das Root-Verzeichnis verwenden
-            debug "$(printf "$get_folder_path_debug_0007" "$fallback_path")" "CLI" "get_folder_path"
+            debug "$(printf "$get_folder_path_debug_0010" "$fallback_path")"
             if [ "$use_root_fallback" -eq 1 ]; then
                 local root_path
                 root_path=$(get_install_dir)
                 if [ -n "$root_path" ] && create_directory "$root_path"; then
-                    debug "$(printf "$get_folder_path_debug_0008" "$root_path")" "CLI" "get_folder_path"
+                    debug "$(printf "$get_folder_path_debug_0011" "$root_path")"
                     actual_path="$root_path"
-                    # Bei Verwendung des Root-Fallbacks ist kein Symlink nötig, da alle Standardpfade
-                    # bereits im Installationsverzeichnis liegen sollten
                 fi
             fi
         fi
@@ -303,8 +319,9 @@ get_folder_path() {
         return 0
     fi
 
-    # Wenn alle Versuche fehlschlagen, eine Fehlermeldung im Log ausgeben    
-    log "$get_folder_path_log_0001" "get_folder_path"
+    # Wenn alle Versuche fehlschlagen, eine Fehlermeldung im Log ausgeben
+    debug "$(printf "$get_folder_path_debug_0012")"
+    # log "$get_folder_path_log_0001" "get_folder_path"
     return 1
 }
 
@@ -314,10 +331,8 @@ get_folder_path() {
 
 # get_install_dir
 get_install_dir_debug_0001="Ermittle Installations-Verzeichnis"
-get_install_dir_debug_0002="Verwende bereits definiertes INSTALL_DIR: %s"
-get_install_dir_debug_0003="Prüfe Standard- und Fallback-Pfade für Installations-Verzeichnis"
-get_install_dir_debug_0004="Verwende Pfad für Installations-Verzeichnis: %s"
-get_install_dir_debug_0005="Alle Pfade für Installations-Verzeichnis fehlgeschlagen, verwende aktuelles Verzeichnis"
+get_install_dir_debug_0002="Verwendeter Pfad für Installations-Verzeichnis: %s"
+get_install_dir_debug_0003="Alle Pfade für Installations-Verzeichnis fehlgeschlagen, verwende aktuelles Verzeichnis"
 
 get_install_dir() {
     # -----------------------------------------------------------------------
@@ -330,25 +345,18 @@ get_install_dir() {
     local dir
         
     # Prüfen, ob INSTALL_DIR bereits gesetzt ist (z.B. vom install.sh)
-    debug "$get_install_dir_debug_0001" "CLI" "get_install_dir"
-    if [ -n "$INSTALL_DIR" ] && [ -d "$INSTALL_DIR" ]; then
-        debug "$(printf "$get_install_dir_debug_0002" "$INSTALL_DIR")" "CLI" "get_install_dir"
-        create_directory "$INSTALL_DIR" || true
-        echo "$INSTALL_DIR"
-        return 0
-    fi
-    
-    # Verwende die in dieser Datei definierten Pfade
-    debug "$get_install_dir_debug_0003" "CLI" "get_install_dir"
-    dir=$(get_folder_path "$DEFAULT_DIR_INSTALL" "$FALLBACK_DIR_INSTALL" 0)
+    debug "$get_install_dir_debug_0001"
+
+    # Verwende die in 'lib_core' definierten Pfade
+    dir=$(get_folder_path "$INSTALL_DIR" "$DEFAULT_DIR_INSTALL" "$FALLBACK_DIR_INSTALL" 0)
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_install_dir_debug_0004" "$dir")" "CLI" "get_install_dir"
+        debug "$(printf "$get_install_dir_debug_0004" "$dir")"
         echo "$dir"
         return 0
     fi
     
     # Als absoluten Notfall das aktuelle Verzeichnis verwenden
-    debug "$get_install_dir_debug_0005" "CLI" "get_install_dir"
+    debug "$get_install_dir_debug_0005"
     echo "$(pwd)/fotobox"
     return 0
 }
@@ -500,7 +508,7 @@ set_script_permissions() {
 }
 
 # get_venv_dir
-get_venv_dir_debug_0001="Ermittle Python Virtual Environment-Verzeichnis"
+get_venv_dir_debug_0001="Ermittle 'Python Virtual Environment' Verzeichnis"
 get_venv_dir_debug_0002="Verwende bereits definiertes BACKEND_VENV_DIR: %s"
 get_venv_dir_debug_0003="Prüfe Standard-VENV-Verzeichnis: %s"
 get_venv_dir_debug_0004="Verwende Standard-VENV-Verzeichnis: %s"
