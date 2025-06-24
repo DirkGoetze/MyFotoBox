@@ -101,32 +101,20 @@ echo
 echo "-------------------------------------------------------------------------"
 echo "Test für das Laden aller Module zentral über lib_core.sh"
 
-# Setze den Pfad zum Skriptverzeichnis
-TEST_SCRIPT_DIR="/opt/fotobox/backend/scripts"
-
 # Debug-Ausgabe zum Anzeigen der vorhandenen Dateien
 echo "---------------------------------------------------------------------------"
 echo "Vorhandene Dateien im Skriptverzeichnis:"
+echo
+# Setze den Pfad zum Skriptverzeichnis
+TEST_SCRIPT_DIR="/opt/fotobox/backend/scripts"
 ls -la "$TEST_SCRIPT_DIR"
+echo "---------------------------------------------------------------------------"
 
 # Laden der erforderlichen Module
 echo
 echo "---------------------------------------------------------------------------"
 echo "Lade Module aus Verzeichnis: $TEST_SCRIPT_DIR"
-
 # Lade lib_core.sh, was automatisch alle anderen Module laden sollte
-echo
-echo "Lade lib_core.sh für zentrale Modulladelogik ..."
-if [ ! -f "$TEST_SCRIPT_DIR/lib_core.sh" ]; then
-    echo "❌ ERROR: lib_core.sh nicht gefunden!"
-    exit 1
-else
-    echo "✅ SUCCES: lib_core.sh wurde erfolgreich geladen."
-fi
-
-# Lade das zentrale Modul lib_core.sh
-echo
-echo "---------------------------------------------------------------------------"
 echo "Versuche lib_core.sh und alle anderen Module zu laden..."
 source "$TEST_SCRIPT_DIR/lib_core.sh"
 if [ $? -eq 0 ]; then
@@ -135,6 +123,8 @@ else
     echo "❌ FEHLER: Beim Laden von lib_core.sh ist ein Fehler aufgetreten."
     exit 1
 fi
+echo "---------------------------------------------------------------------------"
+echo
 
 # -------------------------------
 # Test der manage_folders.sh Funktionen
