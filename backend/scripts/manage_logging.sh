@@ -388,7 +388,24 @@ print_debug() {
         
         # Einfacher Fall: Keine verschachtelten Debug-Ausgaben
         if [[ "$content" != *"[DEBUG]"* ]]; then
-            echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $content"
+            #echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $content"
+            # Farbliche Hervorhebung basierend auf Schlüsselwörtern
+            if [[ "$content" == *"INFO:"* ]]; then
+                # Info-Stil (Standard/Reset-Farbe)
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_RESET}$content${COLOR_RESET}"
+            elif [[ "$content" == *"WARN:"* ]]; then
+                # Warnungs-Stil (gelb)
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_YELLOW}$content${COLOR_RESET}"
+            elif [[ "$content" == *"SUCCESS:"* ]]; then
+                # Erfolgs-Stil (grün)
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_GREEN}$content${COLOR_RESET}"
+            elif [[ "$content" == *"ERROR:"* ]]; then
+                # Fehler-Stil (rot)
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_RED}$content${COLOR_RESET}"
+            else
+                # Standard Debug-Ausgabe ohne Farbakzente
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} $content"
+            fi
             return 0
         fi
         
