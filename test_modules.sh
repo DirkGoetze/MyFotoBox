@@ -33,10 +33,12 @@ test_function() {
     local function_name="$2"          # Name der zu testenden Funktion
     local params=("${@:3}")           # Alle weiteren Parameter für die Funktion
 
-    debug "$(printf "$test_function_debug_0001" "$function_name")" "CLI" "test_function"
+    debug "$(printf "$test_function_debug_0001" "$function_name")"
 
-    # DEBUG: Informationen über den Aufruf
-    debug "$(printf "$test_function_debug_0002" "${params[*]}")" "CLI" "test_function"
+    # DEBUG: Informationen über den Aufruf, wenn Parameter vorhanden sind
+    if [ ${#params[@]} -gt 0 ]; then
+        debug "$(printf "$test_function_debug_0002" "${params[*]}")"
+    fi
 
     # Prüfe, ob das Modul verfügbar ist
     if [ -z "${!module_path_var_upper}" ] || [ ! -f "${!module_path_var_upper}" ]; then
