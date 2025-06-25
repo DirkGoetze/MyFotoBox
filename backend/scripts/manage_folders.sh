@@ -50,6 +50,7 @@ MANAGE_FOLDERS_LOADED=0
 # System-Dateipfade mit Standardorten
 SYSTEM_PATH_NGINX="/etc/nginx/sites-available"
 SYSTEM_PATH_SYSTEMD="/etc/systemd/system"
+SYSTEM_PATH_SSL="/etc/ssl"
 SYSTEM_PATH_SSL_CERT="/etc/ssl/certs"
 SYSTEM_PATH_SSL_KEY="/etc/ssl/private"
 # ---------------------------------------------------------------------------
@@ -1362,7 +1363,7 @@ get_tmp_dir() {
 }
 
 # ---------------------------------------------------------------------------
-# Verzeichnis Struktur sicherstellen
+# Verzeichnis Struktur für das Projekt sicherstellen
 # ---------------------------------------------------------------------------
 
 # ensure_folder_structure
@@ -1486,11 +1487,41 @@ get_systemd_systemdir() {
     return 1
 }
 
+# get_ssl_systemdir
+get_ssl_systemdir_debug_0001="INFO: Ermittle SSL-Verzeichnis"
+get_ssl_systemdir_debug_0002="SUCCESS: Verwendeter Pfad für SSL-Verzeichnis: %s"
+get_ssl_systemdir_debug_0003="ERROR: Alle Pfade für SSL-Verzeichnis fehlgeschlagen"
+
+get_ssl_systemdir() {
+    # -----------------------------------------------------------------------
+    # get_ssl_systemdir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum SSL-Verzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    local dir
+
+    # Prüfen, ob SYSTEM_PATH_SSL bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_ssl_systemdir_debug_0001"
+
+    # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
+    dir=$(get_folder_path "$SYSTEM_PATH_SSL" "$DEFAULT_DIR_CONF_SSL" "$FALLBACK_DIR_CONF_SSL" 1 0)
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_ssl_systemdir_debug_0002" "$dir")"
+        echo "$dir"
+        return 0
+    fi
+
+    debug "$get_ssl_systemdir_debug_0003"
+    echo ""
+    return 1
+}
+
 # get_ssl_cert_systemdir
-get_ssl_cert_systemdir_debug_0001="Prüfe Standard-SSL-Zertifikate-Systemverzeichnis: %s"
-get_ssl_cert_systemdir_debug_0002="Verwende Standard-SSL-Zertifikate-Systemverzeichnis: %s"
-get_ssl_cert_systemdir_debug_0003="Standard-SSL-Zertifikate-Systemverzeichnis nicht verfügbar, verwende Fallback: %s"
-get_ssl_cert_systemdir_debug_0004="Fallback-SSL-Zertifikate-Systemverzeichnis nicht verfügbar, verwende: %s"
+get_ssl_cert_systemdir_debug_0001="INFO: Ermittle SSL-Zertifikate-Systemverzeichnis"
+get_ssl_cert_systemdir_debug_0002="SUCCESS: Verwendeter Pfad für SSL-Zertifikate-Systemverzeichnis: %s"
+get_ssl_cert_systemdir_debug_0003="ERROR: Alle Pfade für SSL-Zertifikate-Systemverzeichnis fehlgeschlagen"
 
 get_ssl_cert_systemdir() {
     # -----------------------------------------------------------------------
@@ -1500,39 +1531,28 @@ get_ssl_cert_systemdir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    local primary_folder="$SYSTEM_PATH_SSL_CERT"
-    local secondary_folder="$("$manage_folders_sh" get_ssl_dir)"
+    local dir
 
-    # Standardpfad verwenden
-    dir="$primary_folder"
-    debug "$(printf "$get_ssl_cert_systemdir_debug_0001" "$dir")" "CLI" "get_ssl_cert_systemdir"
-    if [ -d "$dir" ]; then
-        create_directory "$dir" || true
-        debug "$(printf "$get_ssl_cert_systemdir_debug_0002" "$dir")" "CLI" "get_ssl_cert_systemdir"
-        echo "$dir"
-        return 0
-    fi
-    
-    # Fallback auf alternatives Verzeichnis
-    dir="$secondary_folder"
-    debug "$(printf "$get_ssl_cert_systemdir_debug_0003" "$dir")" "CLI" "get_ssl_cert_systemdir"
-    if [ -d "$dir" ]; then
-        create_directory "$dir" || true
-        debug "$(printf "$get_ssl_cert_systemdir_debug_0004" "$dir")" "CLI" "get_ssl_cert_systemdir"
+    # Prüfen, ob SYSTEM_PATH_SSL_CERT bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_ssl_cert_systemdir_debug_0001"
+
+    # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
+    dir=$(get_folder_path "$SYSTEM_PATH_SSL_CERT" "$DEFAULT_DIR_CONF_SSL_CERT" "$FALLBACK_DIR_CONF_SSL_CERT" 1 0)
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_ssl_cert_systemdir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
 
-    # Fehler: Kein SSL-Zertifikate-Systemverzeichnis gefunden
+    debug "$get_ssl_cert_systemdir_debug_0003"
     echo ""
     return 1
 }
 
 # get_ssl_key_systemdir
-get_ssl_key_systemdir_debug_0001="Prüfe Standard-SSL-Zertifikate-Systemverzeichnis: %s"
-get_ssl_key_systemdir_debug_0002="Verwende Standard-SSL-Zertifikate-Systemverzeichnis: %s"
-get_ssl_key_systemdir_debug_0003="Standard-SSL-Zertifikate-Systemverzeichnis nicht verfügbar, verwende Fallback: %s"
-get_ssl_key_systemdir_debug_0004="Fallback-SSL-Zertifikate-Systemverzeichnis nicht verfügbar, verwende: %s"
+get_ssl_key_systemdir_debug_0001="INFO: Ermittle SSL-Schlüssel-Systemverzeichnis"
+get_ssl_key_systemdir_debug_0002="SUCCESS: Verwendeter Pfad für SSL-Schlüssel-Systemverzeichnis: %s"
+get_ssl_key_systemdir_debug_0003="ERROR: Alle Pfade für SSL-Schlüssel-Systemverzeichnis fehlgeschlagen"
 
 get_ssl_key_systemdir() {
     # -----------------------------------------------------------------------
@@ -1542,30 +1562,20 @@ get_ssl_key_systemdir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    local primary_folder="$SYSTEM_PATH_SSL_KEY"
-    local secondary_folder="$("$manage_folders_sh" get_ssl_dir)"
+    local dir
 
-    # Standardpfad verwenden
-    dir="$primary_folder"
-    debug "$(printf "$get_ssl_key_systemdir_debug_0001" "$dir")" "CLI" "get_ssl_key_systemdir"
-    if [ -d "$dir" ]; then
-        create_directory "$dir" || true
-        debug "$(printf "$get_ssl_key_systemdir_debug_0002" "$dir")" "CLI" "get_ssl_key_systemdir"
-        echo "$dir"
-        return 0
-    fi
-    
-    # Fallback auf alternatives Verzeichnis
-    dir="$secondary_folder"
-    debug "$(printf "$get_ssl_key_systemdir_debug_0003" "$dir")" "CLI" "get_ssl_key_systemdir"
-    if [ -d "$dir" ]; then
-        create_directory "$dir" || true
-        debug "$(printf "$get_ssl_key_systemdir_debug_0004" "$dir")" "CLI" "get_ssl_key_systemdir"
+    # Prüfen, ob SYSTEM_PATH_SSL_KEY bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_ssl_key_systemdir_debug_0001"
+
+    # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
+    dir=$(get_folder_path "$SYSTEM_PATH_SSL_KEY" "$DEFAULT_DIR_CONF_SSL_KEY" "$FALLBACK_DIR_CONF_SSL_KEY" 1 0)
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_ssl_key_systemdir_debug_0002" "$dir")"
         echo "$dir"
         return 0
     fi
 
-    # Fehler: Kein SSL-Zertifikate-Systemverzeichnis gefunden
+    debug "$get_ssl_key_systemdir_debug_0003"
     echo ""
     return 1
 }

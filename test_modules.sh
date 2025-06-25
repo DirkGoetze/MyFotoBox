@@ -295,7 +295,26 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_systemd_systemdir                                           |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_systemd_systemdir"
-
+# Test: get_ssl_systemdir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_ssl_systemdir                                             |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_ssl_systemdir"
+# Test: get_ssl_cert_systemdir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_ssl_cert_systemdir                                         |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_ssl_cert_systemdir"
+# Test: get_ssl_key_systemdir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_ssl_key_systemdir                                           |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_ssl_key_systemdir"
+# Test: ensure_folder_structure
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: ensure_folder_structure                                           |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "ensure_folder_structure"
 
 exit
 
