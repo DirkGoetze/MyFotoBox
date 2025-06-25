@@ -130,9 +130,9 @@ create_symlink_to_standard_path_debug_0009="INFO: Erstelle Symlink von %s zu %s"
 create_symlink_to_standard_path_debug_0010="ERROR: Fehler beim Erstellen des Symlinks"
 # create_symlink_to_standard_path_log_0001="INFO: Symlink erstellt: %s -> %s"
 
-create_symlink_to_standard_path() {
+_create_symlink_to_standard_path() {
     # -----------------------------------------------------------------------
-    # create_symlink_to_standard_path
+    # _create_symlink_to_standard_path
     # -----------------------------------------------------------------------
     # Funktion: Erstellt einen Symlink vom Standard-Pfad zum tatsächlich
     # ......... verwendeten Fallback-Pfad. Dies hilft bei der Navigation und
@@ -346,7 +346,7 @@ get_folder_path() {
             # Wenn gewünscht und möglich, einen Symlink vom Standard-Pfad zum Fallback erstellen
             if [ "$create_symlink" -eq 1 ]; then
                 debug "$(printf "$get_folder_path_debug_0008" "$standard_path" "$fallback_path")"
-                create_symlink_to_standard_path "$standard_path" "$fallback_path" || {
+                _create_symlink_to_standard_path "$standard_path" "$fallback_path" || {
                     debug "$get_folder_path_debug_0009"
                 }
             fi
