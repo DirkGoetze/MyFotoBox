@@ -66,14 +66,14 @@ DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 # Private Hilfsfunktionen 
 # ===========================================================================
 
-# get_clean_foldername
+# _get_clean_foldername
 get_clean_foldername_debug_0001="INFO: Bereinige Name '%s' für Verwendung als Verzeichnisname"
 get_clean_foldername_debug_0002="INFO: Name wurde zu '%s' bereinigt"
 get_clean_foldername_debug_0003="WARN: Bereinigter Name wäre leer, verwende Standardnamen: %s"
 
-get_clean_foldername() {
+_get_clean_foldername() {
     # -----------------------------------------------------------------------
-    # get_clean_foldername
+    # _get_clean_foldername
     # -----------------------------------------------------------------------
     # Funktion: Bereinigt einen String für die Verwendung als Verzeichnisname
     # Parameter: $1 - Zu bereinigender String
@@ -949,7 +949,7 @@ get_template_dir() {
     debug "$(printf "$get_template_dir_debug_0003" "$modul_name")"
     
     # Verwende die Helferfunktion für die Bereinigung
-    local clean_modul_name=$(get_clean_foldername "$modul_name")
+    local clean_modul_name=$(_get_clean_foldername "$modul_name")
     
     # Erstelle das Event-Unterverzeichnis
     # Stellen Sie sicher, dass dir keine abschließenden Slashes hat
@@ -1213,7 +1213,7 @@ get_photos_originals_dir() {
     debug "$(printf "$get_photos_originals_dir_debug_0003" "$event_name")"
     
     # Verwende die Helferfunktion für die Bereinigung
-    local clean_event_name=$(get_clean_foldername "$event_name")
+    local clean_event_name=$(_get_clean_foldername "$event_name")
     
     # Erstelle das Event-Unterverzeichnis
     # Stellen Sie sicher, dass dir keine abschließenden Slashes hat
@@ -1277,7 +1277,7 @@ get_photos_gallery_dir() {
     debug "$(printf "$get_photos_gallery_dir_debug_0003" "$event_name")"
     
     # Verwende die Helferfunktion für die Bereinigung
-    local clean_event_name=$(get_clean_foldername "$event_name")
+    local clean_event_name=$(_get_clean_foldername "$event_name")
     
     # Erstelle das Event-Unterverzeichnis
     # Stellen Sie sicher, dass dir keine abschließenden Slashes hat
@@ -1622,6 +1622,7 @@ get_ssl_key_systemdir() {
 if [ "${BASH_SOURCE[0]}" != "${0}" ]; then
     # Das Skript wurde mit source geladen
     # Lösche interne Funktionen aus dem globalen Namespace
+    unset -f _get_clean_foldername
     unset -f _create_symlink_to_standard_path
     # unset -f _create_directory
     # unset -f _get_folder_path
