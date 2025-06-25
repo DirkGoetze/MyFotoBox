@@ -207,7 +207,7 @@ _create_symlink_to_standard_path() {
     return 0
 }
 
-# create_directory
+# _create_directory
 create_directory_debug_0001="INFO: Verzeichnis '%s' existiert nicht, wird erstellt"
 create_directory_debug_0002="ERROR: Fehler beim Erstellen von '%s'"
 create_directory_debug_0003="WARN: Warnung! <chown> '%s:%s' für '%s' fehlgeschlagen, Eigentümer nicht geändert"
@@ -220,9 +220,9 @@ create_directory_debug_0005="INFO: Verzeichnis '%s' erfolgreich vorbereitet"
 # create_directory_log_0005="INFO: Verzeichnis %s erfolgreich vorbereitet"
 # create_directory_log_0006="ERROR: Verzeichnis %s konnte nicht korrekt vorbereitet werden"
 
-create_directory() {
+_create_directory() {
     # -----------------------------------------------------------------------
-    # create_directory
+    # _create_directory
     # -----------------------------------------------------------------------
     # Funktion: Erstellt ein Verzeichnis mit den korrekten Berechtigungen, 
     # .........  wenn es noch nicht existiert
@@ -244,7 +244,7 @@ create_directory() {
 
     # Verzeichnis erstellen, falls es nicht existiert
     if [ ! -d "$dir" ]; then
-        debug "$(printf "$create_directory_debug_0001" "$dir")"
+        debug "$(printf "$_create_directory_debug_0001" "$dir")"
         mkdir -p "$dir" || {
             # log "$(printf "$create_directory_log_0002" "$dir")" "create_directory"
             debug "$(printf "$create_directory_debug_0002" "$dir")"
@@ -324,7 +324,7 @@ get_folder_path() {
 
     # Prüfen, ob Systempfad bereits gesetzt ist (z.B. vom install.sh)
     debug "$(printf "$get_folder_path_debug_0002" "$systemdef_path")"
-    if create_directory "$systemdef_path"; then
+    if _create_directory "$systemdef_path"; then
         debug "$(printf "$get_folder_path_debug_0003" "$systemdef_path")"
         echo "$systemdef_path"
         return 0
@@ -332,14 +332,14 @@ get_folder_path() {
 
     # Prüfen ob der Standardpfad existiert oder erzeugt werden kann
     debug "$(printf "$get_folder_path_debug_0004" "$standard_path")"
-    if create_directory "$standard_path"; then
+    if _create_directory "$standard_path"; then
         debug "$(printf "$get_folder_path_debug_0005" "$standard_path")"
         echo "$standard_path"
         return 0
     else
         # Versuchen, den Fallback-Pfad zu verwenden
         debug "$(printf "$get_folder_path_debug_0006" "$standard_path")"
-        if create_directory "$fallback_path"; then
+        if _create_directory "$fallback_path"; then
             debug "$(printf "$get_folder_path_debug_0007" "$fallback_path")"
             actual_path="$fallback_path"
             
@@ -956,7 +956,7 @@ get_template_dir() {
     dir=${dir%/}        
     local modul_dir="${dir}/${clean_modul_name}"
 
-     if create_directory "$modul_dir"; then
+     if _create_directory "$modul_dir"; then
         debug "$(printf "$get_template_dir_debug_0004" "$modul_dir")"
         echo "$modul_dir"
         return 0
@@ -1220,7 +1220,7 @@ get_photos_originals_dir() {
     dir=${dir%/}        
     local event_dir="${dir}/${clean_event_name}"
 
-    if create_directory "$event_dir"; then
+    if _create_directory "$event_dir"; then
         debug "$(printf "$get_photos_originals_dir_debug_0004" "$event_dir")"
         echo "$event_dir"
         return 0
@@ -1284,7 +1284,7 @@ get_photos_gallery_dir() {
     dir=${dir%/}        
     local event_dir="${dir}/${clean_event_name}"
 
-     if create_directory "$event_dir"; then
+     if _create_directory "$event_dir"; then
         debug "$(printf "$get_photos_gallery_dir_debug_0004" "$event_dir")"
         echo "$event_dir"
         return 0
@@ -1624,6 +1624,6 @@ if [ "${BASH_SOURCE[0]}" != "${0}" ]; then
     # Lösche interne Funktionen aus dem globalen Namespace
     unset -f _get_clean_foldername
     unset -f _create_symlink_to_standard_path
-    # unset -f _create_directory
+    unset -f _create_directory
     # unset -f _get_folder_path
 fi
