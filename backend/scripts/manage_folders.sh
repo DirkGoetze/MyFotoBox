@@ -284,8 +284,6 @@ get_folder_path() {
     if create_directory "$standard_path"; then
         debug "$(printf "$get_folder_path_debug_0005" "$standard_path")"
         echo "$standard_path"
-        # Variable für Systempfad mit neuen Werten aktualisieren
-        echo "eval $systemdef_path=\"$standard_path\""
         return 0
     else
         # Versuchen, den Fallback-Pfad zu verwenden
@@ -293,8 +291,6 @@ get_folder_path() {
         if create_directory "$fallback_path"; then
             debug "$(printf "$get_folder_path_debug_0007" "$fallback_path")"
             actual_path="$fallback_path"
-            # Variable für Systempfad mit neuen Werten aktualisieren
-            echo "eval $systemdef_path=\"$fallback_path\""
             
             # Wenn gewünscht und möglich, einen Symlink vom Standard-Pfad zum Fallback erstellen
             if [ "$create_symlink" -eq 1 ]; then
@@ -302,19 +298,6 @@ get_folder_path() {
                 create_symlink_to_standard_path "$standard_path" "$fallback_path" || {
                     debug "$get_folder_path_debug_0009"
                 }
-            fi
-        else
-            # Als letzte Option das Root-Verzeichnis verwenden
-            debug "$(printf "$get_folder_path_debug_0010" "$fallback_path")"
-            if [ "$use_root_fallback" -eq 1 ]; then
-                local root_path
-                root_path=$(get_install_dir)
-                if [ -n "$root_path" ] && create_directory "$root_path"; then
-                    debug "$(printf "$get_folder_path_debug_0011" "$root_path")"
-                    actual_path="$root_path"
-                    # Variable für Systempfad mit neuen Werten aktualisieren
-                    echo "eval $systemdef_path=\"$root_path\""
-                fi
             fi
         fi
     fi
@@ -539,7 +522,7 @@ get_python_path() {
         return 0
     else
         # Fehlerfall: Kein Python gefunden
-        debug "$get_python_path_debug_0009" "CLI" "get_python_path"
+        debug "$get_python_path_debug_0003" "CLI" "get_python_path"
         echo ""
         return 1
     fi
