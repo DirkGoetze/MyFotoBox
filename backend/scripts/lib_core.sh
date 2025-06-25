@@ -324,8 +324,6 @@ bind_resource() {
     local resource_name="$1"
     local resource_file="$SCRIPT_DIR/$resource_name"
 
-    debug_output "$(printf "$bind_resource_debug_0013")"
-
     if [ -z "$resource_name" ]; then
         echo "Fehler: Ressource-Name ist leer."
         return 1
