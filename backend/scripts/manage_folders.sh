@@ -371,7 +371,7 @@ _get_folder_path() {
 # get_install_dir
 get_install_dir_debug_0001="INFO: Ermittle Installations-Verzeichnis"
 get_install_dir_debug_0002="SUCCESS: Verwendeter Pfad für Installations-Verzeichnis: %s"
-get_install_dir_debug_0003="Alle Pfade für Installations-Verzeichnis fehlgeschlagen, verwende aktuelles Verzeichnis"
+get_install_dir_debug_0003="ERROR: Alle Pfade für Installations-Verzeichnis fehlgeschlagen"
 
 get_install_dir() {
     # -----------------------------------------------------------------------
@@ -382,22 +382,29 @@ get_install_dir() {
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     local dir
-        
+    local path_system="/opt/fotobox"
+    local path_default="/opt/fotobox"
+    local path_fallback="/usr/local/fotobox"
+
     # Prüfen, ob INSTALL_DIR bereits gesetzt ist (z.B. vom install.sh)
     debug "$get_install_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
-    dir=$(_get_folder_path "$INSTALL_DIR" "$DEFAULT_DIR_INSTALL" "$FALLBACK_DIR_INSTALL" 0 0)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 0 0)
+
     if [ -n "$dir" ]; then
         debug "$(printf "$get_install_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$INSTALL_DIR" ]; then
+            INSTALL_DIR="$dir"
+        fi
         echo "$dir"
         return 0
     fi
     
     # Als absoluten Notfall das aktuelle Verzeichnis verwenden
     debug "$get_install_dir_debug_0003"
-    echo "$(pwd)/fotobox"
-    return 0
+    return 1
 }
 
 # ---------------------------------------------------------------------------
@@ -418,15 +425,22 @@ get_backend_dir() {
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     local dir
+    local path_system="$(get_install_dir)/backend"
+    local path_default="$(get_install_dir)/backend"
+    local path_fallback="$(get_install_dir)/backend"
         
     # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
     debug "$get_backend_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$BACKEND_DIR" "$DEFAULT_DIR_BACKEND" "$FALLBACK_DIR_BACKEND" 1 1)    
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_backend_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$BACKEND_DIR" ]; then
+            BACKEND_DIR="$dir"
+        fi
         echo "$dir"
         return 0
     fi

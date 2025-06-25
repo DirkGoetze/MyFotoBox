@@ -19,8 +19,8 @@ LIB_CORE_LOADED=1
 # Zentrale Konstanten für das gesamte Fotobox-System
 # ===========================================================================
 # Primäre Pfaddefinitionen (Single Source of Truth)
-DEFAULT_DIR_INSTALL="/opt/fotobox"
-DEFAULT_DIR_BACKEND="$DEFAULT_DIR_INSTALL/backend"
+# DEFAULT_DIR_INSTALL="/opt/fotobox"
+# DEFAULT_DIR_BACKEND="$DEFAULT_DIR_INSTALL/backend"
 DEFAULT_DIR_BACKEND_SCRIPTS="$DEFAULT_DIR_BACKEND/scripts"
 DEFAULT_DIR_BACKEND_VENV="$DEFAULT_DIR_BACKEND/venv"
 DEFAULT_DIR_PYTHON="$DEFAULT_DIR_BACKEND_VENV/bin/python3"
@@ -50,8 +50,8 @@ DEFAULT_DIR_LOG="$DEFAULT_DIR_INSTALL/log"
 DEFAULT_DIR_TMP="$DEFAULT_DIR_INSTALL/tmp"
 
 # Fallback-Pfade für den Fall, dass Standardpfade nicht verfügbar sind
-FALLBACK_DIR_INSTALL="/var/lib/fotobox"
-FALLBACK_DIR_BACKEND="$FALLBACK_DIR_INSTALL/backend"
+# FALLBACK_DIR_INSTALL="/var/lib/fotobox" # "/usr/local/fotobox"
+# FALLBACK_DIR_BACKEND="$FALLBACK_DIR_INSTALL/backend"
 FALLBACK_DIR_BACKEND_SCRIPTS="$FALLBACK_DIR_INSTALL/backend/scripts"
 FALLBACK_DIR_BACKEND_VENV="$FALLBACK_DIR_INSTALL/backend/venv"
 FALLBACK_DIR_PYTHON="$DEFAULT_DIR_BACKEND_VENV/bin/python"
