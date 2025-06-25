@@ -63,10 +63,10 @@ DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 # ---------------------------------------------------------------------------
 
 # ===========================================================================
-# Hilfsfunktionen 
+# Private Hilfsfunktionen 
 # ===========================================================================
 
-# create_symlink_to_standard_path
+# _create_symlink_to_standard_path
 create_symlink_to_standard_path_debug_0001="WARN: Standard-Pfad und tatsächlicher Pfad sind identisch"
 create_symlink_to_standard_path_debug_0002="ERROR: Keine Schreibrechte im übergeordneten Verzeichnis"
 create_symlink_to_standard_path_debug_0003="INFO: Entferne vorhandenes Verzeichnis"
@@ -79,9 +79,9 @@ create_symlink_to_standard_path_debug_0009="INFO: Erstelle Symlink von %s zu %s"
 create_symlink_to_standard_path_debug_0010="ERROR: Fehler beim Erstellen des Symlinks"
 # create_symlink_to_standard_path_log_0001="INFO: Symlink erstellt: %s -> %s"
 
-create_symlink_to_standard_path() {
+_create_symlink_to_standard_path() {
     # -----------------------------------------------------------------------
-    # create_symlink_to_standard_path
+    # _create_symlink_to_standard_path
     # -----------------------------------------------------------------------
     # Funktion: Erstellt einen Symlink vom Standard-Pfad zum tatsächlich
     # ......... verwendeten Fallback-Pfad. Dies hilft bei der Navigation und
@@ -156,7 +156,7 @@ create_symlink_to_standard_path() {
     return 0
 }
 
-# create_directory
+# _create_directory
 create_directory_debug_0001="INFO: Verzeichnis '%s' existiert nicht, wird erstellt"
 create_directory_debug_0002="ERROR: Fehler beim Erstellen von '%s'"
 create_directory_debug_0003="WARN: Warnung! <chown> '%s:%s' für '%s' fehlgeschlagen, Eigentümer nicht geändert"
@@ -169,9 +169,9 @@ create_directory_debug_0005="INFO: Verzeichnis '%s' erfolgreich vorbereitet"
 # create_directory_log_0005="INFO: Verzeichnis %s erfolgreich vorbereitet"
 # create_directory_log_0006="ERROR: Verzeichnis %s konnte nicht korrekt vorbereitet werden"
 
-create_directory() {
+_create_directory() {
     # -----------------------------------------------------------------------
-    # create_directory
+    # _create_directory
     # -----------------------------------------------------------------------
     # Funktion: Erstellt ein Verzeichnis mit den korrekten Berechtigungen, 
     # .........  wenn es noch nicht existiert
@@ -226,7 +226,7 @@ create_directory() {
     fi
 }
 
-# get_folder_path
+# _get_folder_path
 get_folder_path_debug_0001="INFO: Prüfe Ordner-Pfade: Systempfad='%s', Standardpfad='%s', Fallbackpfad='%s'"
 get_folder_path_debug_0002="INFO: Systempfad (Exist, Rights und User) prüfen ('%s')"
 get_folder_path_debug_0003="SUCCESS: Systempfad ok, verwende Systempfad ('%s')"
@@ -241,9 +241,9 @@ get_folder_path_debug_0011="SUCCESS: Root-Verzeichnis ok, verwende Root-Verzeich
 get_folder_path_debug_0012="ERROR: Kein gültiger Pfad für die Ordnererstellung verfügbar, alle Versuche fehlgeschlagen"
 # get_folder_path_log_0001="ERROR: Kein gültiger Pfad für die Ordnererstellung verfügbar"
 
-get_folder_path() {
+_get_folder_path() {
     # -----------------------------------------------------------------------
-    # get_folder_path
+    # _get_folder_path
     # -----------------------------------------------------------------------
     # Funktion: Hilfsfunktion zum Ermitteln und Erstellen eines Ordners mit 
     # .........  Fallback-Logik. Erstellt zusätzlich einen Symlink vom
@@ -273,7 +273,7 @@ get_folder_path() {
 
     # Prüfen, ob Systempfad bereits gesetzt ist (z.B. vom install.sh)
     debug "$(printf "$get_folder_path_debug_0002" "$systemdef_path")"
-    if create_directory "$systemdef_path"; then
+    if _create_directory "$systemdef_path"; then
         debug "$(printf "$get_folder_path_debug_0003" "$systemdef_path")"
         echo "$systemdef_path"
         return 0
@@ -281,25 +281,25 @@ get_folder_path() {
 
     # Prüfen ob der Standardpfad existiert oder erzeugt werden kann
     debug "$(printf "$get_folder_path_debug_0004" "$standard_path")"
-    if create_directory "$standard_path"; then
+    if _create_directory "$standard_path"; then
         debug "$(printf "$get_folder_path_debug_0005" "$standard_path")"
         echo "$standard_path"
         # Variable für Systempfad mit neuen Werten aktualisieren
-        echo "eval $systemdef_path_var=\"$standard_path\""
+        echo "eval $systemdef_path=\"$standard_path\""
         return 0
     else
         # Versuchen, den Fallback-Pfad zu verwenden
         debug "$(printf "$get_folder_path_debug_0006" "$standard_path")"
-        if create_directory "$fallback_path"; then
+        if _create_directory "$fallback_path"; then
             debug "$(printf "$get_folder_path_debug_0007" "$fallback_path")"
             actual_path="$fallback_path"
             # Variable für Systempfad mit neuen Werten aktualisieren
-            echo "eval $systemdef_path_var=\"$fallback_path\""
+            echo "eval $systemdef_path=\"$fallback_path\""
             
             # Wenn gewünscht und möglich, einen Symlink vom Standard-Pfad zum Fallback erstellen
             if [ "$create_symlink" -eq 1 ]; then
                 debug "$(printf "$get_folder_path_debug_0008" "$standard_path" "$fallback_path")"
-                create_symlink_to_standard_path "$standard_path" "$fallback_path" || {
+                _create_symlink_to_standard_path "$standard_path" "$fallback_path" || {
                     debug "$get_folder_path_debug_0009"
                 }
             fi
@@ -309,11 +309,11 @@ get_folder_path() {
             if [ "$use_root_fallback" -eq 1 ]; then
                 local root_path
                 root_path=$(get_install_dir)
-                if [ -n "$root_path" ] && create_directory "$root_path"; then
+                if [ -n "$root_path" ] && _create_directory "$root_path"; then
                     debug "$(printf "$get_folder_path_debug_0011" "$root_path")"
                     actual_path="$root_path"
                     # Variable für Systempfad mit neuen Werten aktualisieren
-                    echo "eval $systemdef_path_var=\"$root_path\""
+                    echo "eval $systemdef_path=\"$root_path\""
                 fi
             fi
         fi
@@ -353,7 +353,7 @@ get_install_dir() {
     debug "$get_install_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
-    dir=$(get_folder_path "$INSTALL_DIR" "$DEFAULT_DIR_INSTALL" "$FALLBACK_DIR_INSTALL" 0 0)
+    dir=$(_get_folder_path "$INSTALL_DIR" "$DEFAULT_DIR_INSTALL" "$FALLBACK_DIR_INSTALL" 0 0)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_install_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -390,7 +390,7 @@ get_backend_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$BACKEND_DIR" "$DEFAULT_DIR_BACKEND" "$FALLBACK_DIR_BACKEND" 1 1)    
+    dir=$(_get_folder_path "$BACKEND_DIR" "$DEFAULT_DIR_BACKEND" "$FALLBACK_DIR_BACKEND" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_backend_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -422,7 +422,7 @@ get_script_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$SCRIPT_DIR" "$DEFAULT_DIR_BACKEND_SCRIPTS" "$FALLBACK_DIR_BACKEND_SCRIPTS" 1 1)
+    dir=$(_get_folder_path "$SCRIPT_DIR" "$DEFAULT_DIR_BACKEND_SCRIPTS" "$FALLBACK_DIR_BACKEND_SCRIPTS" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_script_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -483,7 +483,7 @@ get_venv_dir() {
     
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$BACKEND_VENV_DIR" "$DEFAULT_DIR_BACKEND_VENV" "$FALLBACK_DIR_BACKEND_VENV" 1 1)
+    dir=$(_get_folder_path "$BACKEND_VENV_DIR" "$DEFAULT_DIR_BACKEND_VENV" "$FALLBACK_DIR_BACKEND_VENV" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_venv_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -658,7 +658,7 @@ get_backup_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$BACKUP_DIR" "$DEFAULT_DIR_BACKUP" "$FALLBACK_DIR_BACKUP" 1 1)    
+    dir=$(_get_folder_path "$BACKUP_DIR" "$DEFAULT_DIR_BACKUP" "$FALLBACK_DIR_BACKUP" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_backup_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -690,7 +690,7 @@ get_nginx_backup_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$BACKUP_DIR_NGINX" "$DEFAULT_DIR_BACKUP_NGINX" "$FALLBACK_DIR_BACKUP_NGINX" 1 1)    
+    dir=$(_get_folder_path "$BACKUP_DIR_NGINX" "$DEFAULT_DIR_BACKUP_NGINX" "$FALLBACK_DIR_BACKUP_NGINX" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_nginx_backup_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -722,7 +722,7 @@ get_https_backup_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$BACKUP_DIR_HTTPS" "$DEFAULT_DIR_BACKUP_HTTPS" "$FALLBACK_DIR_BACKUP_HTTPS" 1 1)    
+    dir=$(_get_folder_path "$BACKUP_DIR_HTTPS" "$DEFAULT_DIR_BACKUP_HTTPS" "$FALLBACK_DIR_BACKUP_HTTPS" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_https_backup_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -758,7 +758,7 @@ get_config_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$CONF_DIR" "$DEFAULT_DIR_CONF" "$FALLBACK_DIR_CONF" 1 1)    
+    dir=$(_get_folder_path "$CONF_DIR" "$DEFAULT_DIR_CONF" "$FALLBACK_DIR_CONF" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_config_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -792,7 +792,7 @@ get_camera_conf_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$CONF_DIR_CAMERA" "$DEFAULT_DIR_CONF_CAMERA" "$FALLBACK_DIR_CONF_CAMERA" 1 1)    
+    dir=$(_get_folder_path "$CONF_DIR_CAMERA" "$DEFAULT_DIR_CONF_CAMERA" "$FALLBACK_DIR_CONF_CAMERA" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_camera_conf_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -824,7 +824,7 @@ get_https_conf_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$CONF_DIR_HTTPS" "$DEFAULT_DIR_CONF_HTTPS" "$FALLBACK_DIR_CONF_HTTPS" 1 1)    
+    dir=$(_get_folder_path "$CONF_DIR_HTTPS" "$DEFAULT_DIR_CONF_HTTPS" "$FALLBACK_DIR_CONF_HTTPS" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_https_conf_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -856,7 +856,7 @@ get_nginx_conf_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$CONF_DIR_NGINX" "$DEFAULT_DIR_CONF_NGINX" "$FALLBACK_DIR_CONF_NGINX" 1 1)    
+    dir=$(_get_folder_path "$CONF_DIR_NGINX" "$DEFAULT_DIR_CONF_NGINX" "$FALLBACK_DIR_CONF_NGINX" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_nginx_conf_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -895,7 +895,7 @@ get_template_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$CONF_DIR_TEMPLATES" "$DEFAULT_DIR_CONF_TEMPLATES" "$FALLBACK_DIR_CONF_TEMPLATES" 1 1)
+    dir=$(_get_folder_path "$CONF_DIR_TEMPLATES" "$DEFAULT_DIR_CONF_TEMPLATES" "$FALLBACK_DIR_CONF_TEMPLATES" 1 1)
 
     # Basis-Verzeichnis konnte nicht erzeugt werden
     if [ -z "$dir" ]; then
@@ -922,7 +922,7 @@ get_template_dir() {
     dir=${dir%/}        
     local modul_dir="${dir}/${clean_modul_name}"
 
-     if create_directory "$modul_dir"; then
+     if _create_directory "$modul_dir"; then
         debug "$(printf "$get_template_dir_debug_0004" "$modul_dir")"
         echo "$modul_dir"
         return 0
@@ -959,7 +959,7 @@ get_data_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$DATA_DIR" "$DEFAULT_DIR_DATA" "$FALLBACK_DIR_DATA" 1 1)    
+    dir=$(_get_folder_path "$DATA_DIR" "$DEFAULT_DIR_DATA" "$FALLBACK_DIR_DATA" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_data_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -995,7 +995,7 @@ get_frontend_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$FRONTEND_DIR" "$DEFAULT_DIR_FRONTEND" "$FALLBACK_DIR_FRONTEND" 1 1)    
+    dir=$(_get_folder_path "$FRONTEND_DIR" "$DEFAULT_DIR_FRONTEND" "$FALLBACK_DIR_FRONTEND" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -1027,7 +1027,7 @@ get_frontend_css_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$FRONTEND_CSS_DIR" "$DEFAULT_DIR_FRONTEND_CSS" "$FALLBACK_DIR_FRONTEND_CSS" 1 1)    
+    dir=$(_get_folder_path "$FRONTEND_CSS_DIR" "$DEFAULT_DIR_FRONTEND_CSS" "$FALLBACK_DIR_FRONTEND_CSS" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_css_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -1059,7 +1059,7 @@ get_frontend_fonts_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$FRONTEND_FONTS_DIR" "$DEFAULT_DIR_FRONTEND_FONTS" "$FALLBACK_DIR_FRONTEND_FONTS" 1 1)    
+    dir=$(_get_folder_path "$FRONTEND_FONTS_DIR" "$DEFAULT_DIR_FRONTEND_FONTS" "$FALLBACK_DIR_FRONTEND_FONTS" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_fonts_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -1091,7 +1091,7 @@ get_frontend_js_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$FRONTEND_JS_DIR" "$DEFAULT_DIR_FRONTEND_JS" "$FALLBACK_DIR_FRONTEND_JS" 1 1)    
+    dir=$(_get_folder_path "$FRONTEND_JS_DIR" "$DEFAULT_DIR_FRONTEND_JS" "$FALLBACK_DIR_FRONTEND_JS" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_js_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -1123,7 +1123,7 @@ get_photos_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$FRONTEND_PHOTOS_DIR" "$DEFAULT_DIR_FRONTEND_PHOTOS" "$FALLBACK_DIR_FRONTEND_PHOTOS" 1 1)    
+    dir=$(_get_folder_path "$FRONTEND_PHOTOS_DIR" "$DEFAULT_DIR_FRONTEND_PHOTOS" "$FALLBACK_DIR_FRONTEND_PHOTOS" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_photos_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -1159,7 +1159,7 @@ get_photos_originals_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$FRONTEND_PHOTOS_ORIGINAL_DIR" "$DEFAULT_DIR_FRONTEND_PHOTOS_ORIGINAL" "$FALLBACK_DIR_FRONTEND_PHOTOS_ORIGINAL" 1 1)    
+    dir=$(_get_folder_path "$FRONTEND_PHOTOS_ORIGINAL_DIR" "$DEFAULT_DIR_FRONTEND_PHOTOS_ORIGINAL" "$FALLBACK_DIR_FRONTEND_PHOTOS_ORIGINAL" 1 1)    
 
     # Basis-Verzeichnis konnte nicht erzeugt werden
     if [ -z "$dir" ]; then
@@ -1186,7 +1186,7 @@ get_photos_originals_dir() {
     dir=${dir%/}        
     local event_dir="${dir}/${clean_event_name}"
 
-    if create_directory "$event_dir"; then
+    if _create_directory "$event_dir"; then
         debug "$(printf "$get_photos_originals_dir_debug_0004" "$event_dir")"
         echo "$event_dir"
         return 0
@@ -1223,7 +1223,7 @@ get_photos_gallery_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$FRONTEND_PHOTOS_THUMBNAILS_DIR" "$DEFAULT_DIR_FRONTEND_PHOTOS_THUMBNAILS" "$FALLBACK_DIR_FRONTEND_PHOTOS_THUMBNAILS" 1 1)
+    dir=$(_get_folder_path "$FRONTEND_PHOTOS_THUMBNAILS_DIR" "$DEFAULT_DIR_FRONTEND_PHOTOS_THUMBNAILS" "$FALLBACK_DIR_FRONTEND_PHOTOS_THUMBNAILS" 1 1)
 
     # Basis-Verzeichnis konnte nicht erzeugt werden
     if [ -z "$dir" ]; then
@@ -1283,7 +1283,7 @@ get_frontend_picture_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$FRONTEND_PICTURE_DIR" "$DEFAULT_DIR_FRONTEND_PICTURE" "$FALLBACK_DIR_FRONTEND_PICTURE" 1 1)    
+    dir=$(_get_folder_path "$FRONTEND_PICTURE_DIR" "$DEFAULT_DIR_FRONTEND_PICTURE" "$FALLBACK_DIR_FRONTEND_PICTURE" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_picture_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -1319,7 +1319,7 @@ get_log_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$LOG_DIR" "$DEFAULT_DIR_LOG" "$FALLBACK_DIR_LOG" 1 1)
+    dir=$(_get_folder_path "$LOG_DIR" "$DEFAULT_DIR_LOG" "$FALLBACK_DIR_LOG" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_log_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -1355,7 +1355,7 @@ get_tmp_dir() {
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(get_folder_path "$TMP_DIR" "$DEFAULT_DIR_TMP" "$FALLBACK_DIR_TMP" 1 1)
+    dir=$(_get_folder_path "$TMP_DIR" "$DEFAULT_DIR_TMP" "$FALLBACK_DIR_TMP" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_tmp_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -1449,7 +1449,7 @@ get_nginx_systemdir() {
     debug "$get_nginx_systemdir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
-    dir=$(get_folder_path "$SYSTEM_PATH_NGINX" "$DEFAULT_DIR_CONF_NGINX" "$FALLBACK_DIR_CONF_NGINX" 1 0)
+    dir=$(_get_folder_path "$SYSTEM_PATH_NGINX" "$DEFAULT_DIR_CONF_NGINX" "$FALLBACK_DIR_CONF_NGINX" 1 0)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_nginx_systemdir_debug_0002" "$dir")"
         echo "$dir"
@@ -1480,7 +1480,7 @@ get_systemd_systemdir() {
     debug "$get_systemd_systemdir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
-    dir=$(get_folder_path "$SYSTEM_PATH_SYSTEMD" "$DEFAULT_DIR_CONF_SYSTEMD" "$FALLBACK_DIR_CONF_SYSTEMD" 1 0)
+    dir=$(_get_folder_path "$SYSTEM_PATH_SYSTEMD" "$DEFAULT_DIR_CONF_SYSTEMD" "$FALLBACK_DIR_CONF_SYSTEMD" 1 0)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_systemd_systemdir_debug_0002" "$dir")"
         echo "$dir"
@@ -1511,7 +1511,7 @@ get_ssl_systemdir() {
     debug "$get_ssl_systemdir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
-    dir=$(get_folder_path "$SYSTEM_PATH_SSL" "$DEFAULT_DIR_CONF_SSL" "$FALLBACK_DIR_CONF_SSL" 1 0)
+    dir=$(_get_folder_path "$SYSTEM_PATH_SSL" "$DEFAULT_DIR_CONF_SSL" "$FALLBACK_DIR_CONF_SSL" 1 0)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_ssl_systemdir_debug_0002" "$dir")"
         echo "$dir"
@@ -1542,7 +1542,7 @@ get_ssl_cert_systemdir() {
     debug "$get_ssl_cert_systemdir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
-    dir=$(get_folder_path "$SYSTEM_PATH_SSL_CERT" "$DEFAULT_DIR_CONF_SSL_CERTS" "$FALLBACK_DIR_CONF_SSL_CERTS" 1 0)
+    dir=$(_get_folder_path "$SYSTEM_PATH_SSL_CERT" "$DEFAULT_DIR_CONF_SSL_CERTS" "$FALLBACK_DIR_CONF_SSL_CERTS" 1 0)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_ssl_cert_systemdir_debug_0002" "$dir")"
         echo "$dir"
@@ -1573,7 +1573,7 @@ get_ssl_key_systemdir() {
     debug "$get_ssl_key_systemdir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
-    dir=$(get_folder_path "$SYSTEM_PATH_SSL_KEY" "$DEFAULT_DIR_CONF_SSL_KEYS" "$FALLBACK_DIR_CONF_SSL_KEYS" 1 0)
+    dir=$(_get_folder_path "$SYSTEM_PATH_SSL_KEY" "$DEFAULT_DIR_CONF_SSL_KEYS" "$FALLBACK_DIR_CONF_SSL_KEYS" 1 0)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_ssl_key_systemdir_debug_0002" "$dir")"
         echo "$dir"
@@ -1584,3 +1584,18 @@ get_ssl_key_systemdir() {
     echo ""
     return 1
 }
+
+# ===========================================================================
+# Überprüfen, ob das Skript direkt ausgeführt oder mit 'source' geladen wurde
+# ===========================================================================
+# Wenn das Skript mit 'source' geladen wurde, sollen die internen Funktionen
+# nicht im globalen Namespace verfügbar sein, um Konflikte zu vermeiden.
+# Daher werden die internen Funktionen nur dann im globalen Namespace belassen,
+# wenn das Skript direkt ausgeführt wird.
+if [ "${BASH_SOURCE[0]}" != "${0}" ]; then
+    # Das Skript wurde mit source geladen
+    # Lösche interne Funktionen aus dem globalen Namespace
+    unset -f _create_directory
+    unset -f _create_symlink_to_standard_path
+    unset -f _get_folder_path
+fi
