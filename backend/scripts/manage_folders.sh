@@ -1624,6 +1624,6 @@ if [ "${BASH_SOURCE[0]}" != "${0}" ]; then
     # Lösche interne Funktionen aus dem globalen Namespace
     unset -f _get_clean_foldername
     unset -f _create_symlink_to_standard_path
-    # unset -f _create_directory
+    unset -f _create_directory
     # unset -f _get_folder_path
 fi
