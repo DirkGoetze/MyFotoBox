@@ -284,6 +284,8 @@ get_folder_path() {
     if create_directory "$standard_path"; then
         debug "$(printf "$get_folder_path_debug_0005" "$standard_path")"
         echo "$standard_path"
+        # Variable für Systempfad mit neuen Werten aktualisieren
+        echo "eval $systemdef_path_var=\"$standard_path\""
         return 0
     else
         # Versuchen, den Fallback-Pfad zu verwenden
@@ -291,6 +293,8 @@ get_folder_path() {
         if create_directory "$fallback_path"; then
             debug "$(printf "$get_folder_path_debug_0007" "$fallback_path")"
             actual_path="$fallback_path"
+            # Variable für Systempfad mit neuen Werten aktualisieren
+            echo "eval $systemdef_path_var=\"$fallback_path\""
             
             # Wenn gewünscht und möglich, einen Symlink vom Standard-Pfad zum Fallback erstellen
             if [ "$create_symlink" -eq 1 ]; then
@@ -308,6 +312,8 @@ get_folder_path() {
                 if [ -n "$root_path" ] && create_directory "$root_path"; then
                     debug "$(printf "$get_folder_path_debug_0011" "$root_path")"
                     actual_path="$root_path"
+                    # Variable für Systempfad mit neuen Werten aktualisieren
+                    echo "eval $systemdef_path_var=\"$root_path\""
                 fi
             fi
         fi
