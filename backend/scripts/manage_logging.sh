@@ -392,7 +392,7 @@ print_debug() {
             # Farbliche Hervorhebung basierend auf Schlüsselwörtern
             if [[ "$content" == *"INFO:"* ]]; then
                 # Info-Stil (Standard/Reset-Farbe)
-                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_RESET}$content${COLOR_RESET}" >&2
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_GRAY}$content${COLOR_RESET}" >&2
             elif [[ "$content" == *"WARN:"* ]]; then
                 # Warnungs-Stil (gelb)
                 echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_YELLOW}$content${COLOR_RESET}" >&2
