@@ -123,7 +123,7 @@ COLOR_GREEN="\033[1;32m"
 COLOR_YELLOW="\033[1;33m"
 COLOR_BLUE="\033[1;34m"
 COLOR_CYAN="\033[1;36m"
-COLOR_GRAY="\033[1;37m"
+COLOR_GRAY="\033[0;37m"
 
 # Standard-Flags
 : "${DEBUG_MOD:=0}"          # Legacy-Flag (für Kompatibilität mit älteren Skripten)
