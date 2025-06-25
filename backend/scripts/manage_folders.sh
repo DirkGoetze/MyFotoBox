@@ -1537,7 +1537,7 @@ get_ssl_cert_systemdir() {
     debug "$get_ssl_cert_systemdir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
-    dir=$(get_folder_path "$SYSTEM_PATH_SSL_CERT" "$DEFAULT_DIR_CONF_SSL_CERT" "$FALLBACK_DIR_CONF_SSL_CERT" 1 0)
+    dir=$(get_folder_path "$SYSTEM_PATH_SSL_CERT" "$DEFAULT_DIR_CONF_SSL_CERTS" "$FALLBACK_DIR_CONF_SSL_CERTS" 1 0)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_ssl_cert_systemdir_debug_0002" "$dir")"
         echo "$dir"
@@ -1568,7 +1568,7 @@ get_ssl_key_systemdir() {
     debug "$get_ssl_key_systemdir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
-    dir=$(get_folder_path "$SYSTEM_PATH_SSL_KEY" "$DEFAULT_DIR_CONF_SSL_KEY" "$FALLBACK_DIR_CONF_SSL_KEY" 1 0)
+    dir=$(get_folder_path "$SYSTEM_PATH_SSL_KEY" "$DEFAULT_DIR_CONF_SSL_KEYS" "$FALLBACK_DIR_CONF_SSL_KEYS" 1 0)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_ssl_key_systemdir_debug_0002" "$dir")"
         echo "$dir"
