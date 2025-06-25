@@ -4,9 +4,9 @@
 # ---------------------------------------------------------------------------
 # Funktion: Zentrale Verwaltung der Ordnerstruktur für die Fotobox.
 # ......... Stellt einheitliche Pfad-Getter bereit und erstellt Ordner bei 
-# ......... Bedarf. Nach Policy müssen alle Skripte Pfade konsistent verwalten 
-# ......... und sicherstellen, dass Ordner mit den korrekten Berechtigungen 
-# ......... existieren.
+# ......... Bedarf. Nach Policy müssen alle Skripte Pfade konsistent 
+# ......... verwalten und sicherstellen, dass Ordner mit den korrekten  
+# ......... Berechtigungen existieren.
 # ---------------------------------------------------------------------------
 # HINWEIS: Dieses Skript ist Bestandteil der Backend-Logik und darf nur im
 # Unterordner 'backend/scripts/' abgelegt werden 
@@ -16,7 +16,8 @@
 # CLI-Programm ist nicht vorgesehen. Die Policy zur main()-Funktion gilt nur 
 # für Hauptskripte.
 #
-# HINWEIS: Dieses Skript erfordert lib_core.sh und sollte nie direkt aufgerufen werden.
+# HINWEIS: Dieses Skript erfordert lib_core.sh und sollte nie direkt 
+# .......  aufgerufen werden.
 # ---------------------------------------------------------------------------
 
 # ===========================================================================
@@ -38,11 +39,6 @@ MANAGE_FOLDERS_LOADED=0
 # Nutzer- und Ordnereinstellungen werden ebenfalls in lib_core.sh zentral 
 # verwaltet
 # ---------------------------------------------------------------------------
-# Lokale Aliase für bessere Lesbarkeit
-: "${USER:=$DEFAULT_USER}"
-: "${GROUP:=$DEFAULT_GROUP}"
-: "${MODE:=$DEFAULT_MODE}"
-# ---------------------------------------------------------------------------
 
 # ===========================================================================
 # Lokale Konstanten (Vorgaben und Defaults nur für die Installation)
@@ -54,7 +50,10 @@ SYSTEM_PATH_SSL="/etc/ssl"
 SYSTEM_PATH_SSL_CERT="/etc/ssl/certs"
 SYSTEM_PATH_SSL_KEY="/etc/ssl/private"
 # ---------------------------------------------------------------------------
-
+# Lokale Aliase für bessere Lesbarkeit
+: "${USER:=$DEFAULT_USER}"
+: "${GROUP:=$DEFAULT_GROUP}"
+: "${MODE:=$DEFAULT_MODE}"
 # ---------------------------------------------------------------------------
 # Debug-Modus: Lokal und global steuerbar
 # DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
@@ -68,17 +67,17 @@ DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 # ===========================================================================
 
 # create_symlink_to_standard_path
-create_symlink_to_standard_path_debug_0001="Standard-Pfad und tatsächlicher Pfad sind identisch"
-create_symlink_to_standard_path_debug_0002="Keine Schreibrechte im übergeordneten Verzeichnis"
-create_symlink_to_standard_path_debug_0003="Entferne vorhandenes Verzeichnis"
-create_symlink_to_standard_path_debug_0004="Verzeichnis konnte nicht entfernt werden, möglicherweise nicht leer"
-create_symlink_to_standard_path_debug_0005="Symlink zeigt auf %s, wird auf %s geändert"
-create_symlink_to_standard_path_debug_0006="Konnte vorhandenen Symlink nicht entfernen"
-create_symlink_to_standard_path_debug_0007="Symlink existiert bereits und zeigt auf das korrekte Ziel"
-create_symlink_to_standard_path_debug_0008="Eine Datei existiert bereits am Standard-Pfad"
-create_symlink_to_standard_path_debug_0009="Erstelle Symlink von %s zu %s"
-create_symlink_to_standard_path_debug_0010="Fehler beim Erstellen des Symlinks"
-create_symlink_to_standard_path_log_0001="INFO: Symlink erstellt: %s -> %s"
+create_symlink_to_standard_path_debug_0001="WARN: Standard-Pfad und tatsächlicher Pfad sind identisch"
+create_symlink_to_standard_path_debug_0002="ERROR: Keine Schreibrechte im übergeordneten Verzeichnis"
+create_symlink_to_standard_path_debug_0003="INFO: Entferne vorhandenes Verzeichnis"
+create_symlink_to_standard_path_debug_0004="ERROR: Verzeichnis konnte nicht entfernt werden, möglicherweise nicht leer"
+create_symlink_to_standard_path_debug_0005="INFO: Symlink zeigt auf %s, wird auf %s geändert"
+create_symlink_to_standard_path_debug_0006="ERROR: Konnte vorhandenen Symlink nicht entfernen"
+create_symlink_to_standard_path_debug_0007="INFO: Symlink existiert bereits und zeigt auf das korrekte Ziel"
+create_symlink_to_standard_path_debug_0008="ERROR: Eine Datei existiert bereits am Standard-Pfad"
+create_symlink_to_standard_path_debug_0009="INFO: Erstelle Symlink von %s zu %s"
+create_symlink_to_standard_path_debug_0010="ERROR: Fehler beim Erstellen des Symlinks"
+# create_symlink_to_standard_path_log_0001="INFO: Symlink erstellt: %s -> %s"
 
 create_symlink_to_standard_path() {
     # -----------------------------------------------------------------------
@@ -102,7 +101,7 @@ create_symlink_to_standard_path() {
     
     # Wenn die Pfade identisch sind, kein Symlink nötig
     if [ "$standard_path" = "$actual_path" ]; then
-        debug "$create_symlink_to_standard_path_debug_0001: $standard_path" "CLI" "create_symlink_to_standard_path"
+        debug "$create_symlink_to_standard_path_debug_0001: $standard_path"
         return 0
     fi
     
@@ -110,7 +109,7 @@ create_symlink_to_standard_path() {
     local parent_dir
     parent_dir=$(dirname "$standard_path")
     if [ ! -w "$parent_dir" ]; then
-        debug "$create_symlink_to_standard_path_debug_0002: $parent_dir" "CLI" "create_symlink_to_standard_path"
+        debug "$create_symlink_to_standard_path_debug_0002: $parent_dir"
         return 1
     fi
 
@@ -118,10 +117,10 @@ create_symlink_to_standard_path() {
     if [ -e "$standard_path" ]; then
         # Falls es ein reguläres Verzeichnis ist, entfernen (mit Vorsicht)
         if [ -d "$standard_path" ] && [ ! -L "$standard_path" ]; then
-            debug "$create_symlink_to_standard_path_debug_0003: $standard_path" "CLI" "create_symlink_to_standard_path"
+            debug "$create_symlink_to_standard_path_debug_0003: $standard_path"
             # Es ist sicherer, nur leere Verzeichnisse zu entfernen
             rmdir "$standard_path" 2>/dev/null || {
-                debug "$create_symlink_to_standard_path_debug_0004: $standard_path" "CLI" "create_symlink_to_standard_path"
+                debug "$create_symlink_to_standard_path_debug_0004: $standard_path"
                 return 1
             }
         # Falls es ein Symlink auf einen anderen Pfad ist, aktualisieren
@@ -129,31 +128,31 @@ create_symlink_to_standard_path() {
             local current_target
             current_target=$(readlink -f "$standard_path")
             if [ "$current_target" != "$actual_path" ]; then
-                debug "$(printf "$create_symlink_to_standard_path_debug_0005" "$current_target" "$actual_path")" "CLI" "create_symlink_to_standard_path"
+                debug "$(printf "$create_symlink_to_standard_path_debug_0005" "$current_target" "$actual_path")"
                 rm -f "$standard_path" 2>/dev/null || {
-                    debug "$create_symlink_to_standard_path_debug_0006: $standard_path" "CLI" "create_symlink_to_standard_path"
+                    debug "$create_symlink_to_standard_path_debug_0006: $standard_path"
                     return 1
                 }
             else
                 # Symlink zeigt bereits auf das richtige Ziel
-                debug "$create_symlink_to_standard_path_debug_0007: $actual_path" "CLI" "create_symlink_to_standard_path"
+                debug "$create_symlink_to_standard_path_debug_0007: $actual_path"
                 return 0
             fi
         # Falls es eine reguläre Datei ist, abbrechen
         elif [ -f "$standard_path" ]; then
-            debug "$create_symlink_to_standard_path_debug_0008: $standard_path" "CLI" "create_symlink_to_standard_path"
+            debug "$create_symlink_to_standard_path_debug_0008: $standard_path"
             return 1
         fi
     fi
     
     # Symlink erstellen
-    debug "$(printf "$create_symlink_to_standard_path_debug_0009" "$standard_path" "$actual_path")" "CLI" "create_symlink_to_standard_path"
+    debug "$(printf "$create_symlink_to_standard_path_debug_0009" "$standard_path" "$actual_path")"
     ln -sf "$actual_path" "$standard_path" || {
-        debug "$create_symlink_to_standard_path_debug_0010" "CLI" "create_symlink_to_standard_path"
+        debug "$create_symlink_to_standard_path_debug_0010"
         return 1
     }
 
-    log "$(printf "$create_symlink_to_standard_path_log_0001" "$standard_path" "$actual_path")" "create_symlink_to_standard_path"
+    # log "$(printf "$create_symlink_to_standard_path_log_0001" "$standard_path" "$actual_path")" "create_symlink_to_standard_path"
     return 0
 }
 
@@ -330,8 +329,8 @@ get_folder_path() {
 # ===========================================================================
 
 # get_install_dir
-get_install_dir_debug_0001="Ermittle Installations-Verzeichnis"
-get_install_dir_debug_0002="Verwendeter Pfad für Installations-Verzeichnis: %s"
+get_install_dir_debug_0001="INFO: Ermittle Installations-Verzeichnis"
+get_install_dir_debug_0002="SUCCESS: Verwendeter Pfad für Installations-Verzeichnis: %s"
 get_install_dir_debug_0003="Alle Pfade für Installations-Verzeichnis fehlgeschlagen, verwende aktuelles Verzeichnis"
 
 get_install_dir() {
@@ -366,9 +365,9 @@ get_install_dir() {
 # ---------------------------------------------------------------------------
 
 # get_backend_dir
-get_backend_dir_debug_0001="Ermittle Backend-Verzeichnis"
-get_backend_dir_debug_0002="Verwendeter Pfad für Backend-Verzeichnis: %s"
-get_backend_dir_debug_0003="Alle Pfade für Backend-Verzeichnis fehlgeschlagen"
+get_backend_dir_debug_0001="INFO: Ermittle Backend-Verzeichnis"
+get_backend_dir_debug_0002="SUCCESS: Verwendeter Pfad für Backend-Verzeichnis: %s"
+get_backend_dir_debug_0003="ERROR: Alle Pfade für Backend-Verzeichnis fehlgeschlagen"
 
 get_backend_dir() {
     # -----------------------------------------------------------------------
@@ -398,9 +397,9 @@ get_backend_dir() {
 }
 
 # get_script_dir
-get_script_dir_debug_0001="Ermittle Backend-Skript-Verzeichnis"
-get_script_dir_debug_0002="Verwendeter Pfad für Backend-Skript-Verzeichnis: %s"
-get_script_dir_debug_0003="Alle Pfade für Backend-Skript-Verzeichnis fehlgeschlagen"
+get_script_dir_debug_0001="INFO: Ermittle Backend-Skript-Verzeichnis"
+get_script_dir_debug_0002="SUCCESS: Verwendeter Pfad für Backend-Skript-Verzeichnis: %s"
+get_script_dir_debug_0003="ERROR: Alle Pfade für Backend-Skript-Verzeichnis fehlgeschlagen"
 
 get_script_dir() {
     # -----------------------------------------------------------------------
@@ -430,9 +429,9 @@ get_script_dir() {
 }
 
 # set_script_permissions
-set_script_permissions_debug_0001="Skript-Verzeichnis %s existiert nicht"
-set_script_permissions_debug_0002="Setze Ausführbarkeitsrechte für %s/*.sh"
-set_script_permissions_debug_0003="Ausführbarkeitsrechte erfolgreich gesetzt"
+set_script_permissions_debug_0001="ERROR: Skript-Verzeichnis %s existiert nicht"
+set_script_permissions_debug_0002="INFO: Setze Ausführbarkeitsrechte für %s/*.sh"
+set_script_permissions_debug_0003="SUCCESS: Ausführbarkeitsrechte erfolgreich gesetzt"
 
 set_script_permissions() {
     # -----------------------------------------------------------------------
@@ -460,9 +459,9 @@ set_script_permissions() {
 }
 
 # get_venv_dir
-get_venv_dir_debug_0001="Ermittle 'Python Virtual Environment' Verzeichnis"
-get_venv_dir_debug_0002="Verwendeter Pfad für 'Python Virtual Environment' Verzeichnis: %s"
-get_venv_dir_debug_0003="Alle Pfade für 'Python Virtual Environment' Verzeichnis fehlgeschlagen"
+get_venv_dir_debug_0001="INFO: Ermittle 'Python Virtual Environment' Verzeichnis"
+get_venv_dir_debug_0002="SUCCESS: Verwendeter Pfad für 'Python Virtual Environment' Verzeichnis: %s"
+get_venv_dir_debug_0003="ERROR: Alle Pfade für 'Python Virtual Environment' Verzeichnis fehlgeschlagen"
 
 get_venv_dir() {
     # -----------------------------------------------------------------------
@@ -1367,8 +1366,8 @@ get_tmp_dir() {
 # ---------------------------------------------------------------------------
 
 # ensure_folder_structure
-ensure_folder_structure_debug_0001="Stelle sicher, dass alle notwendigen Verzeichnisse existieren"
-ensure_folder_structure_debug_0002="Ordnerstruktur erfolgreich erstellt"
+ensure_folder_structure_debug_0001="INFO: Stelle sicher, dass alle notwendigen Verzeichnisse existieren"
+ensure_folder_structure_debug_0002="SUCCESS: Ordnerstruktur erfolgreich erstellt"
 
 ensure_folder_structure() {
     # -----------------------------------------------------------------------
