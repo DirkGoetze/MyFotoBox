@@ -1618,3 +1618,11 @@ get_ssl_key_systemdir() {
     echo ""
     return 1
 }
+
+if [ "${BASH_SOURCE[0]}" != "${0}" ]; then
+    # Das Skript wurde mit source geladen
+    # Lösche interne Funktionen aus dem globalen Namespace
+    unset -f _create_symlink_to_standard_path
+    # unset -f _create_directory
+    # unset -f _get_folder_path
+fi
