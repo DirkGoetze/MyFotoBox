@@ -244,10 +244,10 @@ _create_directory() {
 
     # Verzeichnis erstellen, falls es nicht existiert
     if [ ! -d "$dir" ]; then
-        debug "$(printf "$_create_directory_debug_0001" "$dir")"
+        debug "$(printf "$_create_directory_debug_0001" "$dir")" "CLI" "_create_directory"
         mkdir -p "$dir" || {
             # log "$(printf "$create_directory_log_0002" "$dir")" "create_directory"
-            debug "$(printf "$create_directory_debug_0002" "$dir")"
+            debug "$(printf "$create_directory_debug_0002" "$dir")" "CLI" "_create_directory"
             return 1
         }
         # log "$(printf "$create_directory_log_0003" "$dir")"
@@ -256,20 +256,20 @@ _create_directory() {
     # Berechtigungen setzen
     chown "$user:$group" "$dir" 2>/dev/null || {
         # log "$(printf "$create_directory_log_0004" "$dir")" "create_directory"
-        debug "$(printf "$create_directory_debug_0003" "$user" "$group" "$dir")"
+        debug "$(printf "$create_directory_debug_0003" "$user" "$group" "$dir")" "CLI" "_create_directory"
         # Fehler beim chown ist kein kritischer Fehler
     }
 
     chmod "$mode" "$dir" 2>/dev/null || {
         # log "$(printf "$create_directory_log_0004" "$dir")" "create_directory"
-        debug "$(printf "$create_directory_debug_0004" "$mode" "$dir")"
+        debug "$(printf "$create_directory_debug_0004" "$mode" "$dir")" "CLI" "_create_directory"
         # Fehler beim chmod ist kein kritischer Fehler
     }
 
     # Überprüfen, ob das Verzeichnis existiert und lesbar ist
     if [ -d "$dir" ] && [ -r "$dir" ]; then
         # log "$(printf "$create_directory_log_0005" "$dir")" "create_directory"
-        debug "$(printf "$create_directory_debug_0005" "$dir")"
+        debug "$(printf "$create_directory_debug_0005" "$dir")" "CLI" "_create_directory"
         return 0
     else
         # log "$(printf "$create_directory_log_0006" "$dir")" "create_directory"
