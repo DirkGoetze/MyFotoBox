@@ -230,57 +230,6 @@ check_param() {
     return 0
 }
 
-# get_clean_foldername
-get_clean_foldername_debug_0001="INFO: Bereinige Name '%s' für Verwendung als Verzeichnisname"
-get_clean_foldername_debug_0002="INFO: Name wurde zu '%s' bereinigt"
-get_clean_foldername_debug_0003="WARN: Bereinigter Name wäre leer, verwende Standardnamen: %s"
-
-get_clean_foldername() {
-    # -----------------------------------------------------------------------
-    # get_clean_foldername
-    # -----------------------------------------------------------------------
-    # Funktion: Bereinigt einen String für die Verwendung als Verzeichnisname
-    # Parameter: $1 - Zu bereinigender String
-    #            $2 - (Optional) Standardname, falls der bereinigte String leer ist
-    #                 Default: "YYYY-MM-DD_event"
-    # Rückgabe: Bereinigter String als Verzeichnisname geeignet
-    # -----------------------------------------------------------------------
-    local input_name="$1"
-    local default_name="${2:-$(date +%Y-%m-%d)_event}"
-    
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$get_clean_foldername_debug_0001" "$input_name")"
-    
-    # Prüfen, ob ein Name übergeben wurde
-    if [ -z "$input_name" ]; then
-        debug "$(printf "$get_clean_foldername_debug_0003" "$default_name")"
-        echo "$default_name"
-        return 0
-    fi
-    
-    # Die Bereinigungslogik in einzelne Schritte aufteilen für bessere Nachvollziehbarkeit
-    # 1. Nur erlaubte Zeichen beibehalten 
-    local filtered_name
-    filtered_name=$(echo "$input_name" | tr -d "[:cntrl:][:punct:]" | tr -s "[:space:]" "_")
-    debug "Schritt 1 (Filterung): '$filtered_name'"
-    
-    # 2. Führende und nachfolgende Unterstriche entfernen
-    local clean_name
-    clean_name=$(echo "$filtered_name" | sed 's/^[_]*//;s/[_]*$//')
-    debug "Schritt 2 (Trimming): '$clean_name'"
-        
-    # Wenn der bereinigte Name leer ist, verwende den Standardnamen
-    if [ -z "$clean_name" ]; then
-        debug "$(printf "$get_clean_foldername_debug_0003" "$default_name")"
-        echo "$default_name"
-        return 0
-    fi
-    
-    debug "$(printf "$get_clean_foldername_debug_0002" "$clean_name")"
-    echo "$clean_name"
-    return 0
-}
-
 # ===========================================================================
 # Hilfsfunktionen zur Einbindung externer Skript-Ressourcen
 # ===========================================================================
@@ -375,7 +324,9 @@ bind_resource() {
     # -----------------------------------------------------------------------
     local resource_name="$1"
     local resource_file="$SCRIPT_DIR/$resource_name"
-    
+
+    debug_output "$(printf "$bind_resource_debug_0013")"
+
     if [ -z "$resource_name" ]; then
         echo "Fehler: Ressource-Name ist leer."
         return 1
@@ -436,7 +387,6 @@ bind_resource() {
 
     # Wenn wir hier ankommen, war alles erfolgreich
     debug_output "$(printf "$bind_resource_debug_0012" "$(basename "${resource_name%.sh}" | tr '[:lower:]' '[:upper:]')")"
-    debug_output "$(printf "$bind_resource_debug_0013")"
     return 0  # Erfolgreich geladen
 }
 
