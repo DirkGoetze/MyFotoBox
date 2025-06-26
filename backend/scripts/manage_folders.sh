@@ -692,16 +692,26 @@ get_backup_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass INSTALL_DIR gesetzt ist
+    : "${INSTALL_DIR:=$(get_install_dir)}"
+    # Pfade für Backup-Verzeichnis
     local dir
+    local path_system="$INSTALL_DIR/backup"
+    local path_default="$INSTALL_DIR/backup"
+    local path_fallback="$INSTALL_DIR/backup"
 
-    # Prüfen, ob BACKUP_DIR bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_backup_dir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$BACKUP_DIR" "$DEFAULT_DIR_BACKUP" "$FALLBACK_DIR_BACKUP" 1 1)    
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_backup_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$BACKUP_DIR" ]; then
+            BACKUP_DIR="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -724,16 +734,26 @@ get_nginx_backup_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass BACKUP_DIR gesetzt ist
+    : "${BACKUP_DIR:=$(get_backup_dir)}"
+    # Pfade für NGINX-Backup-Verzeichnis
     local dir
+    local path_system="$BACKUP_DIR/nginx"
+    local path_default="$BACKUP_DIR/nginx"
+    local path_fallback="$BACKUP_DIR/nginx"
 
-    # Prüfen, ob BACKUP_DIR_NGINX bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_nginx_backup_dir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$BACKUP_DIR_NGINX" "$DEFAULT_DIR_BACKUP_NGINX" "$FALLBACK_DIR_BACKUP_NGINX" 1 1)    
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_nginx_backup_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$BACKUP_DIR_NGINX" ]; then
+            BACKUP_DIR_NGINX="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -756,16 +776,26 @@ get_https_backup_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass BACKUP_DIR gesetzt ist
+    : "${BACKUP_DIR:=$(get_backup_dir)}"
+    # Pfade für https-Backup-Verzeichnis
     local dir
+    local path_system="$BACKUP_DIR/https"
+    local path_default="$BACKUP_DIR/https"
+    local path_fallback="$BACKUP_DIR/https"
 
-    # Prüfen, ob BACKUP_DIR_HTTPS bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_https_backup_dir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$BACKUP_DIR_HTTPS" "$DEFAULT_DIR_BACKUP_HTTPS" "$FALLBACK_DIR_BACKUP_HTTPS" 1 1)    
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_https_backup_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$BACKUP_DIR_HTTPS" ]; then
+            BACKUP_DIR_HTTPS="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -792,16 +822,26 @@ get_config_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass INSTALL_DIR gesetzt ist
+    : "${INSTALL_DIR:=$(get_install_dir)}"
+    # Pfade für Konfigurationsverzeichnis
     local dir
+    local path_system="$INSTALL_DIR/conf"
+    local path_default="$INSTALL_DIR/conf"
+    local path_fallback="/etc/fotobox"
 
-    # Prüfen, ob CONF_DIR bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_config_dir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$CONF_DIR" "$DEFAULT_DIR_CONF" "$FALLBACK_DIR_CONF" 1 1)    
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_config_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$CONF_DIR" ]; then
+            CONF_DIR="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -826,16 +866,26 @@ get_camera_conf_dir() {
     # Rückgabe.: Pfad zum Verzeichnis oder leerer String bei Fehler
     # Extras...: Erstellt bei Bedarf einen Symlink vom Standardpfad
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass CONF_DIR gesetzt ist
+    : "${CONF_DIR:=$(get_config_dir)}"
+    # Pfade für Kamera-Konfigurationsverzeichnis
     local dir
+    local path_system="$CONF_DIR/cameras"
+    local path_default="$CONF_DIR/cameras"
+    local path_fallback="$CONF_DIR/cameras"
 
-    # Prüfen, ob CONF_DIR bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_camera_conf_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$CONF_DIR_CAMERA" "$DEFAULT_DIR_CONF_CAMERA" "$FALLBACK_DIR_CONF_CAMERA" 1 1)    
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_camera_conf_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$CONF_DIR_CAMERA" ]; then
+            CONF_DIR_CAMERA="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -858,16 +908,26 @@ get_https_conf_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass CONF_DIR gesetzt ist
+    : "${CONF_DIR:=$(get_config_dir)}"
+    # Pfade für Backend-Verzeichnis
     local dir
+    local path_system="$CONF_DIR/https"
+    local path_default="$CONF_DIR/https"
+    local path_fallback="/etc/ssl/fotobox"
 
-    # Prüfen, ob CONF_DIR bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_https_conf_dir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$CONF_DIR_HTTPS" "$DEFAULT_DIR_CONF_HTTPS" "$FALLBACK_DIR_CONF_HTTPS" 1 1)    
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_https_conf_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$CONF_DIR_HTTPS" ]; then
+            CONF_DIR_HTTPS="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -878,7 +938,7 @@ get_https_conf_dir() {
 }
 
 # get_nginx_conf_dir
-get_nginx_conf_dir_debug_0001="INFO: Ermittle NGINX-Konfigurations-Verzeichnis"
+get_nginx_conf_dir_debug_0001="INFO: Ermittle NGINX-Konfigurations-Verzeichnis (Modus: %s)"
 get_nginx_conf_dir_debug_0002="SUCCESS: Verwendeter Pfad für NGINX-Konfigurations-Verzeichnis: %s"
 get_nginx_conf_dir_debug_0003="ERROR: Alle Pfade für NGINX-Konfigurations-Verzeichnis fehlgeschlagen"
 
@@ -887,19 +947,58 @@ get_nginx_conf_dir() {
     # get_nginx_conf_dir
     # -----------------------------------------------------------------------
     # Funktion: Gibt den Pfad zum NGINX-Konfigurationsverzeichnis zurück
-    # Parameter: keine
+    # Funktion: Gibt den Pfad zum Originalfotos-Verzeichnis zurück
+    # Parameter: $1 - Modus der WEB-Server Konfiguration, mögliche Werte:
+    # .........  'external'  = Eigene Konfiguration im Projekt Ordner
+    # .........  'internal'  = Integration in bestehende Konfig 
+    # .........  'activated' = Aktivierte Konfiguration
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    local conf_mode="${1:-'external'}" # Standard: 'external' für eigene Konfiguration
+    # Sicherstellen, dass CONF_DIR gesetzt ist
+    : "${CONF_DIR:=$(get_config_dir)}"
+    # Pfade für Konfigurations-Verzeichnis
     local dir
+    # Standard-Pfade für NGINX-Konfiguration bei Integration der eigenen
+    # Einstellungen in einen existierenden WEB-Server
+    local path_system="/etc/nginx/"
+    local path_system_internal="$path_system/sites-available"
+    # Standard-Pfade für NGINX-Konfiguration bei eigener Konfigurations-
+    # .........  Datei im Conf-Verzeichnis, wird per Symlink aufgerufen
+    local path_default="$CONF_DIR/nginx"
+    local path_default_external="$CONF_DIR/nginx/sites-available"
+    # Standard-Pfad für die aktivierte NGINX-Konfiguration
+    local path_activated="$path_system/sites-enabled"
 
     # Prüfen, ob CONF_DIR bereits gesetzt ist (z.B. vom install.sh)
-    debug "$get_nginx_conf_dir_debug_0001"
+    debug "$(printf "$get_nginx_conf_dir_debug_0001" "$conf_mode")"
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$CONF_DIR_NGINX" "$DEFAULT_DIR_CONF_NGINX" "$FALLBACK_DIR_CONF_NGINX" 1 1)    
+    # Bestimmen des Ordnerpfads basierend auf dem Konfigurationsmodus
+    case "$conf_mode" in
+        "external")
+            # Verwende die für diesen Ordner definierten Pfade
+            # Deaktiviere Fallback Order(0) und Erzeugen von Symlink (0)
+            dir=$(_get_folder_path "$path_default_external" "$path_default" "$path_default_external" 0 0)
+            ;;
+        "internal")
+            # Verwende die für diesen Ordner definierten Pfade
+            # Deaktiviere Fallback Order(0) und Erzeugen von Symlink (0)
+            dir=$(_get_folder_path "$path_system_internal" "$path_system" "$path_system_internal" 0 0)
+            ;;
+        "activated")
+            # Verwende die für diesen Ordner definierten Pfade
+            # Deaktiviere Fallback Order(0) und Erzeugen von Symlink (0)
+            dir=$(_get_folder_path "$path_activated" "$path_activated" "$path_activated" 0 0)
+            ;;
+    esac
+
+    # Wenn der Pfad erfolgreich ermittelt wurde, gebe ihn zurück
     if [ -n "$dir" ]; then
         debug "$(printf "$get_nginx_conf_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$CONF_DIR_NGINX" ]; then
+            CONF_DIR_NGINX="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -929,14 +1028,23 @@ get_template_dir() {
     # .......... Exit-Code 0 bei Erfolg, 1 bei Fehler
     # -----------------------------------------------------------------------
     local modul_name="${1:-}"
+    # Sicherstellen, dass CONF_DIR gesetzt ist
+    : "${CONF_DIR:=$(get_config_dir)}"
     local dir
+    local path_system="$CONF_DIR/templates"
+    local path_default="$CONF_DIR/templates"
+    local path_fallback="$CONF_DIR/templates"
         
-    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_template_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$CONF_DIR_TEMPLATES" "$DEFAULT_DIR_CONF_TEMPLATES" "$FALLBACK_DIR_CONF_TEMPLATES" 1 1)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
+    # System-Variable aktualisieren, wenn nötig
+    if [ -n "$dir" ] && [ "$dir" != "$CONF_DIR_TEMPLATES" ]; then
+        CONF_DIR_TEMPLATES="$dir"
+    fi
 
     # Basis-Verzeichnis konnte nicht erzeugt werden
     if [ -z "$dir" ]; then
@@ -945,7 +1053,7 @@ get_template_dir() {
         return 1
     fi
 
-    # Wenn kein Eventname übergeben wurde, gib das Basis-Verzeichnis zurück
+    # Wenn kein Modulname übergeben wurde, gib das Basis-Verzeichnis zurück
     if [ -z "$modul_name" ]; then
         debug "$(printf "$get_template_dir_debug_0002" "$dir")"
         echo "$dir"
@@ -993,16 +1101,26 @@ get_data_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Datenverzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass INSTALL_DIR gesetzt ist
+    : "${INSTALL_DIR:=$(get_install_dir)}"
+    # Pfade für Daten-Verzeichnis
     local dir
+    local path_system="$INSTALL_DIR/data"
+    local path_default="$INSTALL_DIR/data"
+    local path_fallback="/var/lib/fotobox"
 
-    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_data_dir_debug_0001" 
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$DATA_DIR" "$DEFAULT_DIR_DATA" "$FALLBACK_DIR_DATA" 1 1)    
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_data_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$DATA_DIR" ]; then
+            DATA_DIR="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -1029,16 +1147,26 @@ get_frontend_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass INSTALL_DIR gesetzt ist
+    : "${INSTALL_DIR:=$(get_install_dir)}"
+    # Pfade für Daten-Verzeichnis
     local dir
+    local path_system="$INSTALL_DIR/frontend"
+    local path_default="$INSTALL_DIR/frontend"
+    local path_fallback="/var/www/html/fotobox"
         
-    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
-    debug "$get_frontend_dir_debug_0001" "CLI" "get_backend_dir"
+    # Eröffnungsmeldung im Debug Modus
+    debug "$get_frontend_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$FRONTEND_DIR" "$DEFAULT_DIR_FRONTEND" "$FALLBACK_DIR_FRONTEND" 1 1)    
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$FRONTEND_DIR" ]; then
+            FRONTEND_DIR="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -1061,16 +1189,26 @@ get_frontend_css_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass FRONTEND_DIR gesetzt ist
+    : "${FRONTEND_DIR:=$(get_frontend_dir)}"
+    # Pfade für Daten-Verzeichnis
     local dir
+    local path_system="$FRONTEND_DIR/css"
+    local path_default="$FRONTEND_DIR/css"
+    local path_fallback="$FRONTEND_DIR/css"
 
-    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
-    debug "$get_frontend_css_dir_debug_0001" "CLI" "get_backend_dir"
+    # Eröffnungsmeldung im Debug Modus
+    debug "$get_frontend_css_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$FRONTEND_CSS_DIR" "$DEFAULT_DIR_FRONTEND_CSS" "$FALLBACK_DIR_FRONTEND_CSS" 1 1)    
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_css_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$FRONTEND_DIR_CSS" ]; then
+            FRONTEND_DIR_CSS="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -1093,16 +1231,26 @@ get_frontend_fonts_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass FRONTEND_DIR gesetzt ist
+    : "${FRONTEND_DIR:=$(get_frontend_dir)}"
+    # Pfade für Daten-Verzeichnis
     local dir
+    local path_system="$FRONTEND_DIR/fonts"
+    local path_default="$FRONTEND_DIR/fonts"
+    local path_fallback="$FRONTEND_DIR/fonts"
 
-    # Prüfen, ob FRONTEND_FONTS_DIR bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_frontend_fonts_dir_debug_0001" 
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$FRONTEND_FONTS_DIR" "$DEFAULT_DIR_FRONTEND_FONTS" "$FALLBACK_DIR_FRONTEND_FONTS" 1 1)    
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_fonts_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$FRONTEND_DIR_FONTS" ]; then
+            FRONTEND_DIR_FONTS="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -1125,16 +1273,26 @@ get_frontend_js_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass FRONTEND_DIR gesetzt ist
+    : "${FRONTEND_DIR:=$(get_frontend_dir)}"
+    # Pfade für Daten-Verzeichnis
     local dir
+    local path_system="$FRONTEND_DIR/js"
+    local path_default="$FRONTEND_DIR/js"
+    local path_fallback="$FRONTEND_DIR/js"
 
-    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_frontend_js_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$FRONTEND_JS_DIR" "$DEFAULT_DIR_FRONTEND_JS" "$FALLBACK_DIR_FRONTEND_JS" 1 1)    
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_js_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$FRONTEND_DIR_JS" ]; then
+            FRONTEND_DIR_JS="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -1157,16 +1315,26 @@ get_photos_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass FRONTEND_DIR gesetzt ist
+    : "${FRONTEND_DIR:=$(get_frontend_dir)}"
+    # Pfade für Daten-Verzeichnis
     local dir
+    local path_system="$FRONTEND_DIR/photos"
+    local path_default="$FRONTEND_DIR/photos"
+    local path_fallback="$FRONTEND_DIR/photos"
 
-    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_photos_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$FRONTEND_PHOTOS_DIR" "$DEFAULT_DIR_FRONTEND_PHOTOS" "$FALLBACK_DIR_FRONTEND_PHOTOS" 1 1)    
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_photos_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$FRONTEND_DIR_PHOTOS" ]; then
+            FRONTEND_DIR_PHOTOS="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -1193,14 +1361,24 @@ get_photos_originals_dir() {
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     local event_name="${1:-}"
+    # Sicherstellen, dass FRONTEND_DIR_PHOTOS gesetzt ist
+    : "${FRONTEND_DIR_PHOTOS:=$(get_photos_dir)}"
+    # Pfade für Daten-Verzeichnis
     local dir
-        
-    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    local path_system="$FRONTEND_DIR_PHOTOS/original"
+    local path_default="$FRONTEND_DIR_PHOTOS/original"
+    local path_fallback="$FRONTEND_DIR_PHOTOS/original"
+
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_photos_originals_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$FRONTEND_PHOTOS_ORIGINAL_DIR" "$DEFAULT_DIR_FRONTEND_PHOTOS_ORIGINAL" "$FALLBACK_DIR_FRONTEND_PHOTOS_ORIGINAL" 1 1)    
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
+    # System-Variable aktualisieren, wenn nötig
+    if [ -n "$dir" ] && [ "$dir" != "$FRONTEND_DIR_PHOTOS_ORIGINAL" ]; then
+        FRONTEND_DIR_PHOTOS_ORIGINAL="$dir"
+    fi
 
     # Basis-Verzeichnis konnte nicht erzeugt werden
     if [ -z "$dir" ]; then
@@ -1257,14 +1435,24 @@ get_photos_gallery_dir() {
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     local event_name="${1:-}"
+    # Sicherstellen, dass FRONTEND_DIR_PHOTOS gesetzt ist
+    : "${FRONTEND_DIR_PHOTOS:=$(get_photos_dir)}"
+    # Pfade für Daten-Verzeichnis
     local dir
-        
-    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    local path_system="$FRONTEND_DIR_PHOTOS/gallery"
+    local path_default="$FRONTEND_DIR_PHOTOS/gallery"
+    local path_fallback="$FRONTEND_DIR_PHOTOS/gallery"
+
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_photos_gallery_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$FRONTEND_PHOTOS_THUMBNAILS_DIR" "$DEFAULT_DIR_FRONTEND_PHOTOS_THUMBNAILS" "$FALLBACK_DIR_FRONTEND_PHOTOS_THUMBNAILS" 1 1)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
+    # System-Variable aktualisieren, wenn nötig
+    if [ -n "$dir" ] && [ "$dir" != "$FRONTEND_DIR_PHOTOS_THUMBNAILS" ]; then
+        FRONTEND_DIR_PHOTOS_THUMBNAILS="$dir"
+    fi
 
     # Basis-Verzeichnis konnte nicht erzeugt werden
     if [ -z "$dir" ]; then
@@ -1317,16 +1505,26 @@ get_frontend_picture_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass FRONTEND_DIR gesetzt ist
+    : "${FRONTEND_DIR:=$(get_frontend_dir)}"
+    # Pfade für Daten-Verzeichnis
     local dir
+    local path_system="$FRONTEND_DIR/picture"
+    local path_default="$FRONTEND_DIR/picture"
+    local path_fallback="$FRONTEND_DIR/picture"
 
-    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_frontend_picture_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$FRONTEND_PICTURE_DIR" "$DEFAULT_DIR_FRONTEND_PICTURE" "$FALLBACK_DIR_FRONTEND_PICTURE" 1 1)    
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_picture_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$FRONTEND_DIR_PICTURE" ]; then
+            FRONTEND_DIR_PICTURE="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -1353,16 +1551,26 @@ get_log_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # ------------------------------------------------------------------------------
+    # Sicherstellen, dass INSTALL_DIR gesetzt ist
+    : "${INSTALL_DIR:=$(get_install_dir)}"
+    # Pfade für Daten-Verzeichnis
     local dir
+    local path_system="$INSTALL_DIR/log"
+    local path_default="$INSTALL_DIR/log"
+    local path_fallback="/var/log/fotobox"
 
-    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_log_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$LOG_DIR" "$DEFAULT_DIR_LOG" "$FALLBACK_DIR_LOG" 1 1)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_log_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$LOG_DIR" ]; then
+            LOG_DIR="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -1389,16 +1597,26 @@ get_tmp_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass INSTALL_DIR gesetzt ist
+    : "${INSTALL_DIR:=$(get_install_dir)}"
+    # Pfade für Daten-Verzeichnis
     local dir
+    local path_system="$INSTALL_DIR/tmp"
+    local path_default="$INSTALL_DIR/tmp"
+    local path_fallback="/tmp/fotobox"
 
-    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_tmp_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$TMP_DIR" "$DEFAULT_DIR_TMP" "$FALLBACK_DIR_TMP" 1 1)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_tmp_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$TMP_DIR" ]; then
+            TMP_DIR="$dir"
+        fi
         echo "$dir"
         return 0
     fi
