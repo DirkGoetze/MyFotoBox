@@ -20,6 +20,7 @@ LIB_CORE_LOADED=1
 # ===========================================================================
 # Zentrale Definition des Skriptverzeichnisses - wird von allen Modulen verwendet
 : "${SCRIPT_DIR:="/opt/fotobox/backend/scripts"}"
+: "${CONF_DIR:="/opt/fotobox/conf"}"
 
 # Primäre Pfaddefinitionen (Single Source of Truth)
 # DEFAULT_DIR_INSTALL="/opt/fotobox"
@@ -150,7 +151,7 @@ DEFAULT_HTTP_PORT=80
 DEFAULT_HTTPS_PORT=443
 
 # Konfigurationsdatei
-DEFAULT_CONFIG_FILE="$DEFAULT_DIR_CONF/fotobox-config.ini"
+DEFAULT_CONFIG_FILE="$CONF_DIR/fotobox-config.ini"
 
 # Backend Service 
 SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
