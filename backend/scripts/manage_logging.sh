@@ -384,7 +384,7 @@ print_debug() {
     # -----------------------------------------------------------------------
     # Funktion: Gibt eine Debug-Ausgabe in Cyan aus (nur, wenn DEBUG aktiv)
     # Parameter: $* = Debugtext
-    if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ] || [ "${DEBUG_MOD:-0}" = "1" ]; then
+    if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ]; then
         local content="$*"
     
         # Einfacher Fall: Keine verschachtelten Debug-Ausgaben
