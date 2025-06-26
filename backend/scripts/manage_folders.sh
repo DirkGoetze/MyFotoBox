@@ -624,14 +624,12 @@ get_pip_path() {
     debug "$get_pip_path_debug_0001"
 
     # 1. Prüfe, ob PIP_EXEC bereits korrekt gesetzt ist
-    if [ -z "${PIP_EXEC+x}" ] || [ -z "$PIP_EXEC" ]; then
-        if [ -n "$PIP_EXEC" ] && [ -f "$PIP_EXEC" ] && [ -x "$PIP_EXEC" ]; then
-            debug "$(printf "$get_pip_path_debug_0002" "$PIP_EXEC")"
-            echo "$PIP_EXEC"
-            return 0
-        fi
-    fi
-    
+    if [ -n "${PIP_EXEC:-}" ] && [ -f "$PIP_EXEC" ] && [ -x "$PIP_EXEC" ]; then
+        debug "$(printf "$get_pip_path_debug_0002" "$PIP_EXEC")"
+        echo "$PIP_EXEC"
+        return 0
+    fi    
+
     # 2. Prüfe Standard-Unix/Linux-Pfade im venv
     local pip_path="${BACKEND_VENV_DIR}/bin/pip3"
     if [ -f "$pip_path" ] && [ -x "$pip_path" ]; then
