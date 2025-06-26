@@ -424,16 +424,19 @@ get_backend_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass INSTALL_DIR gesetzt ist
+    : "${INSTALL_DIR:=$(get_install_dir)}"
+    # Pfade für Backend-Verzeichnis
     local dir
-    local path_system="$(get_install_dir)/backend"
-    local path_default="$(get_install_dir)/backend"
-    local path_fallback="$(get_install_dir)/backend"
-        
-    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    local path_system="$INSTALL_DIR/backend"
+    local path_default="$INSTALL_DIR/backend"
+    local path_fallback="$INSTALL_DIR/backend"
+
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_backend_dir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_backend_dir_debug_0002" "$dir")"
@@ -463,16 +466,19 @@ get_script_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass BACKEND_DIR gesetzt ist
+    : "${BACKEND_DIR:=$(get_backend_dir)}"
+    # Pfade für Backend-Skript-Verzeichnis
     local dir
-    local path_system="$(get_backend_dir)/scripts"
-    local path_default="$(get_backend_dir)/scripts"
-    local path_fallback="$(get_backend_dir)/scripts"
-    
-    # Prüfen, ob SCRIPT_DIR bereits gesetzt ist (z.B. vom install.sh)
+    local path_system="$BACKEND_DIR/scripts"
+    local path_default="$BACKEND_DIR/scripts"
+    local path_fallback="$BACKEND_DIR/scripts"
+
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_script_dir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_script_dir_debug_0002" "$dir")"
@@ -502,16 +508,19 @@ get_venv_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass BACKEND_DIR gesetzt ist
+    : "${BACKEND_DIR:=$(get_backend_dir)}"
+    # Pfade für zum Python Virtual Environment-Verzeichnis
     local dir
-    local path_system="$(get_backend_dir)/venv"
-    local path_default="$(get_backend_dir)/venv"
-    local path_fallback="$(get_backend_dir)/venv"
+    local path_system="$BACKEND_DIR/venv"
+    local path_default="$BACKEND_DIR/venv"
+    local path_fallback="$BACKEND_DIR/venv"
 
-    # Prüfen, ob BACKEND_VENV_DIR bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_venv_dir_debug_0001"
-    
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_venv_dir_debug_0002" "$dir")"
@@ -522,7 +531,7 @@ get_venv_dir() {
         echo "$dir"
         return 0
     fi
-    
+
     debug "$get_venv_dir_debug_0003"
     echo ""
     return 1
@@ -541,12 +550,15 @@ get_python_path() {
     # Parameter: keine
     # Rückgabe: Pfad zum Python-Interpreter oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    local path_default="$(get_venv_dir)/bin/python3"
-    local path_fallback="$(get_venv_dir)/bin/python"
+    # Sicherstellen, dass BACKEND_VENV_DIR gesetzt ist
+    : "${BACKEND_VENV_DIR:=$(get_venv_dir)}"
+    # Pfade für zum Python-Interpreter-Verzeichnis
+    local path_default="$BACKEND_VENV_DIR/bin/python3"
+    local path_fallback="$BACKEND_VENV_DIR/bin/python"
 
     # Prüfen, ob PYTHON_EXEC bereits gesetzt ist (z.B. vom install.sh)
     debug "$get_python_path_debug_0001"
-    
+
     # Python-Interpreter-Pfad ermitteln und setzen
     if [ -x "$path_default" ]; then
         # Verwende Standard-Python-Pfad, wenn ausführbar
@@ -598,40 +610,39 @@ get_pip_path() {
     # Parameter: keine
     # Rückgabe: Pfad zur pip-Binary oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass BACKEND_VENV_DIR gesetzt ist
+    : "${BACKEND_VENV_DIR:=$(get_venv_dir)}"
+
     debug "$get_pip_path_debug_0001"
-    
+
     # 1. Prüfe, ob PIP_EXEC bereits korrekt gesetzt ist
     if [ -n "$PIP_EXEC" ] && [ -f "$PIP_EXEC" ] && [ -x "$PIP_EXEC" ]; then
         debug "$(printf "$get_pip_path_debug_0002" "$PIP_EXEC")"
         echo "$PIP_EXEC"
         return 0
     fi
-    
-    # 2. Hole venv_dir mit bestehender Funktion
-    local venv_dir
-    venv_dir=$(get_venv_dir)
-    
-    # 3. Prüfe Standard-Unix/Linux-Pfade im venv
-    local pip_path="${venv_dir}/bin/pip3"
+
+    # 2. Prüfe Standard-Unix/Linux-Pfade im venv
+    local pip_path="${BACKEND_VENV_DIR}/bin/pip3"
     if [ -f "$pip_path" ] && [ -x "$pip_path" ]; then
         PIP_EXEC="$pip_path"
         debug "$(printf "$get_pip_path_debug_0002" "$pip_path")"
         echo "$pip_path"
         return 0
     fi
-    
-    pip_path="${venv_dir}/bin/pip"
+
+    pip_path="${BACKEND_VENV_DIR}/bin/pip"
     if [ -f "$pip_path" ] && [ -x "$pip_path" ]; then
         PIP_EXEC="$pip_path"
         debug "$(printf "$get_pip_path_debug_0002" "$pip_path")"
         echo "$pip_path"
         return 0
     fi
-    
-    # 4. Fallback: Python-Module pip verwenden
+
+    # 3. Fallback: Python-Module pip verwenden
     local python_path
     python_path=$(get_python_path)
-    
+
     if [ -n "$python_path" ] && [ -f "$python_path" ] && [ -x "$python_path" ]; then
         # Prüfen, ob das Python-Modul pip verfügbar ist
         if "$python_path" -c "import pip" &>/dev/null; then
@@ -640,25 +651,25 @@ get_pip_path() {
             return 0
         fi
     fi
-    
-    # 5. Systemweite pip-Installation prüfen
+
+    # 4. Systemweite pip-Installation prüfen
     debug "$get_pip_path_debug_0005"
-    
+
     if command -v pip3 &>/dev/null; then
         pip_path=$(command -v pip3)
         debug "$(printf "$get_pip_path_debug_0006" "$pip_path")"
         echo "$pip_path"
         return 0
     fi
-    
+
     if command -v pip &>/dev/null; then
         pip_path=$(command -v pip)
         debug "$(printf "$get_pip_path_debug_0006" "$pip_path")"
         echo "$pip_path"
         return 0
     fi
-    
-    # 6. Keine pip-Installation gefunden
+
+    # 5. Keine pip-Installation gefunden
     debug "$get_pip_path_debug_0007"
     echo ""
     return 1
