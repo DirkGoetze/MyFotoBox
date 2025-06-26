@@ -18,11 +18,14 @@ LIB_CORE_LOADED=1
 # ===========================================================================
 # Zentrale Konstanten für das gesamte Fotobox-System
 # ===========================================================================
+# Zentrale Definition des Skriptverzeichnisses - wird von allen Modulen verwendet
+: "${SCRIPT_DIR:="/opt/fotobox/backend/scripts"}"
+
 # Primäre Pfaddefinitionen (Single Source of Truth)
 # DEFAULT_DIR_INSTALL="/opt/fotobox"
 # DEFAULT_DIR_BACKEND="$DEFAULT_DIR_INSTALL/backend"
-DEFAULT_DIR_BACKEND_SCRIPTS="$DEFAULT_DIR_BACKEND/scripts"
-DEFAULT_DIR_BACKEND_VENV="$DEFAULT_DIR_BACKEND/venv"
+# DEFAULT_DIR_BACKEND_SCRIPTS="$DEFAULT_DIR_BACKEND/scripts"
+# DEFAULT_DIR_BACKEND_VENV="$DEFAULT_DIR_BACKEND/venv"
 DEFAULT_DIR_PYTHON="$DEFAULT_DIR_BACKEND_VENV/bin/python3"
 DEFAULT_DIR_PIP="$DEFAULT_DIR_BACKEND_VENV/bin/pip3"
 DEFAULT_DIR_BACKUP="$DEFAULT_DIR_INSTALL/backup"
@@ -52,8 +55,8 @@ DEFAULT_DIR_TMP="$DEFAULT_DIR_INSTALL/tmp"
 # Fallback-Pfade für den Fall, dass Standardpfade nicht verfügbar sind
 # FALLBACK_DIR_INSTALL="/var/lib/fotobox" # "/usr/local/fotobox"
 # FALLBACK_DIR_BACKEND="$FALLBACK_DIR_INSTALL/backend"
-FALLBACK_DIR_BACKEND_SCRIPTS="$FALLBACK_DIR_INSTALL/backend/scripts"
-FALLBACK_DIR_BACKEND_VENV="$FALLBACK_DIR_INSTALL/backend/venv"
+# FALLBACK_DIR_BACKEND_SCRIPTS="$FALLBACK_DIR_INSTALL/backend/scripts"
+# FALLBACK_DIR_BACKEND_VENV="$FALLBACK_DIR_INSTALL/backend/venv"
 FALLBACK_DIR_PYTHON="$DEFAULT_DIR_BACKEND_VENV/bin/python"
 FALLBACK_DIR_BACKUP="/var/backups/fotobox"
 FALLBACK_DIR_BACKUP_NGINX="$FALLBACK_DIR_BACKUP/nginx"
@@ -104,9 +107,6 @@ FALLBACK_DIR_TMP="/tmp/fotobox"
 : "${FRONTEND_PICTURE_DIR:=$DEFAULT_DIR_FRONTEND_PICTURE}"
 : "${LOG_DIR:=$DEFAULT_DIR_LOG}"
 : "${TMP_DIR:=$DEFAULT_DIR_TMP}"
-
-# Zentrale Definition des Skriptverzeichnisses - wird von allen Modulen verwendet
-: "${SCRIPT_DIR:=$DEFAULT_DIR_BACKEND_SCRIPTS}"
 
 # Farbkonstanten für Ausgaben (Shell-ANSI)
 # ------------------------------------------------------------------------------

@@ -463,16 +463,23 @@ get_script_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    # HINWEIS: Diese Funktion verwendet nun die zentrale Definition von SCRIPT_DIR aus lib_core.sh
+    local dir
+    local path_system="$(get_backend_dir)/scripts"
+    local path_default="$(get_backend_dir)/scripts"
+    local path_fallback="$(get_backend_dir)/scripts"
     
     # Prüfen, ob SCRIPT_DIR bereits gesetzt ist (z.B. vom install.sh)
     debug "$get_script_dir_debug_0001"
 
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$SCRIPT_DIR" "$DEFAULT_DIR_BACKEND_SCRIPTS" "$FALLBACK_DIR_BACKEND_SCRIPTS" 1 1)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_script_dir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$SCRIPT_DIR" ]; then
+            SCRIPT_DIR="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -480,36 +487,6 @@ get_script_dir() {
     debug "$get_script_dir_debug_0003"
     echo ""
     return 1
-}
-
-# set_script_permissions
-set_script_permissions_debug_0001="ERROR: Skript-Verzeichnis %s existiert nicht"
-set_script_permissions_debug_0002="INFO: Setze Ausführbarkeitsrechte für %s/*.sh"
-set_script_permissions_debug_0003="SUCCESS: Ausführbarkeitsrechte erfolgreich gesetzt"
-
-set_script_permissions() {
-    # -----------------------------------------------------------------------
-    # set_script_permissions
-    # -----------------------------------------------------------------------
-    # Funktion: Setzt Ausführbarkeitsrechte für alle Skripte im Script-Verzeichnis
-    # Parameter: keine
-    # Rückgabe: 0 = OK, 1 = Verzeichnis existiert nicht
-    # -----------------------------------------------------------------------
-    local script_dir
-    
-    # Verwende die neue einheitliche get_script_dir Funktion
-    script_dir=$(get_script_dir)
-    
-    if [ ! -d "$script_dir" ]; then
-        debug "$(printf "$set_script_permissions_debug_0001" "$script_dir")" "CLI" "set_script_permissions"
-        return 1
-    fi
-    
-    debug "$(printf "$set_script_permissions_debug_0002" "$script_dir")" "CLI" "set_script_permissions"
-    chmod +x "$script_dir"/*.sh 2>/dev/null || true
-    
-    debug "$set_script_permissions_debug_0003" "CLI" "set_script_permissions"
-    return 0
 }
 
 # get_venv_dir
@@ -526,14 +503,20 @@ get_venv_dir() {
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     local dir
+    local path_system="$(get_backend_dir)/venv"
+    local path_default="$(get_backend_dir)/venv"
+    local path_fallback="$(get_backend_dir)/venv"
     
     debug "$get_venv_dir_debug_0001"
     
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$BACKEND_VENV_DIR" "$DEFAULT_DIR_BACKEND_VENV" "$FALLBACK_DIR_BACKEND_VENV" 1 1)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_venv_dir_debug_0002" "$dir")"
+        if [ "$dir" != "$BACKEND_VENV_DIR" ]; then
+            BACKEND_VENV_DIR="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -1418,6 +1401,36 @@ get_tmp_dir() {
 # ---------------------------------------------------------------------------
 # Verzeichnis Struktur für das Projekt sicherstellen
 # ---------------------------------------------------------------------------
+
+# set_script_permissions
+set_script_permissions_debug_0001="ERROR: Skript-Verzeichnis %s existiert nicht"
+set_script_permissions_debug_0002="INFO: Setze Ausführbarkeitsrechte für %s/*.sh"
+set_script_permissions_debug_0003="SUCCESS: Ausführbarkeitsrechte erfolgreich gesetzt"
+
+set_script_permissions() {
+    # -----------------------------------------------------------------------
+    # set_script_permissions
+    # -----------------------------------------------------------------------
+    # Funktion: Setzt Ausführbarkeitsrechte für alle Skripte im Script-Verzeichnis
+    # Parameter: keine
+    # Rückgabe: 0 = OK, 1 = Verzeichnis existiert nicht
+    # -----------------------------------------------------------------------
+    local script_dir
+    
+    # Verwende die neue einheitliche get_script_dir Funktion
+    script_dir=$(get_script_dir)
+    
+    if [ ! -d "$script_dir" ]; then
+        debug "$(printf "$set_script_permissions_debug_0001" "$script_dir")" "CLI" "set_script_permissions"
+        return 1
+    fi
+    
+    debug "$(printf "$set_script_permissions_debug_0002" "$script_dir")" "CLI" "set_script_permissions"
+    chmod +x "$script_dir"/*.sh 2>/dev/null || true
+    
+    debug "$set_script_permissions_debug_0003" "CLI" "set_script_permissions"
+    return 0
+}
 
 # ensure_folder_structure
 ensure_folder_structure_debug_0001="INFO: Stelle sicher, dass alle notwendigen Verzeichnisse existieren"
