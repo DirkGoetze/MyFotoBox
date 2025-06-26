@@ -395,8 +395,9 @@ get_install_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_install_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$INSTALL_DIR" ]; then
+        if [ -z "$INSTALL_DIR" ] || [ "$dir" != "$INSTALL_DIR" ]; then
             INSTALL_DIR="$dir"
+            export INSTALL_DIR
         fi
         echo "$dir"
         return 0
@@ -441,8 +442,9 @@ get_backend_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_backend_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$BACKEND_DIR" ]; then
+        if [ -z "$BACKEND_DIR" ] || [ "$dir" != "$BACKEND_DIR" ]; then
             BACKEND_DIR="$dir"
+            export BACKEND_DIR
         fi
         echo "$dir"
         return 0
@@ -483,8 +485,9 @@ get_script_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_script_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$SCRIPT_DIR" ]; then
+        if [ -z "$SCRIPT_DIR" ] || [ "$dir" != "$SCRIPT_DIR" ]; then
             SCRIPT_DIR="$dir"
+            export SCRIPT_DIR
         fi
         echo "$dir"
         return 0
@@ -525,8 +528,9 @@ get_venv_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_venv_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$BACKEND_VENV_DIR" ]; then
+        if [ -z "$BACKEND_VENV_DIR" ] || [ "$dir" != "$BACKEND_VENV_DIR" ]; then
             BACKEND_VENV_DIR="$dir"
+            export BACKEND_VENV_DIR
         fi
         echo "$dir"
         return 0
@@ -563,24 +567,28 @@ get_python_path() {
     if [ -x "$path_default" ]; then
         # Verwende Standard-Python-Pfad, wenn ausführbar
         PYTHON_EXEC="$path_default"
+        export PYTHON_EXEC
         debug "$(printf "$get_python_path_debug_0002" "$PYTHON_EXEC")"
         echo "$PYTHON_EXEC"
         return 0
     elif [ -x "$path_fallback" ]; then
         # Verwende Fallback-Python-Pfad, wenn ausführbar
         PYTHON_EXEC="$path_fallback"
+        export PYTHON_EXEC
         debug "$(printf "$get_python_path_debug_0002" "$PYTHON_EXEC")"
         echo "$PYTHON_EXEC"
         return 0
     elif command -v python3 &>/dev/null; then
         # Verwende System-Python3, wenn verfügbar
         PYTHON_EXEC="$(command -v python3)"
+        export PYTHON_EXEC
         debug "$(printf "$get_python_path_debug_0002" "$PYTHON_EXEC")"
         echo "$PYTHON_EXEC"
         return 0
     elif command -v python &>/dev/null; then
         # Verwende System-Python, als letzten Fallback
         PYTHON_EXEC="$(command -v python)"
+        export PYTHON_EXEC
         debug "$(printf "$get_python_path_debug_0002" "$PYTHON_EXEC")"
         echo "$PYTHON_EXEC"
         return 0
@@ -626,6 +634,7 @@ get_pip_path() {
     local pip_path="${BACKEND_VENV_DIR}/bin/pip3"
     if [ -f "$pip_path" ] && [ -x "$pip_path" ]; then
         PIP_EXEC="$pip_path"
+        export PIP_EXEC
         debug "$(printf "$get_pip_path_debug_0002" "$pip_path")"
         echo "$pip_path"
         return 0
@@ -634,6 +643,7 @@ get_pip_path() {
     pip_path="${BACKEND_VENV_DIR}/bin/pip"
     if [ -f "$pip_path" ] && [ -x "$pip_path" ]; then
         PIP_EXEC="$pip_path"
+        export PIP_EXEC
         debug "$(printf "$get_pip_path_debug_0002" "$pip_path")"
         echo "$pip_path"
         return 0
@@ -647,7 +657,9 @@ get_pip_path() {
         # Prüfen, ob das Python-Modul pip verfügbar ist
         if "$python_path" -c "import pip" &>/dev/null; then
             debug "$(printf "$get_pip_path_debug_0004" "$python_path")"
-            echo "$python_path -m pip"
+            PIP_EXEC="$python_path -m pip"
+            export PIP_EXEC
+            echo "$PIP_EXEC"
             return 0
         fi
     fi
@@ -658,14 +670,18 @@ get_pip_path() {
     if command -v pip3 &>/dev/null; then
         pip_path=$(command -v pip3)
         debug "$(printf "$get_pip_path_debug_0006" "$pip_path")"
-        echo "$pip_path"
+        PIP_EXEC="$pip_path"
+        export PIP_EXEC
+        echo "$PIP_EXEC"
         return 0
     fi
 
     if command -v pip &>/dev/null; then
         pip_path=$(command -v pip)
         debug "$(printf "$get_pip_path_debug_0006" "$pip_path")"
-        echo "$pip_path"
+        PIP_EXEC="$pip_path"
+        export PIP_EXEC
+        echo "$PIP_EXEC"
         return 0
     fi
 
@@ -709,8 +725,9 @@ get_backup_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_backup_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$BACKUP_DIR" ]; then
+        if [ -z "$BACKUP_DIR" ] || [ "$dir" != "$BACKUP_DIR" ]; then
             BACKUP_DIR="$dir"
+            export BACKUP_DIR
         fi
         echo "$dir"
         return 0
@@ -751,8 +768,9 @@ get_nginx_backup_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_nginx_backup_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$BACKUP_DIR_NGINX" ]; then
+        if [ -z "$BACKUP_DIR_NGINX" ] || [ "$dir" != "$BACKUP_DIR_NGINX" ]; then
             BACKUP_DIR_NGINX="$dir"
+            export BACKUP_DIR_NGINX
         fi
         echo "$dir"
         return 0
@@ -793,8 +811,9 @@ get_https_backup_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_https_backup_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$BACKUP_DIR_HTTPS" ]; then
+        if [ -z "$BACKUP_DIR_HTTPS" ] || [ "$dir" != "$BACKUP_DIR_HTTPS" ]; then
             BACKUP_DIR_HTTPS="$dir"
+            export BACKUP_DIR_HTTPS
         fi
         echo "$dir"
         return 0
@@ -839,8 +858,9 @@ get_config_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_config_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$CONF_DIR" ]; then
+        if [ -z "$CONF_DIR" ] || [ "$dir" != "$CONF_DIR" ]; then
             CONF_DIR="$dir"
+            export CONF_DIR
         fi
         echo "$dir"
         return 0
@@ -883,8 +903,9 @@ get_camera_conf_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_camera_conf_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$CONF_DIR_CAMERA" ]; then
+        if [ -z "$CONF_DIR_CAMERA" ] || [ "$dir" != "$CONF_DIR_CAMERA" ]; then
             CONF_DIR_CAMERA="$dir"
+            export CONF_DIR_CAMERA
         fi
         echo "$dir"
         return 0
@@ -925,8 +946,9 @@ get_https_conf_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_https_conf_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$CONF_DIR_HTTPS" ]; then
+        if [ -z "$CONF_DIR_HTTPS" ] || [ "$dir" != "$CONF_DIR_HTTPS" ]; then
             CONF_DIR_HTTPS="$dir"
+            export CONF_DIR_HTTPS
         fi
         echo "$dir"
         return 0
@@ -996,8 +1018,9 @@ get_nginx_conf_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_nginx_conf_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$CONF_DIR_NGINX" ]; then
+        if [ -z "$CONF_DIR_NGINX" ] || [ "$dir" != "$CONF_DIR_NGINX" ]; then
             CONF_DIR_NGINX="$dir"
+            export CONF_DIR_NGINX
         fi
         echo "$dir"
         return 0
@@ -1041,16 +1064,20 @@ get_template_dir() {
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
-    # System-Variable aktualisieren, wenn nötig
-    if [ -n "$dir" ] && [ "$dir" != "$CONF_DIR_TEMPLATES" ]; then
-        CONF_DIR_TEMPLATES="$dir"
-    fi
-
+    
     # Basis-Verzeichnis konnte nicht erzeugt werden
     if [ -z "$dir" ]; then
         debug "$(printf "$get_template_dir_debug_0005")"
         echo ""
         return 1
+    fi
+
+    # System-Variable aktualisieren, wenn nötig
+    if [ -n "$dir" ]; then
+        if  [ -z "$CONF_DIR_TEMPLATES" ] || [ "$dir" != "$CONF_DIR_TEMPLATES" ]; then
+            CONF_DIR_TEMPLATES="$dir"
+            export CONF_DIR_TEMPLATES
+        fi
     fi
 
     # Wenn kein Modulname übergeben wurde, gib das Basis-Verzeichnis zurück
@@ -1118,8 +1145,9 @@ get_data_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_data_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$DATA_DIR" ]; then
+        if [ -z "$DATA_DIR" ] || [ "$dir" != "$DATA_DIR" ]; then
             DATA_DIR="$dir"
+            export DATA_DIR
         fi
         echo "$dir"
         return 0
@@ -1164,8 +1192,9 @@ get_frontend_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$FRONTEND_DIR" ]; then
+        if [ -z "$FRONTEND_DIR" ] || [ "$dir" != "$FRONTEND_DIR" ]; then
             FRONTEND_DIR="$dir"
+            export FRONTEND_DIR
         fi
         echo "$dir"
         return 0
@@ -1206,8 +1235,9 @@ get_frontend_css_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_css_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$FRONTEND_DIR_CSS" ]; then
+        if [ -z "$FRONTEND_DIR_CSS" ] || [ "$dir" != "$FRONTEND_DIR_CSS" ]; then
             FRONTEND_DIR_CSS="$dir"
+            export FRONTEND_DIR_CSS
         fi
         echo "$dir"
         return 0
@@ -1248,8 +1278,9 @@ get_frontend_fonts_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_fonts_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$FRONTEND_DIR_FONTS" ]; then
+        if [ -z "$FRONTEND_DIR_FONTS" ] || [ "$dir" != "$FRONTEND_DIR_FONTS" ]; then
             FRONTEND_DIR_FONTS="$dir"
+            export FRONTEND_DIR_FONTS
         fi
         echo "$dir"
         return 0
@@ -1290,8 +1321,9 @@ get_frontend_js_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_js_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$FRONTEND_DIR_JS" ]; then
+        if [ -z "$FRONTEND_DIR_JS" ] || [ "$dir" != "$FRONTEND_DIR_JS" ]; then
             FRONTEND_DIR_JS="$dir"
+            export FRONTEND_DIR_JS
         fi
         echo "$dir"
         return 0
@@ -1332,8 +1364,9 @@ get_photos_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_photos_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$FRONTEND_DIR_PHOTOS" ]; then
+        if [ -z "$FRONTEND_DIR_PHOTOS" ] || [ "$dir" != "$FRONTEND_DIR_PHOTOS" ]; then
             FRONTEND_DIR_PHOTOS="$dir"
+            export FRONTEND_DIR_PHOTOS
         fi
         echo "$dir"
         return 0
@@ -1375,16 +1408,20 @@ get_photos_originals_dir() {
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
-    # System-Variable aktualisieren, wenn nötig
-    if [ -n "$dir" ] && [ "$dir" != "$FRONTEND_DIR_PHOTOS_ORIGINAL" ]; then
-        FRONTEND_DIR_PHOTOS_ORIGINAL="$dir"
-    fi
 
     # Basis-Verzeichnis konnte nicht erzeugt werden
     if [ -z "$dir" ]; then
         debug "$(printf "$get_photos_originals_dir_debug_0005")"
         echo ""
         return 1
+    fi
+
+    # System-Variable aktualisieren, wenn nötig
+    if [ -n "$dir" ]; then
+        if [ -z "$FRONTEND_DIR_PHOTOS_ORIGINAL" ] || [ "$dir" != "$FRONTEND_DIR_PHOTOS_ORIGINAL" ]; then
+            FRONTEND_DIR_PHOTOS_ORIGINAL="$dir"
+            export FRONTEND_DIR_PHOTOS_ORIGINAL
+        fi
     fi
 
     # Wenn kein Eventname übergeben wurde, gib das Basis-Verzeichnis zurück
@@ -1449,16 +1486,19 @@ get_photos_gallery_dir() {
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
-    # System-Variable aktualisieren, wenn nötig
-    if [ -n "$dir" ] && [ "$dir" != "$FRONTEND_DIR_PHOTOS_THUMBNAILS" ]; then
-        FRONTEND_DIR_PHOTOS_THUMBNAILS="$dir"
-    fi
 
     # Basis-Verzeichnis konnte nicht erzeugt werden
     if [ -z "$dir" ]; then
         debug "$(printf "$get_photos_gallery_dir_debug_0005")"
         echo ""
         return 1
+    fi
+
+    if [ -n "$dir" ]; then
+        if [ -z "$FRONTEND_DIR_PHOTOS_THUMBNAILS" ] || [ "$dir" != "$FRONTEND_DIR_PHOTOS_THUMBNAILS" ]; then
+            FRONTEND_DIR_PHOTOS_THUMBNAILS="$dir"
+            export FRONTEND_DIR_PHOTOS_THUMBNAILS
+        fi
     fi
 
     # Wenn kein Eventname übergeben wurde, gib das Basis-Verzeichnis zurück
@@ -1522,8 +1562,9 @@ get_frontend_picture_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_picture_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$FRONTEND_DIR_PICTURE" ]; then
+        if [ -z "$FRONTEND_DIR_PICTURE" ] || [ "$dir" != "$FRONTEND_DIR_PICTURE" ]; then
             FRONTEND_DIR_PICTURE="$dir"
+            export FRONTEND_DIR_PICTURE
         fi
         echo "$dir"
         return 0
@@ -1568,8 +1609,9 @@ get_log_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_log_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$LOG_DIR" ]; then
+        if [ -z "$LOG_DIR" ] || [ "$dir" != "$LOG_DIR" ]; then
             LOG_DIR="$dir"
+            export LOG_DIR
         fi
         echo "$dir"
         return 0
@@ -1614,8 +1656,9 @@ get_tmp_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_tmp_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$TMP_DIR" ]; then
+        if [ -z "$TMP_DIR" ] || [ "$dir" != "$TMP_DIR" ]; then
             TMP_DIR="$dir"
+            export TMP_DIR
         fi
         echo "$dir"
         return 0
@@ -1746,8 +1789,9 @@ get_nginx_systemdir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_nginx_systemdir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$SYSTEM_PATH_NGINX" ]; then
+        if [ -z "$SYSTEM_PATH_NGINX" ] || [ "$dir" != "$SYSTEM_PATH_NGINX" ]; then
             SYSTEM_PATH_NGINX="$dir"
+            export SYSTEM_PATH_NGINX
         fi
         echo "$dir"
         return 0
@@ -1788,8 +1832,9 @@ get_systemd_systemdir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_systemd_systemdir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$SYSTEM_PATH_SYSTEMD" ]; then
+        if [ -z "$SYSTEM_PATH_SYSTEMD" ] || [ "$dir" != "$SYSTEM_PATH_SYSTEMD" ]; then
             SYSTEM_PATH_SYSTEMD="$dir"
+            export SYSTEM_PATH_SYSTEMD
         fi
         echo "$dir"
         return 0
@@ -1830,8 +1875,9 @@ get_ssl_systemdir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_ssl_systemdir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$SYSTEM_PATH_SSL" ]; then
+        if [ -z "$SYSTEM_PATH_SSL" ] || [ "$dir" != "$SYSTEM_PATH_SSL" ]; then
             SYSTEM_PATH_SSL="$dir"
+            export SYSTEM_PATH_SSL
         fi
         echo "$dir"
         return 0
@@ -1872,8 +1918,9 @@ get_ssl_cert_systemdir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_ssl_cert_systemdir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$SYSTEM_PATH_SSL_CERTS" ]; then
+        if [ -z "$SYSTEM_PATH_SSL_CERTS" ] || [ "$dir" != "$SYSTEM_PATH_SSL_CERTS" ]; then
             SYSTEM_PATH_SSL_CERTS="$dir"
+            export SYSTEM_PATH_SSL_CERTS
         fi
         echo "$dir"
         return 0
@@ -1914,8 +1961,9 @@ get_ssl_key_systemdir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_ssl_key_systemdir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ "$dir" != "$SYSTEM_PATH_SSL_KEY" ]; then
+        if [ -z "$SYSTEM_PATH_SSL_KEY" ] || [ "$dir" != "$SYSTEM_PATH_SSL_KEY" ]; then
             SYSTEM_PATH_SSL_KEY="$dir"
+            export SYSTEM_PATH_SSL_KEY
         fi
         echo "$dir"
         return 0
