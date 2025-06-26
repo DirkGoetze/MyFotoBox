@@ -44,11 +44,11 @@ MANAGE_FOLDERS_LOADED=0
 # Lokale Konstanten (Vorgaben und Defaults nur für die Installation)
 # ===========================================================================
 # System-Dateipfade mit Standardorten
-SYSTEM_PATH_NGINX="/etc/nginx/sites-available"
-SYSTEM_PATH_SYSTEMD="/etc/systemd/system"
-SYSTEM_PATH_SSL="/etc/ssl"
-SYSTEM_PATH_SSL_CERT="/etc/ssl/certs"
-SYSTEM_PATH_SSL_KEY="/etc/ssl/private"
+# SYSTEM_PATH_NGINX="/etc/nginx/sites-available"
+# SYSTEM_PATH_SYSTEMD="/etc/systemd/system"
+# SYSTEM_PATH_SSL="/etc/ssl"
+# SYSTEM_PATH_SSL_CERT="/etc/ssl/certs"
+# SYSTEM_PATH_SSL_KEY="/etc/ssl/private"
 # ---------------------------------------------------------------------------
 # Lokale Aliase für bessere Lesbarkeit
 : "${USER:=$DEFAULT_USER}"
@@ -386,12 +386,12 @@ get_install_dir() {
     local path_default="/opt/fotobox"
     local path_fallback="/usr/local/fotobox"
 
-    # Prüfen, ob INSTALL_DIR bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_install_dir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade
+    # Verwende die für diesen Ordner definierten Pfade
+    # Deaktiviere Fallback Order(0) und das Erzeugen von Symlink (0)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 0 0)
-
     if [ -n "$dir" ]; then
         debug "$(printf "$get_install_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
@@ -1733,14 +1733,22 @@ get_nginx_systemdir() {
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     local dir
+    local path_system="/usr/sbin/nginx"
+    local path_default="/usr/sbin/nginx"
+    local path_fallback="/usr/sbin/nginx"
 
-    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_nginx_systemdir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
-    dir=$(_get_folder_path "$SYSTEM_PATH_NGINX" "$DEFAULT_DIR_CONF_NGINX" "$FALLBACK_DIR_CONF_NGINX" 1 0)
+    # Verwende die für diesen Ordner definierten Pfade
+    # Deaktiviere Fallback Order(0) und das Erzeugen von Symlink (0)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 0 0)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_nginx_systemdir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$SYSTEM_PATH_NGINX" ]; then
+            SYSTEM_PATH_NGINX="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -1763,15 +1771,26 @@ get_systemd_systemdir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-   local dir
+    # Sicherstellen, dass CONF_DIR gesetzt ist
+    : "${CONF_DIR:=$(get_config_dir)}"
+    # Pfade zu möglichen systemd-Systemverzeichnis
+    local dir
+    local path_system="/etc/systemd/system"
+    local path_default="$CONF_DIR/systemd"
+    local path_fallback="/etc/systemd/system"
 
-    # Prüfen, ob BACKEND_DIR bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_systemd_systemdir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
-    dir=$(_get_folder_path "$SYSTEM_PATH_SYSTEMD" "$DEFAULT_DIR_CONF_SYSTEMD" "$FALLBACK_DIR_CONF_SYSTEMD" 1 0)
+    # Verwende die für diesen Ordner definierten Pfade
+    # Deaktiviere Fallback Order(1) und das Erzeugen von Symlink (1)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_systemd_systemdir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$SYSTEM_PATH_SYSTEMD" ]; then
+            SYSTEM_PATH_SYSTEMD="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -1794,15 +1813,26 @@ get_ssl_systemdir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass CONF_DIR gesetzt ist
+    : "${CONF_DIR:=$(get_config_dir)}"
+    # Pfade zu möglichen systemd-Systemverzeichnis
     local dir
+    local path_system="/etc/ssl"
+    local path_default="$CONF_DIR/ssl"
+    local path_fallback="/etc/ssl"
 
-    # Prüfen, ob SYSTEM_PATH_SSL bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_ssl_systemdir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
-    dir=$(_get_folder_path "$SYSTEM_PATH_SSL" "$DEFAULT_DIR_CONF_SSL" "$FALLBACK_DIR_CONF_SSL" 1 0)
+    # Verwende die für diesen Ordner definierten Pfade
+    # Deaktiviere Fallback Order(1) und das Erzeugen von Symlink (1)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_ssl_systemdir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$SYSTEM_PATH_SSL" ]; then
+            SYSTEM_PATH_SSL="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -1825,15 +1855,26 @@ get_ssl_cert_systemdir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass SYSTEM_PATH_SSL gesetzt ist
+    : "${SYSTEM_PATH_SSL:=$(get_ssl_systemdir)}"
+    # Pfade zu möglichen systemd-Systemverzeichnis
     local dir
+    local path_system="/etc/ssl/certs"
+    local path_default="$SYSTEM_PATH_SSL/certs"
+    local path_fallback="/etc/ssl/certs"
 
-    # Prüfen, ob SYSTEM_PATH_SSL_CERT bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_ssl_cert_systemdir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
-    dir=$(_get_folder_path "$SYSTEM_PATH_SSL_CERT" "$DEFAULT_DIR_CONF_SSL_CERTS" "$FALLBACK_DIR_CONF_SSL_CERTS" 1 0)
+    # Verwende die für diesen Ordner definierten Pfade
+    # Deaktiviere Fallback Order(1) und das Erzeugen von Symlink (1)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_ssl_cert_systemdir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$SYSTEM_PATH_SSL_CERTS" ]; then
+            SYSTEM_PATH_SSL_CERTS="$dir"
+        fi
         echo "$dir"
         return 0
     fi
@@ -1856,15 +1897,26 @@ get_ssl_key_systemdir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
+    # Sicherstellen, dass SYSTEM_PATH_SSL gesetzt ist
+    : "${SYSTEM_PATH_SSL:=$(get_ssl_systemdir)}"
+    # Pfade zu möglichen systemd-Systemverzeichnis
     local dir
+    local path_system="/etc/ssl/private"
+    local path_default="$SYSTEM_PATH_SSL/private"
+    local path_fallback="/etc/ssl/private"
 
-    # Prüfen, ob SYSTEM_PATH_SSL_KEY bereits gesetzt ist (z.B. vom install.sh)
+    # Eröffnungsmeldung im Debug Modus
     debug "$get_ssl_key_systemdir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade oder das Konfigurationsverzeichnis
-    dir=$(_get_folder_path "$SYSTEM_PATH_SSL_KEY" "$DEFAULT_DIR_CONF_SSL_KEYS" "$FALLBACK_DIR_CONF_SSL_KEYS" 1 0)
+    # Verwende die für diesen Ordner definierten Pfade
+    # Deaktiviere Fallback Order(1) und das Erzeugen von Symlink (1)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_ssl_key_systemdir_debug_0002" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ "$dir" != "$SYSTEM_PATH_SSL_KEY" ]; then
+            SYSTEM_PATH_SSL_KEY="$dir"
+        fi
         echo "$dir"
         return 0
     fi
