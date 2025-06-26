@@ -395,7 +395,7 @@ get_install_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_install_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$INSTALL_DIR" ] || [ "$dir" != "$INSTALL_DIR" ]; then
+        if [ -z "${INSTALL_DIR+x}" ] || [ -z "$INSTALL_DIR" ] || [ "$dir" != "$INSTALL_DIR" ]; then
             INSTALL_DIR="$dir"
             export INSTALL_DIR
         fi
