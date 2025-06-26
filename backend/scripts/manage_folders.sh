@@ -442,7 +442,7 @@ get_backend_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_backend_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$BACKEND_DIR" ] || [ "$dir" != "$BACKEND_DIR" ]; then
+        if [ -z "${BACKEND_DIR+x}" ] || [ -z "$BACKEND_DIR" ] || [ "$dir" != "$BACKEND_DIR" ]; then
             BACKEND_DIR="$dir"
             export BACKEND_DIR
         fi
@@ -485,7 +485,7 @@ get_script_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_script_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$SCRIPT_DIR" ] || [ "$dir" != "$SCRIPT_DIR" ]; then
+        if [ -z "${SCRIPT_DIR+x}" ] || [ -z "$SCRIPT_DIR" ] || [ "$dir" != "$SCRIPT_DIR" ]; then
             SCRIPT_DIR="$dir"
             export SCRIPT_DIR
         fi
@@ -528,7 +528,7 @@ get_venv_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_venv_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$BACKEND_VENV_DIR" ] || [ "$dir" != "$BACKEND_VENV_DIR" ]; then
+        if [ -z "${BACKEND_VENV_DIR+x}" ] || [ -z "$BACKEND_VENV_DIR" ] || [ "$dir" != "$BACKEND_VENV_DIR" ]; then
             BACKEND_VENV_DIR="$dir"
             export BACKEND_VENV_DIR
         fi
@@ -725,7 +725,7 @@ get_backup_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_backup_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$BACKUP_DIR" ] || [ "$dir" != "$BACKUP_DIR" ]; then
+        if [ -z "${BACKUP_DIR+x}" ] || [ -z "$BACKUP_DIR" ] || [ "$dir" != "$BACKUP_DIR" ]; then
             BACKUP_DIR="$dir"
             export BACKUP_DIR
         fi
@@ -768,7 +768,7 @@ get_nginx_backup_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_nginx_backup_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$BACKUP_DIR_NGINX" ] || [ "$dir" != "$BACKUP_DIR_NGINX" ]; then
+        if [ -z "${BACKUP_DIR_NGINX+x}" ] || [ -z "$BACKUP_DIR_NGINX" ] || [ "$dir" != "$BACKUP_DIR_NGINX" ]; then
             BACKUP_DIR_NGINX="$dir"
             export BACKUP_DIR_NGINX
         fi
@@ -811,7 +811,7 @@ get_https_backup_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_https_backup_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$BACKUP_DIR_HTTPS" ] || [ "$dir" != "$BACKUP_DIR_HTTPS" ]; then
+        if [ -z "${BACKUP_DIR_HTTPS+x}" ] || [ -z "$BACKUP_DIR_HTTPS" ] || [ "$dir" != "$BACKUP_DIR_HTTPS" ]; then
             BACKUP_DIR_HTTPS="$dir"
             export BACKUP_DIR_HTTPS
         fi
@@ -858,7 +858,7 @@ get_config_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_config_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$CONF_DIR" ] || [ "$dir" != "$CONF_DIR" ]; then
+        if [ -z "${CONF_DIR+x}" ] || [ -z "$CONF_DIR" ] || [ "$dir" != "$CONF_DIR" ]; then
             CONF_DIR="$dir"
             export CONF_DIR
         fi
@@ -903,7 +903,7 @@ get_camera_conf_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_camera_conf_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$CONF_DIR_CAMERA" ] || [ "$dir" != "$CONF_DIR_CAMERA" ]; then
+        if [ -z "${CONF_DIR_CAMERA+x}" ] || [ -z "$CONF_DIR_CAMERA" ] || [ "$dir" != "$CONF_DIR_CAMERA" ]; then
             CONF_DIR_CAMERA="$dir"
             export CONF_DIR_CAMERA
         fi
@@ -946,7 +946,7 @@ get_https_conf_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_https_conf_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$CONF_DIR_HTTPS" ] || [ "$dir" != "$CONF_DIR_HTTPS" ]; then
+        if [ -z "${CONF_DIR_HTTPS+x}" ] || [ -z "$CONF_DIR_HTTPS" ] || [ "$dir" != "$CONF_DIR_HTTPS" ]; then
             CONF_DIR_HTTPS="$dir"
             export CONF_DIR_HTTPS
         fi
@@ -1018,7 +1018,7 @@ get_nginx_conf_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_nginx_conf_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$CONF_DIR_NGINX" ] || [ "$dir" != "$CONF_DIR_NGINX" ]; then
+        if [ -z "${CONF_DIR_NGINX+x}" ] || [ -z "$CONF_DIR_NGINX" ] || [ "$dir" != "$CONF_DIR_NGINX" ]; then
             CONF_DIR_NGINX="$dir"
             export CONF_DIR_NGINX
         fi
@@ -1074,7 +1074,7 @@ get_template_dir() {
 
     # System-Variable aktualisieren, wenn nötig
     if [ -n "$dir" ]; then
-        if  [ -z "$CONF_DIR_TEMPLATES" ] || [ "$dir" != "$CONF_DIR_TEMPLATES" ]; then
+        if [ -z "${CONF_DIR_TEMPLATES+x}" ] || [ -z "$CONF_DIR_TEMPLATES" ] || [ "$dir" != "$CONF_DIR_TEMPLATES" ]; then
             CONF_DIR_TEMPLATES="$dir"
             export CONF_DIR_TEMPLATES
         fi
@@ -1145,7 +1145,7 @@ get_data_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_data_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$DATA_DIR" ] || [ "$dir" != "$DATA_DIR" ]; then
+        if [ -z "${DATA_DIR+x}" ] || [ -z "$DATA_DIR" ] || [ "$dir" != "$DATA_DIR" ]; then
             DATA_DIR="$dir"
             export DATA_DIR
         fi
@@ -1192,7 +1192,7 @@ get_frontend_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$FRONTEND_DIR" ] || [ "$dir" != "$FRONTEND_DIR" ]; then
+        if [ -z "${FRONTEND_DIR+x}" ] || [ -z "$FRONTEND_DIR" ] || [ "$dir" != "$FRONTEND_DIR" ]; then
             FRONTEND_DIR="$dir"
             export FRONTEND_DIR
         fi
@@ -1235,7 +1235,7 @@ get_frontend_css_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_css_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$FRONTEND_DIR_CSS" ] || [ "$dir" != "$FRONTEND_DIR_CSS" ]; then
+        if [ -z "${FRONTEND_DIR_CSS+x}" ] || [ -z "$FRONTEND_DIR_CSS" ] || [ "$dir" != "$FRONTEND_DIR_CSS" ]; then
             FRONTEND_DIR_CSS="$dir"
             export FRONTEND_DIR_CSS
         fi
@@ -1278,7 +1278,7 @@ get_frontend_fonts_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_fonts_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$FRONTEND_DIR_FONTS" ] || [ "$dir" != "$FRONTEND_DIR_FONTS" ]; then
+        if [ -z "${FRONTEND_DIR_FONTS+x}" ] || [ -z "$FRONTEND_DIR_FONTS" ] || [ "$dir" != "$FRONTEND_DIR_FONTS" ]; then
             FRONTEND_DIR_FONTS="$dir"
             export FRONTEND_DIR_FONTS
         fi
@@ -1321,7 +1321,7 @@ get_frontend_js_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_js_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$FRONTEND_DIR_JS" ] || [ "$dir" != "$FRONTEND_DIR_JS" ]; then
+        if [ -z "${FRONTEND_DIR_JS+x}" ] || [ -z "$FRONTEND_DIR_JS" ] || [ "$dir" != "$FRONTEND_DIR_JS" ]; then
             FRONTEND_DIR_JS="$dir"
             export FRONTEND_DIR_JS
         fi
@@ -1364,7 +1364,7 @@ get_photos_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_photos_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$FRONTEND_DIR_PHOTOS" ] || [ "$dir" != "$FRONTEND_DIR_PHOTOS" ]; then
+        if [ -z "${FRONTEND_DIR_PHOTOS+x}" ] || [ -z "$FRONTEND_DIR_PHOTOS" ] || [ "$dir" != "$FRONTEND_DIR_PHOTOS" ]; then
             FRONTEND_DIR_PHOTOS="$dir"
             export FRONTEND_DIR_PHOTOS
         fi
@@ -1418,7 +1418,7 @@ get_photos_originals_dir() {
 
     # System-Variable aktualisieren, wenn nötig
     if [ -n "$dir" ]; then
-        if [ -z "$FRONTEND_DIR_PHOTOS_ORIGINAL" ] || [ "$dir" != "$FRONTEND_DIR_PHOTOS_ORIGINAL" ]; then
+        if [ -z "${FRONTEND_DIR_PHOTOS_ORIGINAL+x}" ] || [ -z "$FRONTEND_DIR_PHOTOS_ORIGINAL" ] || [ "$dir" != "$FRONTEND_DIR_PHOTOS_ORIGINAL" ]; then
             FRONTEND_DIR_PHOTOS_ORIGINAL="$dir"
             export FRONTEND_DIR_PHOTOS_ORIGINAL
         fi
@@ -1495,7 +1495,7 @@ get_photos_gallery_dir() {
     fi
 
     if [ -n "$dir" ]; then
-        if [ -z "$FRONTEND_DIR_PHOTOS_THUMBNAILS" ] || [ "$dir" != "$FRONTEND_DIR_PHOTOS_THUMBNAILS" ]; then
+        if [ -z "${FRONTEND_DIR_PHOTOS_THUMBNAILS+x}" ] || [ -z "$FRONTEND_DIR_PHOTOS_THUMBNAILS" ] || [ "$dir" != "$FRONTEND_DIR_PHOTOS_THUMBNAILS" ]; then
             FRONTEND_DIR_PHOTOS_THUMBNAILS="$dir"
             export FRONTEND_DIR_PHOTOS_THUMBNAILS
         fi
@@ -1562,7 +1562,7 @@ get_frontend_picture_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_frontend_picture_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$FRONTEND_DIR_PICTURE" ] || [ "$dir" != "$FRONTEND_DIR_PICTURE" ]; then
+        if [ -z "${FRONTEND_DIR_PICTURE+x}" ] || [ -z "$FRONTEND_DIR_PICTURE" ] || [ "$dir" != "$FRONTEND_DIR_PICTURE" ]; then
             FRONTEND_DIR_PICTURE="$dir"
             export FRONTEND_DIR_PICTURE
         fi
@@ -1609,7 +1609,7 @@ get_log_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_log_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$LOG_DIR" ] || [ "$dir" != "$LOG_DIR" ]; then
+        if [ -z "${LOG_DIR+x}" ] || [ -z "$LOG_DIR" ] || [ "$dir" != "$LOG_DIR" ]; then
             LOG_DIR="$dir"
             export LOG_DIR
         fi
@@ -1656,7 +1656,7 @@ get_tmp_dir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_tmp_dir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$TMP_DIR" ] || [ "$dir" != "$TMP_DIR" ]; then
+        if [ -z "${TMP_DIR+x}" ] || [ -z "$TMP_DIR" ] || [ "$dir" != "$TMP_DIR" ]; then
             TMP_DIR="$dir"
             export TMP_DIR
         fi
@@ -1789,7 +1789,7 @@ get_nginx_systemdir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_nginx_systemdir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$SYSTEM_PATH_NGINX" ] || [ "$dir" != "$SYSTEM_PATH_NGINX" ]; then
+        if [ -z "${SYSTEM_PATH_NGINX+x}" ] || [ -z "$SYSTEM_PATH_NGINX" ] || [ "$dir" != "$SYSTEM_PATH_NGINX" ]; then
             SYSTEM_PATH_NGINX="$dir"
             export SYSTEM_PATH_NGINX
         fi
@@ -1832,7 +1832,7 @@ get_systemd_systemdir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_systemd_systemdir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$SYSTEM_PATH_SYSTEMD" ] || [ "$dir" != "$SYSTEM_PATH_SYSTEMD" ]; then
+        if [ -z "${SYSTEM_PATH_SYSTEMD+x}" ] || [ -z "$SYSTEM_PATH_SYSTEMD" ] || [ "$dir" != "$SYSTEM_PATH_SYSTEMD" ]; then
             SYSTEM_PATH_SYSTEMD="$dir"
             export SYSTEM_PATH_SYSTEMD
         fi
@@ -1875,7 +1875,7 @@ get_ssl_systemdir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_ssl_systemdir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$SYSTEM_PATH_SSL" ] || [ "$dir" != "$SYSTEM_PATH_SSL" ]; then
+        if [ -z "${SYSTEM_PATH_SSL+x}" ] || [ -z "$SYSTEM_PATH_SSL" ] || [ "$dir" != "$SYSTEM_PATH_SSL" ]; then
             SYSTEM_PATH_SSL="$dir"
             export SYSTEM_PATH_SSL
         fi
@@ -1918,7 +1918,7 @@ get_ssl_cert_systemdir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_ssl_cert_systemdir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$SYSTEM_PATH_SSL_CERTS" ] || [ "$dir" != "$SYSTEM_PATH_SSL_CERTS" ]; then
+        if [ -z "${SYSTEM_PATH_SSL_CERTS+x}" ] || [ -z "$SYSTEM_PATH_SSL_CERTS" ] || [ "$dir" != "$SYSTEM_PATH_SSL_CERTS" ]; then
             SYSTEM_PATH_SSL_CERTS="$dir"
             export SYSTEM_PATH_SSL_CERTS
         fi
@@ -1961,7 +1961,7 @@ get_ssl_key_systemdir() {
     if [ -n "$dir" ]; then
         debug "$(printf "$get_ssl_key_systemdir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
-        if [ -z "$SYSTEM_PATH_SSL_KEY" ] || [ "$dir" != "$SYSTEM_PATH_SSL_KEY" ]; then
+        if [ -z "${SYSTEM_PATH_SSL_KEY+x}" ] || [ -z "$SYSTEM_PATH_SSL_KEY" ] || [ "$dir" != "$SYSTEM_PATH_SSL_KEY" ]; then
             SYSTEM_PATH_SSL_KEY="$dir"
             export SYSTEM_PATH_SSL_KEY
         fi
