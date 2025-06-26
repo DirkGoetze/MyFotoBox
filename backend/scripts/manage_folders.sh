@@ -1790,7 +1790,7 @@ get_nginx_systemdir() {
 
     # Verwende die für diesen Ordner definierten Pfade
     # Deaktiviere Fallback Order(0) und das Erzeugen von Symlink (0)
-    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 0 0)
+    dir="$path_system" # $(_get_folder_path "$path_system" "$path_default" "$path_fallback" 0 0)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_nginx_systemdir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig
