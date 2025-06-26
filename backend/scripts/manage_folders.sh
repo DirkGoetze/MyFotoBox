@@ -237,7 +237,7 @@ _create_directory() {
 
     # Verzeichnis erstellen, falls es nicht existiert
     if [ ! -d "$dir" ]; then
-        debug "$(printf "$_create_directory_debug_0001" "$dir")"
+        debug "$(printf "$create_directory_debug_0001" "$dir")"
         mkdir -p "$dir" || {
             # log "$(printf "$create_directory_log_0002" "$dir")" "create_directory"
             debug "$(printf "$create_directory_debug_0002" "$dir")"
