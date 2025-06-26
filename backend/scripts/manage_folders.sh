@@ -976,7 +976,7 @@ get_nginx_conf_dir() {
     # .........  'activated' = Aktivierte Konfiguration
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    local conf_mode="${1:-'external'}" # Standard: 'external' für eigene Konfiguration
+    local conf_mode="${1:-external}" # Standard: 'external' für eigene Konfiguration
     # Sicherstellen, dass CONF_DIR gesetzt ist
     : "${CONF_DIR:=$(get_config_dir)}"
     # Pfade für Konfigurations-Verzeichnis
@@ -1011,6 +1011,11 @@ get_nginx_conf_dir() {
             # Verwende die für diesen Ordner definierten Pfade
             # Deaktiviere Fallback Order(0) und Erzeugen von Symlink (0)
             dir=$(_get_folder_path "$path_activated" "$path_activated" "$path_activated" 0 0)
+            ;;
+        *)
+            # Verwende die für diesen Ordner definierten Pfade
+            # Deaktiviere Fallback Order(0) und Erzeugen von Symlink (0)
+            dir=$(_get_folder_path "$path_default_external" "$path_default" "$path_default_external" 0 0)
             ;;
     esac
 
