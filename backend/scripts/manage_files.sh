@@ -359,9 +359,6 @@ get_template_file() {
     fi
 }
 
-
-
-
 # get_config_file_nginx
 get_config_file_nginx_debug_0001="INFO: Ermittle Name der Nginx Konfigurationsdatei"
 get_config_file_nginx_debug_0002="INFO: Genutzter Verzeichnispfad zur Nginx Konfigurationsdatei: '%s'"
@@ -400,7 +397,6 @@ get_config_file_nginx() {
         return 1
     fi
 }
-
 
 # get_backup_file
 get_backup_file_debug_0001="Ermittle Backup-Datei für Komponente: %s"
