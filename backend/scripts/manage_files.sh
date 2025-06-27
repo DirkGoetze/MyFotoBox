@@ -65,11 +65,11 @@ DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 # ---------------------------------------------------------------------------
 
 # _get_file_name
-_get_file_name_debug_0001="INFO: Prüfung der Konfigurationsdatei '%s' im Verzeichnis '%s'"
+_get_file_name_debug_0001="INFO: Prüfung der Konfigurationsdatei: '%s'"
 _get_file_name_debug_0002="INFO: Verzeichnispfad zur Konfigurationsdatei: %s"
 _get_file_name_debug_0003="INFO: Zusammengesetzter Dateiname: %s%s"
 _get_file_name_debug_0004="INFO: Prüfung der Konfigurationsdatei (exist, read, write, rights) :'%s'"
-_get_file_name_debug_0005="SUCCESS: Vollständiger Konfigurationspfad: '%s'"
+_get_file_name_debug_0005="SUCCESS: Prüfung erfolgreich für Konfigurationsdatei: '%s'"
 _get_file_name_debug_0006="ERROR: Konfigurationsdatei '%s' nicht gefunden oder nicht lesbar/beschreibbar"
 
 _get_file_name() {
@@ -103,7 +103,7 @@ _get_file_name() {
     if ! check_param "$name" "name"; then return 1; fi
 
     # Eröffnungsmeldung für die Debug-Ausgabe
-    debug "$(printf "$_get_file_name_debug_0001" "$name$ext" "$path")"
+    debug "$(printf "$_get_file_name_debug_0001" "$name")"
 
     # Prüfen ob der Pfad übergeben wurde
     if [ -z "$path" ]; then
