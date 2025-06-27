@@ -54,6 +54,7 @@ CONFIG_FILE_EXT_BACKUP_META=".meta.json"
 CONFIG_FILE_EXT_LOG=".log"
 CONFIG_FILE_EXT_FIREWALL=".rules"
 CONFIG_FILE_EXT_SSH=".ssh"
+LOG_FILE_EXT_DEFAULT=".log"
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
@@ -192,6 +193,89 @@ get_config_file() {
     fi
 }
 
+# get_log_file
+get_log_file_debug_0001="INFO: Ermittle Log-Datei: %s"
+get_log_file_debug_0002="INFO: Genutzter Verzeichnispfad zur Log-Datei: '%s'"
+get_log_file_debug_0003="SUCCESS: Vollständiger Pfad zur Log-Datei: '%s'"
+get_log_file_debug_0004="ERROR: Log-Datei nicht gefunden oder nicht lesbar/beschreibbar"
+
+get_log_file() {
+    # -----------------------------------------------------------------------
+    # get_log_file
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einer Log-Datei zurück
+    # Parameter: Keine
+    # Rückgabewert: Der vollständige Name, inklusive Pfad zur Datei
+    # -----------------------------------------------------------------------
+    local folder_path                         # Pfad zum Konfigurationsordner
+    local file_name                           # Name der Konfigurationsdatei
+    local file_ext                            # Standard-Dateiendung
+    local full_filename
+
+    # Eröffnungsmeldung für die Debug-Ausgabe
+    debug "$(printf "$get_log_file_debug_0001")"
+
+    #  Festlegen der Bestandteile für den Dateinamen
+    # Bestimmen des Ordnerpfads (später löschen, wird nur optional benötigt)
+    file_name="$(date +%Y-%m-%d)_fotobox"
+    file_ext="$LOG_FILE_EXT_DEFAULT"
+    folder_path="$(get_log_dir)"
+    debug "$(printf "$get_log_file_debug_0002" "$folder_path")"
+
+    # Zusammensetzen des vollständigen Dateinamens erfolgreich
+    full_filename="$(_get_file_name "$file_name" "$file_ext" "$folder_path")"
+    if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
+        # Erfolg: Datei existiert und ist les-/schreibbar
+        debug "$(printf "$get_log_file_debug_0003" "$full_filename")"
+        echo "$full_filename"
+        return 0
+    else
+        # Fehlerfall
+        debug "$get_log_file_debug_0004"
+        return 1
+    fi
+}
+
+
+# get_config_file_nginx
+get_config_file_nginx_debug_0001="INFO: Ermittle Name der Nginx Konfigurationsdatei"
+get_config_file_nginx_debug_0002="INFO: Genutzter Verzeichnispfad zur Nginx Konfigurationsdatei: '%s'"
+get_config_file_nginx_debug_0003="SUCCESS: Vollständiger Pfad zur Nginx Konfigurationsdatei: '%s'"
+get_config_file_nginx_debug_0004="ERROR: Nginx Konfigurationsdatei nicht gefunden oder nicht lesbar/beschreibbar"
+
+get_config_file_nginx() {
+    # -----------------------------------------------------------------------
+    # get_config_file_nginx
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einer Nginx-Konfigurationsdatei zurück
+    # Parameter: keine
+    # Rückgabewert: Der vollständige Name, inklusive Pfad zur Datei
+    # -----------------------------------------------------------------------
+    local folder_path                   # Pfad zum Nginx-Konfigurationsordner
+    local file_name                     # Name der Nginx-Konfigurationsdatei
+    local file_ext                      # Standard-Dateiendung
+    local full_filename
+
+    debug "$(printf "$get_config_file_nginx_debug_0001")"
+
+    # Festlegen der Bestandteile für den Dateinamen
+    file_name="fotobox_nginx"
+    file_ext="$CONFIG_FILE_EXT_NGINX"
+    folder_path="$(get_nginx_conf_dir)"
+    debug "$(printf "$get_config_file_nginx_debug_0002" "$folder_path")"
+
+    # Zusammensetzen des vollständigen Dateinamens erfolgreich
+    full_filename="$(_get_file_name "$file_name" "$file_ext" "$folder_path")"
+    if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
+        debug "$(printf "$get_config_file_nginx_debug_0003" "$full_filename")"
+        echo "$full_filename"
+        return 0
+    else
+        debug "$get_config_file_nginx_debug_0004"
+        return 1
+    fi
+}
+
 # get_template_file
 get_template_file_debug_0001="Ermittle Pfad zu Template-Datei für Modul %s, Name %s"
 get_template_file_debug_0002="Template-Basisverzeichnis: %s"
@@ -288,27 +372,6 @@ get_template_file() {
     return 0
 }
 
-# get_log_file
-get_log_file_debug_0001="Ermittle Log-Datei für Komponente: %s"
-
-get_log_file() {
-    # -----------------------------------------------------------------------
-    # get_log_file
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zu einer Log-Datei zurück
-    # Parameter: $1 - Komponente die eine Log-Datei anlegen möchte
-    # Rückgabewert: Der vollständige Pfad zur Datei
-    # -----------------------------------------------------------------------
-    local component="${1:-fotobox}"
-    local log_dir
-
-    echo "$(printf "$get_log_file_debug_0001" "$component")"
-    debug "$(printf "$get_log_file_debug_0001" "$component")" "CLI" "get_log_file"
-
-    # Verzeichnis abrufen und Dateinamen generieren
-    log_dir="$("$MANAGE_FOLDERS_SH" get_log_dir)"
-    echo "${log_dir}/$(date +%Y-%m-%d)_${component}.log"
-}
 
 # get_temp_file
 get_temp_file_debug_0001="Generiere temporären Dateinamen mit Präfix '%s' und Suffix '%s'"

@@ -352,27 +352,22 @@ test_function "manage_folders_sh" "ensure_folder_structure"
 # Test der manage_files.sh Funktionen
 # -------------------------------
 echo
-echo "-------------------------------------------------------------------------"
+echo "========================================================================="
 echo "  Test der Funktionen in manage_files.sh"
-echo "-------------------------------------------------------------------------"
-
+echo "========================================================================="
 # Test: get_config_file
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_config_file                                                 |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_files_sh" "get_config_file"
+# Test: get_log_file
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_log_file                                                    |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_log_file"
 
 exit
 
-echo -n "Test get_config_file: "
-set +e  # Fehler nicht als fatal behandeln
-config_file=$(call_module_function "$manage_files_sh" "get_config_file" "system" "version" 2>/dev/null)
-set -e  # Fehlerbehandlung wieder aktivieren
-if [ -n "$config_file" ]; then
-    echo "✅ Die Funktion get_config_file wurde erfolgreich ausgeführt. Ergebnis: $config_file"
-else
-    echo "❌ Die Funktion get_config_file ist fehlgeschlagen."
-fi
 
 # Test: get_template_file
 echo -n "Test get_template_file: "
@@ -383,15 +378,6 @@ if [ -n "$template_file" ]; then
     echo "✅ Die Funktion get_template_file wurde erfolgreich ausgeführt. Ergebnis: $template_file"
 else
     echo "❌ Die Funktion get_template_file ist fehlgeschlagen."
-fi
-
-# Test: get_log_file
-echo -n "Test get_log_file: "
-log_file=$(call_module_function "$manage_files_sh" "get_log_file" "test_script")
-if [ -n "$log_file" ]; then
-    echo "✅ Die Funktion get_log_file wurde erfolgreich ausgeführt. Ergebnis: $log_file"
-else
-    echo "❌ Die Funktion get_log_file ist fehlgeschlagen."
 fi
 
 # Test: get_temp_file
