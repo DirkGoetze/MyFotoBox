@@ -343,21 +343,26 @@ test_function "manage_folders_sh" "get_ssl_key_systemdir"
 debug "INFO: SYSTEM_PATH_SSL_KEY: ${SYSTEM_PATH_SSL_KEY:-nicht gesetzt}"
 # Test: ensure_folder_structure
 echo "+-----------------------------------------------------------------------+"
-echo "| Test: ensure_folder_structure                                           |"
+echo "| Test: ensure_folder_structure                                         |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "ensure_folder_structure"
-
-exit
 
 # -------------------------------
 # Test der manage_files.sh Funktionen
 # -------------------------------
 echo
 echo "-------------------------------------------------------------------------"
-echo "Test der Funktionen in manage_files.sh"
+echo "  Test der Funktionen in manage_files.sh"
 echo "-------------------------------------------------------------------------"
 
 # Test: get_config_file
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_config_file                                                 |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_config_file"
+
+exit
+
 echo -n "Test get_config_file: "
 set +e  # Fehler nicht als fatal behandeln
 config_file=$(call_module_function "$manage_files_sh" "get_config_file" "system" "version" 2>/dev/null)
