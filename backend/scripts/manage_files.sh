@@ -176,9 +176,10 @@ get_config_file() {
     # -----------------------------------------------------------------------
     # get_config_file
     # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zu einer Projekt-Konfigurationsdatei zurück
+    # Funktion : Gibt den Pfad zu einer Projekt-Konfigurationsdatei zurück
     # Parameter: keine
-    # Rückgabewert: Der vollständige Name, inklusive Pfad zur Datei
+    # Rückgabe : Der vollständige Name, inklusive Pfad zur Datei
+    # .........  Exit-Code-> 0 bei Erfolg, 1 bei Fehler
     # -----------------------------------------------------------------------
     local folder_path                         # Pfad zum Konfigurationsordner
     local file_name                           # Name der Konfigurationsdatei
@@ -188,8 +189,7 @@ get_config_file() {
     # Eröffnungsmeldung für die Debug-Ausgabe
     debug "$(printf "$get_config_file_debug_0001")"
 
-    #  Festlegen der Bestandteile für den Dateinamen
-    # Bestimmen des Ordnerpfads (später löschen, wird nur optional benötigt)
+    # Festlegen der Bestandteile für den Dateinamen
     file_name="fotobox"
     file_ext="$CONFIG_FILE_EXT_DEFAULT"
     folder_path="$(get_config_dir)"
@@ -219,9 +219,10 @@ get_log_file() {
     # -----------------------------------------------------------------------
     # get_log_file
     # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zu einer Log-Datei zurück
+    # Funktion : Gibt den Pfad zu einer Log-Datei zurück
     # Parameter: Keine
-    # Rückgabewert: Der vollständige Name, inklusive Pfad zur Datei
+    # Rückgabe : Der vollständige Name, inklusive Pfad zur Datei
+    # .........  Exit-Code-> 0 bei Erfolg, 1 bei Fehler
     # -----------------------------------------------------------------------
     local folder_path                         # Pfad zum Konfigurationsordner
     local file_name                           # Name der Konfigurationsdatei
@@ -231,8 +232,7 @@ get_log_file() {
     # Eröffnungsmeldung für die Debug-Ausgabe
     debug "$(printf "$get_log_file_debug_0001")"
 
-    #  Festlegen der Bestandteile für den Dateinamen
-    # Bestimmen des Ordnerpfads (später löschen, wird nur optional benötigt)
+    # Festlegen der Bestandteile für den Dateinamen
     file_name="$(date +%Y-%m-%d)_fotobox"
     file_ext="$LOG_FILE_EXT_DEFAULT"
     folder_path="$(get_log_dir)"
@@ -262,9 +262,10 @@ get_tmp_file() {
     # -----------------------------------------------------------------------
     # get_tmp_file
     # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zu einer temporären Datei zurück
+    # Funktion : Gibt den Pfad zu einer temporären Datei zurück
     # Parameter: keine
-    # Rückgabewert: Der vollständige Pfad zur Datei
+    # Rückgabe : Der vollständige Name, inklusive Pfad zur Datei
+    # .........  Exit-Code-> 0 bei Erfolg, 1 bei Fehler
     # -----------------------------------------------------------------------
     local folder_path                         # Pfad zum Konfigurationsordner
     local file_name                           # Name der Konfigurationsdatei
@@ -274,8 +275,7 @@ get_tmp_file() {
     # Eröffnungsmeldung für die Debug-Ausgabe
     debug "$(printf "$get_tmp_file_debug_0001")"
 
-    #  Festlegen der Bestandteile für den Dateinamen
-    # Bestimmen des Ordnerpfads (später löschen, wird nur optional benötigt)
+    # Festlegen der Bestandteile für den Dateinamen
     file_name="fotobox_$(date +%Y%m%d%H%M%S)_$RANDOM"
     file_ext="$TMP_FILE_EXT_DEFAULT"
     folder_path="$(get_tmp_dir)"
@@ -295,6 +295,69 @@ get_tmp_file() {
     fi
 }
 
+# get_template_file
+get_template_file_debug_0001="INFO: Ermittle Template-Datei für Modul '%s': '%s'"
+get_template_file_debug_0002="INFO: Genutzter Verzeichnispfad zur Template-Datei: '%s'"
+get_template_file_debug_0003="SUCCESS: Vollständiger Pfad zur Template-Datei: '%s'"
+get_template_file_debug_0004="ERROR: Template-Datei nicht gefunden oder nicht lesbar/beschreibbar"
+
+get_template_file() {
+    # -----------------------------------------------------------------------
+    # get_template_file
+    # -----------------------------------------------------------------------
+    # Funktion : Gibt den Pfad zu einer Template-Datei zurück
+    # Parameter: $1 - Modulname (z.B. nginx, systemd, ssl_cert, etc.)
+    # .........  $2 - Template-Name (z.B. default, example, etc.)
+    # ..........      Die Extension wird basierend auf dem Modultyp gesetzt.
+    # Rückgabe : Der vollständige Name, inklusive Pfad zur Datei
+    # .........  Exit-Code-> 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    local modul="$1"
+    local folder_path                         # Basispfad zum Templateordner
+    local file_name="$2"                      # Name der Konfigurationsdatei
+    local file_ext                            # Standard-Dateiendung
+    local full_filename
+    
+    # Überprüfen, ob die erforderlichen Parameter angegeben sind
+    if ! check_param "$modul" "modul"; then return 1; fi
+    if ! check_param "$file_name" "file_name"; then return 1; fi
+    
+    # Eröffnungsmeldung für die Debug-Ausgabe
+    debug "$(printf "$get_template_file_debug_0001" "$modul" "$file_name")"
+
+    # Festlegen der Bestandteile für den Dateinamen
+    # Dateiendung basierend auf dem Modul festlegen
+    local file_ext=""
+    case "$modul" in
+        "nginx")            file_ext="$CONFIG_FILE_EXT_NGINX" ;;
+        "systemd")          file_ext="$CONFIG_FILE_EXT_SYSTEMD" ;;
+        "ssl_cert")         file_ext="$CONFIG_FILE_EXT_SSL_CERT" ;;
+        "ssl_key")          file_ext="$CONFIG_FILE_EXT_SSL_KEY" ;;
+        "backup_meta")      file_ext="$CONFIG_FILE_EXT_BACKUP_META" ;;
+        "firewall")         file_ext="$CONFIG_FILE_EXT_FIREWALL" ;;
+        "ssh")              file_ext="$CONFIG_FILE_EXT_SSH" ;;
+        # Verwende den Modulnamen direkt als Dateiendung
+        "html"|"js"|"css")  file_ext=".$modul" ;; 
+        # Für andere Module keine spezifische Endung hinzufügen
+        # Wir nehmen an, dass der Name bereits die korrekte Endung enthält
+        *)                  file_ext=".$modul.tmpl" ;;
+    esac
+    folder_path="$(get_template_dir "$modul")"
+    debug "$(printf "$get_tmp_file_debug_0002" "$folder_path")"
+
+    # Zusammensetzen des vollständigen Dateinamens erfolgreich
+    full_filename="$(_get_file_name "$file_name" "$file_ext" "$folder_path")"
+    if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
+        # Erfolg: Datei existiert und ist les-/schreibbar
+        debug "$(printf "$get_tmp_file_debug_0003" "$full_filename")"
+        echo "$full_filename"
+        return 0
+    else
+        # Fehlerfall
+        debug "$get_tmp_file_debug_0004"
+        return 1
+    fi
+}
 
 
 
@@ -338,101 +401,6 @@ get_config_file_nginx() {
     fi
 }
 
-# get_template_file
-get_template_file_debug_0001="Ermittle Pfad zu Template-Datei für Modul %s, Name %s"
-get_template_file_debug_0002="Template-Basisverzeichnis: %s"
-get_template_file_debug_0003="Dateiendung für Modul %s: %s"
-get_template_file_debug_0004="Vollständiger Template-Pfad: %s"
-get_template_file_log_0001="ERROR: Unbekannte Modul-Kategorie: %s"
-get_template_file_log_0002="ERROR: Template-Pfad konnte nicht ermittelt werden: %s/%s"
-get_template_file_log_0003="INFO: Template-Datei gefunden: %s"
-
-get_template_file() {
-    # -----------------------------------------------------------------------
-    # get_template_file
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zu einer Template-Datei zurück
-    # Parameter: $1 - Modulname
-    # .........  $2 - Template-Name
-    # Rückgabewert: Der vollständige Pfad zur Datei oder leerer String bei Fehler
-    # .......... Exit-Code 0 bei Erfolg, 1 bei Fehler
-    # -----------------------------------------------------------------------
-    local modul="$1"
-    local name="$2"
-    
-    # Überprüfen, ob die erforderlichen Parameter angegeben sind
-    if ! check_param "$modul" "modul"; then return 1; fi
-    if ! check_param "$name" "name"; then return 1; fi
-    
-    debug "$(printf "$get_template_file_debug_0001" "$modul" "$name")" "CLI" "get_template_file"
-    
-    # Ermitteln des Template-Basisordners für das Modul
-    local template_dir
-    template_dir="$("$MANAGE_FOLDERS_SH" get_template_dir "$modul")"
-    
-    if [ $? -ne 0 ] || [ -z "$template_dir" ]; then
-        log "$(printf "$get_template_file_log_0002" "$modul" "$name")" "get_template_file"
-        return 1
-    fi
-    
-    debug "$(printf "$get_template_file_debug_0002" "$template_dir")" "CLI" "get_template_file"
-    
-    # Dateiendung basierend auf dem Modul festlegen
-    local extension=""
-    case "$modul" in
-        "nginx")
-            extension="$CONFIG_FILE_EXT_NGINX" 
-            ;;
-        "systemd")
-            extension="$CONFIG_FILE_EXT_SYSTEMD"
-            ;;
-        "ssl_cert")
-            extension="$CONFIG_FILE_EXT_SSL_CERT"
-            ;;
-        "ssl_key")
-            extension="$CONFIG_FILE_EXT_SSL_KEY"
-            ;;
-        "backup_meta")
-            extension="$CONFIG_FILE_EXT_BACKUP_META"
-            ;;
-        "firewall")
-            extension="$CONFIG_FILE_EXT_FIREWALL"
-            ;;
-        "ssh")
-            extension="$CONFIG_FILE_EXT_SSH"
-            ;;
-        "html"|"js"|"css")
-            extension=".$modul"  # Verwende den Modulnamen direkt als Dateiendung
-            ;;
-        *)
-            # Für andere Module keine spezifische Endung hinzufügen
-            # Wir nehmen an, dass der Name bereits die korrekte Endung enthält
-            extension=""
-            ;;
-    esac
-    
-    debug "$(printf "$get_template_file_debug_0003" "$modul" "$extension")" "CLI" "get_template_file"
-    
-    # Vollständigen Pfad zur Template-Datei erstellen
-    local template_path
-    if [ -n "$extension" ]; then
-        template_path="${template_dir}/${name}${extension}"
-    else
-        template_path="${template_dir}/${name}"
-    fi
-    
-    debug "$(printf "$get_template_file_debug_0004" "$template_path")" "CLI" "get_template_file"
-    
-    # Überprüfen, ob der Pfad gültig ist (keine Fehlerprüfung, ob die Datei existiert)
-    if [ -z "$template_path" ]; then
-        log "$(printf "$get_template_file_log_0002" "$modul" "$name")" "get_template_file"
-        return 1
-    fi
-    
-    log "$(printf "$get_template_file_log_0003" "$template_path")" "get_template_file"
-    echo "$template_path"
-    return 0
-}
 
 # get_backup_file
 get_backup_file_debug_0001="Ermittle Backup-Datei für Komponente: %s"

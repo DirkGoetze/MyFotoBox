@@ -1076,13 +1076,13 @@ get_template_dir() {
         return 0
     fi
 
-    # Event-Name validieren und bereinigen
+    # Modul-Name validieren und bereinigen
     debug "$(printf "$get_template_dir_debug_0003" "$modul_name")"
     
     # Verwende die Helferfunktion für die Bereinigung
     local clean_modul_name=$(_get_clean_foldername "$modul_name")
-    
-    # Erstelle das Event-Unterverzeichnis
+
+    # Erstellt das Modul-Unterverzeichnis
     # Stellen Sie sicher, dass dir keine abschließenden Slashes hat
     dir=${dir%/}        
     local modul_dir="${dir}/${clean_modul_name}"
