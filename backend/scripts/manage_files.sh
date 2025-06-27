@@ -67,8 +67,10 @@ DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 # _get_file_name
 _get_file_name_debug_0001="INFO: Prüfung der Konfigurationsdatei '%s' im Verzeichnis '%s'"
 _get_file_name_debug_0002="INFO: Verzeichnispfad zur Konfigurationsdatei: %s"
-_get_file_name_debug_0003="SUCCESS: Vollständiger Konfigurationspfad: %s/%s"
-_get_file_name_debug_0004="ERROR: Konfigurationsdatei nicht gefunden"
+_get_file_name_debug_0003="INFO: Zusammengesetzter Dateiname: %s%s"
+_get_file_name_debug_0004="INFO: Prüfung der Konfigurationsdatei (exist, read, write, rights) :'%s'"
+_get_file_name_debug_0005="SUCCESS: Vollständiger Konfigurationspfad: '%s'"
+_get_file_name_debug_0006="ERROR: Konfigurationsdatei '%s' nicht gefunden oder nicht lesbar/beschreibbar"
 
 _get_file_name() {
     # -----------------------------------------------------------------------
@@ -108,13 +110,15 @@ _get_file_name() {
         # Wenn kein Pfad angegeben ist, Standardpfad verwenden
         path="$(get_conf_dir)"
     fi
-
-    # Debug-Ausgabe des Verzeichnispfads
     debug "$(printf "$_get_file_name_debug_0002" "$path")"
 
-    # Zusammenstellen des vollständigen Pfads
-    # Sicherstellen, dass $path keine abschließenden Slashes hat
+    # Zusammenstellen des vollständigen Dateinamen
+    debug "$(printf "$_get_file_name_debug_0003" "$name" "$ext")"
+
+    # Alles zusammensetzen und sicherstellen, dass $path keine 
+    # abschließenden Slashes hat
     full_path="${path%/}/${name}${ext}"
+    debug "$(printf "$_get_file_name_debug_0004" "$full_path")"
 
     # Die Datei existiert nicht, erzeugen und die Rechte setzen
     if [ ! -f "$full_path" ]; then
@@ -130,12 +134,12 @@ _get_file_name() {
     # Überprüfen, ob die Datei existiert und lesbar/beschreibbar ist
     if [ -r "$full_path" ] && [ -w "$full_path" ]; then
         # Debug-Ausgabe des vollständigen Pfads
-        debug "$(printf "$_get_file_name_debug_0003" "$path" "$name")"
+        debug "$(printf "$_get_file_name_debug_0005" "$full_path")"
         echo "$full_path"
         return 0
     else
         # Fehlerausgabe, wenn die Datei nicht lesbar oder beschreibbar ist
-        debug "$(printf "$_get_file_name_debug_0004")"
+        debug "$(printf "$_get_file_name_debug_0006" "$full_path")"
         echo ""
         return 1
     fi
