@@ -103,7 +103,7 @@ _get_file_name() {
     if ! check_param "$name" "name"; then return 1; fi
 
     # Eröffnungsmeldung für die Debug-Ausgabe
-    debug "$(printf "$_get_file_name_debug_0001" "$name" "$path")"
+    debug "$(printf "$_get_file_name_debug_0001" "$name$ext" "$path")"
 
     # Prüfen ob der Pfad übergeben wurde
     if [ -z "$path" ]; then
@@ -151,9 +151,9 @@ _get_file_name() {
 
 # get_config_file
 get_config_file_debug_0001="INFO: Ermittle Name der Projekt Konfigurationsdatei"
-get_config_file_debug_0002="INFO: Verzeichnispfad zur Konfigurationsdatei: %s"
-get_config_file_debug_0003="SUCCESS: Vollständiger Konfigurationspfad: %s/%s"
-get_config_file_debug_0004="ERROR: Konfigurationsdatei nicht gefunden"
+get_config_file_debug_0002="INFO: Genutzter Verzeichnispfad zur Konfigurationsdatei: %s"
+get_config_file_debug_0003="SUCCESS: Vollständiger Pfad zur Konfigurationsdatei: %s"
+get_config_file_debug_0004="ERROR: Konfigurationsdatei nicht gefunden oder nicht lesbar/beschreibbar"
 
 get_config_file() {
     # -----------------------------------------------------------------------
@@ -182,7 +182,7 @@ get_config_file() {
     full_filename="$(_get_file_name "$file_name" "$file_ext" "$folder_path")"
     if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
         # Erfolg: Datei existiert und ist les-/schreibbar
-        debug "$(printf "$get_config_file_debug_0003" "$folder_path" "$file_name" "$file_ext")"
+        debug "$(printf "$get_config_file_debug_0003" "$full_filename")"
         echo "$full_filename"
         return 0
     else
