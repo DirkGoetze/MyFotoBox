@@ -71,10 +71,11 @@ _get_file_name_debug_0001="INFO: Prüfung der Konfigurationsdatei: '%s'"
 _get_file_name_debug_0002="INFO: Verzeichnispfad zur Konfigurationsdatei: %s"
 _get_file_name_debug_0003="INFO: Zusammengesetzter Dateiname: %s%s"
 _get_file_name_debug_0004="INFO: Prüfung der Konfigurationsdatei (exist, read, write, rights) :'%s'"
-_get_file_name_debug_0005="WARN: Warnung! <chown> '%s:%s' für '%s' fehlgeschlagen, Eigentümer nicht geändert"
-_get_file_name_debug_0006="WARN: Warnung! <chmod> '%s' für '%s' fehlgeschlagen, Berechtigungen nicht geändert"
-_get_file_name_debug_0007="SUCCESS: Prüfung erfolgreich für Konfigurationsdatei: '%s'"
-_get_file_name_debug_0008="ERROR: Konfigurationsdatei '%s' nicht gefunden oder nicht lesbar/beschreibbar"
+_get_file_name_debug_0005="ERROR: Fehler beim Erstellen von '%s'"
+_get_file_name_debug_0006="WARN: Warnung! <chown> '%s:%s' für '%s' fehlgeschlagen, Eigentümer nicht geändert"
+_get_file_name_debug_0007="WARN: Warnung! <chmod> '%s' für '%s' fehlgeschlagen, Berechtigungen nicht geändert"
+_get_file_name_debug_0008="SUCCESS: Prüfung erfolgreich für Konfigurationsdatei: '%s'"
+_get_file_name_debug_0009="ERROR: Konfigurationsdatei '%s' nicht gefunden oder nicht lesbar/beschreibbar"
 
 _get_file_name() {
     # -----------------------------------------------------------------------
@@ -85,9 +86,9 @@ _get_file_name() {
     # Parameter...: $1 - Name der Datei
     # ............  $2 - (Optional) Dateiendung (Standard: leer)
     # ............  $3 - (Optional) Pfad, in dem die Datei gesucht wird
-    # ............  $3 - (Optional) Nutzername, der die Datei besitzen soll
-    # ............  $4 - (Optional) Gruppenname, der die Datei besitzen soll
-    # ............  $5 - (Optional) Modus (Rechte) der Datei (Standard: 664)
+    # ............  $4 - (Optional) Nutzername, der die Datei besitzen soll
+    # ............  $5 - (Optional) Gruppenname, der die Datei besitzen soll
+    # ............  $6 - (Optional) Modus (Rechte) der Datei (Standard: 664)
     # Hinweis.....: Wird kein Pfad angegeben, wird als Standard der Pfad für 
     # ............  Einstellungen im Projekt Ordner verwendet. Die Parameter
     # ............  $3, $4 und $5 sind optional und werden auf Standardwerte
@@ -104,7 +105,10 @@ _get_file_name() {
     local full_path
 
     # Überprüfen, ob die erforderlichen Parameter angegeben sind
-    if ! check_param "$name" "name"; then return 1; fi
+    if ! check_param "$name" "name"; then 
+        echo ""
+        return 1
+    fi
 
     # Eröffnungsmeldung für die Debug-Ausgabe
     debug "$(printf "$_get_file_name_debug_0001" "$name")"
@@ -112,7 +116,7 @@ _get_file_name() {
     # Prüfen ob der Pfad übergeben wurde
     if [ -z "$path" ]; then
         # Wenn kein Pfad angegeben ist, Standardpfad verwenden
-        path="$(get_conf_dir)"
+        path="$(get_config_dir)"
     fi
     debug "$(printf "$_get_file_name_debug_0002" "$path")"
 
@@ -127,31 +131,32 @@ _get_file_name() {
     # Die Datei existiert nicht, erzeugen und die Rechte setzen
     if [ ! -f "$full_path" ]; then
         # Datei erzeugen und prüfen ob sie erfolgreich erstellt wurde
-        touch "$full_path"
+        touch "$full_path" 2>/dev/null || {
+            # Fehler beim Erstellen der Datei, Debug-Ausgabe
+            debug "$(printf "$_get_file_name_debug_0005" "$full_path")"
+            echo ""
+            return 1
+        }
         # wenn erzeugen erfolgreich, User, Lese- und Schreibrechte setzen
-        if [ $? -eq 0 ]; then
-            chmod "$mode" "$full_path" 2>/dev/null || {
-                # log "$(printf "$create_directory_log_0004" "$dir")" "create_directory"
-                debug "$(printf "$_get_file_name_debug_0005" "$user" "$group" "$full_path")"
-                # Fehler beim chown ist kein kritischer Fehler
-            }
-            chown "$user":"$group" "$full_path" 2>/dev/null || {
-                # log "$(printf "$create_directory_log_0004" "$dir")" "create_directory"
-                debug "$(printf "$_get_file_name_debug_0006" "$mode" "$full_path")"
-                # Fehler beim chmod ist kein kritischer Fehler
-            }
-        fi
+        chmod "$mode" "$full_path" 2>/dev/null || {
+            debug "$(printf "$_get_file_name_debug_0006" "$user" "$group" "$full_path")"
+            # Fehler beim chmod ist kein kritischer Fehler
+        }
+        chown "$user":"$group" "$full_path" 2>/dev/null || {
+            debug "$(printf "$_get_file_name_debug_0007" "$mode" "$full_path")"
+            # Fehler beim chown ist kein kritischer Fehler
+        }
     fi
 
     # Überprüfen, ob die Datei existiert und lesbar/beschreibbar ist
     if [ -r "$full_path" ] && [ -w "$full_path" ]; then
         # Debug-Ausgabe des vollständigen Pfads
-        debug "$(printf "$_get_file_name_debug_0007" "$full_path")"
+        debug "$(printf "$_get_file_name_debug_0008" "$full_path")"
         echo "$full_path"
         return 0
     else
         # Fehlerausgabe, wenn die Datei nicht lesbar oder beschreibbar ist
-        debug "$(printf "$_get_file_name_debug_0008" "$full_path")"
+        debug "$(printf "$_get_file_name_debug_0009" "$full_path")"
         echo ""
         return 1
     fi
