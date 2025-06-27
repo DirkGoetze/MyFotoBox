@@ -55,6 +55,7 @@ CONFIG_FILE_EXT_LOG=".log"
 CONFIG_FILE_EXT_FIREWALL=".rules"
 CONFIG_FILE_EXT_SSH=".ssh"
 LOG_FILE_EXT_DEFAULT=".log"
+TMP_FILE_EXT_DEFAULT=".tmp"
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
@@ -70,8 +71,10 @@ _get_file_name_debug_0001="INFO: Prüfung der Konfigurationsdatei: '%s'"
 _get_file_name_debug_0002="INFO: Verzeichnispfad zur Konfigurationsdatei: %s"
 _get_file_name_debug_0003="INFO: Zusammengesetzter Dateiname: %s%s"
 _get_file_name_debug_0004="INFO: Prüfung der Konfigurationsdatei (exist, read, write, rights) :'%s'"
-_get_file_name_debug_0005="SUCCESS: Prüfung erfolgreich für Konfigurationsdatei: '%s'"
-_get_file_name_debug_0006="ERROR: Konfigurationsdatei '%s' nicht gefunden oder nicht lesbar/beschreibbar"
+_get_file_name_debug_0005="WARN: Warnung! <chown> '%s:%s' für '%s' fehlgeschlagen, Eigentümer nicht geändert"
+_get_file_name_debug_0006="WARN: Warnung! <chmod> '%s' für '%s' fehlgeschlagen, Berechtigungen nicht geändert"
+_get_file_name_debug_0007="SUCCESS: Prüfung erfolgreich für Konfigurationsdatei: '%s'"
+_get_file_name_debug_0008="ERROR: Konfigurationsdatei '%s' nicht gefunden oder nicht lesbar/beschreibbar"
 
 _get_file_name() {
     # -----------------------------------------------------------------------
@@ -127,27 +130,35 @@ _get_file_name() {
         touch "$full_path"
         # wenn erzeugen erfolgreich, User, Lese- und Schreibrechte setzen
         if [ $? -eq 0 ]; then
-            chmod "$mode" "$full_path"
-            chown "$user":"$group" "$full_path"
+            chmod "$mode" "$full_path" 2>/dev/null || {
+                # log "$(printf "$create_directory_log_0004" "$dir")" "create_directory"
+                debug "$(printf "$_get_file_name_debug_0005" "$user" "$group" "$full_path")"
+                # Fehler beim chown ist kein kritischer Fehler
+            }
+            chown "$user":"$group" "$full_path" 2>/dev/null || {
+                # log "$(printf "$create_directory_log_0004" "$dir")" "create_directory"
+                debug "$(printf "$_get_file_name_debug_0006" "$mode" "$full_path")"
+                # Fehler beim chmod ist kein kritischer Fehler
+            }
         fi
     fi
 
     # Überprüfen, ob die Datei existiert und lesbar/beschreibbar ist
     if [ -r "$full_path" ] && [ -w "$full_path" ]; then
         # Debug-Ausgabe des vollständigen Pfads
-        debug "$(printf "$_get_file_name_debug_0005" "$full_path")"
+        debug "$(printf "$_get_file_name_debug_0007" "$full_path")"
         echo "$full_path"
         return 0
     else
         # Fehlerausgabe, wenn die Datei nicht lesbar oder beschreibbar ist
-        debug "$(printf "$_get_file_name_debug_0006" "$full_path")"
+        debug "$(printf "$_get_file_name_debug_0008" "$full_path")"
         echo ""
         return 1
     fi
 }
 
 # ===========================================================================
-# Hauptfunktionen für die Ermittlung von Dateipfaden im Projekt
+# Hauptfunktionen für die Ermittlung von Dateinamen im Projekt
 # ===========================================================================
 
 # get_config_file
@@ -235,6 +246,52 @@ get_log_file() {
         return 1
     fi
 }
+
+# get_tmp_file
+get_tmp_file_debug_0001="INFO: Ermittle temporäre Datei: %s"
+get_tmp_file_debug_0002="INFO: Genutzter Verzeichnispfad zur temporären Datei: '%s'"
+get_tmp_file_debug_0003="SUCCESS: Vollständiger Pfad zur temporären Datei: '%s'"
+get_tmp_file_debug_0004="ERROR: Temporäre Datei nicht gefunden oder nicht lesbar/beschreibbar"
+
+get_tmp_file() {
+    # -----------------------------------------------------------------------
+    # get_tmp_file
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einer temporären Datei zurück
+    # Parameter: keine
+    # Rückgabewert: Der vollständige Pfad zur Datei
+    # -----------------------------------------------------------------------
+    local folder_path                         # Pfad zum Konfigurationsordner
+    local file_name                           # Name der Konfigurationsdatei
+    local file_ext                            # Standard-Dateiendung
+    local full_filename
+
+    # Eröffnungsmeldung für die Debug-Ausgabe
+    debug "$(printf "$get_tmp_file_debug_0001")"
+
+    #  Festlegen der Bestandteile für den Dateinamen
+    # Bestimmen des Ordnerpfads (später löschen, wird nur optional benötigt)
+    file_name="fotobox_$(date +%Y%m%d%H%M%S)_$RANDOM"
+    file_ext="$TMP_FILE_EXT_DEFAULT"
+    folder_path="$(get_tmp_dir)"
+    debug "$(printf "$get_tmp_file_debug_0002" "$folder_path")"
+
+    # Zusammensetzen des vollständigen Dateinamens erfolgreich
+    full_filename="$(_get_file_name "$file_name" "$file_ext" "$folder_path")"
+    if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
+        # Erfolg: Datei existiert und ist les-/schreibbar
+        debug "$(printf "$get_tmp_file_debug_0003" "$full_filename")"
+        echo "$full_filename"
+        return 0
+    else
+        # Fehlerfall
+        debug "$get_tmp_file_debug_0004"
+        return 1
+    fi
+}
+
+
+
 
 
 # get_config_file_nginx
@@ -370,30 +427,6 @@ get_template_file() {
     log "$(printf "$get_template_file_log_0003" "$template_path")" "get_template_file"
     echo "$template_path"
     return 0
-}
-
-
-# get_temp_file
-get_temp_file_debug_0001="Generiere temporären Dateinamen mit Präfix '%s' und Suffix '%s'"
-
-get_temp_file() {
-    # -----------------------------------------------------------------------
-    # get_temp_file
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zu einer temporären Datei zurück
-    # Parameter: $1 - Präfix für den Dateinamen (optional) 
-    #            $2 - Suffix für die Dateierweiterung (optional)
-    # Rückgabewert: Der vollständige Pfad zur Datei
-    # -----------------------------------------------------------------------
-    local prefix="${1:-fotobox}"  # Standard-Präfix ist "fotobox"
-    local suffix="${2:-.tmp}"     # Standard-Suffix ist .tmp
-    local temp_dir
-
-    debug "$(printf "$get_temp_file_debug_0001" "$prefix" "$suffix")" "CLI" "get_temp_file"
-
-    # Temporäres Verzeichnis abrufen und Dateinamen generieren
-    temp_dir="$("$MANAGE_FOLDERS_SH" get_temp_dir)"
-    echo "${temp_dir}/${prefix}_$(date +%Y%m%d%H%M%S)_$RANDOM$suffix"
 }
 
 # get_backup_file
