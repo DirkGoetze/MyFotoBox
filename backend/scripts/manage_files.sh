@@ -151,8 +151,8 @@ _get_file_name() {
 
 # get_config_file
 get_config_file_debug_0001="INFO: Ermittle Name der Projekt Konfigurationsdatei"
-get_config_file_debug_0002="INFO: Genutzter Verzeichnispfad zur Konfigurationsdatei: %s"
-get_config_file_debug_0003="SUCCESS: Vollständiger Pfad zur Konfigurationsdatei: %s"
+get_config_file_debug_0002="INFO: Genutzter Verzeichnispfad zur Konfigurationsdatei: '%s'"
+get_config_file_debug_0003="SUCCESS: Vollständiger Pfad zur Konfigurationsdatei: '%s'"
 get_config_file_debug_0004="ERROR: Konfigurationsdatei nicht gefunden oder nicht lesbar/beschreibbar"
 
 get_config_file() {
