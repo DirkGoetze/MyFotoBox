@@ -169,9 +169,9 @@ get_config_file() {
 
     #  Festlegen der Bestandteile für den Dateinamen
     # Bestimmen des Ordnerpfads (später löschen, wird nur optional benötigt)
-    folder_path="$(get_conf_dir)"
     file_name="fotobox"
     file_ext="$CONFIG_FILE_EXT_DEFAULT"
+    folder_path="$(get_config_dir)"
     debug "$(printf "$get_config_file_debug_0002" "$folder_path")"
 
     # Zusammensetzen des vollständigen Dateinamens erfolgreich
