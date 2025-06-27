@@ -2,7 +2,7 @@
 # ---------------------------------------------------------------------------
 # manage_files.sh
 # ---------------------------------------------------------------------------
-# Funktion: Zentrale Stelle für alle Dateipfad-Operationen
+# Funktion: Zentrale Verwaltung für alle Dateipfad-Operationen
 # ......... Stellt einheitliche Dateipfad-Getter bereit und arbeitet eng
 # ......... mit manage_folders.sh zusammen, das die Ordnerpfade verwaltet.
 # ......... Nach Policy müssen alle Skripte Dateien konsistent benennen
@@ -16,7 +16,8 @@
 # CLI-Programm ist nicht vorgesehen. Die Policy zur main()-Funktion gilt nur 
 # für Hauptskripte.
 #
-# HINWEIS: Dieses Skript erfordert lib_core.sh und sollte nie direkt aufgerufen werden.
+# HINWEIS: Dieses Skript erfordert lib_core.sh und sollte nie direkt 
+# .......  aufgerufen werden.
 # ---------------------------------------------------------------------------
 
 # ===========================================================================
@@ -30,18 +31,19 @@ MANAGE_FILES_LOADED=0
 # Globale Konstanten
 # ===========================================================================
 # Die meisten globalen Konstanten werden bereits durch lib_core.sh gesetzt.
-# Hier definieren wir nur Konstanten, die noch nicht durch 
-# lib_core.sh gesetzt wurden oder die speziell für dieses Modul benötigt werden.
+# bereitgestellt. Hier definieren wir nur Konstanten, die noch nicht durch 
+# lib_core.sh gesetzt wurden oder die speziell für die Installation 
+# überschrieben werden müssen.
 # ---------------------------------------------------------------------------
-# Standardpfade und Fallback-Pfade werden in lib_core.sh zentral definiert
-# Nutzer- und Ordnereinstellungen werden ebenfalls in lib_core.sh zentral 
-# verwaltet
+# Standardpfade und Fallback-Pfade werden in manage_folders.sh definiert und
+# Nutzer- und Ordnereinstellungen werden dort ebenfalls zentral verwaltet
 # ---------------------------------------------------------------------------
 
 # ===========================================================================
 # Lokale Konstanten (Vorgaben und Defaults nur für die Installation)
 # ===========================================================================
 # Standard-Dateierweiterungen für verschiedene Dateitypen
+CONFIG_FILE_EXT_DEFAULT=".ini"
 CONFIG_FILE_EXT_NGINX=".conf"
 CONFIG_FILE_EXT_CAMERA=".json"
 CONFIG_FILE_EXT_SYSTEM=".inf"
@@ -62,63 +64,128 @@ DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
 # ---------------------------------------------------------------------------
 
+# _get_file_name
+_get_file_name_debug_0001="INFO: Prüfung der Konfigurationsdatei '%s' im Verzeichnis '%s'"
+_get_file_name_debug_0002="INFO: Verzeichnispfad zur Konfigurationsdatei: %s"
+_get_file_name_debug_0003="SUCCESS: Vollständiger Konfigurationspfad: %s/%s"
+_get_file_name_debug_0004="ERROR: Konfigurationsdatei nicht gefunden"
+
+_get_file_name() {
+    # -----------------------------------------------------------------------
+    # _get_file_name
+    # -----------------------------------------------------------------------
+    # Funktion....: Gibt nach Prüfung auf Vorhandensein, Beschreibbarkeit und
+    # ............  Lese/Schreibrechten den vollständigen Dateipfad zurück.
+    # Parameter...: $1 - Name der Datei
+    # ............  $2 - (Optional) Dateiendung (Standard: leer)
+    # ............  $3 - (Optional) Pfad, in dem die Datei gesucht wird
+    # ............  $3 - (Optional) Nutzername, der die Datei besitzen soll
+    # ............  $4 - (Optional) Gruppenname, der die Datei besitzen soll
+    # ............  $5 - (Optional) Modus (Rechte) der Datei (Standard: 664)
+    # Hinweis.....: Wird kein Pfad angegeben, wird als Standard der Pfad für 
+    # ............  Einstellungen im Projekt Ordner verwendet. Die Parameter
+    # ............  $3, $4 und $5 sind optional und werden auf Standardwerte
+    # ............  gesetzt, wenn sie nicht angegeben werden. Sie werden nur
+    # ............  verwendet, wenn die Datei neu erstellt wird.
+    # Rückgabewert: Der vollständige Name der Datei (inkl. Pfad)
+    # -----------------------------------------------------------------------
+    local name="$1"                   # Name der Datei
+    local ext="${2:-""}"              # Dateiendung (optional, Standard leer)
+    local path="${3:-""}"             # Pfad, in dem die Datei gesucht wird
+    local user="${4:-$DEFAULT_USER}"
+    local group="${5:-$DEFAULT_GROUP}"
+    local mode="${6:-$DEFAULT_MODE_FILES}"
+    local full_path
+
+    # Überprüfen, ob die erforderlichen Parameter angegeben sind
+    if ! check_param "$name" "name"; then return 1; fi
+
+    # Eröffnungsmeldung für die Debug-Ausgabe
+    debug "$(printf "$_get_file_name_debug_0001" "$name" "$path")"
+
+    # Prüfen ob der Pfad übergeben wurde
+    if [ -z "$path" ]; then
+        # Wenn kein Pfad angegeben ist, Standardpfad verwenden
+        path="$(get_conf_dir)"
+    fi
+
+    # Debug-Ausgabe des Verzeichnispfads
+    debug "$(printf "$_get_file_name_debug_0002" "$path")"
+
+    # Zusammenstellen des vollständigen Pfads
+    # Sicherstellen, dass $path keine abschließenden Slashes hat
+    full_path="${path%/}/${name}${ext}"
+
+    # Die Datei existiert nicht, erzeugen und die Rechte setzen
+    if [ ! -f "$full_path" ]; then
+        # Datei erzeugen und prüfen ob sie erfolgreich erstellt wurde
+        touch "$full_path"
+        # wenn erzeugen erfolgreich, User, Lese- und Schreibrechte setzen
+        if [ $? -eq 0 ]; then
+            chmod "$mode" "$full_path"
+            chown "$user":"$group" "$full_path"
+        fi
+    fi
+
+    # Überprüfen, ob die Datei existiert und lesbar/beschreibbar ist
+    if [ -r "$full_path" ] && [ -w "$full_path" ]; then
+        # Debug-Ausgabe des vollständigen Pfads
+        debug "$(printf "$_get_file_name_debug_0003" "$path" "$name")"
+        echo "$full_path"
+        return 0
+    else
+        # Fehlerausgabe, wenn die Datei nicht lesbar oder beschreibbar ist
+        debug "$(printf "$_get_file_name_debug_0004")"
+        echo ""
+        return 1
+    fi
+}
+
 # ===========================================================================
-# Hauptfunktionen für die Ermittlung von Projekt Dateipfaden
+# Hauptfunktionen für die Ermittlung von Dateipfaden im Projekt
 # ===========================================================================
 
 # get_config_file
-get_config_file_debug_0001="Ermittle Pfad zu Konfigurationsdatei für Kategorie %s, Name %s"
-get_config_file_debug_0002="Konfigurationsordner für Kategorie %s: %s"
-get_config_file_debug_0003="Vollständiger Konfigurationspfad: %s/%s%s"
-get_config_file_log_0001="ERROR: Unbekannte Kategorie: %s"
+get_config_file_debug_0001="INFO: Ermittle Name der Projekt Konfigurationsdatei"
+get_config_file_debug_0002="INFO: Verzeichnispfad zur Konfigurationsdatei: %s"
+get_config_file_debug_0003="SUCCESS: Vollständiger Konfigurationspfad: %s/%s"
+get_config_file_debug_0004="ERROR: Konfigurationsdatei nicht gefunden"
 
 get_config_file() {
     # -----------------------------------------------------------------------
     # get_config_file
     # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zu einer Konfigurationsdatei zurück
-    # Parameter: $1 - Die Kategorie der Konfigurationsdatei
-    # .........  $2 - Der Name der Konfigurationsdatei (ohne Erweiterung)
-    # Rückgabewert: Der vollständige Pfad zur Datei
+    # Funktion: Gibt den Pfad zu einer Projekt-Konfigurationsdatei zurück
+    # Parameter: keine
+    # Rückgabewert: Der vollständige Name, inklusive Pfad zur Datei
     # -----------------------------------------------------------------------
-    local category="$1"
-    local name="$2"
-    local folder_path
-    local file_ext=""
+    local folder_path                         # Pfad zum Konfigurationsordner
+    local file_name                           # Name der Konfigurationsdatei
+    local file_ext                            # Standard-Dateiendung
+    local full_filename
 
-    # Überprüfen, ob die erforderlichen Parameter angegeben sind
-    if ! check_param "$category" "category"; then return 1; fi
-    if ! check_param "$name" "name"; then return 1; fi
+    # Eröffnungsmeldung für die Debug-Ausgabe
+    debug "$(printf "$get_config_file_debug_0001")"
 
-    debug "$(printf "$get_config_file_debug_0001" "$category" "$name")" "CLI" "get_config_file"
+    #  Festlegen der Bestandteile für den Dateinamen
+    # Bestimmen des Ordnerpfads (später löschen, wird nur optional benötigt)
+    folder_path="$(get_conf_dir)"
+    file_name="fotobox"
+    file_ext="$CONFIG_FILE_EXT_DEFAULT"
+    debug "$(printf "$get_config_file_debug_0002" "$folder_path")"
 
-    # Bestimmen des Ordnerpfads basierend auf der Kategorie
-    case "$category" in
-        "nginx")
-            folder_path="$("$MANAGE_FOLDERS_SH" get_nginx_conf_dir)"
-            file_ext=".conf"
-            ;;
-        "camera")
-            folder_path="$("$MANAGE_FOLDERS_SH" get_camera_conf_dir)"
-            file_ext=".json"
-            ;;
-        "system")
-            folder_path="$("$MANAGE_FOLDERS_SH" get_conf_dir)"
-            file_ext=".inf"
-            ;;
-        *)
-          log "$(printf "$get_config_file_log_0001" "$category")" "get_config_file" "manage_files"
-          debug "$(printf "$get_config_file_log_0001" "$category")" "get_config_file" "manage_files"
-          echo ""
-          return 1
-          ;;
-    esac
-    debug "$(printf "$get_config_file_debug_0002" "$category" "$folder_path")" "CLI" "get_config_file"
-
-    # Rückgabe des vollständigen Pfads zur Konfigurationsdatei
-    debug "$(printf "$get_config_file_debug_0003" "$folder_path" "$name" "$file_ext")" "CLI" "get_config_file"
-    echo "${folder_path}/${name}${file_ext}"
-    return 0
+    # Zusammensetzen des vollständigen Dateinamens erfolgreich
+    full_filename="$(_get_file_name "$file_name" "$file_ext" "$folder_path")"
+    if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
+        # Erfolg: Datei existiert und ist les-/schreibbar
+        debug "$(printf "$get_config_file_debug_0003" "$folder_path" "$file_name" "$file_ext")"
+        echo "$full_filename"
+        return 0
+    else
+        # Fehlerfall
+        debug "$get_config_file_debug_0004"
+        return 1
+    fi
 }
 
 # get_template_file

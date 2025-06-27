@@ -57,7 +57,8 @@ DEBUG_MOD_GLOBAL=1           # Globales Flag, das alle lokalen überstimmt
 # Benutzer- und Berechtigungseinstellungen
 DEFAULT_USER="fotobox"
 DEFAULT_GROUP="fotobox"
-DEFAULT_MODE="755"
+DEFAULT_MODE_FOLDER="755"
+DEFAULT_MODE_FILES="664"
 
 # Port-Einstellungen
 DEFAULT_HTTP_PORT=80

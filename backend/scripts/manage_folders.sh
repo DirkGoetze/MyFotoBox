@@ -35,19 +35,10 @@ MANAGE_FOLDERS_LOADED=0
 # lib_core.sh gesetzt wurden oder die speziell für die Installation 
 # überschrieben werden müssen.
 # ---------------------------------------------------------------------------
-# Standardpfade und Fallback-Pfade werden in lib_core.sh zentral definiert
-# Nutzer- und Ordnereinstellungen werden ebenfalls in lib_core.sh zentral 
-# verwaltet
-# ---------------------------------------------------------------------------
 
 # ===========================================================================
 # Lokale Konstanten (Vorgaben und Defaults nur für die Installation)
 # ===========================================================================
-# Lokale Aliase für bessere Lesbarkeit
-: "${USER:=$DEFAULT_USER}"
-: "${GROUP:=$DEFAULT_GROUP}"
-: "${MODE:=$DEFAULT_MODE}"
-# ---------------------------------------------------------------------------
 # Debug-Modus: Lokal und global steuerbar
 # DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
@@ -230,7 +221,7 @@ _create_directory() {
     local dir="$1"
     local user="${2:-$DEFAULT_USER}"
     local group="${3:-$DEFAULT_GROUP}"
-    local mode="${4:-$DEFAULT_MODE}"
+    local mode="${4:-$DEFAULT_MODE_FOLDER}"
 
     # Prüfung der Parameter
     if ! check_param "$dir" "dir"; then return 1; fi
