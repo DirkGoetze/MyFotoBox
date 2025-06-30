@@ -154,7 +154,7 @@ log_or_json() {
 }
 
 # log
-log_debug_0001="Funktionsaufruf ohne Parameter aufgerufen, führe Log-Rotation aus"
+log_debug_0001="Funktionsaufruf ohne Parameter, führe Log-Rotation aus"
 log_debug_0002="%s ([Datei: '%s'][Funktion: '%s'])"
 log_debug_0003="FEHLER: Konnte nicht in Logdatei %s schreiben!"
 

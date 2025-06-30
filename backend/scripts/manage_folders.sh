@@ -1529,6 +1529,7 @@ get_photos_dir() {
 
 # get_photos_originals_dir
 get_photos_originals_dir_debug_0001="INFO: Ermittle Original-Fotos-Verzeichnis"
+get_photos_originals_dir_debug_0002="SUCCESS: Verwende für Original-Fotos-Verzeichnis \$FRONTEND_DIR_PHOTOS_ORIGINAL: %s"
 get_photos_originals_dir_debug_0003="SUCCESS: Verwendeter Pfad für Original-Fotos-Verzeichnis: %s"
 get_photos_originals_dir_debug_0004="INFO: Eventname: '%s', prüfe Verzeichniseignung"
 get_photos_originals_dir_debug_0005="SUCCESS: Verwendeter Pfad für Event-spezifisches Original-Fotos-Verzeichnis: %s"
@@ -1614,11 +1615,12 @@ get_photos_originals_dir() {
 
 # get_photos_gallery_dir
 get_photos_gallery_dir_debug_0001="INFO: Ermittle Galerie(Thumbnail)-Verzeichnis"
-get_photos_gallery_dir_debug_0002="SUCCESS: Verwendeter Pfad für Galerie(Thumbnail)-Verzeichnis: %s"
-get_photos_gallery_dir_debug_0003="INFO: Eventname: '%s', prüfe Verzeichniseignung"
-get_photos_gallery_dir_debug_0004="SUCCESS: Verwendeter Pfad für Event-spezifisches Galerie(Thumbnail)-Verzeichnis: %s"
-get_photos_gallery_dir_debug_0005="ERROR: Alle Pfade für Galerie(Thumbnail)-Verzeichnis fehlgeschlagen"
-get_photos_gallery_dir_debug_0006="ERROR: Fehler beim Erstellen des Event-spezifischen Verzeichnisses: %s, Fallback auf Basis-Verzeichnis: %s"
+get_photos_gallery_dir_debug_0002="SUCCESS: Verwende für Galerie(Thumbnail)-Verzeichnis \$FRONTEND_DIR_PHOTOS_THUMBNAILS: %s"
+get_photos_gallery_dir_debug_0003="SUCCESS: Verwendeter Pfad für Galerie(Thumbnail)-Verzeichnis: %s"
+get_photos_gallery_dir_debug_0004="INFO: Eventname: '%s', prüfe Verzeichniseignung"
+get_photos_gallery_dir_debug_0005="SUCCESS: Verwendeter Pfad für Event-spezifisches Galerie(Thumbnail)-Verzeichnis: %s"
+get_photos_gallery_dir_debug_0006="ERROR: Alle Pfade für Galerie(Thumbnail)-Verzeichnis fehlgeschlagen"
+get_photos_gallery_dir_debug_0007="ERROR: Fehler beim Erstellen des Event-spezifischen Verzeichnisses: %s, Fallback auf Basis-Verzeichnis: %s"
 
 get_photos_gallery_dir() {
     # -----------------------------------------------------------------------
@@ -1640,33 +1642,40 @@ get_photos_gallery_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_photos_gallery_dir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${FRONTEND_DIR_PHOTOS_THUMBNAILS+x}" ] && [ -n "$FRONTEND_DIR_PHOTOS_THUMBNAILS" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_photos_originals_dir_debug_0002" "$FRONTEND_DIR_PHOTOS_THUMBNAILS")"
+        dir="$FRONTEND_DIR_PHOTOS_THUMBNAILS"
+    else
+        # Verwende die für diesen Ordner definierten Pfade
+        # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
+        dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
 
-    # Basis-Verzeichnis konnte nicht erzeugt werden
-    if [ -z "$dir" ]; then
-        debug "$(printf "$get_photos_gallery_dir_debug_0005")"
-        echo ""
-        return 1
-    fi
+        # Basis-Verzeichnis konnte nicht erzeugt werden
+        if [ -z "$dir" ]; then
+            debug "$(printf "$get_photos_gallery_dir_debug_0006")"
+            echo ""
+            return 1
+        fi
 
-    if [ -n "$dir" ]; then
-        if [ -z "${FRONTEND_DIR_PHOTOS_THUMBNAILS+x}" ] || [ -z "$FRONTEND_DIR_PHOTOS_THUMBNAILS" ] || [ "$dir" != "$FRONTEND_DIR_PHOTOS_THUMBNAILS" ]; then
-            FRONTEND_DIR_PHOTOS_THUMBNAILS="$dir"
-            export FRONTEND_DIR_PHOTOS_THUMBNAILS
+        if [ -n "$dir" ]; then
+            if [ -z "${FRONTEND_DIR_PHOTOS_THUMBNAILS+x}" ] || [ -z "$FRONTEND_DIR_PHOTOS_THUMBNAILS" ] || [ "$dir" != "$FRONTEND_DIR_PHOTOS_THUMBNAILS" ]; then
+                FRONTEND_DIR_PHOTOS_THUMBNAILS="$dir"
+                export FRONTEND_DIR_PHOTOS_THUMBNAILS
+            fi
         fi
     fi
 
     # Wenn kein Eventname übergeben wurde, gib das Basis-Verzeichnis zurück
     if [ -z "$event_name" ]; then
-        debug "$(printf "$get_photos_gallery_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_photos_gallery_dir_debug_0003" "$dir")"
         echo "$dir"
         return 0
     fi
 
     # Event-Name validieren und bereinigen
-    debug "$(printf "$get_photos_gallery_dir_debug_0003" "$event_name")"
+    debug "$(printf "$get_photos_gallery_dir_debug_0004" "$event_name")"
     
     # Verwende die Helferfunktion für die Bereinigung
     local clean_event_name=$(_get_clean_foldername "$event_name")
@@ -1677,13 +1686,13 @@ get_photos_gallery_dir() {
     local event_dir="${dir}/${clean_event_name}"
 
      if _create_directory "$event_dir"; then
-        debug "$(printf "$get_photos_gallery_dir_debug_0004" "$event_dir")"
+        debug "$(printf "$get_photos_gallery_dir_debug_0005" "$event_dir")"
         echo "$event_dir"
         return 0
     else
-        debug "$(printf "$get_photos_gallery_dir_debug_0006" "$event_dir" "$dir")"
+        debug "$(printf "$get_photos_gallery_dir_debug_0007" "$event_dir" "$dir")"
         # Fallback auf das Basis-Verzeichnis bei Fehler
-        debug "$(printf "$get_photos_gallery_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_photos_gallery_dir_debug_0003" "$dir")"
         echo "$dir"
         return 0
     fi
@@ -1691,8 +1700,9 @@ get_photos_gallery_dir() {
 
 # get_frontend_picture_dir
 get_frontend_picture_dir_debug_0001="INFO: Ermittle Frontend-Bilder-Verzeichnis"
-get_frontend_picture_dir_debug_0002="SUCCESS: Verwendeter Pfad für Frontend-Bilder-Verzeichnis: %s"
-get_frontend_picture_dir_debug_0003="ERROR: Alle Pfade für Frontend-Bilder-Verzeichnis fehlgeschlagen"
+get_frontend_picture_dir_debug_0002="SUCCESS: Verwende für Frontend-Bilder-Verzeichnis \$FRONTEND_DIR_PICTURE: %s"
+get_frontend_picture_dir_debug_0003="SUCCESS: Verwendeter Pfad für Frontend-Bilder-Verzeichnis: %s"
+get_frontend_picture_dir_debug_0004="ERROR: Alle Pfade für Frontend-Bilder-Verzeichnis fehlgeschlagen"
 
 get_frontend_picture_dir() {
     # -----------------------------------------------------------------------
@@ -1713,11 +1723,19 @@ get_frontend_picture_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_frontend_picture_dir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${FRONTEND_DIR_PICTURE+x}" ] && [ -n "$FRONTEND_DIR_PICTURE" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_frontend_picture_dir_debug_0002" "$FRONTEND_DIR_PICTURE")"
+        echo "$FRONTEND_DIR_PICTURE"
+        return 0
+    fi
+
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_frontend_picture_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_frontend_picture_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${FRONTEND_DIR_PICTURE+x}" ] || [ -z "$FRONTEND_DIR_PICTURE" ] || [ "$dir" != "$FRONTEND_DIR_PICTURE" ]; then
             FRONTEND_DIR_PICTURE="$dir"
@@ -1727,7 +1745,7 @@ get_frontend_picture_dir() {
         return 0
     fi
 
-    debug "$get_frontend_picture_dir_debug_0003"
+    debug "$get_frontend_picture_dir_debug_0004"
     echo ""
     return 1
 }
@@ -1794,8 +1812,9 @@ get_log_dir() {
 
 # get_tmp_dir
 get_tmp_dir_debug_0001="INFO: Ermittle temporäres Verzeichnis"
-get_tmp_dir_debug_0002="SUCCESS: Verwendeter Pfad für temporäres Verzeichnis: %s"
-get_tmp_dir_debug_0003="ERROR: Alle Pfade für temporäres Verzeichnis fehlgeschlagen"
+get_tmp_dir_debug_0002="SUCCESS: Verwende für temporäres Verzeichnis \$TMP_DIR: %s"
+get_tmp_dir_debug_0003="SUCCESS: Verwendeter Pfad für temporäres Verzeichnis: %s"
+get_tmp_dir_debug_0004="ERROR: Alle Pfade für temporäres Verzeichnis fehlgeschlagen"
 
 get_tmp_dir() {
     # -----------------------------------------------------------------------
@@ -1816,11 +1835,19 @@ get_tmp_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_tmp_dir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${TMP_DIR+x}" ] && [ -n "$TMP_DIR" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_tmp_dir_debug_0002" "$TMP_DIR")"
+        echo "$TMP_DIR"
+        return 0
+    fi
+
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_tmp_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_tmp_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${TMP_DIR+x}" ] || [ -z "$TMP_DIR" ] || [ "$dir" != "$TMP_DIR" ]; then
             TMP_DIR="$dir"
@@ -1830,7 +1857,7 @@ get_tmp_dir() {
         return 0
     fi
 
-    debug "$get_tmp_dir_debug_0003"
+    debug "$get_tmp_dir_debug_0004"
     echo ""
     return 1
 }
