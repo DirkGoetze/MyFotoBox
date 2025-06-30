@@ -595,7 +595,7 @@ install_system_requirements() {
         rm -f "$apt_update_output"
         return 2
     else
-        echo -e "\r  → [OK] Update der Paketquellen erfolgreich abgeschlossen."
+        print_success "Update der Paketquellen erfolgreich abgeschlossen."
         # Lösche temporäre Datei
         rm -f "$apt_update_output"
     fi
@@ -630,10 +630,10 @@ install_system_requirements() {
         rm -f "$apt_install_output"
         
         if [ $install_result -eq 0 ]; then
-            echo -e "\r  → [OK] Paket $pkg erfolgreich installiert."
+            print_success "Paket $pkg erfolgreich installiert."
             ((successful_packages++))
         else
-            echo -e "\r  → [FEHLER] Installation von $pkg fehlgeschlagen."
+            print_error "Installation von $pkg fehlgeschlagen."
             print_warning "Paket $pkg konnte nicht installiert werden. Das Skript wird versuchen, fortzufahren."
             failed_packages+=("$pkg")
             # Fehler für nicht installiertes Paket über die zentrale Logfunktion melden

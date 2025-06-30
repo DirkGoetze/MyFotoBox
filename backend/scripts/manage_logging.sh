@@ -251,7 +251,7 @@ print_step() {
     # -----------------------------------------------------------------------
     # Funktion: Gibt einen Hinweis auf einen auszuführenden Schritt in Gelb aus
     # Parameter: $* = Meldungstext
-    echo -e "${COLOR_YELLOW}$*${COLOR_RESET}"
+    echo -e "\r${COLOR_YELLOW}$*${COLOR_RESET}"
     log "STEP: $*"
 }
 
@@ -261,7 +261,7 @@ print_info() {
     # -----------------------------------------------------------------------
     # Funktion: Gibt allgemeine Informationen nach Systemstandard aus
     # Parameter: $* = Meldungstext
-    echo -e "${COLOR_RESET}$*${COLOR_RESET}"
+    echo -e "\r${COLOR_RESET}$*${COLOR_RESET}"
     log "INFO: $*"
 }
 
@@ -271,7 +271,7 @@ print_success() {
     # -----------------------------------------------------------------------
     # Funktion: Gibt eine Erfolgsmeldung in Dunkelgrün aus
     # Parameter: $* = Meldungstext
-    echo -e "${COLOR_GREEN}  → [OK]${COLOR_RESET} $*"
+    echo -e "\r${COLOR_GREEN}  → [OK]${COLOR_RESET} $*"
     log "SUCCESS: $*"
 }
 
@@ -281,7 +281,7 @@ print_warning() {
     # -----------------------------------------------------------------------
     # Funktion: Gibt eine Warnung in gelber Farbe aus 
     # Parameter: $* = Warnungstext
-    echo -e "${COLOR_YELLOW}  → [WARN]${COLOR_RESET} $*"
+    echo -e "\r${COLOR_YELLOW}  → [WARN]${COLOR_RESET} $*"
     log "WARNING: $*"
 }
 
@@ -291,7 +291,7 @@ print_error() {
     # -----------------------------------------------------------------------
     # Funktion: Gibt eine Fehlermeldung farbig aus
     # Parameter: $* = Fehlertext
-    echo -e "${COLOR_RED}  → [ERROR]${COLOR_RESET} $*"
+    echo -e "\r${COLOR_RED}  → [ERROR]${COLOR_RESET} $*"
     log "ERROR: $*"
 }
 
