@@ -1570,8 +1570,9 @@ get_frontend_picture_dir() {
 
 # get_log_dir
 get_log_dir_debug_0001="INFO: Ermittle Log-Verzeichnis"
-get_log_dir_debug_0002="SUCCESS: Verwendeter Pfad für Log-Verzeichnis: %s"
-get_log_dir_debug_0003="ERROR: Alle Pfade für Log-Verzeichnis fehlgeschlagen"
+get_log_dir_debug_0002="SUCCESS: Verwende für Log-Verzeichnis \$LOG_DIR: '%s'"
+get_log_dir_debug_0003="SUCCESS: Verwendeter Pfad für Log-Verzeichnis: %s"
+get_log_dir_debug_0004="ERROR: Alle Pfade für Log-Verzeichnis fehlgeschlagen"
 
 get_log_dir() {
     # ------------------------------------------------------------------------------
@@ -1604,7 +1605,7 @@ get_log_dir() {
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_log_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_log_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${LOG_DIR+x}" ] || [ -z "$LOG_DIR" ] || [ "$dir" != "$LOG_DIR" ]; then
             LOG_DIR="$dir"
@@ -1614,7 +1615,7 @@ get_log_dir() {
         return 0
     fi
 
-    debug "$get_log_dir_debug_0003"
+    debug "$get_log_dir_debug_0004"
     echo ""
     return 1
 }
