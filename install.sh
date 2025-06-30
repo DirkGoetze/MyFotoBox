@@ -381,6 +381,12 @@ set_fallback_security_settings() {
         echo -e "\033[1;31mFehler: Modul 'manage_nginx' ist nicht verfügbar.\033[0m"
         return 1
     fi
+    # --- 4. Prüfen, ob Skript mit root-Rechten ausgeführt wird
+    if ! check_is_root; then
+        print_error "Dieses Skript muss mit Root-Rechten ausgeführt werden."
+        exit 1
+    fi
+    print_success "Rechteprüfung erfolgreich (Root-Rechte vorhanden)."
 
     # --- 5. Vermerke in log schreiben
     log "1. Log Meldung: Prüfung der Systemumgebung erfolgreich abgeschlossen"
