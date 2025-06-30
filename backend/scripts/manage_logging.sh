@@ -154,8 +154,8 @@ log_or_json() {
 }
 
 # log
-log_debug_0001="Funktionsaufruf: log() > ohne Parameter aufgerufen, führe Logrotation durch"
-log_debug_0002="%s (Funktionsname: '%s', Dateiname: '%s')"
+log_debug_0001="Funktionsaufruf ohne Parameter aufgerufen, führe Log-Rotation aus"
+log_debug_0002="%s ([Datei: '%s'][Funktion: '%s'])"
 log_debug_0003="FEHLER: Konnte nicht in Logdatei %s schreiben!"
 
 log() {
@@ -170,6 +170,16 @@ log() {
     local msg="$1"
     local log_file="$LOG_FILENAME"
 
+    # Prüfe, ob Systemvariable gesetzt ist
+    if [ -z "${LOG_FILENAME+x}" ] || [ -z "$LOG_FILENAME" ]; then
+        # Logdatei ist nicht gesetzt, versuche sie zu ermitteln
+        log_file="$(get_log_file)"
+        if [ -z "$log_file" ]; then
+            echo "FEHLER: Logdatei konnte nicht ermittelt werden!" >&2
+            return 1
+        fi
+    fi
+
     if [ -z "$msg" ]; then
         # Debug Meldung: log() ohne Parameter aufgerufen
         debug "$(printf "$log_debug_0001")"
@@ -179,11 +189,11 @@ log() {
         # Fehlerfall: Funktionsname und ggf. Dateiname erzwingen
         local called_func="${FUNCNAME[1]}"
         local called_file="${BASH_SOURCE[1]}"
-        debug "$(printf "$log_debug_0002" "$msg" "$called_func" "$called_file")"
+        debug "$(printf "$log_debug_0002" "$msg" "$called_file" "$called_func")"
         # Wenn Fehlermeldung, Meldung um aufrufende Datei und Funktion ergänzen
         if [[ "$msg" == ERROR:* ]]; then
             if [ -n "$called_file" ]; then
-                echo "$(date "+%Y-%m-%d %H:%M:%S") [$called_func][$called_file] $msg" >> "$log_file" 2>/dev/null || {
+                echo "$(date "+%Y-%m-%d %H:%M:%S") [$called_file][$called_func] $msg" >> "$log_file" 2>/dev/null || {
                     debug "$(printf "$log_debug_0003" "$log_file")"
                     echo "$(printf "$log_debug_0003" "$log_file")" >&2
                     return 1
