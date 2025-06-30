@@ -341,9 +341,9 @@ install_package_group() {
 # Einstellungen (Systemanpassungen)
 # ===========================================================================
 
-set_fallback_security_settings() {
+check_system_requirements() {
     # -----------------------------------------------------------------------
-    # set_fallback_security_settings
+    # check_system_requirements
     # -----------------------------------------------------------------------
     # Funktion: Prüft, ob das Skript im vorgegebenen INSTALL_DIR ausgeführt 
     # ......... wird und stellt die Verfügbarkeit aller kritischen Ressourcen 
@@ -750,7 +750,7 @@ dlg_check_system_requirements() {
     echo -e "\033[1;33m[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfung der Systemvoraussetzungen ...\033[0m"    
     
     # Auf kritische Ressourcen prüfen und Logging einrichten
-    if ! set_fallback_security_settings; then
+    if ! check_system_requirements; then
         echo -e "\033[1;31m  → [ERROR]\033[0m Kritische Systemvoraussetzungen nicht erfüllt oder Logging konnte nicht eingerichtet werden."
         exit 1
     fi
@@ -763,79 +763,10 @@ dlg_check_system_requirements() {
         exit 1
     fi
     
-    # Prüfen, ob die manage_logging.sh erfolgreich geladen wurde
-    #if type get_log_file &>/dev/null; then
-    #    print_success "Modul 'Manage_Logging' erfolgreich geladen, verwende zentrales Logging."
-    #    log "INFO: Modul 'Manage_Logging' erfolgreich geladen, verwende zentrales Logging."
-    #fi
-    
     # Befehlszeilenargumente verarbeiten
     parse_args "$@"
     
-    # Log-Initialisierung (Rotation) direkt nach Skriptstart
-    #if type -t log | grep -q "function"; then
-    #    log
-    #    log "Installationsskript gestartet: $(date '+%Y-%m-%d %H:%M:%S')"
-    #    log "Logverzeichnis: $LOG_DIR"
-    #else
-    #    echo -e "\033[1;33mWarnung: Log-Rotation konnte nicht durchgeführt werden (log-Funktion nicht verfügbar)\033[0m"
-    #fi
-
     print_success "Systemvoraussetzungen erfüllt."
-}
-
-dlg_check_root() {
-    # -----------------------------------------------------------------------
-    # dlg_check_root
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob das Skript als root ausgeführt wird
-    ((STEP_COUNTER++))
-    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfe Rechte zur Ausführung ..."
-    if ! check_is_root; then
-        print_error "Dieses Skript muss mit Root-Rechten ausgeführt werden."
-        exit 1
-    fi
-    print_success "Rechteprüfung erfolgreich (Root-Rechte vorhanden)."
-}
-
-dlg_check_distribution() {
-    # -----------------------------------------------------------------------
-    # dlg_check_distribution
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob das System auf Debian/Ubuntu basiert und zeigt Informationen an
-    ((STEP_COUNTER++))
-    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfe Distribution ..."
-    
-    # Prüfe Basis-Distribution
-    if ! check_distribution; then
-        print_error "Dieses Skript ist nur für Debian/Ubuntu-basierte Systeme geeignet."
-        exit 1
-    fi
-    
-    # Versionsinfo-Variablen vorinitialisieren, falls sie später nicht gesetzt werden können
-    : "${DIST_NAME:=Unbekannt}"
-    : "${DIST_VERSION:=Unbekannt}"
-    
-    # Prüfe Versions-Kompatibilität
-    check_distribution_version
-    version_check=$?
-    
-    case $version_check in
-        0)
-            print_success "Distribution erkannt: $DIST_NAME $DIST_VERSION (unterstützt)"
-            log "INFO: Unterstützte Distribution erkannt: $DIST_NAME $DIST_VERSION"
-            ;;
-        1)
-            print_warning "Distributionsversion konnte nicht erkannt werden (/etc/os-release nicht gefunden)."
-            print_success "Distribution: Debian/Ubuntu-basiertes System"
-            log "WARNING: Distributionsversion konnte nicht erkannt werden (/etc/os-release nicht gefunden)"
-            ;;
-        2)
-            print_warning "Distribution erkannt: $DIST_NAME $DIST_VERSION (nicht offiziell unterstützt)"
-            print_info "Die Installation wird fortgesetzt, aber es könnte zu unerwarteten Problemen kommen."
-            log "WARNING: Nicht offiziell unterstützte Distribution erkannt: $DIST_NAME $DIST_VERSION"
-            ;;
-    esac
 }
 
 dlg_prepare_system() {
@@ -1552,8 +1483,6 @@ main() {
     # Ausführung der einzelnen Dialogschritte, robuste Fehlerbehandlung
     run_step dlg_check_system_requirements "$@"  # Prüfe Systemvoraussetzungen 
     exit
-    run_step dlg_check_root               # Prüfe Root-Rechte
-    run_step dlg_check_distribution       # Prüfe die Distribution
     run_step dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
     run_step dlg_prepare_users            # Erstelle Benutzer und Gruppe 'fotobox'
     run_step dlg_prepare_structure        # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
