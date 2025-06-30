@@ -234,7 +234,7 @@ get_log_file() {
     debug "$(printf "$get_log_file_debug_0001")"
 
      # Prüfen, ob LOG_DIR bereits gesetzt ist
-    if [ -z "${LOG_FILENAME+x}" ] || [ -n "$LOG_FILENAME" ]; then
+    if [ -n "$LOG_FILENAME" ]; then
         # Pfad wurde bereits ermittelt, diesen zurückgeben
         debug "$(printf "$get_log_file_debug_0002" "$LOG_FILENAME")"
         echo "$LOG_FILENAME"
