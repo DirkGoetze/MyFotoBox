@@ -383,7 +383,7 @@ set_fallback_security_settings() {
     fi
 
     # --- 5. Vermerke in log schreiben
-    log "Prüfung der Systemumgebung erfolgreich abgeschlossen"
+    log "1. Log Meldung: Prüfung der Systemumgebung erfolgreich abgeschlossen"
     return 0
 }
 
