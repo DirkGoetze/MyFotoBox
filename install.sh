@@ -1419,7 +1419,6 @@ main() {
     run_step dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
     run_step dlg_prepare_users            # Erstelle Benutzer und Gruppe 'fotobox'
     run_step dlg_prepare_structure        # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
-    exit
     run_step dlg_nginx_installation       # NGINX-Konfiguration (Integration oder eigene Site)
     run_step dlg_firewall_config          # Firewall-Konfiguration für HTTP/HTTPS-Ports
     run_step dlg_backend_integration      # Python-Backend, venv, systemd-Service, Start
