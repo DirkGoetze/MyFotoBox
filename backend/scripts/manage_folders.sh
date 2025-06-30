@@ -459,8 +459,9 @@ get_backend_dir() {
 
 # get_script_dir
 get_script_dir_debug_0001="INFO: Ermittle Backend-Skript-Verzeichnis"
-get_script_dir_debug_0002="SUCCESS: Verwendeter Pfad für Backend-Skript-Verzeichnis: %s"
-get_script_dir_debug_0003="ERROR: Alle Pfade für Backend-Skript-Verzeichnis fehlgeschlagen"
+get_script_dir_debug_0002="SUCCESS: Verwendete für Backend-Skript-Verzeichnis \$SCRIPT_DIR: %s"
+get_script_dir_debug_0003="SUCCESS: Verwendeter Pfad für Backend-Skript-Verzeichnis: %s"
+get_script_dir_debug_0004="ERROR: Alle Pfade für Backend-Skript-Verzeichnis fehlgeschlagen"
 
 get_script_dir() {
     # -----------------------------------------------------------------------
@@ -481,11 +482,19 @@ get_script_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_script_dir_debug_0001"
 
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${SCRIPT_DIR+x}" ] && [ -n "$SCRIPT_DIR" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_script_dir_debug_0002" "$SCRIPT_DIR")"
+        echo "$SCRIPT_DIR"
+        return 0
+    fi
+
     # Verwende die für diesen Ordner definierten Pfade
     # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_script_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_script_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${SCRIPT_DIR+x}" ] || [ -z "$SCRIPT_DIR" ] || [ "$dir" != "$SCRIPT_DIR" ]; then
             SCRIPT_DIR="$dir"
@@ -495,15 +504,16 @@ get_script_dir() {
         return 0
     fi
 
-    debug "$get_script_dir_debug_0003"
+    debug "$get_script_dir_debug_0004"
     echo ""
     return 1
 }
 
 # get_venv_dir
 get_venv_dir_debug_0001="INFO: Ermittle 'Python Virtual Environment' Verzeichnis"
-get_venv_dir_debug_0002="SUCCESS: Verwendeter Pfad für 'Python Virtual Environment' Verzeichnis: %s"
-get_venv_dir_debug_0003="ERROR: Alle Pfade für 'Python Virtual Environment' Verzeichnis fehlgeschlagen"
+get_venv_dir_debug_0002="SUCCESS: Verwendete für 'Python Virtual Environment' Verzeichnis \$BACKEND_VENV_DIR: %s"
+get_venv_dir_debug_0003="SUCCESS: Verwendeter Pfad für 'Python Virtual Environment' Verzeichnis: %s"
+get_venv_dir_debug_0004="ERROR: Alle Pfade für 'Python Virtual Environment' Verzeichnis fehlgeschlagen"
 
 get_venv_dir() {
     # -----------------------------------------------------------------------
@@ -524,11 +534,19 @@ get_venv_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_venv_dir_debug_0001"
 
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${BACKEND_VENV_DIR+x}" ] && [ -n "$BACKEND_VENV_DIR" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_venv_dir_debug_0002" "$BACKEND_VENV_DIR")"
+        echo "$BACKEND_VENV_DIR"
+        return 0
+    fi
+
     # Verwende die für diesen Ordner definierten Pfade
     # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_venv_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_venv_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${BACKEND_VENV_DIR+x}" ] || [ -z "$BACKEND_VENV_DIR" ] || [ "$dir" != "$BACKEND_VENV_DIR" ]; then
             BACKEND_VENV_DIR="$dir"
@@ -538,15 +556,16 @@ get_venv_dir() {
         return 0
     fi
 
-    debug "$get_venv_dir_debug_0003"
+    debug "$get_venv_dir_debug_0004"
     echo ""
     return 1
 }
 
 # get_python_path
 get_python_path_debug_0001="INFO: Ermittle Pfad zum Python-Interpreter"
-get_python_path_debug_0002="SUCCESS: Verwendeter Pfad zum Python-Interpreter: %s"
-get_python_path_debug_0003="ERROR: Ermittlung des Python-Interpreter fehlgeschlagen. Python scheint nicht installiert zu sein!"
+get_python_path_debug_0002="SUCCESS: Verwende für Python-Interpreter \$PYTHON_EXEC: %s"
+get_python_path_debug_0003="SUCCESS: Verwendeter Pfad zum Python-Interpreter: %s"
+get_python_path_debug_0004="ERROR: Ermittlung des Python-Interpreter fehlgeschlagen. Python scheint nicht installiert zu sein!"
 
 get_python_path() {
     # -----------------------------------------------------------------------
@@ -565,39 +584,47 @@ get_python_path() {
     # Prüfen, ob PYTHON_EXEC bereits gesetzt ist (z.B. vom install.sh)
     debug "$get_python_path_debug_0001"
 
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${PYTHON_EXEC+x}" ] && [ -n "$PYTHON_EXEC" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_python_path_debug_0002" "$PYTHON_EXEC")"
+        echo "$PYTHON_EXEC"
+        return 0
+    fi
+
     # Python-Interpreter-Pfad ermitteln und setzen
     if [ -x "$path_default" ]; then
         # Verwende Standard-Python-Pfad, wenn ausführbar
         PYTHON_EXEC="$path_default"
         export PYTHON_EXEC
-        debug "$(printf "$get_python_path_debug_0002" "$PYTHON_EXEC")"
+        debug "$(printf "$get_python_path_debug_0003" "$PYTHON_EXEC")"
         echo "$PYTHON_EXEC"
         return 0
     elif [ -x "$path_fallback" ]; then
         # Verwende Fallback-Python-Pfad, wenn ausführbar
         PYTHON_EXEC="$path_fallback"
         export PYTHON_EXEC
-        debug "$(printf "$get_python_path_debug_0002" "$PYTHON_EXEC")"
+        debug "$(printf "$get_python_path_debug_0003" "$PYTHON_EXEC")"
         echo "$PYTHON_EXEC"
         return 0
     elif command -v python3 &>/dev/null; then
         # Verwende System-Python3, wenn verfügbar
         PYTHON_EXEC="$(command -v python3)"
         export PYTHON_EXEC
-        debug "$(printf "$get_python_path_debug_0002" "$PYTHON_EXEC")"
+        debug "$(printf "$get_python_path_debug_0003" "$PYTHON_EXEC")"
         echo "$PYTHON_EXEC"
         return 0
     elif command -v python &>/dev/null; then
         # Verwende System-Python, als letzten Fallback
         PYTHON_EXEC="$(command -v python)"
         export PYTHON_EXEC
-        debug "$(printf "$get_python_path_debug_0002" "$PYTHON_EXEC")"
+        debug "$(printf "$get_python_path_debug_0003" "$PYTHON_EXEC")"
         echo "$PYTHON_EXEC"
         return 0
     else
         # Fehlerfall: Kein Python gefunden
         PYTHON_EXEC=""
-        debug "$get_python_path_debug_0003" "CLI" "get_python_path"
+        debug "$get_python_path_debug_0004"
         echo ""
         return 1
     fi
@@ -699,8 +726,9 @@ get_pip_path() {
 
 # get_backup_dir
 get_backup_dir_debug_0001="INFO: Ermittle Backup-Verzeichnis"
-get_backup_dir_debug_0002="SUCCESS: Verwendeter Pfad für Backup-Verzeichnis: %s"
-get_backup_dir_debug_0003="ERROR: Alle Pfade für Backup-Verzeichnis fehlgeschlagen"
+get_backup_dir_debug_0002="SUCCESS: Verwende für Backup-Verzeichnis \$BACKUP_DIR : %s"
+get_backup_dir_debug_0003="SUCCESS: Verwendeter Pfad für Backup-Verzeichnis: %s"
+get_backup_dir_debug_0004="ERROR: Alle Pfade für Backup-Verzeichnis fehlgeschlagen"
 
 get_backup_dir() {
     # -----------------------------------------------------------------------
@@ -721,11 +749,19 @@ get_backup_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_backup_dir_debug_0001"
 
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${BACKUP_DIR+x}" ] && [ -n "$BACKUP_DIR" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_backup_dir_debug_0002" "$BACKUP_DIR")"
+        echo "$BACKUP_DIR"
+        return 0
+    fi
+
     # Verwende die für diesen Ordner definierten Pfade
     # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_backup_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_backup_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${BACKUP_DIR+x}" ] || [ -z "$BACKUP_DIR" ] || [ "$dir" != "$BACKUP_DIR" ]; then
             BACKUP_DIR="$dir"
@@ -735,7 +771,7 @@ get_backup_dir() {
         return 0
     fi
 
-    debug "$get_backup_dir_debug_0003"
+    debug "$get_backup_dir_debug_0004"
     echo ""
     return 1
 }
