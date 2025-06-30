@@ -491,9 +491,9 @@ install_system_requirements() {
     local req_file
 
     # Ermitteln des Pfads zur System-Anforderungsdatei
+    debug "INFO: Ermittelte System-Anforderungsdatei: $req_file"
     req_file="$(get_requirements_system_file)"
     rc=$?
-    debug "INFO: Ermittelte System-Anforderungsdatei: $req_file"
     if [ $rc -ne 0 ] || [ -z "$req_file" ]; then
         debug "ERROR: System-Anforderungsdatei nicht gefunden."
         log "ERROR: System-Anforderungsdatei nicht gefunden"
@@ -1417,9 +1417,9 @@ main() {
     # Ausführung der einzelnen Dialogschritte, robuste Fehlerbehandlung
     run_step dlg_check_system_requirements "$@"  # Prüfe Systemvoraussetzungen 
     run_step dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
-    exit
     run_step dlg_prepare_users            # Erstelle Benutzer und Gruppe 'fotobox'
     run_step dlg_prepare_structure        # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
+    exit
     run_step dlg_nginx_installation       # NGINX-Konfiguration (Integration oder eigene Site)
     run_step dlg_firewall_config          # Firewall-Konfiguration für HTTP/HTTPS-Ports
     run_step dlg_backend_integration      # Python-Backend, venv, systemd-Service, Start
