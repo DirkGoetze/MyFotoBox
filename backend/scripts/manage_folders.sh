@@ -1593,9 +1593,9 @@ get_log_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_log_dir_debug_0001"
 
-    # Prüfen, ob LOG_DIR bereits gesetzt ist
+    # Prüfen, ob Systemvariable bereits gesetzt ist
     if [ "${LOG_DIR+x}" ] && [ -n "$LOG_DIR" ]; then
-        # Pfad wurde bereits ermittelt, diesen zurückgeben
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
         debug "$(printf "$get_log_dir_debug_0002" "$LOG_DIR")"
         echo "$LOG_DIR"
         return 0
@@ -1605,12 +1605,12 @@ get_log_dir() {
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
+        # Erfolg: Pfad existiert und ist les-/schreibbar
         debug "$(printf "$get_log_dir_debug_0003" "$dir")"
-        # System-Variable aktualisieren, wenn nötig
-        if [ -z "${LOG_DIR+x}" ] || [ -z "$LOG_DIR" ] || [ "$dir" != "$LOG_DIR" ]; then
-            LOG_DIR="$dir"
-            export LOG_DIR
-        fi
+        # System-Variable aktualisieren
+        LOG_DIR="$dir"
+        export LOG_DIR
+        # Log-Verzeichnis zurückgeben
         echo "$dir"
         return 0
     fi

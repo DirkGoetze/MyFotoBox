@@ -233,9 +233,9 @@ get_log_file() {
     # Eröffnungsmeldung für die Debug-Ausgabe
     debug "$(printf "$get_log_file_debug_0001")"
 
-     # Prüfen, ob LOG_DIR bereits gesetzt ist
+     # Prüfen, ob Systemvariable bereits gesetzt ist
     if [ "${LOG_FILENAME+x}" ] && [ -n "$LOG_FILENAME" ]; then
-        # Pfad wurde bereits ermittelt, diesen zurückgeben
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
         debug "$(printf "$get_log_file_debug_0002" "$LOG_FILENAME")"
         echo "$LOG_FILENAME"
         return 0
@@ -252,15 +252,17 @@ get_log_file() {
     if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
         # Erfolg: Datei existiert und ist les-/schreibbar
         debug "$(printf "$get_log_file_debug_0004" "$full_filename")"
-        # Setze die globale Variable LOG_FILENAME
-        export LOG_FILENAME="$full_filename"
+        # System-Variable aktualisieren
+        LOG_FILENAME="$full_filename"
+        export LOG_FILENAME
+        # Vollständigen Pfad zurückgeben
         echo "$full_filename"
         return 0
-    else
-        # Fehlerfall
-        debug "$get_log_file_debug_0005"
-        return 1
     fi
+
+    # Fehlerfall
+    debug "$get_log_file_debug_0005"
+    return 1
 }
 
 # get_tmp_file
