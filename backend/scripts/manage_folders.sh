@@ -1594,7 +1594,7 @@ get_log_dir() {
     debug "$get_log_dir_debug_0001"
 
     # Prüfen, ob LOG_DIR bereits gesetzt ist
-    if [ -n "$LOG_DIR" ]; then
+    if [ "${LOG_DIR+x}" ] && [ -n "$LOG_DIR" ]; then
         # Pfad wurde bereits ermittelt, diesen zurückgeben
         debug "$(printf "$get_log_dir_debug_0002" "$LOG_DIR")"
         echo "$LOG_DIR"
