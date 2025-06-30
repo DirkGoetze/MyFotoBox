@@ -167,7 +167,7 @@ log() {
     # Aufruf:  log "Nachricht" [Funktionsname] [Dateiname]
     #          log ohne Parameter → prüft/rotiert/komprimiert das Logfile
     # -----------------------------------------------------------------------
-    local msg="$1"
+    local msg="${1:-}"
     local log_file="$LOG_FILENAME"
 
     # Prüfe, ob Systemvariable gesetzt ist
@@ -477,7 +477,7 @@ if [ -z "${LOG_FILENAME+x}" ] || [ -z "$LOG_FILENAME" ]; then
     export LOG_FILENAME
     debug "INFO: Modul 'manage_logging' geladen, Logdatei ermittelt: $LOG_FILENAME"
     # Log-Rotation anstoßen
-    log ""
+    log
     log "Modul 'manage_logging' geladen: $(date '+%Y-%m-%d %H:%M:%S')"
     log "Logdatei: $LOG_FILENAME"
     debug "INFO: Log-Rotation initialisiert für: $LOG_FILENAME"

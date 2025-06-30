@@ -1156,26 +1156,26 @@ get_template_dir() {
         debug "$(printf "$get_template_dir_debug_0002" "$CONF_DIR_TEMPLATES")"
         dir="$CONF_DIR_TEMPLATES"
     else
-        # Verwende die in 'lib_core' definierten Pfade
-        # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-        dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
-    fi
-    
-    # Basis-Verzeichnis konnte nicht erzeugt werden
-    if [ -z "$dir" ]; then
-        debug "$(printf "$get_template_dir_debug_0006")"
-        echo ""
-        return 1
-    fi
+        # Verwende die für diesen Ordner definierten Pfade
+        # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
+        dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
 
-    # System-Variable aktualisieren, wenn nötig
-    if [ -n "$dir" ]; then
-        if [ -z "${CONF_DIR_TEMPLATES+x}" ] || [ -z "$CONF_DIR_TEMPLATES" ] || [ "$dir" != "$CONF_DIR_TEMPLATES" ]; then
-            CONF_DIR_TEMPLATES="$dir"
-            export CONF_DIR_TEMPLATES
+        # Basis-Verzeichnis konnte nicht erzeugt werden
+        if [ -z "$dir" ]; then
+            debug "$(printf "$get_template_dir_debug_0006")"
+            echo ""
+            return 1
+        fi
+
+        # System-Variable aktualisieren, wenn nötig
+        if [ -n "$dir" ]; then
+            if [ -z "${CONF_DIR_TEMPLATES+x}" ] || [ -z "$CONF_DIR_TEMPLATES" ] || [ "$dir" != "$CONF_DIR_TEMPLATES" ]; then
+                CONF_DIR_TEMPLATES="$dir"
+                export CONF_DIR_TEMPLATES
+            fi
         fi
     fi
-
+    
     # Wenn kein Modulname übergeben wurde, gib das Basis-Verzeichnis zurück
     if [ -z "$modul_name" ]; then
         debug "$(printf "$get_template_dir_debug_0003" "$dir")"
@@ -1321,8 +1321,9 @@ get_frontend_dir() {
 
 # get_frontend_css_dir
 get_frontend_css_dir_debug_0001="INFO: Ermittle Frontend-CSS-Verzeichnis"
-get_frontend_css_dir_debug_0002="SUCCESS: Verwendeter Pfad für Frontend-CSS-Verzeichnis: %s"
-get_frontend_css_dir_debug_0003="ERROR: Alle Pfade für Frontend-CSS-Verzeichnis fehlgeschlagen"
+get_frontend_css_dir_debug_0002="SUCCESS: Verwende für Frontend-CSS-Verzeichnis \$FRONTEND_DIR_CSS: %s"
+get_frontend_css_dir_debug_0003="SUCCESS: Verwendeter Pfad für Frontend-CSS-Verzeichnis: %s"
+get_frontend_css_dir_debug_0004="ERROR: Alle Pfade für Frontend-CSS-Verzeichnis fehlgeschlagen"
 
 get_frontend_css_dir() {
     # -----------------------------------------------------------------------
@@ -1343,11 +1344,19 @@ get_frontend_css_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_frontend_css_dir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${FRONTEND_DIR_CSS+x}" ] && [ -n "$FRONTEND_DIR_CSS" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_frontend_css_dir_debug_0002" "$FRONTEND_DIR_CSS")"
+        echo "$FRONTEND_DIR_CSS"
+        return 0
+    fi
+
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_frontend_css_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_frontend_css_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${FRONTEND_DIR_CSS+x}" ] || [ -z "$FRONTEND_DIR_CSS" ] || [ "$dir" != "$FRONTEND_DIR_CSS" ]; then
             FRONTEND_DIR_CSS="$dir"
@@ -1357,15 +1366,16 @@ get_frontend_css_dir() {
         return 0
     fi
 
-    debug "$get_frontend_css_dir_debug_0003"
+    debug "$get_frontend_css_dir_debug_0004"
     echo ""
     return 1
 }
 
 # get_frontend_fonts_dir
 get_frontend_fonts_dir_debug_0001="INFO: Ermittle Frontend-Fonts-Verzeichnis"
-get_frontend_fonts_dir_debug_0002="SUCCESS: Verwendeter Pfad für Frontend-Fonts-Verzeichnis: %s"
-get_frontend_fonts_dir_debug_0003="ERROR: Alle Pfade für Frontend-Fonts-Verzeichnis fehlgeschlagen"
+get_frontend_fonts_dir_debug_0002="SUCCESS: Verwende für Frontend-Fonts-Verzeichnis \$FRONTEND_DIR_FONTS: %s"
+get_frontend_fonts_dir_debug_0003="SUCCESS: Verwendeter Pfad für Frontend-Fonts-Verzeichnis: %s"
+get_frontend_fonts_dir_debug_0004="ERROR: Alle Pfade für Frontend-Fonts-Verzeichnis fehlgeschlagen"
 
 get_frontend_fonts_dir() {
     # -----------------------------------------------------------------------
@@ -1386,11 +1396,19 @@ get_frontend_fonts_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_frontend_fonts_dir_debug_0001" 
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${FRONTEND_DIR_FONTS+x}" ] && [ -n "$FRONTEND_DIR_FONTS" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_frontend_fonts_dir_debug_0002" "$FRONTEND_DIR_FONTS")"
+        echo "$FRONTEND_DIR_FONTS"
+        return 0
+    fi
+
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_frontend_fonts_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_frontend_fonts_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${FRONTEND_DIR_FONTS+x}" ] || [ -z "$FRONTEND_DIR_FONTS" ] || [ "$dir" != "$FRONTEND_DIR_FONTS" ]; then
             FRONTEND_DIR_FONTS="$dir"
@@ -1400,15 +1418,16 @@ get_frontend_fonts_dir() {
         return 0
     fi
 
-    debug "$get_frontend_fonts_dir_debug_0003"
+    debug "$get_frontend_fonts_dir_debug_0004"
     echo ""
     return 1
 }
 
 # get_frontend_js_dir
 get_frontend_js_dir_debug_0001="INFO: Ermittle Frontend-JavaScript-Verzeichnis"
-get_frontend_js_dir_debug_0002="SUCCESS: Verwendeter Pfad für Frontend-JavaScript-Verzeichnis: %s"
-get_frontend_js_dir_debug_0003="ERROR: Alle Pfade für Frontend-JavaScript-Verzeichnis fehlgeschlagen"
+get_frontend_js_dir_debug_0002="SUCCESS: Verwende für Frontend-JavaScript-Verzeichnis \$FRONTEND_DIR_JS: %s"
+get_frontend_js_dir_debug_0003="SUCCESS: Verwendeter Pfad für Frontend-JavaScript-Verzeichnis: %s"
+get_frontend_js_dir_debug_0004="ERROR: Alle Pfade für Frontend-JavaScript-Verzeichnis fehlgeschlagen"
 
 get_frontend_js_dir() {
     # -----------------------------------------------------------------------
@@ -1429,11 +1448,19 @@ get_frontend_js_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_frontend_js_dir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${FRONTEND_DIR_JS+x}" ] && [ -n "$FRONTEND_DIR_JS" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_frontend_js_dir_debug_0002" "$FRONTEND_DIR_JS")"
+        echo "$FRONTEND_DIR_JS"
+        return 0
+    fi
+
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_frontend_js_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_frontend_js_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${FRONTEND_DIR_JS+x}" ] || [ -z "$FRONTEND_DIR_JS" ] || [ "$dir" != "$FRONTEND_DIR_JS" ]; then
             FRONTEND_DIR_JS="$dir"
@@ -1443,15 +1470,16 @@ get_frontend_js_dir() {
         return 0
     fi
 
-    debug "$get_frontend_js_dir_debug_0003"
+    debug "$get_frontend_js_dir_debug_0004"
     echo ""
     return 1
 }
 
 # get_photos_dir
 get_photos_dir_debug_0001="INFO: Ermittle Fotos-Verzeichnis"
-get_photos_dir_debug_0002="SUCCESS: Verwendeter Pfad für Fotos-Verzeichnis: %s"
-get_photos_dir_debug_0003="ERROR: Alle Pfade für Fotos-Verzeichnis fehlgeschlagen"
+get_photos_dir_debug_0002="SUCCESS: Verwende für Fotos-Verzeichnis \$FRONTEND_DIR_PHOTOS: %s"
+get_photos_dir_debug_0003="SUCCESS: Verwendeter Pfad für Fotos-Verzeichnis: %s"
+get_photos_dir_debug_0004="ERROR: Alle Pfade für Fotos-Verzeichnis fehlgeschlagen"
 
 get_photos_dir() {
     # -----------------------------------------------------------------------
@@ -1472,11 +1500,19 @@ get_photos_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_photos_dir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${FRONTEND_DIR_PHOTOS+x}" ] && [ -n "$FRONTEND_DIR_PHOTOS" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_photos_dir_debug_0002" "$FRONTEND_DIR_PHOTOS")"
+        echo "$FRONTEND_DIR_PHOTOS"
+        return 0
+    fi
+
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_photos_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_photos_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${FRONTEND_DIR_PHOTOS+x}" ] || [ -z "$FRONTEND_DIR_PHOTOS" ] || [ "$dir" != "$FRONTEND_DIR_PHOTOS" ]; then
             FRONTEND_DIR_PHOTOS="$dir"
@@ -1486,18 +1522,18 @@ get_photos_dir() {
         return 0
     fi
 
-    debug "$get_photos_dir_debug_0003"
+    debug "$get_photos_dir_debug_0004"
     echo ""
     return 1
 }
 
 # get_photos_originals_dir
 get_photos_originals_dir_debug_0001="INFO: Ermittle Original-Fotos-Verzeichnis"
-get_photos_originals_dir_debug_0002="SUCCESS: Verwendeter Pfad für Original-Fotos-Verzeichnis: %s"
-get_photos_originals_dir_debug_0003="INFO: Eventname: '%s', prüfe Verzeichniseignung"
-get_photos_originals_dir_debug_0004="SUCCESS: Verwendeter Pfad für Event-spezifisches Original-Fotos-Verzeichnis: %s"
-get_photos_originals_dir_debug_0005="ERROR: Alle Pfade für Original-Fotos-Verzeichnis fehlgeschlagen"
-get_photos_originals_dir_debug_0006="ERROR: Fehler beim Erstellen des Event-spezifischen Verzeichnisses: %s, Fallback auf Basis-Verzeichnis: %s"
+get_photos_originals_dir_debug_0003="SUCCESS: Verwendeter Pfad für Original-Fotos-Verzeichnis: %s"
+get_photos_originals_dir_debug_0004="INFO: Eventname: '%s', prüfe Verzeichniseignung"
+get_photos_originals_dir_debug_0005="SUCCESS: Verwendeter Pfad für Event-spezifisches Original-Fotos-Verzeichnis: %s"
+get_photos_originals_dir_debug_0006="ERROR: Alle Pfade für Original-Fotos-Verzeichnis fehlgeschlagen"
+get_photos_originals_dir_debug_0007="ERROR: Fehler beim Erstellen des Event-spezifischen Verzeichnisses: %s, Fallback auf Basis-Verzeichnis: %s"
 
 get_photos_originals_dir() {
     # -----------------------------------------------------------------------
@@ -1519,34 +1555,41 @@ get_photos_originals_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_photos_originals_dir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${FRONTEND_DIR_PHOTOS_ORIGINAL+x}" ] && [ -n "$FRONTEND_DIR_PHOTOS_ORIGINAL" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_photos_originals_dir_debug_0002" "$FRONTEND_DIR_PHOTOS_ORIGINAL")"
+        dir="$FRONTEND_DIR_PHOTOS_ORIGINAL"
+    else
+        # Verwende die für diesen Ordner definierten Pfade
+        # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
+        dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
 
-    # Basis-Verzeichnis konnte nicht erzeugt werden
-    if [ -z "$dir" ]; then
-        debug "$(printf "$get_photos_originals_dir_debug_0005")"
-        echo ""
-        return 1
-    fi
+        # Basis-Verzeichnis konnte nicht erzeugt werden
+        if [ -z "$dir" ]; then
+            debug "$(printf "$get_photos_originals_dir_debug_0006")"
+            echo ""
+            return 1
+        fi
 
-    # System-Variable aktualisieren, wenn nötig
-    if [ -n "$dir" ]; then
-        if [ -z "${FRONTEND_DIR_PHOTOS_ORIGINAL+x}" ] || [ -z "$FRONTEND_DIR_PHOTOS_ORIGINAL" ] || [ "$dir" != "$FRONTEND_DIR_PHOTOS_ORIGINAL" ]; then
-            FRONTEND_DIR_PHOTOS_ORIGINAL="$dir"
-            export FRONTEND_DIR_PHOTOS_ORIGINAL
+        # System-Variable aktualisieren, wenn nötig
+        if [ -n "$dir" ]; then
+            if [ -z "${FRONTEND_DIR_PHOTOS_ORIGINAL+x}" ] || [ -z "$FRONTEND_DIR_PHOTOS_ORIGINAL" ] || [ "$dir" != "$FRONTEND_DIR_PHOTOS_ORIGINAL" ]; then
+                FRONTEND_DIR_PHOTOS_ORIGINAL="$dir"
+                export FRONTEND_DIR_PHOTOS_ORIGINAL
+            fi
         fi
     fi
 
     # Wenn kein Eventname übergeben wurde, gib das Basis-Verzeichnis zurück
     if [ -z "$event_name" ]; then
-        debug "$(printf "$get_photos_originals_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_photos_originals_dir_debug_0003" "$dir")"
         echo "$dir"
         return 0
     fi
 
     # Event-Name validieren und bereinigen
-    debug "$(printf "$get_photos_originals_dir_debug_0003" "$event_name")"
+    debug "$(printf "$get_photos_originals_dir_debug_0004" "$event_name")"
     
     # Verwende die Helferfunktion für die Bereinigung
     local clean_event_name=$(_get_clean_foldername "$event_name")
@@ -1557,13 +1600,13 @@ get_photos_originals_dir() {
     local event_dir="${dir}/${clean_event_name}"
 
     if _create_directory "$event_dir"; then
-        debug "$(printf "$get_photos_originals_dir_debug_0004" "$event_dir")"
+        debug "$(printf "$get_photos_originals_dir_debug_0005" "$event_dir")"
         echo "$event_dir"
         return 0
     else
-        debug "$(printf "$get_photos_originals_dir_debug_0006" "$event_dir" "$dir")"
+        debug "$(printf "$get_photos_originals_dir_debug_0007" "$event_dir" "$dir")"
         # Fallback auf das Basis-Verzeichnis bei Fehler
-        debug "$(printf "$get_photos_originals_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_photos_originals_dir_debug_0003" "$dir")"
         echo "$dir"
         return 0
     fi
