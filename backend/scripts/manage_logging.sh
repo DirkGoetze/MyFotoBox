@@ -466,7 +466,7 @@ if [ -z "${LOG_FILENAME+x}" ] || [ -z "$LOG_FILENAME" ]; then
     export LOG_FILENAME="$(get_log_file)"
     debug "INFO: Modul 'manage_logging' geladen, Logdatei ermittelt: $LOG_FILENAME"
     # Log-Rotation anstoßen
-    log
+    log ""
     log "Modul 'manage_logging' geladen: $(date '+%Y-%m-%d %H:%M:%S')"
     log "Logverzeichnis: $LOG_DIR"
     log "Logdatei: $LOG_FILENAME"
