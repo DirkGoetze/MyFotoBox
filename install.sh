@@ -538,7 +538,6 @@ install_system_requirements() {
     # Führe den Befehl aus und speichere Ausgabe in temporärer Datei
     (apt-get update -qq) &> "$apt_update_output" &
     show_spinner $! "dots"
-    wait $!
     update_result=$?
     
     # Logge die Ausgabe in die zentrale Logdatei
@@ -570,8 +569,7 @@ install_system_requirements() {
         
         apt-get install -y "$pkg" &> "$apt_install_output" &
         local install_pid=$!
-        show_spinner "$install_pid" "slash"
-        wait "$install_pid"
+        show_spinner "$install_pid" "dots"
         local install_result=$?
         
         # Log der Installationsausgabe

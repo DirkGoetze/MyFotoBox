@@ -257,10 +257,10 @@ show_spinner() {
     # -----------------------------------------------------------------------
     # show_spinner
     # -----------------------------------------------------------------------
-    # Funktion: Zeigt eine Animation, solange der übergebene Prozess läuft
+    # Funktion.: Zeigt eine Animation, solange der übergebene Prozess läuft
     # Parameter: $1 = PID des zu überwachenden Prozesses
-    #            $2 = Typ des Spinners (optional, default: standard)
-    # Rückgabe: keine
+    # .........  $2 = Typ des Spinners (optional, default: standard)
+    # Rückgabe.: Exit-Code des überwachten Prozesses
     # -----------------------------------------------------------------------
     local pid="$1"
     local spinner_type="${2:-standard}"
@@ -292,12 +292,15 @@ show_spinner() {
         printf "[%s]\r" "${spinstr:$i:1}"
         sleep $delay
     done
+
+     # Warte auf das Ende und liefere den Exit-Code zurück
+    wait "$pid"
+    local exit_code=$?
     
     # Lösche den Spinner, wenn der Prozess beendet ist
     printf "    \r"
+    return $exit_code
 }
-
-
 
 # ===========================================================================
 # Hilfsfunktionen zur Einbindung externer Skript-Ressourcen
