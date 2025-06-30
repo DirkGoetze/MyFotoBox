@@ -18,18 +18,15 @@ set -e
 # ===========================================================================
 # Skript-Verzeichnis festlegen
 INSTALL_DIR="$(dirname "$(readlink -f "$0")")"
-SCRIPT_DIR="$INSTALL_DIR/backend/scripts"
 # Diese Variable wird zu Beginn direkt gesetzt, damit die lib_core.sh geladen werden kann
 # Nach dem Laden der lib_core.sh sollten die Getter-Funktionen verwendet werden
 
 # Debug-Ausgabe zum Nachverfolgen des Installationspfads
 echo "INSTALL_DIR=$INSTALL_DIR"
-echo "SCRIPT_DIR=$SCRIPT_DIR"
 
-# Installation/Update benötigt alle Module -> Lademodus auf 1 setzen
-# Dies vor dem Einbinden von lib_core.sh festlegen
-export MODULE_LOAD_MODE=1
-
+# Skript-Verzeichnis festlegen
+SCRIPT_DIR="$INSTALL_DIR/backend/scripts"
+# Installation/Update benötigt alle Module von lib_core.sh 
 if [ -f "$SCRIPT_DIR/lib_core.sh" ]; then
     # Direkt core-Bibliothek einbinden, um alle Module zu laden
     echo "Lade lib_core.sh..."
@@ -72,44 +69,6 @@ TOTAL_STEPS=10               # Fallback-Wert, falls die Erkennung nicht funktion
 # Hilfsfunktionen
 # ===========================================================================
 
-create_temp_file() {
-    # -----------------------------------------------------------------------
-    # create_temp_file
-    # -----------------------------------------------------------------------
-    # Funktion: Erstellt eine temporäre Datei im Projektverzeichnis
-    # Parameter: $1 = (Optional) Präfix für den Dateinamen
-    # Rückgabe: Pfad zur temporären Datei
-    
-    local prefix="${1:-fotobox}"
-    local tmpdir
-    
-    # Prüfen, ob get_tmp_dir verfügbar ist
-    if type -t get_tmp_dir >/dev/null; then
-        tmpdir="$(get_tmp_dir)"
-    elif [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ]; then
-        tmpdir="$TMP_DIR"
-    elif [ -d "$DEFAULT_DIR_TMP" ] || mkdir -p "$DEFAULT_DIR_TMP" 2>/dev/null; then
-        tmpdir="$DEFAULT_DIR_TMP"
-    else
-        # Fallback auf System-temp, wenn Projektverzeichnis nicht verfügbar
-        tmpdir="/tmp"
-    fi
-    
-    # Sicherstellen, dass das Verzeichnis existiert
-    mkdir -p "$tmpdir" 2>/dev/null || true
-    
-    # Temporäre Datei mit zufälligem Suffix erstellen
-    local random_suffix
-    random_suffix="$(date +%s%N | md5sum | head -c 10)"
-    local tempfile="${tmpdir}/${prefix}_${random_suffix}.tmp"
-    
-    # Datei erstellen
-    touch "$tempfile" 2>/dev/null
-    
-    # Ausgabe des Dateipfads
-    echo "$tempfile"
-}
-
 parse_args() {
     # -----------------------------------------------------------------------
     # Funktion: Verarbeitet Befehlszeilenargumente für das Skript
@@ -148,58 +107,6 @@ parse_args() {
     export UNATTENDED
     export DEBUG_MOD_LOCAL
     export DEBUG_MOD_GLOBAL
-}
-
-chk_is_root() {
-    # -----------------------------------------------------------------------
-    # chk_is_root
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob das Skript als root ausgeführt wird
-    if [ "$EUID" -ne 0 ]; then
-        return 1
-    fi
-    return 0
-}
-
-chk_distribution() {
-    # -----------------------------------------------------------------------
-    # chk_distribution
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob das System auf Debian/Ubuntu basiert
-    if [ ! -f /etc/os-release ]; then
-        return 1
-    fi
-    . /etc/os-release
-    if [[ ! "$ID" =~ ^(debian|ubuntu|raspbian)$ && ! "$ID_LIKE" =~ (debian|ubuntu) ]]; then
-        return 1
-    fi
-    return 0
-}
-
-chk_distribution_version() {
-    # -----------------------------------------------------------------------
-    # chk_distribution_version
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob die Distribution eine unterstützte Version ist
-    # Rückgabe: 0 = unterstützte Version (VERSION_ID wird als globale Variable gesetzt)
-    #           1 = /etc/os-release nicht gefunden
-    #           2 = Version nicht unterstützt
-    if [ ! -f /etc/os-release ]; then
-        DIST_NAME="Unknown"
-        DIST_VERSION="Unknown"
-        return 1
-    fi
-    . /etc/os-release
-    DIST_NAME="$NAME"
-    DIST_VERSION="$VERSION_ID"
-    case "$VERSION_ID" in
-        10|11|12|20.04|22.04)
-            return 0
-            ;;
-        *)
-            return 2
-            ;;
-    esac
 }
 
 show_spinner() {
@@ -460,21 +367,26 @@ set_fallback_security_settings() {
     fi
     
     # --- 3. Prüfen, ob alle benötigten Ressourcen verfügbar sind
-    # Diese Prüfung ersetzt die direkten Einbindungen der Skripte,
-    # da lib_core.sh dies bereits über load_core_resources erledigt hat
-    if [ "$MANAGE_FOLDERS_LOADED" != "1" ] || [ "$MANAGE_LOGGING_LOADED" != "1" ] || [ "$MANAGE_NGINX_LOADED" != "1" ]; then
-        echo -e "\033[1;31mFehler: Nicht alle benötigten Skripte konnten geladen werden.\033[0m"
-        [ "$MANAGE_FOLDERS_LOADED" != "1" ] && echo -e "\033[1;31m  - manage_folders.sh fehlt oder ist fehlerhaft\033[0m"
-        [ "$MANAGE_LOGGING_LOADED" != "1" ] && echo -e "\033[1;31m  - manage_logging.sh fehlt oder ist fehlerhaft\033[0m"
-        [ "$MANAGE_NGINX_LOADED" != "1" ] && echo -e "\033[1;31m  - manage_nginx.sh fehlt oder ist fehlerhaft\033[0m"
+    # ---    Für die Prüfung 'check_module()' aus 'lib_core' nutzen
+    if ! check_module "manage_folders"; then
+        echo -e "\033[1;31mFehler: Modul 'manage_folders' ist nicht verfügbar.\033[0m"
+        return 1
+    fi
+    if ! check_module "manage_files"; then
+        echo -e "\033[1;31mFehler: Modul 'manage_files' ist nicht verfügbar.\033[0m"
+        return 1
+    fi
+    if ! check_module "manage_logging"; then
+        echo -e "\033[1;31mFehler: Modul 'manage_logging' ist nicht verfügbar.\033[0m"
+        return 1
+    fi
+    if ! check_module "manage_nginx"; then
+        echo -e "\033[1;31mFehler: Modul 'manage_nginx' ist nicht verfügbar.\033[0m"
         return 1
     fi
     
     return 0
 }
-
-# set_install_packages wurde entfernt (redundant mit install_system_requirements)
-# Die Funktion wurde direkt in dlg_prepare_system() integriert
 
 set_user_group() {
     # -----------------------------------------------------------------------
@@ -647,8 +559,8 @@ install_system_requirements() {
     echo -n "[/] Update der Paketquellen ..."
     
     # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
-    apt_update_output=$(create_temp_file "apt_update")
-    
+    apt_update_output="$(get_tmp_file)"
+
     # Führe den Befehl aus und speichere Ausgabe in temporärer Datei
     (apt-get update -qq) &> "$apt_update_output" &
     show_spinner $! "dots"
@@ -680,7 +592,7 @@ install_system_requirements() {
         echo -n "[/] Installiere Paket: $pkg..."
         
         # Temporäre Datei für die Ausgabe der apt-get Installation
-        local apt_install_output=$(create_temp_file "apt_install_${pkg}")
+        local apt_install_output="$(get_tmp_file)"
         
         apt-get install -y "$pkg" &> "$apt_install_output" &
         local install_pid=$!
@@ -847,7 +759,7 @@ dlg_check_root() {
     # Funktion: Prüft, ob das Skript als root ausgeführt wird
     ((STEP_COUNTER++))
     print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfe Rechte zur Ausführung ..."
-    if ! chk_is_root; then
+    if ! check_is_root; then
         print_error "Dieses Skript muss mit Root-Rechten ausgeführt werden."
         exit 1
     fi
@@ -863,7 +775,7 @@ dlg_check_distribution() {
     print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfe Distribution ..."
     
     # Prüfe Basis-Distribution
-    if ! chk_distribution; then
+    if ! check_distribution; then
         print_error "Dieses Skript ist nur für Debian/Ubuntu-basierte Systeme geeignet."
         exit 1
     fi
@@ -873,7 +785,7 @@ dlg_check_distribution() {
     : "${DIST_VERSION:=Unbekannt}"
     
     # Prüfe Versions-Kompatibilität
-    chk_distribution_version
+    check_distribution_version
     version_check=$?
     
     case $version_check in
@@ -1236,7 +1148,7 @@ dlg_backend_integration() {
         echo -n "[/] Erstelle Python-Virtualenv..."
         
         # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
-        venv_output=$(create_temp_file "venv_create")
+        venv_output="$(get_tmp_file)"
         
         # Ermittlung des Python-Interpreters (python3 oder python)
         local python_cmd
@@ -1288,7 +1200,7 @@ dlg_backend_integration() {
     fi
     
     # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
-    pip_output=$(create_temp_file "pip_upgrade")
+    pip_output="$(get_tmp_file)"
     
     # Prüfen ob pip direkt oder via python -m pip aufgerufen werden soll
     if [ -f "$pip_bin" ]; then
@@ -1321,7 +1233,7 @@ dlg_backend_integration() {
     echo -n "[/] Installiere Python-Abhängigkeiten ..."
     
     # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
-    req_output=$(create_temp_file "pip_requirements")
+    req_output="$(get_tmp_file)"
     
     local conf_dir
     if type -t get_config_dir >/dev/null; then

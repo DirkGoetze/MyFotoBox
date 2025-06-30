@@ -145,6 +145,114 @@ check_param() {
     return 0
 }
 
+# chk_is_root
+check_is_root_debug_0001="INFO: Prüfe, ob Skript als root ausgeführt wird"
+check_is_root_debug_0002="ERROR: Skript muss als root ausgeführt werden"
+check_is_root_debug_0003="SUCCESS: Skript wird als root ausgeführt"
+
+check_is_root() {
+    # -----------------------------------------------------------------------
+    # check_is_root
+    # -----------------------------------------------------------------------
+    # Funktion: Prüft, ob das Skript als root ausgeführt wird
+    # Parameter: keine
+    # Rückgabe: 0 = OK, 1 = nicht als root ausgeführt
+    # -----------------------------------------------------------------------
+
+    # Debug-Ausgabe eröffnen
+    debug_output "$(printf "$check_is_root_debug_0001")"
+
+    if [ "$EUID" -ne 0 ]; then
+        # Skript wird nicht als root ausgeführt
+        debug_output "$(printf "$check_is_root_debug_0002")"
+        return 1
+    fi
+
+    # Debug-Ausgabe für Erfolg
+    debug_output "$(printf "$check_is_root_debug_0003")"
+    return 0
+}
+
+# check_distribution
+check_distribution_debug_0001="INFO: Prüfe, ob das System auf Debian/Ubuntu basiert"
+check_distribution_debug_0002="ERROR: System ist nicht Debian/Ubuntu-basiert"
+check_distribution_debug_0003="SUCCESS: System ist Debian/Ubuntu-basiert"
+
+check_distribution() {
+    # -----------------------------------------------------------------------
+    # check_distribution
+    # -----------------------------------------------------------------------
+    # Funktion: Prüft, ob das System auf Debian/Ubuntu basiert
+    # Parameter: keine
+    # Rückgabe: 0 = OK, 1 = nicht Debian/Ubuntu-basiert
+    # -----------------------------------------------------------------------
+
+    # Debug-Ausgabe eröffnen
+    debug_output "$(printf "$check_distribution_debug_0001")"
+
+    if [ ! -f /etc/os-release ]; then
+        # Distribution ist nicht Debian/Ubuntu-basiert
+        debug_output "$(printf "$check_distribution_debug_0002")"
+        return 1
+    fi
+    . /etc/os-release
+    if [[ ! "$ID" =~ ^(debian|ubuntu|raspbian)$ && ! "$ID_LIKE" =~ (debian|ubuntu) ]]; then
+        # Distribution ist nicht Debian/Ubuntu-basiert
+        debug_output "$(printf "$check_distribution_debug_0002")"
+        return 1
+    fi
+
+    # Debug-Ausgabe für Erfolg
+    debug_output "$(printf "$check_distribution_debug_0003")"
+    return 0
+}
+
+# chk_distribution_version
+check_distribution_version_debug_0001="INFO: Prüfe, ob die Distribution eine unterstützte Version ist"
+check_distribution_version_debug_0002="ERROR: /etc/os-release nicht gefunden"
+check_distribution_version_debug_0003="SUCCESS: Version wird unterstützt"
+check_distribution_version_debug_0004="ERROR: Version wird nicht unterstützt"
+
+check_distribution_version() {
+    # -----------------------------------------------------------------------
+    # check_distribution_version
+    # -----------------------------------------------------------------------
+    # Funktion: Prüft, ob die Distribution eine unterstützte Version ist
+    # Parameter: keine
+    # Rückgabe: 0 = unterstützte Version (VERSION_ID wird als globale 
+    # ........      Variable gesetzt)
+    # ........  1 = /etc/os-release nicht gefunden
+    # ........  2 = Version nicht unterstützt
+    # -----------------------------------------------------------------------
+
+    # Debug-Ausgabe eröffnen
+    debug_output "$(printf "$check_distribution_version_debug_0001")"
+
+    if [ ! -f /etc/os-release ]; then
+        export DIST_NAME="Unknown"
+        export DIST_VERSION="Unknown"
+        # Distribution ist unbekannt oder nicht unterstützt
+        debug_output "$(printf "$check_distribution_version_debug_0002")"
+        return 1
+    fi
+
+    . /etc/os-release
+    export DIST_NAME="$NAME"
+    export DIST_VERSION="$VERSION_ID"
+    case "$VERSION_ID" in
+        10|11|12|20.04|22.04)
+            # Distributionsversion wird unterstützt
+            debug_output "$(printf "$check_distribution_version_debug_0003")"
+            return 0
+            ;;
+        *)
+            # Distributionsversion wird nicht unterstützt
+            debug_output "$(printf "$check_distribution_version_debug_0004")"
+            return 2
+            ;;
+    esac
+}
+
 # ===========================================================================
 # Hilfsfunktionen zur Einbindung externer Skript-Ressourcen
 # ===========================================================================
