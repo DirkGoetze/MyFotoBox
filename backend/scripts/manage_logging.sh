@@ -55,49 +55,52 @@ chk_log_file() {
     # Funktion: Prüft, ob Logdateien zur Rotation vorhanden sind und führt
     #           ggf. Rotation und Komprimierung durch. Legt Logfile neu an,
     #           falls es fehlt oder durch Rotation verschoben wurde.
-    local LOG_FILE
-    LOG_FILE="$(get_log_file)"
+    # Parameter: $1 - zu prüfendes Logfile (optional)
+    # Rückgabe:  Keine
+    # Seiteneffekte: Logdatei wird rotiert und komprimiert,
+    #                Logdatei wird neu angelegt, falls sie fehlt
+    #                oder verschoben wurde.
+    # Besonderheiten:
+    # - Logdatei: /opt/fotobox/log/YYYY-MM-DD_fotobox
+    #  (Fallback: /var/log/fotobox/ oder /tmp/fotobox/)
+    # - Rotation und Komprimierung: max. 5 Rotationen, danach wird die
+    #  älteste Rotation gelöscht.
+    # -----------------------------------------------------------------------
+    local log_file_to_check="$1"
     local MAX_ROTATE=5
 
-    echo "Prüfe Logdatei: ${LOG_FILE}"
+    echo "Prüfe Logdatei: ${log_file_to_check}"
 
     # Alte, maximal rotierte Datei löschen
-    if [ -f "${LOG_FILE}.${MAX_ROTATE}.gz" ]; then
-        rm -f "${LOG_FILE}.${MAX_ROTATE}.gz"
+    if [ -f "${log_file_to_check}.${MAX_ROTATE}.gz" ]; then
+        rm -f "${log_file_to_check}.${MAX_ROTATE}.gz"
     fi
     
     # Bestehende rotierte Dateien weiterschieben
     for ((i=MAX_ROTATE-1; i>=2; i--)); do
-        if [ -f "${LOG_FILE}.${i}.gz" ]; then
-            mv "${LOG_FILE}.${i}.gz" "${LOG_FILE}.$((i+1)).gz"
+        if [ -f "${log_file_to_check}.${i}.gz" ]; then
+            mv "${log_file_to_check}.${i}.gz" "${log_file_to_check}.$((i+1)).gz"
         fi
     done
     
     # 1. Rotation komprimieren
-    if [ -f "${LOG_FILE}.1" ]; then
-        gzip -c "${LOG_FILE}.1" > "${LOG_FILE}.2.gz"
-        rm -f "${LOG_FILE}.1"
+    if [ -f "${log_file_to_check}.1" ]; then
+        gzip -c "${log_file_to_check}.1" > "${log_file_to_check}.2.gz"
+        rm -f "${log_file_to_check}.1"
     fi
     
     # Aktuelles Logfile rotieren
-    if [ -f "${LOG_FILE}" ]; then
-        mv "${LOG_FILE}" "${LOG_FILE}.1"
+    if [ -f "${log_file_to_check}" ]; then
+        mv "${log_file_to_check}" "${log_file_to_check}.1"
     fi
-    
-    # Durch den Aufruf von get_log_file/get_log_dir wurde bereits sichergestellt,
-    # sichergestellt, dass das Log-Verzeichnis existiert oder ein Fallback verwendet 
-    # wird. Wir aktualisieren LOG_FILE über get_log_file, um sicherzustellen, dass
-    # wir den aktuellen Pfad verwenden, falls get_log_dir eine Änderung vorgenommen 
-    # hat.
-    LOG_FILE="$(get_log_file)"
-    
+        
     # Sicherstellen, dass das Logfile existiert
-    if [ ! -f "${LOG_FILE}" ]; then
-        touch "${LOG_FILE}" 2>/dev/null || echo "Warnung: Log-Datei ${LOG_FILE} konnte nicht erstellt werden" >&2
+    if [ ! -f "${log_file_to_check}" ]; then
+        touch "${log_file_to_check}" 2>/dev/null || echo "Warnung: Log-Datei ${log_file_to_check} konnte nicht erstellt werden" >&2
     fi
     # Nur wenn die Datei existiert und schreibbar ist, schreiben wir etwas hinein
-    if [ -f "${LOG_FILE}" ] && [ -w "${LOG_FILE}" ]; then
-        echo "" >> "${LOG_FILE}" 2>/dev/null || true
+    if [ -f "${log_file_to_check}" ] && [ -w "${log_file_to_check}" ]; then
+        echo "---" >> "${log_file_to_check}" 2>/dev/null || true
     fi
 }
 
@@ -169,38 +172,14 @@ log() {
     #   Programm), in der der Fehler aufgetreten ist, als verpflichtender 
     #   Parameter an log() übergeben werden.
     local LOG_FILE
-    LOG_FILE="$("$MANAGE_FILES_SH" get_log_file)"
+    LOG_FILE="$(get_log_file)"
     local msg="$1"
     
     if [ -z "$msg" ]; then
         # Auch hier debug-Aufruf entfernen
         # debug "log() ohne Parameter aufgerufen, führe Logrotation durch"
-        chk_log_file
+        chk_log_file "$LOG_FILE"
     else
-        # Prüfen, ob das Log-Verzeichnis existiert und schreibbar ist
-        local log_dir
-        log_dir="$(dirname "$LOG_FILE")"
-        if [ ! -d "$log_dir" ]; then
-            echo "Logverzeichnis $log_dir existiert nicht, versuche es zu erstellen" >&2
-            mkdir -p "$log_dir" 2>/dev/null || {
-                echo "FEHLER: Konnte Logverzeichnis $log_dir nicht erstellen. Verwende /tmp als Fallback." >&2
-                LOG_FILE="/tmp/fotobox_$(date '+%Y-%m-%d').log"
-            }
-        fi
-
-        # Stellen wir sicher, dass die Datei existiert
-        if [ ! -f "$LOG_FILE" ]; then
-            echo "Logdatei $LOG_FILE existiert nicht, versuche sie zu erstellen" >&2
-            touch "$LOG_FILE" 2>/dev/null || {
-                echo "FEHLER: Konnte Logdatei $LOG_FILE nicht erstellen. Verwende /tmp als Fallback." >&2
-                LOG_FILE="/tmp/fotobox_$(date '+%Y-%m-%d').log"
-                touch "$LOG_FILE" 2>/dev/null || {
-                    echo "KRITISCHER FEHLER: Kann keine Logdatei erstellen!" >&2
-                    return 1
-                }
-            }
-        fi
-
         # Fehlerfall: Funktionsname und ggf. Dateiname erzwingen
         local func
         local file
