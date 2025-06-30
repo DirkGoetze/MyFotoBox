@@ -168,11 +168,6 @@ log() {
     #          log ohne Parameter → prüft/rotiert/komprimiert das Logfile
     # -----------------------------------------------------------------------
     local msg="$1"
-
-    # Logdatei global ermitteln und speichern
-    if [ -z "$LOG_FILENAME" ]; then
-        LOG_FILENAME="$(get_log_file)"
-    fi
     local log_file="$LOG_FILENAME"
 
     if [ -z "$msg" ]; then
@@ -465,3 +460,15 @@ print_debug() {
         fi
     fi
 }
+
+# Logdatei global ermitteln und speichern
+if [ -z "$LOG_FILENAME" ]; then
+    export LOG_FILENAME="$(get_log_file)"
+    debug "Modul 'manage_logging' geladen, Logdatei ermittelt: $LOG_FILENAME"
+    # Log-Rotation anstoßen
+    log
+    log "Modul 'manage_logging' geladen: $(date '+%Y-%m-%d %H:%M:%S')"
+    log "Logverzeichnis: $LOG_DIR"
+    log "Logdatei: $LOG_FILENAME"
+    debug "Log-Rotation initialisiert für: $LOG_FILENAME"
+fi
