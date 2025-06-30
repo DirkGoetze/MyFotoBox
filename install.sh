@@ -525,38 +525,27 @@ install_system_requirements() {
     # -----------------------------------------------------------------------
     # install_system_requirements
     # -----------------------------------------------------------------------
-    # Funktion: Liest die Systempakete aus conf/requirements_system.inf und installiert sie
-    # Rückgabe: 0 = OK, 1 = Fehler beim Lesen der Datei, 2 = Fehler bei der Installation
-    
-    # Sicherstellen, dass INSTALL_DIR gesetzt ist
-    if [ -z "$INSTALL_DIR" ]; then
-        INSTALL_DIR=$(dirname "$(readlink -f "$0")")
-        log "WARNING: INSTALL_DIR war nicht gesetzt, setze auf: $INSTALL_DIR"
-    fi
-    
+    # Funktion: Liest die Systempakete aus conf/requirements_system.inf und 
+    # ........  installiert sie
+    # Rückgabe: 0 = OK, 
+    # ........  1 = Fehler beim Lesen der Datei, 
+    # ........  2 = Fehler bei der Installation
+    # -----------------------------------------------------------------------
     local req_file
-    local conf_dir
-    
-    if type -t get_config_dir >/dev/null; then
-        conf_dir=$(get_config_dir)
-    else
-        conf_dir="$INSTALL_DIR/conf"
-    fi
-    
-    req_file="$conf_dir/requirements_system.inf"
-    
-    if [ ! -f "$req_file" ]; then
-        print_error "Datei nicht gefunden: $req_file"
-        log "ERROR: Anforderungsdatei nicht gefunden: $req_file"
+
+    # Ermitteln des Pfads zur System-Anforderungsdatei
+    req_file="$(get_requirements_system_file)"
+    if [ $? -eq 0 ] && [ -n "$req_file" ]; then
+        print_error "System-Anforderungsdatei nicht gefunden."
+        log "ERROR: System-Anforderungsdatei nicht gefunden"
         return 1
     fi
     
     print_info "Lese System-Anforderungen aus $req_file ..."
     
-    # Array für die zu installierenden Pakete
-    local packages=()
-    
-    # Datei zeilenweise lesen und Kommentare und leere Zeilen überspringen
+    # Array für die zu installierenden Pakete erzeugen, Datei zeilenweise  
+    # lesen und Kommentare und leere Zeilen überspringen
+    local packages=()    
     while IFS= read -r line; do
         # Kommentare und leere Zeilen überspringen
         if [[ "$line" =~ ^[[:space:]]*# || -z "$line" || "$line" =~ ^// ]]; then
@@ -578,17 +567,8 @@ install_system_requirements() {
         return 0
     fi
     
-    # Stelle sicher, dass das Logverzeichnis existiert
-    # LOG_DIR wird bereits in set_fallback_security_settings korrekt gesetzt
-    
-    # Stelle sicher, dass die Log-Funktionalität verfügbar ist
-    if ! type -t log &>/dev/null; then
-        print_warning "Log-Funktion nicht verfügbar. Log-Ausgaben werden möglicherweise nicht gespeichert."
-    else
-        # Log-Funktion ohne Parameter aufrufen führt die Rotation durch, falls nötig
-        log
-        log "START: Systemanforderungen werden installiert" "install_system_requirements" "install.sh"
-    fi
+    # Log-Eintrag für die Installation der Systemanforderungen
+    log "START: Systemanforderungen werden installiert" "install_system_requirements" "install.sh"
     
     # Paketlisten aktualisieren
     echo -n "[/] Update der Paketquellen ..."
@@ -775,10 +755,7 @@ dlg_prepare_system() {
     # -----------------------------------------------------------------------
     # Funktion: Prüft und installiert benötigte Systempakete
     ((STEP_COUNTER++))
-    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Installiere benötigte Systempakete ..."
-    
-    # Stelle sicher, dass das Logverzeichnis existiert
-    mkdir -p "$LOG_DIR"
+    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Installiere benötigte Softwarepakete ..."
     
     # Direkt die Systemanforderungen prüfen und installieren
     install_system_requirements
@@ -787,13 +764,13 @@ dlg_prepare_system() {
         print_error "Fehler beim Lesen der Anforderungsdatei. Prüfen Sie die Projektstruktur."
         exit 1
     elif [ $rc -eq 2 ]; then
-        print_error "Fehler bei der Installation der Systempakete. Prüfen Sie Ihre Internetverbindung und Paketquellen."
+        print_error "Fehler bei der Installation der Softwarepakete. Prüfen Sie Ihre Internetverbindung und Paketquellen."
         exit 1
     elif [ $rc -ne 0 ]; then
-        print_error "Unbekannter Fehler bei der Systempaket-Installation (Code $rc)."
+        print_error "Unbekannter Fehler bei der Softwarepaket-Installation (Code $rc)."
         exit 1
     fi
-    print_success "Systempakete wurden erfolgreich installiert."
+    print_success "Softwarepakete wurden erfolgreich installiert."
 }
 
 dlg_prepare_users() {
@@ -1482,8 +1459,8 @@ main() {
         
     # Ausführung der einzelnen Dialogschritte, robuste Fehlerbehandlung
     run_step dlg_check_system_requirements "$@"  # Prüfe Systemvoraussetzungen 
-    exit
     run_step dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
+    exit
     run_step dlg_prepare_users            # Erstelle Benutzer und Gruppe 'fotobox'
     run_step dlg_prepare_structure        # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
     run_step dlg_nginx_installation       # NGINX-Konfiguration (Integration oder eigene Site)
