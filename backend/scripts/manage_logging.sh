@@ -155,7 +155,7 @@ log_or_json() {
 
 # log
 log_debug_0001="Funktionsaufruf: log() > ohne Parameter aufgerufen, führe Logrotation durch"
-log_debug_0002="Nachricht: %s (Funktionsname: '%s', Dateiname: '%s')"
+log_debug_0002="%s (Funktionsname: '%s', Dateiname: '%s')"
 log_debug_0003="FEHLER: Konnte nicht in Logdatei %s schreiben!"
 
 log() {
@@ -168,7 +168,12 @@ log() {
     #          log ohne Parameter → prüft/rotiert/komprimiert das Logfile
     # -----------------------------------------------------------------------
     local msg="$1"
-    local log_file="$(get_log_file)"
+
+    # Logdatei global ermitteln und speichern
+    if [ -z "$LOG_FILENAME" ]; then
+        LOG_FILENAME="$(get_log_file)"
+    fi
+    local log_file="$LOG_FILENAME"
 
     if [ -z "$msg" ]; then
         # Debug Meldung: log() ohne Parameter aufgerufen
