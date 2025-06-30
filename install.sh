@@ -535,18 +535,17 @@ install_system_requirements() {
 
     # Ermitteln des Pfads zur System-Anforderungsdatei
     req_file="$(get_requirements_system_file)"
-    debug "Ermittelte System-Anforderungsdatei: $req_file"
+    debug "INFO: Ermittelte System-Anforderungsdatei: $req_file"
     if [ $? -eq 0 ] && [ -n "$req_file" ]; then
-        print_error "System-Anforderungsdatei nicht gefunden."
+        debug "ERROR: System-Anforderungsdatei nicht gefunden."
         log "ERROR: System-Anforderungsdatei nicht gefunden"
         return 1
     fi
-    
-    print_info "Lese System-Anforderungen aus $req_file ..."
-    
+        
     # Array für die zu installierenden Pakete erzeugen, Datei zeilenweise  
     # lesen und Kommentare und leere Zeilen überspringen
     local packages=()    
+    debug "INFO: Lese System-Anforderungen aus $req_file ..."
     while IFS= read -r line; do
         # Kommentare und leere Zeilen überspringen
         if [[ "$line" =~ ^[[:space:]]*# || -z "$line" || "$line" =~ ^// ]]; then
@@ -564,12 +563,13 @@ install_system_requirements() {
     done < "$req_file"
     
     if [ ${#packages[@]} -eq 0 ]; then
-        print_warning "Keine Pakete in $req_file gefunden!"
+        debug "WARN: Keine Pakete in $req_file gefunden!"
+        log "WARN: Keine Pakete in $req_file gefunden"
         return 0
     fi
     
     # Log-Eintrag für die Installation der Systemanforderungen
-    log "START: Systemanforderungen werden installiert" "install_system_requirements" "install.sh"
+    log "START: Systemanforderungen werden installiert"
     
     # Paketlisten aktualisieren
     echo -n "[/] Update der Paketquellen ..."
