@@ -47,7 +47,7 @@ COLOR_GRAY="\033[0;37m"
 # DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
 : "${DEBUG_MOD_LOCAL:=0}"    # Lokales Debug-Flag für einzelne Skripte
-DEBUG_MOD_GLOBAL=1           # Globales Flag, das alle lokalen überstimmt
+DEBUG_MOD_GLOBAL=0           # Globales Flag, das alle lokalen überstimmt
 
 # Lademodus für Module
 # 0 = Bei Bedarf laden (für laufenden Betrieb)
