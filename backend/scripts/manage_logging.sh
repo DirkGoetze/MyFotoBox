@@ -56,7 +56,7 @@ chk_log_file() {
     #           ggf. Rotation und Komprimierung durch. Legt Logfile neu an,
     #           falls es fehlt oder durch Rotation verschoben wurde.
     local LOG_FILE
-    LOG_FILE="$("$manage_files_sh" get_log_file)"
+    LOG_FILE="$(get_log_file)"
     local MAX_ROTATE=5
 
     echo "Prüfe Logdatei: ${LOG_FILE}"
