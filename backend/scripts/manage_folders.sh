@@ -407,8 +407,9 @@ get_install_dir() {
 
 # get_backend_dir
 get_backend_dir_debug_0001="INFO: Ermittle Backend-Verzeichnis"
-get_backend_dir_debug_0002="SUCCESS: Verwendeter Pfad für Backend-Verzeichnis: %s"
-get_backend_dir_debug_0003="ERROR: Alle Pfade für Backend-Verzeichnis fehlgeschlagen"
+get_backend_dir_debug_0002="SUCCESS: Verwendete für Backend-Verzeichnis \$BACKEND_DIR: %s"
+get_backend_dir_debug_0003="SUCCESS: Verwendeter Pfad für Backend-Verzeichnis: %s"
+get_backend_dir_debug_0004="ERROR: Alle Pfade für Backend-Verzeichnis fehlgeschlagen"
 
 get_backend_dir() {
     # -----------------------------------------------------------------------
@@ -429,11 +430,19 @@ get_backend_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_backend_dir_debug_0001"
 
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${BACKEND_DIR+x}" ] && [ -n "$BACKEND_DIR" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_backend_dir_debug_0002" "$BACKEND_DIR")"
+        echo "$BACKEND_DIR"
+        return 0
+    fi
+
     # Verwende die für diesen Ordner definierten Pfade
     # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_backend_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_backend_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${BACKEND_DIR+x}" ] || [ -z "$BACKEND_DIR" ] || [ "$dir" != "$BACKEND_DIR" ]; then
             BACKEND_DIR="$dir"
@@ -443,7 +452,7 @@ get_backend_dir() {
         return 0
     fi
 
-    debug "$get_backend_dir_debug_0003"
+    debug "$get_backend_dir_debug_0004"
     echo ""
     return 1
 }
