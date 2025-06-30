@@ -886,8 +886,9 @@ get_https_backup_dir() {
 
 # get_config_dir
 get_config_dir_debug_0001="INFO: Ermittle Konfigurations-Verzeichnis"
-get_config_dir_debug_0002="SUCCESS: Verwendeter Pfad für Konfigurations-Verzeichnis: %s"
-get_config_dir_debug_0003="ERROR: Alle Pfade für Konfigurations-Verzeichnis fehlgeschlagen"
+get_config_dir_debug_0002="SUCCESS: Verwende für Konfigurations-Verzeichnis \$CONF_DIR: %s"
+get_config_dir_debug_0003="SUCCESS: Verwendeter Pfad für Konfigurations-Verzeichnis: %s"
+get_config_dir_debug_0004="ERROR: Alle Pfade für Konfigurations-Verzeichnis fehlgeschlagen"
 
 get_config_dir() {
     # -----------------------------------------------------------------------
@@ -908,11 +909,19 @@ get_config_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_config_dir_debug_0001"
 
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${CONF_DIR+x}" ] && [ -n "$CONF_DIR" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_config_dir_debug_0002" "$CONF_DIR")"
+        echo "$CONF_DIR"
+        return 0
+    fi
+
     # Verwende die für diesen Ordner definierten Pfade
     # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_config_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_config_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${CONF_DIR+x}" ] || [ -z "$CONF_DIR" ] || [ "$dir" != "$CONF_DIR" ]; then
             CONF_DIR="$dir"
@@ -922,7 +931,7 @@ get_config_dir() {
         return 0
     fi
 
-    debug "$get_config_dir_debug_0003"
+    debug "$get_config_dir_debug_0004"
     echo ""
     return 1
 }
