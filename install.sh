@@ -388,8 +388,38 @@ set_fallback_security_settings() {
     fi
     print_success "Rechteprüfung erfolgreich (Root-Rechte vorhanden)."
 
-    # --- 5. Vermerke in log schreiben
-    log "1. Log Meldung: Prüfung der Systemumgebung erfolgreich abgeschlossen"
+    # --- 5. Prüfe Basis-Distribution
+    if ! check_distribution; then
+        print_error "Dieses Skript ist nur für Debian/Ubuntu-basierte Systeme geeignet."
+        exit 1
+    fi
+
+    # --- 6. Prüfe Versions-Kompatibilität
+    # Versionsinfo-Variablen vorinitialisieren, falls sie später nicht gesetzt werden können
+    : "${DIST_NAME:=Unbekannt}"
+    : "${DIST_VERSION:=Unbekannt}"
+    check_distribution_version
+    version_check=$?
+    
+    case $version_check in
+        0)
+            print_success "Distribution erkannt: $DIST_NAME $DIST_VERSION (unterstützt)"
+            log "INFO: Unterstützte Distribution erkannt: $DIST_NAME $DIST_VERSION"
+            ;;
+        1)
+            print_warning "Distributionsversion konnte nicht erkannt werden (/etc/os-release nicht gefunden)."
+            print_success "Distribution: Debian/Ubuntu-basiertes System"
+            log "WARNING: Distributionsversion konnte nicht erkannt werden (/etc/os-release nicht gefunden)"
+            ;;
+        2)
+            print_warning "Distribution erkannt: $DIST_NAME $DIST_VERSION (nicht offiziell unterstützt)"
+            print_info "Die Installation wird fortgesetzt, aber es könnte zu unerwarteten Problemen kommen."
+            log "WARNING: Nicht offiziell unterstützte Distribution erkannt: $DIST_NAME $DIST_VERSION"
+            ;;
+    esac
+
+    # --- 7. Vermerke in log schreiben
+    log "Prüfung der Systemumgebung erfolgreich abgeschlossen"
     return 0
 }
 
