@@ -479,7 +479,7 @@ if [ -z "${LOG_FILENAME+x}" ] || [ -z "$LOG_FILENAME" ]; then
     # Log-Rotation anstoßen
     log ""
     log "Modul 'manage_logging' geladen: $(date '+%Y-%m-%d %H:%M:%S')"
-    #log "Logverzeichnis: $LOG_DIR"
     log "Logdatei: $LOG_FILENAME"
     debug "INFO: Log-Rotation initialisiert für: $LOG_FILENAME"
+    #log "Logverzeichnis: $LOG_DIR"
 fi
