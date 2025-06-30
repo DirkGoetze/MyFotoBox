@@ -176,7 +176,7 @@ check_is_root() {
 # check_distribution
 check_distribution_debug_0001="INFO: Prüfe, ob das System auf Debian/Ubuntu basiert"
 check_distribution_debug_0002="ERROR: System ist nicht Debian/Ubuntu-basiert"
-check_distribution_debug_0003="SUCCESS: System ist Debian/Ubuntu-basiert"
+check_distribution_debug_0003="SUCCESS: Distribution erkannt: ID=%s, ID_LIKE=%s, NAME=%s, VERSION_ID=%s"
 
 check_distribution() {
     # -----------------------------------------------------------------------
@@ -203,15 +203,15 @@ check_distribution() {
     fi
 
     # Debug-Ausgabe für Erfolg
-    debug_output "$(printf "$check_distribution_debug_0003")"
+    debug_output "$(printf "$check_distribution_debug_0003" "$ID" "$ID_LIKE" "$NAME" "$VERSION_ID")"
     return 0
 }
 
 # chk_distribution_version
 check_distribution_version_debug_0001="INFO: Prüfe, ob die Distribution eine unterstützte Version ist"
-check_distribution_version_debug_0002="ERROR: /etc/os-release nicht gefunden"
-check_distribution_version_debug_0003="SUCCESS: Version wird unterstützt"
-check_distribution_version_debug_0004="ERROR: Version wird nicht unterstützt"
+check_distribution_version_debug_0002="ERROR: '/etc/os-release' nicht gefunden"
+check_distribution_version_debug_0003="SUCCESS: %s (Version %s) wird unterstützt"
+check_distribution_version_debug_0004="ERROR: %s (Version %s) wird nicht unterstützt"
 
 check_distribution_version() {
     # -----------------------------------------------------------------------
@@ -242,12 +242,12 @@ check_distribution_version() {
     case "$VERSION_ID" in
         10|11|12|20.04|22.04)
             # Distributionsversion wird unterstützt
-            debug_output "$(printf "$check_distribution_version_debug_0003")"
+            debug_output "$(printf "$check_distribution_version_debug_0003" "$DIST_NAME" "$DIST_VERSION")"
             return 0
             ;;
         *)
             # Distributionsversion wird nicht unterstützt
-            debug_output "$(printf "$check_distribution_version_debug_0004")"
+            debug_output "$(printf "$check_distribution_version_debug_0004" "$DIST_NAME" "$DIST_VERSION")"
             return 2
             ;;
     esac
