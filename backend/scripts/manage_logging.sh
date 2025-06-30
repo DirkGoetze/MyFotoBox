@@ -153,6 +153,11 @@ log_or_json() {
     fi
 }
 
+# log
+log_debug_0001="Funktionsaufruf: log() > ohne Parameter aufgerufen, führe Logrotation durch"
+log_debug_0002="Funktionsaufruf: log() > Nachricht: %s, Funktionsname: %s, Dateiname: %s"
+log_debug_0003="FEHLER: Konnte nicht in Logdatei %s schreiben!"
+
 log() {
     # -----------------------------------------------------------------------
     # log
@@ -161,49 +166,39 @@ log() {
     #           Logrotation und Komprimierung durch (über chk_log_file).
     # Aufruf:  log "Nachricht" [Funktionsname] [Dateiname]
     #          log ohne Parameter → prüft/rotiert/komprimiert das Logfile
-    # Besonderheiten:
-    # - Logdatei: /opt/fotobox/log/YYYY-MM-DD_fotobox.log 
-    #  (Fallback: /var/log/fotobox/ oder /tmp/fotobox/)
-    # - Rotation und Komprimierung werden von chk_log_file übernommen
-    # - Legt Logdatei neu an, falls sie fehlt oder verschoben wurde
-    # - Im Fehlerfall MUSS die aufrufende Funktion (Funktionsname) als 
-    #   verpflichtender Parameter an log() übergeben werden.
-    # - Wenn DEBUG aktiv ist, MUSS im Fehlerfall die Datei (Skript/
-    #   Programm), in der der Fehler aufgetreten ist, als verpflichtender 
-    #   Parameter an log() übergeben werden.
-    local LOG_FILE
-    LOG_FILE="$(get_log_file)"
+    # -----------------------------------------------------------------------
     local msg="$1"
-    
+    local log_file="$(get_log_file)"
+
     if [ -z "$msg" ]; then
-        # Auch hier debug-Aufruf entfernen
-        # debug "log() ohne Parameter aufgerufen, führe Logrotation durch"
-        chk_log_file "$LOG_FILE"
+        # Debug Meldung: log() ohne Parameter aufgerufen
+        debug "$(printf "$log_debug_0001")"
+        # Prüfe und rotiere Logdatei
+        chk_log_file "$log_file"
     else
         # Fehlerfall: Funktionsname und ggf. Dateiname erzwingen
-        local func
-        local file
+        local called_func="${FUNCNAME[1]}"
+        local called_file="${BASH_SOURCE[1]}"
+        debug "$(printf "$log_debug_0002" "$msg" "$called_func" "$called_file")"
+        # Wenn Fehlermeldung, Meldung um aufrufende Datei und Funktion ergänzen
         if [[ "$msg" == ERROR:* ]]; then
-            if [ -z "$func" ]; then
-                func="${FUNCNAME[1]}"
-            fi
-            if { [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ]; } && [ -z "$file" ]; then
-                file="${BASH_SOURCE[1]}"
-            fi
-            if [ -n "$file" ]; then
-                echo "$(date "+%Y-%m-%d %H:%M:%S") [$func][$file] $msg" >> "$LOG_FILE" 2>/dev/null || {
-                    echo "FEHLER: Konnte nicht in Logdatei $LOG_FILE schreiben!" >&2
+            if [ -n "$called_file" ]; then
+                echo "$(date "+%Y-%m-%d %H:%M:%S") [$called_func][$called_file] $msg" >> "$log_file" 2>/dev/null || {
+                    debug "$(printf "$log_debug_0003" "$log_file")"
+                    echo "$(printf "$log_debug_0003" "$log_file")" >&2
                     return 1
                 }
             else
-                echo "$(date "+%Y-%m-%d %H:%M:%S") [$func] $msg" >> "$LOG_FILE" 2>/dev/null || {
-                    echo "FEHLER: Konnte nicht in Logdatei $LOG_FILE schreiben!" >&2
+                echo "$(date "+%Y-%m-%d %H:%M:%S") [$called_func] $msg" >> "$log_file" 2>/dev/null || {
+                    debug "$(printf "$log_debug_0003" "$log_file")"
+                    echo "$(printf "$log_debug_0003" "$log_file")" >&2
                     return 1
                 }
             fi
         else
-            echo "$(date "+%Y-%m-%d %H:%M:%S") $msg" >> "$LOG_FILE" 2>/dev/null || {
-                echo "FEHLER: Konnte nicht in Logdatei $LOG_FILE schreiben!" >&2
+            echo "$(date "+%Y-%m-%d %H:%M:%S") $msg" >> "$log_file" 2>/dev/null || {
+                debug "$(printf "$log_debug_0003" "$log_file")"
+                echo "$(printf "$log_debug_0003" "$log_file")" >&2
                 return 1
             }
         fi

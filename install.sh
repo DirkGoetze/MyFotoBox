@@ -345,12 +345,10 @@ set_fallback_security_settings() {
     # -----------------------------------------------------------------------
     # set_fallback_security_settings
     # -----------------------------------------------------------------------
-    # Funktion: Stellt die Verfügbarkeit aller kritischen Ressourcen sicher und
-    # ......... setzt Fallback-Definitionen für Logging- und Print-Funktionen.
-    # ......... Prüft außerdem die Verfügbarkeit von manage_nginx.sh.
-    # ......... Prüft, ob das Skript im vorgegebenen INSTALL_DIR ausgeführt wird.
-    # .........
-    # Rückgabe: 0 = OK, 1 = fehlerhafte Umgebung, Skript sollte abgebrochen werden
+    # Funktion: Prüft, ob das Skript im vorgegebenen INSTALL_DIR ausgeführt 
+    # ......... wird und stellt die Verfügbarkeit aller kritischen Ressourcen 
+    # ......... sicher
+    # Rückgabe: 0 = OK, 1 = fehlerhafte Umgebung, Skript abgebrechen
 
     # --- 1. Prüfen, ob das Skript im vorgegebenen INSTALL_DIR ausgeführt wird
     local SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
@@ -367,7 +365,6 @@ set_fallback_security_settings() {
     fi
     
     # --- 3. Prüfen, ob alle benötigten Ressourcen verfügbar sind
-    # ---    Für die Prüfung 'check_module()' aus 'lib_core' nutzen
     if ! check_module "manage_folders"; then
         echo -e "\033[1;31mFehler: Modul 'manage_folders' ist nicht verfügbar.\033[0m"
         return 1
@@ -384,7 +381,9 @@ set_fallback_security_settings() {
         echo -e "\033[1;31mFehler: Modul 'manage_nginx' ist nicht verfügbar.\033[0m"
         return 1
     fi
-    
+
+    # --- 5. Vermerke in log schreiben
+    log "SUCCESS: Prüfung der Systemumgebung abgeschlossen"
     return 0
 }
 
@@ -730,11 +729,8 @@ dlg_check_system_requirements() {
     
     # Prüfen, ob die manage_logging.sh erfolgreich geladen wurde
     if type get_log_file &>/dev/null; then
-        print_success "Log-Hilfsskript erfolgreich geladen, verwende zentrales Logging."
-        log "INFO: Log-Hilfsskript erfolgreich geladen, verwende zentrales Logging."
-    else
-        print_warning "Zentrales Log-Hilfsskript nicht verfügbar, verwende Fallback-Logging in $LOG_DIR."
-        log "WARNING: Zentrales Log-Hilfsskript nicht verfügbar, verwende Fallback-Logging in $LOG_DIR."
+        print_success "Modul 'Manage_Logging' erfolgreich geladen, verwende zentrales Logging."
+        log "INFO: Modul 'Manage_Logging' erfolgreich geladen, verwende zentrales Logging."
     fi
     
     # Befehlszeilenargumente verarbeiten
@@ -1519,6 +1515,7 @@ main() {
         
     # Ausführung der einzelnen Dialogschritte, robuste Fehlerbehandlung
     run_step dlg_check_system_requirements "$@"  # Prüfe Systemvoraussetzungen 
+    exit
     run_step dlg_check_root               # Prüfe Root-Rechte
     run_step dlg_check_distribution       # Prüfe die Distribution
     run_step dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
