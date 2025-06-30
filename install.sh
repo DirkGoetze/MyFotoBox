@@ -541,10 +541,10 @@ install_system_requirements() {
         log "ERROR: System-Anforderungsdatei nicht gefunden"
         return 1
     fi
-        
-    # Array für die zu installierenden Pakete erzeugen, Datei zeilenweise  
-    # lesen und Kommentare und leere Zeilen überspringen
-    local packages=()    
+
+    # Array für die zu installierenden Pakete erzeugen, Datei zeilenweise
+    # einlesen und Kommentare und leere Zeilen überspringen
+    local packages=()
     debug "INFO: Lese System-Anforderungen aus $req_file ..."
     while IFS= read -r line; do
         # Kommentare und leere Zeilen überspringen
