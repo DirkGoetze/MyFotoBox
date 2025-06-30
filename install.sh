@@ -728,22 +728,22 @@ dlg_check_system_requirements() {
     fi
     
     # Prüfen, ob die manage_logging.sh erfolgreich geladen wurde
-    if type get_log_file &>/dev/null; then
-        print_success "Modul 'Manage_Logging' erfolgreich geladen, verwende zentrales Logging."
-        log "INFO: Modul 'Manage_Logging' erfolgreich geladen, verwende zentrales Logging."
-    fi
+    #if type get_log_file &>/dev/null; then
+    #    print_success "Modul 'Manage_Logging' erfolgreich geladen, verwende zentrales Logging."
+    #    log "INFO: Modul 'Manage_Logging' erfolgreich geladen, verwende zentrales Logging."
+    #fi
     
     # Befehlszeilenargumente verarbeiten
     parse_args "$@"
     
     # Log-Initialisierung (Rotation) direkt nach Skriptstart
-    if type -t log | grep -q "function"; then
-        log
-        log "Installationsskript gestartet: $(date '+%Y-%m-%d %H:%M:%S')"
-        log "Logverzeichnis: $LOG_DIR"
-    else
-        echo -e "\033[1;33mWarnung: Log-Rotation konnte nicht durchgeführt werden (log-Funktion nicht verfügbar)\033[0m"
-    fi
+    #if type -t log | grep -q "function"; then
+    #    log
+    #    log "Installationsskript gestartet: $(date '+%Y-%m-%d %H:%M:%S')"
+    #    log "Logverzeichnis: $LOG_DIR"
+    #else
+    #    echo -e "\033[1;33mWarnung: Log-Rotation konnte nicht durchgeführt werden (log-Funktion nicht verfügbar)\033[0m"
+    #fi
 
     print_success "Systemvoraussetzungen erfüllt."
 }
