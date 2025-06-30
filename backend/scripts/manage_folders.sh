@@ -354,8 +354,9 @@ _get_folder_path() {
 
 # get_install_dir
 get_install_dir_debug_0001="INFO: Ermittle Installations-Verzeichnis"
-get_install_dir_debug_0002="SUCCESS: Verwendeter Pfad für Installations-Verzeichnis: %s"
-get_install_dir_debug_0003="ERROR: Alle Pfade für Installations-Verzeichnis fehlgeschlagen"
+get_install_dir_debug_0002="SUCCESS: Verwendete für Installations-Verzeichnis \$INSTALL_DIR: '%s'"
+get_install_dir_debug_0003="SUCCESS: Verwendeter Pfad für Installations-Verzeichnis: '%s'"
+get_install_dir_debug_0004="ERROR: Alle Pfade für Installations-Verzeichnis fehlgeschlagen"
 
 get_install_dir() {
     # -----------------------------------------------------------------------
@@ -373,11 +374,19 @@ get_install_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_install_dir_debug_0001"
 
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${INSTALL_DIR+x}" ] && [ -n "$INSTALL_DIR" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_install_dir_debug_0002" "$INSTALL_DIR")"
+        echo "$INSTALL_DIR"
+        return 0
+    fi
+
     # Verwende die für diesen Ordner definierten Pfade
     # Deaktiviere Fallback Order(0) und das Erzeugen von Symlink (0)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 0 0)
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_install_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_install_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${INSTALL_DIR+x}" ] || [ -z "$INSTALL_DIR" ] || [ "$dir" != "$INSTALL_DIR" ]; then
             INSTALL_DIR="$dir"
@@ -388,7 +397,7 @@ get_install_dir() {
     fi
     
     # Als absoluten Notfall das aktuelle Verzeichnis verwenden
-    debug "$get_install_dir_debug_0003"
+    debug "$get_install_dir_debug_0004"
     return 1
 }
 
