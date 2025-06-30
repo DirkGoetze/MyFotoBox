@@ -830,8 +830,9 @@ get_nginx_backup_dir() {
 
 # get_https_backup_dir
 get_https_backup_dir_debug_0001="INFO: Ermittle https-Backup-Verzeichnis"
-get_https_backup_dir_debug_0002="SUCCESS: Verwendeter Pfad für https-Backup-Verzeichnis: %s"
-get_https_backup_dir_debug_0003="ERROR: Alle Pfade für https-Backup-Verzeichnis fehlgeschlagen"
+get_https_backup_dir_debug_0002="SUCCESS: Verwende für https-Backup-Verzeichnis \$BACKUP_DIR_HTTPS: %s"
+get_https_backup_dir_debug_0003="SUCCESS: Verwendeter Pfad für https-Backup-Verzeichnis: %s"
+get_https_backup_dir_debug_0004="ERROR: Alle Pfade für https-Backup-Verzeichnis fehlgeschlagen"
 
 get_https_backup_dir() {
     # -----------------------------------------------------------------------
@@ -852,11 +853,19 @@ get_https_backup_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_https_backup_dir_debug_0001"
 
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${BACKUP_DIR_HTTPS+x}" ] && [ -n "$BACKUP_DIR_HTTPS" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_https_backup_dir_debug_0002" "$BACKUP_DIR_HTTPS")"
+        echo "$BACKUP_DIR_HTTPS"
+        return 0
+    fi
+
     # Verwende die für diesen Ordner definierten Pfade
     # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_https_backup_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_https_backup_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${BACKUP_DIR_HTTPS+x}" ] || [ -z "$BACKUP_DIR_HTTPS" ] || [ "$dir" != "$BACKUP_DIR_HTTPS" ]; then
             BACKUP_DIR_HTTPS="$dir"
@@ -866,7 +875,7 @@ get_https_backup_dir() {
         return 0
     fi
 
-    debug "$get_https_backup_dir_debug_0003"
+    debug "$get_https_backup_dir_debug_0004"
     echo ""
     return 1
 }
