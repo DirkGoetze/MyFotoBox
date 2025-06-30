@@ -938,7 +938,7 @@ get_config_dir() {
 
 # get_camera_conf_dir
 get_camera_conf_dir_debug_0001="INFO: Ermittle Kamera-Konfigurations-Verzeichnis"
-get_camera_conf_dir_debug_0002="SUCCESS: Verwende für Kamera-Konfigurations-Verzeichnis \$CONF_DIR: %s"
+get_camera_conf_dir_debug_0002="SUCCESS: Verwende für Kamera-Konfigurations-Verzeichnis \$CONF_DIR_CAMERA: %s"
 get_camera_conf_dir_debug_0003="SUCCESS: Verwendeter Pfad für Kamera-Konfigurations-Verzeichnis: %s"
 get_camera_conf_dir_debug_0004="ERROR: Alle Pfade für Kamera-Konfigurations-Verzeichnis fehlgeschlagen"
 
@@ -992,8 +992,9 @@ get_camera_conf_dir() {
 
 # get_https_conf_dir
 get_https_conf_dir_debug_0001="INFO: Ermittle HTTPS-Konfigurations-Verzeichnis"
-get_https_conf_dir_debug_0002="SUCCESS: Verwendeter Pfad für HTTPS-Konfigurations-Verzeichnis: %s"
-get_https_conf_dir_debug_0003="ERROR: Alle Pfade für HTTPS-Konfigurations-Verzeichnis fehlgeschlagen"
+get_https_conf_dir_debug_0002="SUCCESS: Verwende für HTTPS-Konfigurations-Verzeichnis \$CONF_DIR_HTTPS: %s"
+get_https_conf_dir_debug_0003="SUCCESS: Verwendeter Pfad für HTTPS-Konfigurations-Verzeichnis: %s"
+get_https_conf_dir_debug_0004="ERROR: Alle Pfade für HTTPS-Konfigurations-Verzeichnis fehlgeschlagen"
 
 get_https_conf_dir() {
     # -----------------------------------------------------------------------
@@ -1014,11 +1015,19 @@ get_https_conf_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_https_conf_dir_debug_0001"
 
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${CONF_DIR_HTTPS+x}" ] && [ -n "$CONF_DIR_HTTPS" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_https_conf_dir_debug_0002" "$CONF_DIR_HTTPS")"
+        echo "$CONF_DIR_HTTPS"
+        return 0
+    fi
+
     # Verwende die für diesen Ordner definierten Pfade
     # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_https_conf_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_https_conf_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${CONF_DIR_HTTPS+x}" ] || [ -z "$CONF_DIR_HTTPS" ] || [ "$dir" != "$CONF_DIR_HTTPS" ]; then
             CONF_DIR_HTTPS="$dir"
@@ -1028,7 +1037,7 @@ get_https_conf_dir() {
         return 0
     fi
 
-    debug "$get_https_conf_dir_debug_0003"
+    debug "$get_https_conf_dir_debug_0004"
     echo ""
     return 1
 }
@@ -1112,11 +1121,12 @@ get_nginx_conf_dir() {
 
 # get_template_dir
 get_template_dir_debug_0001="INFO: Ermittle Template-Verzeichnis"
-get_template_dir_debug_0002="SUCCESS: Verwendeter Pfad für Template-Verzeichnis: %s"
-get_template_dir_debug_0003="INFO: Modulname: '%s', prüfe Verzeichniseignung"
-get_template_dir_debug_0004="SUCCESS: Verwendeter Pfad für Modul-spezifisches Template-Verzeichnis: %s"
-get_template_dir_debug_0005="ERROR: Alle Pfade für Template-Verzeichnis fehlgeschlagen"
-get_template_dir_debug_0006="ERROR: Fehler beim Erstellen des Modul-spezifisches Verzeichnisses: %s, Fallback auf Basis-Verzeichnis: %s"
+get_template_dir_debug_0002="SUCCESS: Verwende für Template-Verzeichnis \$CONF_DIR_TEMPLATES : %s"
+get_template_dir_debug_0003="SUCCESS: Verwendeter Pfad für Template-Verzeichnis: %s"
+get_template_dir_debug_0004="INFO: Modulname: '%s', prüfe Verzeichniseignung"
+get_template_dir_debug_0005="SUCCESS: Verwendeter Pfad für Modul-spezifisches Template-Verzeichnis: %s"
+get_template_dir_debug_0006="ERROR: Alle Pfade für Template-Verzeichnis fehlgeschlagen"
+get_template_dir_debug_0007="ERROR: Fehler beim Erstellen des Modul-spezifisches Verzeichnisses: %s, Fallback auf Basis-Verzeichnis: %s"
 
 get_template_dir() {
     # -----------------------------------------------------------------------
@@ -1140,13 +1150,20 @@ get_template_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_template_dir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
-    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${CONF_DIR_TEMPLATES+x}" ] && [ -n "$CONF_DIR_TEMPLATES" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_template_dir_debug_0002" "$CONF_DIR_TEMPLATES")"
+        dir="$CONF_DIR_TEMPLATES"
+    else
+        # Verwende die in 'lib_core' definierten Pfade
+        # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+        dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
+    fi
     
     # Basis-Verzeichnis konnte nicht erzeugt werden
     if [ -z "$dir" ]; then
-        debug "$(printf "$get_template_dir_debug_0005")"
+        debug "$(printf "$get_template_dir_debug_0006")"
         echo ""
         return 1
     fi
@@ -1161,13 +1178,13 @@ get_template_dir() {
 
     # Wenn kein Modulname übergeben wurde, gib das Basis-Verzeichnis zurück
     if [ -z "$modul_name" ]; then
-        debug "$(printf "$get_template_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_template_dir_debug_0003" "$dir")"
         echo "$dir"
         return 0
     fi
 
     # Modul-Name validieren und bereinigen
-    debug "$(printf "$get_template_dir_debug_0003" "$modul_name")"
+    debug "$(printf "$get_template_dir_debug_0004" "$modul_name")"
     
     # Verwende die Helferfunktion für die Bereinigung
     local clean_modul_name=$(_get_clean_foldername "$modul_name")
@@ -1178,13 +1195,13 @@ get_template_dir() {
     local modul_dir="${dir}/${clean_modul_name}"
 
      if _create_directory "$modul_dir"; then
-        debug "$(printf "$get_template_dir_debug_0004" "$modul_dir")"
+        debug "$(printf "$get_template_dir_debug_0005" "$modul_dir")"
         echo "$modul_dir"
         return 0
     else
-        debug "$(printf "$get_template_dir_debug_0006" "$modul_dir" "$dir")"
+        debug "$(printf "$get_template_dir_debug_0007" "$modul_dir" "$dir")"
         # Fallback auf das Basis-Verzeichnis bei Fehler
-        debug "$(printf "$get_template_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_template_dir_debug_0003" "$dir")"
         echo "$dir"
         return 0
     fi
