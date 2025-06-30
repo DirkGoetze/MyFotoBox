@@ -67,15 +67,15 @@ DEBUG_MOD_LOCAL=1            # Lokales Debug-Flag für einzelne Skripte
 # ---------------------------------------------------------------------------
 
 # _get_file_name
-_get_file_name_debug_0001="INFO: Prüfung der Konfigurationsdatei: '%s'"
-_get_file_name_debug_0002="INFO: Verzeichnispfad zur Konfigurationsdatei: %s"
+_get_file_name_debug_0001="INFO: Prüfung der Datei: '%s'"
+_get_file_name_debug_0002="INFO: Verzeichnispfad zur Datei: %s"
 _get_file_name_debug_0003="INFO: Zusammengesetzter Dateiname: %s%s"
-_get_file_name_debug_0004="INFO: Prüfung der Konfigurationsdatei (exist, read, write, rights) :'%s'"
+_get_file_name_debug_0004="INFO: Prüfung der Datei (exist, read, write, rights) :'%s'"
 _get_file_name_debug_0005="ERROR: Fehler beim Erstellen von '%s'"
 _get_file_name_debug_0006="WARN: Warnung! <chown> '%s:%s' für '%s' fehlgeschlagen, Eigentümer nicht geändert"
 _get_file_name_debug_0007="WARN: Warnung! <chmod> '%s' für '%s' fehlgeschlagen, Berechtigungen nicht geändert"
-_get_file_name_debug_0008="SUCCESS: Prüfung erfolgreich für Konfigurationsdatei: '%s'"
-_get_file_name_debug_0009="ERROR: Konfigurationsdatei '%s' nicht gefunden oder nicht lesbar/beschreibbar"
+_get_file_name_debug_0008="SUCCESS: Prüfung erfolgreich für Datei: '%s'"
+_get_file_name_debug_0009="ERROR: Datei '%s' nicht gefunden oder nicht lesbar/beschreibbar"
 
 _get_file_name() {
     # -----------------------------------------------------------------------
