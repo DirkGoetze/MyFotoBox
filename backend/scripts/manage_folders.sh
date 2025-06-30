@@ -1213,8 +1213,9 @@ get_template_dir() {
 
 # get_data_dir
 get_data_dir_debug_0001="INFO: Ermittle Daten-Verzeichnis"
-get_data_dir_debug_0002="SUCCESS: Verwendeter Pfad für Daten-Verzeichnis: %s"
-get_data_dir_debug_0003="ERROR: Alle Pfade für Daten-Verzeichnis fehlgeschlagen"
+get_data_dir_debug_0002="SUCCESS: Verwende für Daten-Verzeichnis \$DATA_DIR: %s"
+get_data_dir_debug_0003="SUCCESS: Verwendeter Pfad für Daten-Verzeichnis: %s"
+get_data_dir_debug_0004="ERROR: Alle Pfade für Daten-Verzeichnis fehlgeschlagen"
 
 get_data_dir() {
     # -----------------------------------------------------------------------
@@ -1235,11 +1236,19 @@ get_data_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_data_dir_debug_0001" 
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+     # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${DATA_DIR+x}" ] && [ -n "$DATA_DIR" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_data_dir_debug_0002" "$DATA_DIR")"
+        echo "$DATA_DIR"
+        return 0
+    fi
+
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_data_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_data_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${DATA_DIR+x}" ] || [ -z "$DATA_DIR" ] || [ "$dir" != "$DATA_DIR" ]; then
             DATA_DIR="$dir"
@@ -1249,7 +1258,7 @@ get_data_dir() {
         return 0
     fi
 
-    debug "$get_data_dir_debug_0003"
+    debug "$get_data_dir_debug_0004"
     echo ""
     return 1
 }
