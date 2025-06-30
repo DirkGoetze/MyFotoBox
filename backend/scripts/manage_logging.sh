@@ -473,7 +473,8 @@ print_debug() {
 
 # Logdatei global ermitteln und speichern
 if [ -z "${LOG_FILENAME+x}" ] || [ -z "$LOG_FILENAME" ]; then
-    #export LOG_FILENAME="$(get_log_file)"
+    LOG_FILENAME="$(get_log_file)"
+    export LOG_FILENAME
     debug "INFO: Modul 'manage_logging' geladen, Logdatei ermittelt: $LOG_FILENAME"
     # Log-Rotation anstoßen
     log ""
