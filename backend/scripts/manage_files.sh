@@ -168,9 +168,10 @@ _get_file_name() {
 
 # get_config_file
 get_config_file_debug_0001="INFO: Ermittle Name der Projekt Konfigurationsdatei"
-get_config_file_debug_0002="INFO: Genutzter Verzeichnispfad zur Konfigurationsdatei: '%s'"
-get_config_file_debug_0003="SUCCESS: Vollständiger Pfad zur Konfigurationsdatei: '%s'"
-get_config_file_debug_0004="ERROR: Konfigurationsdatei nicht gefunden oder nicht lesbar/beschreibbar"
+get_config_file_debug_0002="INFO: Verwende für Konfigurationsdatei \$CONFIG_FILENAME: '%s'"
+get_config_file_debug_0003="INFO: Genutzter Verzeichnispfad zur Konfigurationsdatei: '%s'"
+get_config_file_debug_0004="SUCCESS: Vollständiger Pfad zur Konfigurationsdatei: '%s'"
+get_config_file_debug_0005="ERROR: Konfigurationsdatei nicht gefunden oder nicht lesbar/beschreibbar"
 
 get_config_file() {
     # -----------------------------------------------------------------------
@@ -189,22 +190,34 @@ get_config_file() {
     # Eröffnungsmeldung für die Debug-Ausgabe
     debug "$(printf "$get_config_file_debug_0001")"
 
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${CONFIG_FILENAME+x}" ] && [ -n "$CONFIG_FILENAME" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_config_file_debug_0002" "$CONFIG_FILENAME")"
+        echo "$CONFIG_FILENAME"
+        return 0
+    fi
+
     # Festlegen der Bestandteile für den Dateinamen
     file_name="fotobox"
     file_ext="$CONFIG_FILE_EXT_DEFAULT"
     folder_path="$(get_config_dir)"
-    debug "$(printf "$get_config_file_debug_0002" "$folder_path")"
+    debug "$(printf "$get_config_file_debug_0003" "$folder_path")"
 
     # Zusammensetzen des vollständigen Dateinamens erfolgreich
     full_filename="$(_get_file_name "$file_name" "$file_ext" "$folder_path")"
     if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
         # Erfolg: Datei existiert und ist les-/schreibbar
-        debug "$(printf "$get_config_file_debug_0003" "$full_filename")"
+        debug "$(printf "$get_config_file_debug_0004" "$full_filename")"
+        # System-Variable aktualisieren
+        CONFIG_FILENAME="$full_filename"
+        export CONFIG_FILENAME
+        # Vollständigen Pfad zurückgeben
         echo "$full_filename"
         return 0
     else
         # Fehlerfall
-        debug "$get_config_file_debug_0004"
+        debug "$get_config_file_debug_0005"
         return 1
     fi
 }
@@ -233,7 +246,7 @@ get_log_file() {
     # Eröffnungsmeldung für die Debug-Ausgabe
     debug "$(printf "$get_log_file_debug_0001")"
 
-     # Prüfen, ob Systemvariable bereits gesetzt ist
+    # Prüfen, ob Systemvariable bereits gesetzt ist
     if [ "${LOG_FILENAME+x}" ] && [ -n "$LOG_FILENAME" ]; then
         # Systemvariable wurde bereits ermittelt, diese zurückgeben
         debug "$(printf "$get_log_file_debug_0002" "$LOG_FILENAME")"
