@@ -29,12 +29,12 @@ SCRIPT_DIR="$INSTALL_DIR/backend/scripts"
 # Installation/Update benötigt alle Module von lib_core.sh 
 if [ -f "$SCRIPT_DIR/lib_core.sh" ]; then
     # Direkt core-Bibliothek einbinden, um alle Module zu laden
-    echo "Lade lib_core.sh..."
+    echo "Lade Modul 'lib_core.sh' ..."
     source "$SCRIPT_DIR/lib_core.sh"
     if [ $? -eq 0 ]; then
-        echo "✅ SUCCES: Modul lib_core.sh wurde geladen und sollte alle anderen Module mitgeladen haben."
+        echo "Modul 'lib_core.sh' wurde erfolgreich geladen."
     else
-        echo "❌ FEHLER: Beim Laden von lib_core.sh ist ein Fehler aufgetreten."
+        echo "FEHLER: Beim Laden von 'lib_core.sh' ist ein Fehler aufgetreten."
         exit 1
     fi
 fi
@@ -354,31 +354,31 @@ check_system_requirements() {
     local SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
     if [ "$SCRIPT_DIR" != "$INSTALL_DIR" ]; then
         # Kein gültiges Verzeichnis, Abbruch
-        echo -e "\033[1;31mFehler: Das Skript muss im Installationsverzeichnis ($INSTALL_DIR) ausgeführt werden.\033[0m"
+        print_error "Das Skript muss im Installationsverzeichnis ($INSTALL_DIR) ausgeführt werden."
         return 1
     fi
     
     # --- 2. Prüfen, ob die Kernressourcen geladen wurden
     if [ "$LIB_CORE_LOADED" != "1" ]; then
-        echo -e "\033[1;31mFehler: Die zentrale Bibliothek (lib_core.sh) wurde nicht geladen.\033[0m"
+        print_error "Die zentrale Bibliothek (lib_core.sh) wurde nicht geladen."
         return 1
     fi
     
     # --- 3. Prüfen, ob alle benötigten Ressourcen verfügbar sind
     if ! check_module "manage_folders"; then
-        echo -e "\033[1;31mFehler: Modul 'manage_folders' ist nicht verfügbar.\033[0m"
+        print_error "Modul 'manage_folders' ist nicht verfügbar."
         return 1
     fi
     if ! check_module "manage_files"; then
-        echo -e "\033[1;31mFehler: Modul 'manage_files' ist nicht verfügbar.\033[0m"
+        print_error "Modul 'manage_files' ist nicht verfügbar."
         return 1
     fi
     if ! check_module "manage_logging"; then
-        echo -e "\033[1;31mFehler: Modul 'manage_logging' ist nicht verfügbar.\033[0m"
+        print_error "Modul 'manage_logging' ist nicht verfügbar."
         return 1
     fi
     if ! check_module "manage_nginx"; then
-        echo -e "\033[1;31mFehler: Modul 'manage_nginx' ist nicht verfügbar.\033[0m"
+        print_error "Modul 'manage_nginx' ist nicht verfügbar."
         return 1
     fi
     # --- 4. Prüfen, ob Skript mit root-Rechten ausgeführt wird
