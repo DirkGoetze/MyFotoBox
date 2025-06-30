@@ -535,6 +535,7 @@ install_system_requirements() {
 
     # Ermitteln des Pfads zur System-Anforderungsdatei
     req_file="$(get_requirements_system_file)"
+    debug "Ermittelte System-Anforderungsdatei: $req_file"
     if [ $? -eq 0 ] && [ -n "$req_file" ]; then
         print_error "System-Anforderungsdatei nicht gefunden."
         log "ERROR: System-Anforderungsdatei nicht gefunden"

@@ -279,7 +279,7 @@ get_log_file() {
 }
 
 # get_requirements_system_file
-get_requirements_system_file_debug_0001="INFO: Ermittle Requirements Datei für '%s'"
+get_requirements_system_file_debug_0001="INFO: Ermittle System-Requirements-Datei"
 get_requirements_system_file_debug_0002="SUCCESS: Verwende für Systempaket-Anforderungen-Datei : '%s'"
 get_requirements_system_file_debug_0003="INFO: Genutzter Verzeichnispfad zur Systempaket-Anforderungen-Datei: '%s'"
 get_requirements_system_file_debug_0004="SUCCESS: Vollständiger Pfad zur Systempaket-Anforderungen-Datei: '%s'"
