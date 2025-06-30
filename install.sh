@@ -109,49 +109,6 @@ parse_args() {
     export DEBUG_MOD_GLOBAL
 }
 
-show_spinner() {
-    # -----------------------------------------------------------------------
-    # show_spinner
-    # -----------------------------------------------------------------------
-    # Funktion: Zeigt eine Animation, solange der übergebene Prozess läuft
-    # Parameter: $1 = PID des zu überwachenden Prozesses
-    #            $2 = Typ des Spinners (optional, default: standard)
-    # Rückgabe: keine
-    local pid="$1"
-    local spinner_type="${2:-standard}"
-    local delay=0.1
-    local spinstr=''
-    
-    # Verschiedene Spinner-Typen
-    case "$spinner_type" in
-        "dots")
-            spinstr="⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
-            ;;
-        "slash")
-            spinstr='|/-\'
-            ;;
-        *)  # Standard-Spinner
-            spinstr='|/-\'
-            ;;
-    esac
-    
-    local len=${#spinstr}
-    local i=0
-    
-    # Verschiebe Cursor zurück zum Anfang der Zeile
-    printf "\r"
-    
-    # Zeige Spinner, solange der Prozess läuft
-    while kill -0 "$pid" 2>/dev/null; do
-        i=$(( (i+1) % len ))
-        printf "[%s]\r" "${spinstr:$i:1}"
-        sleep $delay
-    done
-    
-    # Lösche den Spinner, wenn der Prozess beendet ist
-    printf "    \r"
-}
-
 make_dir() {
     # -----------------------------------------------------------------------
     # make_dir
