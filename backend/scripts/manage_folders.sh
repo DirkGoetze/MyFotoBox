@@ -938,8 +938,9 @@ get_config_dir() {
 
 # get_camera_conf_dir
 get_camera_conf_dir_debug_0001="INFO: Ermittle Kamera-Konfigurations-Verzeichnis"
-get_camera_conf_dir_debug_0002="SUCCESS: Verwendeter Pfad für Kamera-Konfigurations-Verzeichnis: %s"
-get_camera_conf_dir_debug_0003="ERROR: Alle Pfade für Kamera-Konfigurations-Verzeichnis fehlgeschlagen"
+get_camera_conf_dir_debug_0002="SUCCESS: Verwende für Kamera-Konfigurations-Verzeichnis \$CONF_DIR: %s"
+get_camera_conf_dir_debug_0003="SUCCESS: Verwendeter Pfad für Kamera-Konfigurations-Verzeichnis: %s"
+get_camera_conf_dir_debug_0004="ERROR: Alle Pfade für Kamera-Konfigurations-Verzeichnis fehlgeschlagen"
 
 get_camera_conf_dir() {
     # -----------------------------------------------------------------------
@@ -962,11 +963,19 @@ get_camera_conf_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_camera_conf_dir_debug_0001"
 
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${CONF_DIR_CAMERA+x}" ] && [ -n "$CONF_DIR_CAMERA" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_camera_conf_dir_debug_0002" "$CONF_DIR_CAMERA")"
+        echo "$CONF_DIR_CAMERA"
+        return 0
+    fi
+
     # Verwende die in 'lib_core' definierten Pfade
     # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_camera_conf_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_camera_conf_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${CONF_DIR_CAMERA+x}" ] || [ -z "$CONF_DIR_CAMERA" ] || [ "$dir" != "$CONF_DIR_CAMERA" ]; then
             CONF_DIR_CAMERA="$dir"
@@ -976,7 +985,7 @@ get_camera_conf_dir() {
         return 0
     fi
 
-    debug "$get_camera_conf_dir_debug_0003"
+    debug "$get_camera_conf_dir_debug_0004"
     echo ""
     return 1
 }
