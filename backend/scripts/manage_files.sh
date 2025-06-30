@@ -211,9 +211,10 @@ get_config_file() {
 
 # get_log_file
 get_log_file_debug_0001="INFO: Ermittle Log-Datei: %s"
-get_log_file_debug_0002="INFO: Genutzter Verzeichnispfad zur Log-Datei: '%s'"
-get_log_file_debug_0003="SUCCESS: Vollständiger Pfad zur Log-Datei: '%s'"
-get_log_file_debug_0004="ERROR: Log-Datei nicht gefunden oder nicht lesbar/beschreibbar"
+get_log_file_debug_0002="SUCCESS: Verwende für Log-Datei \$LOG_FILENAME: '%s'"
+get_log_file_debug_0003="INFO: Genutzter Verzeichnispfad zur Log-Datei: '%s'"
+get_log_file_debug_0004="SUCCESS: Vollständiger Pfad zur Log-Datei: '%s'"
+get_log_file_debug_0005="ERROR: Log-Datei nicht gefunden oder nicht lesbar/beschreibbar"
 
 get_log_file() {
     # -----------------------------------------------------------------------
@@ -232,22 +233,32 @@ get_log_file() {
     # Eröffnungsmeldung für die Debug-Ausgabe
     debug "$(printf "$get_log_file_debug_0001")"
 
+     # Prüfen, ob LOG_DIR bereits gesetzt ist
+    if [ -n "$LOG_FILENAME" ]; then
+        # Pfad wurde bereits ermittelt, diesen zurückgeben
+        debug "$(printf "$get_log_file_debug_0002" "$LOG_FILENAME")"
+        echo "$LOG_FILENAME"
+        return 0
+    fi
+
     # Festlegen der Bestandteile für den Dateinamen
     file_name="$(date +%Y-%m-%d)_fotobox"
     file_ext="$LOG_FILE_EXT_DEFAULT"
     folder_path="$(get_log_dir)"
-    debug "$(printf "$get_log_file_debug_0002" "$folder_path")"
+    debug "$(printf "$get_log_file_debug_0003" "$folder_path")"
 
     # Zusammensetzen des vollständigen Dateinamens erfolgreich
     full_filename="$(_get_file_name "$file_name" "$file_ext" "$folder_path")"
     if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
         # Erfolg: Datei existiert und ist les-/schreibbar
-        debug "$(printf "$get_log_file_debug_0003" "$full_filename")"
+        debug "$(printf "$get_log_file_debug_0004" "$full_filename")"
+        # Setze die globale Variable LOG_FILENAME
+        export LOG_FILENAME="$full_filename"
         echo "$full_filename"
         return 0
     else
         # Fehlerfall
-        debug "$get_log_file_debug_0004"
+        debug "$get_log_file_debug_0005"
         return 1
     fi
 }
