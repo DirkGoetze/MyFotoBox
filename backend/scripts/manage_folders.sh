@@ -778,8 +778,9 @@ get_backup_dir() {
 
 # get_nginx_backup_dir
 get_nginx_backup_dir_debug_0001="INFO: Ermittle NGINX-Backup-Verzeichnis"
-get_nginx_backup_dir_debug_0002="SUCCESS: Verwendeter Pfad für NGINX-Backup-Verzeichnis: %s"
-get_nginx_backup_dir_debug_0003="ERROR: Alle Pfade für NGINX-Backup-Verzeichnis fehlgeschlagen"
+get_nginx_backup_dir_debug_0002="SUCCESS: Verwende für NGINX-Backup-Verzeichnis \$BACKUP_DIR_NGINX: %s"
+get_nginx_backup_dir_debug_0003="SUCCESS: Verwendeter Pfad für NGINX-Backup-Verzeichnis: %s"
+get_nginx_backup_dir_debug_0004="ERROR: Alle Pfade für NGINX-Backup-Verzeichnis fehlgeschlagen"
 
 get_nginx_backup_dir() {
     # -----------------------------------------------------------------------
@@ -800,11 +801,19 @@ get_nginx_backup_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_nginx_backup_dir_debug_0001"
 
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${BACKUP_DIR_NGINX+x}" ] && [ -n "$BACKUP_DIR_NGINX" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_backup_dir_debug_0002" "$BACKUP_DIR_NGINX")"
+        echo "$BACKUP_DIR_NGINX"
+        return 0
+    fi
+
     # Verwende die für diesen Ordner definierten Pfade
     # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_nginx_backup_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_nginx_backup_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${BACKUP_DIR_NGINX+x}" ] || [ -z "$BACKUP_DIR_NGINX" ] || [ "$dir" != "$BACKUP_DIR_NGINX" ]; then
             BACKUP_DIR_NGINX="$dir"
@@ -814,7 +823,7 @@ get_nginx_backup_dir() {
         return 0
     fi
 
-    debug "$get_nginx_backup_dir_debug_0003"
+    debug "$get_nginx_backup_dir_debug_0004"
     echo ""
     return 1
 }
@@ -1655,8 +1664,8 @@ get_log_dir() {
         return 0
     fi
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
         # Erfolg: Pfad existiert und ist les-/schreibbar
