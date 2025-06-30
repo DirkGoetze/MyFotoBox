@@ -176,7 +176,7 @@ check_is_root() {
 # check_distribution
 check_distribution_debug_0001="INFO: Prüfe, ob das System auf Debian/Ubuntu basiert"
 check_distribution_debug_0002="ERROR: System ist nicht Debian/Ubuntu-basiert"
-check_distribution_debug_0003="SUCCESS: Distribution erkannt: ID=%s, ID_LIKE=%s, NAME=%s, VERSION_ID=%s"
+check_distribution_debug_0003="SUCCESS: System als %s erkannt."
 
 check_distribution() {
     # -----------------------------------------------------------------------
@@ -203,7 +203,7 @@ check_distribution() {
     fi
 
     # Debug-Ausgabe für Erfolg
-    debug_output "$(printf "$check_distribution_debug_0003" "$ID" "$ID_LIKE" "$NAME" "$VERSION_ID")"
+    debug_output "$(printf "$check_distribution_debug_0003" "$NAME")"
     return 0
 }
 
