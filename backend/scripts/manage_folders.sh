@@ -1269,8 +1269,9 @@ get_data_dir() {
 
 # get_frontend_dir
 get_frontend_dir_debug_0001="INFO: Ermittle Frontend-Verzeichnis"
-get_frontend_dir_debug_0002="SUCCESS: Verwendeter Pfad für Frontend-Verzeichnis: %s"
-get_frontend_dir_debug_0003="ERROR: Alle Pfade für Frontend-Verzeichnis fehlgeschlagen"
+get_frontend_dir_debug_0002="SUCCESS: Verwende für Frontend-Verzeichnis \$FRONTEND_DIR: %s"
+get_frontend_dir_debug_0003="SUCCESS: Verwendeter Pfad für Frontend-Verzeichnis: %s"
+get_frontend_dir_debug_0004="ERROR: Alle Pfade für Frontend-Verzeichnis fehlgeschlagen"
 
 get_frontend_dir() {
     # -----------------------------------------------------------------------
@@ -1291,11 +1292,19 @@ get_frontend_dir() {
     # Eröffnungsmeldung im Debug Modus
     debug "$get_frontend_dir_debug_0001"
 
-    # Verwende die in 'lib_core' definierten Pfade
-    # (inkl. Fallback im Systemordner und Erzeugen von Symlink)
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${FRONTEND_DIR+x}" ] && [ -n "$FRONTEND_DIR" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_frontend_dir_debug_0002" "$FRONTEND_DIR")"
+        echo "$FRONTEND_DIR"
+        return 0
+    fi
+
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
     dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
     if [ -n "$dir" ]; then
-        debug "$(printf "$get_frontend_dir_debug_0002" "$dir")"
+        debug "$(printf "$get_frontend_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
         if [ -z "${FRONTEND_DIR+x}" ] || [ -z "$FRONTEND_DIR" ] || [ "$dir" != "$FRONTEND_DIR" ]; then
             FRONTEND_DIR="$dir"
@@ -1305,7 +1314,7 @@ get_frontend_dir() {
         return 0
     fi
 
-    debug "$get_frontend_dir_debug_0003"
+    debug "$get_frontend_dir_debug_0004"
     echo ""
     return 1
 }
