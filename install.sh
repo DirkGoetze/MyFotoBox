@@ -105,8 +105,6 @@ parse_args() {
     # Um zu prüfen, ob der interaktive Modus aktiv ist: [ "$UNATTENDED" -eq 0 ]
     # Um zu prüfen, ob der unbeaufsichtigte Modus aktiv ist: [ "$UNATTENDED" -eq 1 ]
     export UNATTENDED
-    export DEBUG_MOD_LOCAL
-    export DEBUG_MOD_GLOBAL
 }
 
 make_dir() {
