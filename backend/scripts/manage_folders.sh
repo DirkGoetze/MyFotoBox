@@ -532,6 +532,7 @@ get_venv_dir() {
     local path_fallback="$BACKEND_DIR/venv"
 
     # Eröffnungsmeldung im Debug Modus
+    DEBUG_MOD_GLOBAL=1
     debug "$get_venv_dir_debug_0001"
 
     # Prüfen, ob Systemvariable bereits gesetzt ist
@@ -557,6 +558,7 @@ get_venv_dir() {
     fi
 
     debug "$get_venv_dir_debug_0004"
+    DEBUG_MOD_GLOBAL=0
     echo ""
     return 1
 }

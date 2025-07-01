@@ -649,6 +649,7 @@ get_python_cmd() {
     # Rückgabe: Pfad zum Python-Interpreter oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     # Sicherstellen, dass BACKEND_VENV_DIR gesetzt ist
+    DEBUG_MOD_GLOBAL=1
     : "${BACKEND_VENV_DIR:=$(get_venv_dir)}"
     # Pfade für zum Python-Interpreter-Verzeichnis
     local path_default="$BACKEND_VENV_DIR/bin/python3"
@@ -672,6 +673,7 @@ get_python_cmd() {
         export PYTHON_EXEC
         debug "$(printf "$get_python_cmd_debug_0003" "$PYTHON_EXEC")"
         echo "$PYTHON_EXEC"
+        DEBUG_MOD_GLOBAL=0
         return 0
     elif [ -x "$path_fallback" ]; then
         # Verwende Fallback-Python-Pfad, wenn ausführbar
@@ -679,6 +681,7 @@ get_python_cmd() {
         export PYTHON_EXEC
         debug "$(printf "$get_python_cmd_debug_0004" "$PYTHON_EXEC")"
         echo "$PYTHON_EXEC"
+        DEBUG_MOD_GLOBAL=0
         return 0
     #elif command -v python3 &>/dev/null; then
     #    # Verwende System-Python3, wenn verfügbar
@@ -699,6 +702,7 @@ get_python_cmd() {
         PYTHON_EXEC=""
         debug "$get_python_cmd_debug_0007"
         echo ""
+        DEBUG_MOD_GLOBAL=0
         return 1
     fi
 }
