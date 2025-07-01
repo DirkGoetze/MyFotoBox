@@ -465,7 +465,7 @@ setup_backend_service() {
             return 1
         fi
         print_success "systemd-Backend-Service wurde erfolgreich gestartet."
-
+    fi
 
     if [ "$output_mode" = "json" ]; then
         # Überprüfe den Status des Services
