@@ -367,7 +367,7 @@ get_requirements_python_file() {
 
     # Festlegen der Bestandteile für den Dateinamen
     file_name="requirements_python"
-    file_ext="$CONFIG_FILE_EXT_DEFAULT"
+    file_ext="$CONFIG_FILE_EXT_SYSTEM"
     folder_path="$(get_config_dir)"
     debug "$(printf "$get_requirements_python_file_debug_0003" "$folder_path")"
 

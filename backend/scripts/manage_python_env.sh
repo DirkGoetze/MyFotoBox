@@ -307,7 +307,7 @@ install_python_requirements() {
 
      # Führe den Befehl im Hintergrund aus und leite die Ausgabe in
     # die temporäre Datei um.
-    debug "INFO: $pip_cmd install -r $requirements_file"
+    debug "INFO: Installiere mit '$pip_cmd install -r $requirements_file' die Python-Abhängigkeiten ..."
     "$pip_cmd" install -r "$requirements_file" &> "$pip_output" &
     local pip_pid=$!
     # Warte auf den Abschluss des Hintergrundprozesses
