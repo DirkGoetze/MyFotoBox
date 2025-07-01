@@ -1,400 +1,173 @@
 #!/usr/bin/env python3
 """
-@file manage_database.py
-@description Verwaltungsmodul für Datenbankoperationen in Fotobox2
-@module manage_database
+manage_database.py - Verwaltungsmodul für Datenbankoperationen in Fotobox2
+
+Dieses Modul stellt zentrale Funktionen für alle Datenbankoperationen bereit und
+stellt sicher, dass Datenbankzugriffe einheitlich und sicher erfolgen.
 """
-# -------------------------------------------------------------------------------
-# manage_database.py
-# -------------------------------------------------------------------------------
-# Funktion: Zentrale Verwaltung aller Datenbank-Aktivitäten der Fotobox
-# (Initialisierung, Migration, Optimierung, Aufräumen, Struktur-Updates)
-# -------------------------------------------------------------------------------
+
 import os
 import sqlite3
 import shutil
 import json
 import logging
 from datetime import datetime
-import traceback
+from typing import Optional, Dict, Any, List, Tuple
+from pathlib import Path
 
-# Pfadkonfiguration über das zentrale Verzeichnismanagement
-try:
-    from manage_folders import get_data_dir
-    DB_DIR = get_data_dir()
-except ImportError:
-    # Fallback falls manage_folders nicht verfügbar ist
-    DB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
+# Modul-Logger konfigurieren
+logger = logging.getLogger(__name__)
 
-DB_PATH = os.path.join(DB_DIR, 'fotobox_settings.db')
-OLD_DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'fotobox_settings.db'))
+# Importiere FolderManager für zentrale Pfadverwaltung
+from manage_folders import FolderManager, get_data_dir, get_backup_dir
 
-# Logging konfigurieren
-try:
-    from manage_logging import setup_logger
-    logger = setup_logger('database')
-except ImportError:
-    # Fallback falls manage_logging nicht verfügbar ist
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger('database')
+class DatabaseError(Exception):
+    """Basisklasse für Datenbank-bezogene Fehler"""
+    pass
 
-# -------------------------------------------------------------------------------
-# connect_db
-# -------------------------------------------------------------------------------
-# Funktion: Stellt Verbindung zur Datenbank her
-# Parameter: None
-# Return: sqlite3.Connection - Datenbankverbindung
-# -------------------------------------------------------------------------------
-def connect_db():
-    """Stellt eine Verbindung zur Datenbank her und gibt ein Connection-Objekt zurück"""
+class DatabaseConfigError(DatabaseError):
+    """Fehler in der Datenbank-Konfiguration"""
+    pass
+
+class DatabaseManager:
+    """Zentrale Verwaltungsklasse für Datenbankoperationen"""
+    
+    def __init__(self):
+        self.folder_manager = FolderManager()
+        self.data_dir = get_data_dir()
+        self.backup_dir = get_backup_dir()
+        self.db_path = os.path.join(self.data_dir, 'fotobox_settings.db')
+        self._ensure_db_directory()
+        self._init_database()
+        
+    def _ensure_db_directory(self) -> None:
+        """Stellt sicher, dass das Datenbankverzeichnis existiert"""
+        os.makedirs(self.data_dir, mode=0o755, exist_ok=True)
+        
+    def _init_database(self) -> None:
+        """Initialisiert die Datenbankstruktur"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS settings (
+                        key TEXT PRIMARY KEY,
+                        value TEXT,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS camera_configs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL,
+                        config TEXT NOT NULL,
+                        is_active INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                conn.commit()
+        except sqlite3.Error as e:
+            logger.error(f"Fehler bei Datenbankinitialisierung: {e}")
+            raise DatabaseError(f"Datenbankinitialisierung fehlgeschlagen: {e}")
+            
+    def backup_database(self) -> str:
+        """Erstellt ein Backup der Datenbank"""
+        try:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_path = os.path.join(
+                self.backup_dir,
+                f"fotobox_settings_{timestamp}.db"
+            )
+            
+            if os.path.exists(self.db_path):
+                shutil.copy2(self.db_path, backup_path)
+                logger.info(f"Datenbank-Backup erstellt: {backup_path}")
+                return backup_path
+            else:
+                raise DatabaseError("Keine Datenbank zum Backup gefunden")
+                
+        except Exception as e:
+            logger.error(f"Fehler beim Datenbank-Backup: {e}")
+            raise DatabaseError(f"Backup fehlgeschlagen: {e}")
+            
+    def restore_database(self, backup_path: str) -> bool:
+        """Stellt ein Datenbank-Backup wieder her"""
+        try:
+            if not os.path.exists(backup_path):
+                raise DatabaseError(f"Backup-Datei nicht gefunden: {backup_path}")
+                
+            # Aktuelles Backup erstellen
+            self.backup_database()
+            
+            # Backup wiederherstellen
+            shutil.copy2(backup_path, self.db_path)
+            logger.info(f"Datenbank wiederhergestellt von: {backup_path}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Fehler bei Datenbank-Wiederherstellung: {e}")
+            raise DatabaseError(f"Wiederherstellung fehlgeschlagen: {e}")
+
+# Globale Instanz
+_db_manager = DatabaseManager()
+
+# Convenience-Funktionen
+def get_connection() -> sqlite3.Connection:
+    """Gibt eine Datenbankverbindung zurück"""
     try:
-        os.makedirs(DB_DIR, exist_ok=True)
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row  # Ermöglicht den Zugriff auf Spalten über Namen
+        conn = sqlite3.connect(_db_manager.db_path)
+        conn.row_factory = sqlite3.Row
         return conn
-    except Exception as e:
-        logger.error(f"Fehler beim Verbinden zur Datenbank: {str(e)}")
-        logger.debug(traceback.format_exc())
-        raise
+    except sqlite3.Error as e:
+        logger.error(f"Fehler beim Verbindungsaufbau: {e}")
+        raise DatabaseError(f"Verbindungsaufbau fehlgeschlagen: {e}")
 
-# -------------------------------------------------------------------------------
-# init_db
-# -------------------------------------------------------------------------------
-# Funktion: Erstellt das Datenbankverzeichnis und die Datenbank, legt Tabellen an
-# -------------------------------------------------------------------------------
-def init_db():
-    """Initialisiert die Datenbankstruktur"""
+def backup_db() -> str:
+    """Erstellt ein Backup der Datenbank"""
+    return _db_manager.backup_database()
+
+def restore_db(backup_path: str) -> bool:
+    """Stellt ein Datenbank-Backup wieder her"""
+    return _db_manager.restore_database(backup_path)
+
+def execute_query(query: str, params: tuple = (), fetch: bool = False) -> Optional[List[sqlite3.Row]]:
+    """Führt eine SQL-Query aus"""
     try:
-        os.makedirs(DB_DIR, exist_ok=True)
-        conn = connect_db()
-        cursor = conn.cursor()
-        
-        # Basis-Tabellen erstellen
-        cursor.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
-        cursor.execute("CREATE TABLE IF NOT EXISTS image_metadata (id INTEGER PRIMARY KEY, filename TEXT, timestamp TEXT, tags TEXT)")
-        cursor.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT UNIQUE, password_hash TEXT, role TEXT)")
-        
-        # Version in der Datenbank speichern
-        cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", 
-                      ('db_version', '1.0.0'))
-        
-        conn.commit()
-        conn.close()
-        logger.info(f"Datenbankinitialisierung abgeschlossen: {DB_PATH}")
-        return True
-    except Exception as e:
-        logger.error(f"Fehler bei der Datenbankinitialisierung: {str(e)}")
-        logger.debug(traceback.format_exc())
-        return False
+        with get_connection() as conn:
+            cur = conn.execute(query, params)
+            if fetch:
+                return cur.fetchall()
+            conn.commit()
+            return None
+    except sqlite3.Error as e:
+        logger.error(f"Fehler bei Query-Ausführung: {e}")
+        raise DatabaseError(f"Query-Ausführung fehlgeschlagen: {e}")
 
-# -------------------------------------------------------------------------------
-# migrate_db
-# -------------------------------------------------------------------------------
-# Funktion: Verschiebt alte Datenbank ins neue data-Verzeichnis (Migration)
-# -------------------------------------------------------------------------------
-def migrate_db():
-    """Migriert die Datenbank von alten zu neuen Strukturen"""
+def get_setting(key: str, default: Any = None) -> Any:
+    """Liest eine Einstellung aus der Datenbank"""
     try:
-        if os.path.exists(OLD_DB_PATH) and not os.path.exists(DB_PATH):
-            os.makedirs(DB_DIR, exist_ok=True)
-            shutil.move(OLD_DB_PATH, DB_PATH)
-            logger.info(f"Datenbankmigration erfolgreich: {OLD_DB_PATH} -> {DB_PATH}")
-            return True
-        else:
-            logger.info("Keine Datenbankmigration erforderlich.")
-            return True
-    except Exception as e:
-        logger.error(f"Fehler bei der Datenbankmigration: {str(e)}")
-        logger.debug(traceback.format_exc())
-        return False
-
-# -------------------------------------------------------------------------------
-# cleanup_db
-# -------------------------------------------------------------------------------
-# Funktion: Löscht nicht mehr benötigte Daten/Tabellen
-# -------------------------------------------------------------------------------
-def cleanup_db():
-    """Bereinigt die Datenbank von temporären oder nicht mehr benötigten Daten"""
-    try:
-        conn = connect_db()
-        cursor = conn.cursor()
-        # Temporäre Einträge löschen
-        cursor.execute("DELETE FROM settings WHERE key LIKE 'temp%'")
-        conn.commit()
-        conn.close()
-        logger.info("Datenbank-Cleanup abgeschlossen")
-        return True
-    except Exception as e:
-        logger.error(f"Fehler beim Datenbank-Cleanup: {str(e)}")
-        logger.debug(traceback.format_exc())
-        return False
-
-# -------------------------------------------------------------------------------
-# optimize_db
-# -------------------------------------------------------------------------------
-# Funktion: Optimiert die Datenbank (VACUUM)
-# -------------------------------------------------------------------------------
-def optimize_db():
-    """Optimiert die Datenbank durch VACUUM-Operation"""
-    try:
-        conn = connect_db()
-        conn.execute("VACUUM")
-        conn.close()
-        logger.info("Datenbankoptimierung abgeschlossen")
-        return True
-    except Exception as e:
-        logger.error(f"Fehler bei der Datenbankoptimierung: {str(e)}")
-        logger.debug(traceback.format_exc())
-        return False
-
-# -------------------------------------------------------------------------------
-# CRUD-Operationen
-# -------------------------------------------------------------------------------
-
-# -------------------------------------------------------------------------------
-# query
-# -------------------------------------------------------------------------------
-# Funktion: Führt eine SELECT-Abfrage aus
-# Parameter: sql - SQL-Query als String
-#            params - Parameter für die Query (optional)
-# Return: List[dict] - Ergebnisliste als Dictionary
-# -------------------------------------------------------------------------------
-def query(sql, params=None):
-    """Führt eine SQL-Abfrage aus und gibt das Ergebnis zurück"""
-    try:
-        conn = connect_db()
-        cursor = conn.cursor()
-        
-        if params:
-            cursor.execute(sql, params)
-        else:
-            cursor.execute(sql)
-            
-        result = [dict(row) for row in cursor.fetchall()]
-        conn.close()
-        return {"success": True, "data": result}
-    except Exception as e:
-        logger.error(f"Fehler bei Datenbankabfrage: {str(e)}")
-        logger.debug(f"SQL: {sql}, Params: {params}")
-        logger.debug(traceback.format_exc())
-        return {"success": False, "error": str(e), "sql": sql}
-
-# -------------------------------------------------------------------------------
-# insert
-# -------------------------------------------------------------------------------
-# Funktion: Fügt Daten in eine Tabelle ein
-# Parameter: table - Name der Zieltabelle
-#            data - Dictionary mit Spaltennamen und Werten
-# Return: dict - Ergebnis mit lastrowid
-# -------------------------------------------------------------------------------
-def insert(table, data):
-    """Fügt einen neuen Datensatz in die Datenbank ein"""
-    try:
-        conn = connect_db()
-        cursor = conn.cursor()
-        
-        columns = ', '.join(data.keys())
-        placeholders = ', '.join(['?' for _ in data])
-        values = list(data.values())
-        
-        sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
-        cursor.execute(sql, values)
-        
-        last_id = cursor.lastrowid
-        conn.commit()
-        conn.close()
-        
-        logger.debug(f"Datensatz in {table} eingefügt, ID: {last_id}")
-        return {"success": True, "id": last_id}
-    except Exception as e:
-        logger.error(f"Fehler beim Einfügen in {table}: {str(e)}")
-        logger.debug(f"Daten: {data}")
-        logger.debug(traceback.format_exc())
-        return {"success": False, "error": str(e), "table": table}
-
-# -------------------------------------------------------------------------------
-# update
-# -------------------------------------------------------------------------------
-# Funktion: Aktualisiert Daten in einer Tabelle
-# Parameter: table - Name der Zieltabelle
-#            data - Dictionary mit zu aktualisierenden Spalten
-#            condition - WHERE-Bedingung als String
-#            params - Parameter für die Bedingung
-# Return: dict - Ergebnis mit Anzahl betroffener Zeilen
-# -------------------------------------------------------------------------------
-def update(table, data, condition, params=None):
-    """Aktualisiert Datensätze in der Datenbank"""
-    try:
-        conn = connect_db()
-        cursor = conn.cursor()
-        
-        set_clause = ', '.join([f"{key} = ?" for key in data.keys()])
-        values = list(data.values())
-        
-        sql = f"UPDATE {table} SET {set_clause} WHERE {condition}"
-        
-        if params:
-            values.extend(params)
-            cursor.execute(sql, values)
-        else:
-            cursor.execute(sql, values)
-            
-        affected_rows = cursor.rowcount
-        conn.commit()
-        conn.close()
-        
-        logger.debug(f"{affected_rows} Datensätze in {table} aktualisiert")
-        return {"success": True, "affected_rows": affected_rows}
-    except Exception as e:
-        logger.error(f"Fehler beim Aktualisieren von {table}: {str(e)}")
-        logger.debug(f"Daten: {data}, Bedingung: {condition}")
-        logger.debug(traceback.format_exc())
-        return {"success": False, "error": str(e), "table": table}
-
-# -------------------------------------------------------------------------------
-# delete
-# -------------------------------------------------------------------------------
-# Funktion: Löscht Daten aus einer Tabelle
-# Parameter: table - Name der Zieltabelle
-#            condition - WHERE-Bedingung als String
-#            params - Parameter für die Bedingung
-# Return: dict - Ergebnis mit Anzahl betroffener Zeilen
-# -------------------------------------------------------------------------------
-def delete(table, condition, params=None):
-    """Löscht Datensätze aus der Datenbank"""
-    try:
-        conn = connect_db()
-        cursor = conn.cursor()
-        
-        sql = f"DELETE FROM {table} WHERE {condition}"
-        
-        if params:
-            cursor.execute(sql, params)
-        else:
-            cursor.execute(sql)
-            
-        affected_rows = cursor.rowcount
-        conn.commit()
-        conn.close()
-        
-        logger.debug(f"{affected_rows} Datensätze aus {table} gelöscht")
-        return {"success": True, "affected_rows": affected_rows}
-    except Exception as e:
-        logger.error(f"Fehler beim Löschen aus {table}: {str(e)}")
-        logger.debug(f"Bedingung: {condition}, Parameter: {params}")
-        logger.debug(traceback.format_exc())
-        return {"success": False, "error": str(e), "table": table}
-
-# -------------------------------------------------------------------------------
-# get_setting
-# -------------------------------------------------------------------------------
-# Funktion: Holt eine Einstellung aus der settings-Tabelle
-# Parameter: key - Schlüssel der gesuchten Einstellung
-#            default - Standardwert falls nicht gefunden (optional)
-# Return: Wert der Einstellung oder default-Wert
-# -------------------------------------------------------------------------------
-def get_setting(key, default=None):
-    """Holt eine Einstellung aus der Datenbank"""
-    try:
-        result = query("SELECT value FROM settings WHERE key = ?", [key])
-        if result["success"] and result["data"]:
-            return result["data"][0]["value"]
+        result = execute_query(
+            "SELECT value FROM settings WHERE key = ?",
+            (key,),
+            fetch=True
+        )
+        if result:
+            return json.loads(result[0]['value'])
         return default
     except Exception as e:
-        logger.error(f"Fehler beim Abrufen der Einstellung {key}: {str(e)}")
+        logger.error(f"Fehler beim Lesen von Einstellung {key}: {e}")
         return default
 
-# -------------------------------------------------------------------------------
-# set_setting
-# -------------------------------------------------------------------------------
-# Funktion: Speichert eine Einstellung in der settings-Tabelle
-# Parameter: key - Schlüssel der Einstellung
-#            value - Wert der Einstellung
-# Return: dict - Erfolgsstatus
-# -------------------------------------------------------------------------------
-def set_setting(key, value):
+def set_setting(key: str, value: Any) -> bool:
     """Speichert eine Einstellung in der Datenbank"""
     try:
-        # Überprüfen, ob der Key bereits existiert
-        result = query("SELECT key FROM settings WHERE key = ?", [key])
-        
-        if result["success"] and result["data"]:
-            # Update vorhandener Eintrag
-            return update("settings", {"value": value}, "key = ?", [key])
-        else:
-            # Neuen Eintrag anlegen
-            return insert("settings", {"key": key, "value": value})
+        execute_query(
+            """
+            INSERT OR REPLACE INTO settings (key, value, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            """,
+            (key, json.dumps(value))
+        )
+        return True
     except Exception as e:
-        logger.error(f"Fehler beim Speichern der Einstellung {key}: {str(e)}")
-        logger.debug(traceback.format_exc())
-        return {"success": False, "error": str(e)}
-
-# -------------------------------------------------------------------------------
-# check_integrity
-# -------------------------------------------------------------------------------
-# Funktion: Prüft die Integrität der Datenbank
-# Return: dict - Ergebnisstatus und Informationen
-# -------------------------------------------------------------------------------
-def check_integrity():
-    """Überprüft die Integrität der Datenbank"""
-    try:
-        conn = connect_db()
-        cursor = conn.cursor()
-        
-        # Integrity Check durchführen
-        cursor.execute("PRAGMA integrity_check")
-        integrity_result = cursor.fetchone()
-        
-        # Foreign Key Check durchführen
-        cursor.execute("PRAGMA foreign_key_check")
-        foreign_key_result = cursor.fetchall()
-        
-        conn.close()
-        
-        if integrity_result and integrity_result[0] == 'ok' and not foreign_key_result:
-            logger.info("Datenbank-Integritätsprüfung erfolgreich")
-            return {
-                "success": True, 
-                "integrity": "ok",
-                "foreign_keys": "ok"
-            }
-        else:
-            logger.warning("Datenbank-Integritätsprüfung fehlgeschlagen")
-            return {
-                "success": False, 
-                "integrity": integrity_result[0] if integrity_result else "failed",
-                "foreign_keys": "failed" if foreign_key_result else "ok"
-            }
-    except Exception as e:
-        logger.error(f"Fehler bei der Datenbank-Integritätsprüfung: {str(e)}")
-        logger.debug(traceback.format_exc())
-        return {"success": False, "error": str(e)}
-
-# -------------------------------------------------------------------------------
-# CLI-Interface
-# -------------------------------------------------------------------------------
-if __name__ == "__main__":
-    import sys
-    if len(sys.argv) < 2:
-        print("Verwendung: python manage_database.py [init|migrate|cleanup|optimize|check]")
-        sys.exit(1)
-    cmd = sys.argv[1]
-    if cmd == "init":
-        success = init_db()
-        sys.exit(0 if success else 1)
-    elif cmd == "migrate":
-        success = migrate_db()
-        sys.exit(0 if success else 1)
-    elif cmd == "cleanup":
-        success = cleanup_db()
-        sys.exit(0 if success else 1)
-    elif cmd == "optimize":
-        success = optimize_db()
-        sys.exit(0 if success else 1)
-    elif cmd == "check":
-        result = check_integrity()
-        print(json.dumps(result, indent=2))
-        sys.exit(0 if result["success"] else 1)
-    else:
-        print(f"Unbekannter Befehl: {cmd}")
-        sys.exit(1)
+        logger.error(f"Fehler beim Speichern von Einstellung {key}: {e}")
+        return False

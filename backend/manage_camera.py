@@ -17,52 +17,105 @@ import time
 import json
 import logging
 import threading
-from typing import Dict, List, Optional, Tuple, Union
+import subprocess
+from typing import Dict, List, Optional, Tuple, Union, Any
+from pathlib import Path
 
 # Abhängige Module importieren
-import manage_logging
+from manage_folders import FolderManager, get_config_dir, get_photos_dir
 import manage_settings
-import manage_filesystem as manage_files
-import manage_camera_config  # Neu importiert für Kamera-Konfigurationssets
+import manage_logging
+import manage_files
+import manage_camera_config
 import utils
+
+# Logger konfigurieren
+logger = logging.getLogger(__name__)
 
 # Versuche, OpenCV zu importieren
 try:
     import cv2
     OPENCV_AVAILABLE = True
-    manage_logging.log("OpenCV erfolgreich geladen", source="manage_camera")
+    logger.info("OpenCV erfolgreich geladen")
 except ImportError:
     OPENCV_AVAILABLE = False
-    manage_logging.error("OpenCV konnte nicht geladen werden. Kamerafunktionen eingeschränkt.", source="manage_camera")
+    logger.error("OpenCV konnte nicht geladen werden. Kamerafunktionen eingeschränkt.")
 
 # Versuche, gPhoto2 zu importieren (für DSLR-Kameras)
 try:
     import gphoto2 as gp
     GPHOTO2_AVAILABLE = True
-    manage_logging.log("gPhoto2 erfolgreich geladen", source="manage_camera")
+    logger.info("gPhoto2 erfolgreich geladen")
 except ImportError:
     GPHOTO2_AVAILABLE = False
-    manage_logging.log("gPhoto2 konnte nicht geladen werden. DSLR-Unterstützung deaktiviert.", source="manage_camera")
+    logger.warning("gPhoto2 konnte nicht geladen werden. DSLR-Unterstützung deaktiviert.")
 
 # Versuche, Intel RealSense zu importieren (für Tiefensensor-Kameras)
 try:
     import pyrealsense2 as rs
     import numpy as np
     REALSENSE_AVAILABLE = True
-    manage_logging.log("Intel RealSense-Bibliothek erfolgreich geladen", source="manage_camera")
+    logger.info("Intel RealSense SDK erfolgreich geladen")
 except ImportError:
     REALSENSE_AVAILABLE = False
-    manage_logging.log("Intel RealSense-Bibliothek konnte nicht geladen werden. Tiefensensor-Unterstützung deaktiviert.", source="manage_camera")
+    logger.info("Intel RealSense SDK nicht verfügbar")
 
-# Versuche, das RealSense-Modul zu importieren (für Tiefensensor-Kameras)
-try:
-    import pyrealsense2 as rs
-    REALSENSE_AVAILABLE = True
-    manage_logging.log("RealSense-Bibliothek erfolgreich geladen", source="manage_camera")
-except ImportError:
-    REALSENSE_AVAILABLE = False
-    manage_logging.log("RealSense-Bibliothek konnte nicht geladen werden. Tiefensensor-Unterstützung deaktiviert.", 
-                    source="manage_camera")
+class CameraError(Exception):
+    """Basisklasse für Kamera-bezogene Fehler"""
+    pass
+
+class CameraInitError(CameraError):
+    """Fehler bei der Kamera-Initialisierung"""
+    pass
+
+class CameraConfigError(CameraError):
+    """Fehler in der Kamera-Konfiguration"""
+    pass
+
+class CameraManager:
+    """Zentrale Verwaltungsklasse für Kamerafunktionen"""
+    
+    def __init__(self):
+        self.folder_manager = FolderManager()
+        self.config_dir = get_config_dir()
+        self.photos_dir = get_photos_dir()
+        self._cameras: Dict[str, Any] = {}
+        self._active_camera: Optional[str] = None
+        self._camera_lock = threading.Lock()
+        self._init_camera_config()
+        
+    def _init_camera_config(self) -> None:
+        """Initialisiert die Kamera-Konfiguration"""
+        try:
+            config_file = os.path.join(self.config_dir, 'cameras', 'camera_config.json')
+            if os.path.exists(config_file):
+                with open(config_file, 'r') as f:
+                    self._config = json.load(f)
+            else:
+                self._config = self._create_default_config()
+                os.makedirs(os.path.dirname(config_file), exist_ok=True)
+                with open(config_file, 'w') as f:
+                    json.dump(self._config, f, indent=4)
+        except Exception as e:
+            logger.error(f"Fehler beim Laden der Kamera-Konfiguration: {e}")
+            self._config = self._create_default_config()
+            
+    def _create_default_config(self) -> Dict[str, Any]:
+        """Erstellt eine Standard-Konfiguration"""
+        return {
+            'default_camera': 'auto',
+            'camera_search_order': ['opencv', 'gphoto2', 'realsense'],
+            'opencv_settings': {
+                'resolution': {'width': 1920, 'height': 1080},
+                'format': 'MJPG',
+                'fps': 30
+            },
+            'gphoto2_settings': {
+                'capture_target': 'internal',
+                'image_format': 'jpeg',
+                'jpeg_quality': 95
+            }
+        }
 
 # Logger konfigurieren
 logger = logging.getLogger(__name__)
