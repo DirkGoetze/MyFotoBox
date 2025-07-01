@@ -123,18 +123,14 @@ create_python_env() {
     debug "$create_python_env_debug_0010"
     log "$create_python_env_log_0004"
 
-    # Führe den Befehl im Hintergrund aus und leite die Ausgabe in die 
-    # temporäre Datei um. Verwende den Python-Interpreter, um das Virtual 
-    # Environment zu erstellen
-    "$python_cmd" -m venv "$venv_dir" &> "$venv_output" &
-    local venv_pid=$!
-    # Warte auf den Abschluss des Hintergrundprozesses
-    wait "$venv_pid"
+    # Führe den Befehl aus und leite die Ausgabe in die temporäre Datei um.
+    "$python_cmd" -m venv "$venv_dir" > "$venv_output" 2>&1
+    local venv_result=$?
 
     # Ausgabe des Hintergrundprozesses in die Logdatei übernehmen
     log "$(printf "$create_python_env_log_0005" "$(cat "$venv_output")")"
 
-    if [ $? -ne 0 ]; then
+    if [ $venv_result -ne 0 ]; then
         debug "$(printf "$create_python_env_debug_0011" "$(tail -n 10 "$venv_output")")"
         log "$(printf "$create_python_env_log_0006" "$(tail -n 10 "$venv_output")")"
         # Lösche temporäre Datei
@@ -215,17 +211,14 @@ install_pip() {
     fi
     debug "$(printf "$install_pip_debug_0009" "$pip_cmd")"
 
-    # Führe den Befehl im Hintergrund aus und leite die Ausgabe in
-    # die temporäre Datei um.
-    "$pip_cmd" install --upgrade pip &> "$pip_output" &
-    local pip_pid=$!
-    # Warte auf den Abschluss des Hintergrundprozesses
-    wait $pip_pid
+    # Führe den Befehl aus und leite die Ausgabe in die temporäre Datei um.
+    "$pip_cmd" install --upgrade pip > "$pip_output" 2>&1
+    local pip_result=$?
 
     # Ausgabe des Hintergrundprozesses in die Logdatei übernehmen
     log "$(printf "$install_pip_log_0004" "$(cat "$pip_output")")"
 
-    if [ $? -ne 0 ]; then
+    if [ $pip_result -ne 0 ]; then
         debug "$(printf "$install_pip_debug_0010" "$(tail -n 10 "$venv_output")")"
         log "$(printf "$install_pip_log_0005" "$(tail -n 10 "$venv_output")")"
         # Lösche temporäre Datei
@@ -305,18 +298,15 @@ install_python_requirements() {
     fi
     debug "$(printf "$install_python_requirements_debug_0009" "$pip_cmd")"
 
-     # Führe den Befehl im Hintergrund aus und leite die Ausgabe in
-    # die temporäre Datei um.
+     # Führe den Befehl aus und leite die Ausgabe in die temporäre Datei um.
     debug "INFO: Installiere mit '$pip_cmd install -r $requirements_file' die Python-Abhängigkeiten ..."
-    "$pip_cmd" install -r "$requirements_file" &> "$pip_output" &
-    local pip_pid=$!
-    # Warte auf den Abschluss des Hintergrundprozesses
-    wait $pip_pid
+    "$pip_cmd" install -r "$requirements_file" > "$pip_output" 2>&1
+    local pip_result=$?
 
     # Ausgabe des Hintergrundprozesses in die Logdatei übernehmen
     log "$(printf "$install_python_requirements_log_0004" "$(cat "$pip_output")")"
-    
-    if [ $? -ne 0 ]; then
+
+    if [ $pip_result -ne 0 ]; then
         debug "$(printf "$install_python_requirements_debug_0010" "$(tail -n 10 "$pip_output")")"
         log "$(printf "$install_python_requirements_log_0005" "$(tail -n 10 "$pip_output")")"
         # Lösche temporäre Datei
