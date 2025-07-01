@@ -726,27 +726,6 @@ set_python_requirements() {
     rm -f "$pip_output"
 }
 
-set_systemd_service() {
-    # -----------------------------------------------------------------------
-    # set_systemd_service
-    # -----------------------------------------------------------------------
-    # Funktion: Erstellt oder kopiert die systemd-Service-Datei für das Backend
-    # Rückgabe: keine (Seitenwirkung: legt Datei an, gibt Erfolgsmeldung aus)
-
-    DEBUG_MOD_GLOBAL=1
-
-    install_backend_service
-    if [ $? -ne 0 ]; then
-        print_error "Fehler beim Einrichten des Backend-Services."
-        return 1
-    fi
-    print_success "Backend-Service erfolgreich eingerichtet."
-
-    DEBUG_MOD_GLOBAL=0
-
-    return 0
-}
-
 set_systemd_install() {
     # -----------------------------------------------------------------------
     # set_systemd_install
@@ -914,18 +893,43 @@ dlg_backend_integration() {
     
     # systemd-Service anlegen und starten
     echo -n "[/] Erstelle systemd-Service-Datei..."
-    set_systemd_service #&>/dev/null &
+    install_backend_service
     local service_pid=$!
     show_spinner "$service_pid" "dots"
     wait $service_pid
-    echo -e "\r  → [OK] Systemd-Service-Datei wurde erstellt."
+    print_success "Backend-Service wurde erfolgreich eingerichtet."
     
-    return 0
+    # Service aktivieren und starten
+    enable_backend_service
+    local enable_pid=$!
+    show_spinner "$enable_pid" "dots"
+    wait $enable_pid
+    if [ $? -ne 0 ]; then
+        print_error "Fehler beim Aktivieren des Backend-Services."
+        print_info "Stellen Sie sicher, dass die systemd-Konfiguration korrekt ist."
+        return 1
+    fi
+    print_success "Backend-Service wurde erfolgreich aktiviert."
 
-    # Service installieren und starten
-    set_systemd_install
-    
-    print_success "Backend-Service wurde erfolgreich eingerichtet und gestartet."
+    # Service starten
+    start_backend_service
+    local start_pid=$!
+    show_spinner "$start_pid" "dots"
+    wait $start_pid
+    if [ $? -ne 0 ]; then
+        print_error "Fehler beim Starten des Backend-Services."
+        print_info "Stellen Sie sicher, dass der Service korrekt konfiguriert ist."
+        return 1
+    fi
+    print_success "Backend-Service wurde erfolgreich gestartet."
+
+    # Prüfen, ob der Service läuft
+    if ! get_backend_service_status; then
+        print_error "Backend-Service läuft nicht. Bitte überprüfen Sie die Logs für weitere Details."
+        return 1
+    fi
+    print_success "Backend-Service läuft erfolgreich."
+
     return 0
 }
 
