@@ -133,7 +133,7 @@ install_backend_service() {
         debug "$install_backend_service_debug_0012"
         return 1
     fi
-    if ! sed -i "s|{{PYTHON_CMD}}|$(command -v python3)|g" "$systemd_file"; then
+    if ! sed -i "s|{{PYTHON_CMD}}|$(get_python_cmd)|g" "$systemd_file"; then
         debug "$install_backend_service_debug_0013"
         return 1
     fi
