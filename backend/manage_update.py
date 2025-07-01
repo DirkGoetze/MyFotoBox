@@ -1,54 +1,117 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+manage_update.py - Update-Verwaltung für Fotobox2
+
+Dieses Modul verwaltet Updates des Fotobox-Systems, einschließlich:
+- Prüfung und Installation von System-Abhängigkeiten
+- Update der Python-Umgebung
+- Backup vor Updates
+- Integration mit Shell-Skripten
+"""
+
 import os
 import subprocess
 import sys
-from datetime import datetime
+import logging
 import shutil
 import glob
 import re
+from datetime import datetime
+from typing import Dict, List, Optional, Tuple
 from pkg_resources import parse_version
 
-# Versuche, die neuen manage_folders-Funktionen zu verwenden
+# Logger einrichten
+logger = logging.getLogger(__name__)
+
+# Versuche, die manage_folders-Funktionen zu verwenden
 try:
-    from manage_folders import get_backup_dir, get_log_dir, get_data_dir, get_config_dir
+    from manage_folders import (
+        FolderManager, get_backup_dir, get_log_dir, 
+        get_data_dir, get_config_dir, get_script_dir
+    )
     
-    # Definiere Verzeichnisse über den zentralen Verzeichnismanager
+    folder_manager = FolderManager()
     BACKUP_DIR = get_backup_dir()
-    LOG_DIR = get_log_dir()  # Verwende direkt die get_log_dir()-Funktion 
+    LOG_DIR = get_log_dir()
     DATA_DIR = get_data_dir()
     CONFIG_DIR = get_config_dir()
-except ImportError:
-    # Fallback zur alten Methode, wenn manage_folders nicht verfügbar ist
-    BACKUP_DIR = os.path.join(os.path.dirname(__file__), '../backup')
-    LOG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../backup/logs'))
-    DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
-    CONFIG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../conf'))
-
-# Stelle sicher, dass das Log-Verzeichnis existiert
-os.makedirs(LOG_DIR, exist_ok=True)
-
-# Pfade zu den Requirements-Dateien im Config-Verzeichnis
-SYSTEM_REQUIREMENTS_PATH = os.path.join(CONFIG_DIR, 'requirements_system.inf')
-
-# Pfad zur requirements_python.inf im conf-Verzeichnis
-PYTHON_REQUIREMENTS_PATH = os.path.join(CONFIG_DIR, 'requirements_python.inf')
-
-# -------------------------------------------------------------------------------
-# Neue Funktionen für Abhängigkeiten
-# -------------------------------------------------------------------------------
-
-def detect_package_manager():
-    """Erkennt den verwendeten Paketmanager"""
+    SCRIPT_DIR = get_script_dir()
     
-    if os.path.exists('/usr/bin/apt'):
-        return 'apt'
-    elif os.path.exists('/usr/bin/yum'):
-        return 'yum'
-    elif os.path.exists('/usr/bin/dnf'):
-        return 'dnf'
-    elif os.path.exists('/usr/bin/pacman'):
-        return 'pacman'
-    else:
-        return None
+except ImportError as e:
+    logger.error(f"Fehler beim Import von manage_folders: {e}")
+    # Verwende absolute Standardpfade
+    BACKUP_DIR = "/opt/fotobox/backup"
+    LOG_DIR = "/opt/fotobox/log"
+    DATA_DIR = "/opt/fotobox/data"
+    CONFIG_DIR = "/opt/fotobox/conf"
+    SCRIPT_DIR = "/opt/fotobox/backend/scripts"
+
+# Stelle sicher, dass die Verzeichnisse existieren
+for directory in [BACKUP_DIR, LOG_DIR, DATA_DIR, CONFIG_DIR, SCRIPT_DIR]:
+    os.makedirs(directory, mode=0o755, exist_ok=True)
+    try:
+        shutil.chown(directory, user='fotobox', group='fotobox')
+    except Exception as e:
+        logger.warning(f"Konnte Berechtigungen für {directory} nicht setzen: {e}")
+
+# Pfade zu den Requirements-Dateien
+SYSTEM_REQUIREMENTS = os.path.join(CONFIG_DIR, 'requirements_system.inf')
+PYTHON_REQUIREMENTS = os.path.join(CONFIG_DIR, 'requirements_python.inf')
+
+def check_shell_scripts() -> Tuple[bool, List[str]]:
+    """
+    Überprüft die Shell-Skripte auf Verfügbarkeit und Ausführbarkeit
+    
+    Returns:
+        Tuple[bool, List[str]]: (Alle OK?, Liste der problematischen Skripte)
+    """
+    required_scripts = [
+        'lib_core.sh',
+        'manage_folders.sh',
+        'manage_files.sh',
+        'manage_logging.sh',
+        'manage_python_env.sh',
+        'manage_backend_service.sh'
+    ]
+    
+    missing_scripts = []
+    
+    for script in required_scripts:
+        script_path = os.path.join(SCRIPT_DIR, script)
+        if not os.path.exists(script_path):
+            missing_scripts.append(script)
+            continue
+            
+        # Prüfe Ausführbarkeit
+        if not os.access(script_path, os.X_OK):
+            try:
+                os.chmod(script_path, 0o755)
+            except Exception as e:
+                logger.error(f"Konnte Ausführrechte für {script} nicht setzen: {e}")
+                missing_scripts.append(script)
+                
+    return len(missing_scripts) == 0, missing_scripts
+
+def detect_package_manager() -> Optional[str]:
+    """
+    Erkennt den verwendeten Paketmanager
+    
+    Returns:
+        Optional[str]: Name des Paketmanagers oder None
+    """
+    package_managers = {
+        '/usr/bin/apt': 'apt',
+        '/usr/bin/yum': 'yum',
+        '/usr/bin/dnf': 'dnf',
+        '/usr/bin/pacman': 'pacman'
+    }
+    
+    for path, manager in package_managers.items():
+        if os.path.exists(path):
+            return manager
+            
+    return None
 
 def version_satisfies(installed, required):
     """Prüft, ob die installierte Version die Mindestanforderung erfüllt"""
@@ -63,7 +126,7 @@ def check_package_installed(package, min_version=None):
     package_manager = detect_package_manager()
     
     if not package_manager:
-        log(f"Kein unterstützter Paketmanager gefunden. Überspringe Prüfung für {package}.", "WARNING")
+        logger.warning(f"Kein unterstützter Paketmanager gefunden. Überspringe Prüfung für {package}.")
         return True  # Bei Windows oder nicht erkannten Systemen überspringen
     
     try:
@@ -116,40 +179,57 @@ def check_package_installed(package, min_version=None):
         
         return True
     except Exception as e:
-        log(f"Fehler beim Prüfen des Pakets {package}: {str(e)}", "ERROR")
+        logger.error(f"Fehler beim Prüfen des Pakets {package}: {str(e)}")
         return False
 
-def check_system_requirements():
-    """Überprüft (ohne Installation) fehlende Systempakete basierend auf system_requirements.txt"""
+def check_system_requirements() -> Tuple[bool, List[str]]:
+    """
+    Prüft die Systemanforderungen
+    
+    Returns:
+        Tuple[bool, List[str]]: (Alle OK?, Liste fehlender Pakete)
+    """
+    if not os.path.exists(SYSTEM_REQUIREMENTS):
+        logger.error(f"System-Requirements nicht gefunden: {SYSTEM_REQUIREMENTS}")
+        return False, ["requirements_system.inf nicht gefunden"]
+        
+    package_manager = detect_package_manager()
+    if not package_manager:
+        logger.error("Kein unterstützter Paketmanager gefunden")
+        return False, ["Kein unterstützter Paketmanager"]
+        
     missing_packages = []
-    outdated_packages = []
-    if not os.path.exists(SYSTEM_REQUIREMENTS_PATH):
-        log(f"requirements_system.inf nicht gefunden: {SYSTEM_REQUIREMENTS_PATH}", "WARNING")
-        return [], []
-
-    try:
-        with open(SYSTEM_REQUIREMENTS_PATH, 'r') as f:
-            requirements = [line.strip() for line in f if line.strip() and not line.startswith('#')]
-        
-        for req in requirements:
-            # Paketname und Version trennen
-            match = re.match(r'^([a-zA-Z0-9\-_\.]+)(?:>=|==|>)?([\d\.]+)?$', req)
-            if not match:
-                log(f"Ungültiges Format für Paket: {req}", "WARNING")
+    
+    with open(SYSTEM_REQUIREMENTS, 'r') as f:
+        for line in f:
+            package = line.strip()
+            if not package or package.startswith('#'):
                 continue
-            
-            package, min_version = match.groups()
-            
-            if not check_package_installed(package, None):  # Prüfe nur, ob es installiert ist
+                
+            # Prüfe ob Paket installiert ist
+            try:
+                if package_manager == 'apt':
+                    result = subprocess.run(
+                        ['dpkg', '-l', package],
+                        capture_output=True,
+                        text=True
+                    )
+                    if 'ii' not in result.stdout:
+                        missing_packages.append(package)
+                        
+                elif package_manager in ['yum', 'dnf']:
+                    result = subprocess.run(
+                        [package_manager, 'list', 'installed', package],
+                        capture_output=True,
+                        text=True
+                    )
+                    if package not in result.stdout:
+                        missing_packages.append(package)
+                        
+            except subprocess.CalledProcessError:
                 missing_packages.append(package)
-            elif min_version and not check_package_installed(package, min_version):  # Prüfe Version
-                outdated_packages.append(package)
-        
-        return missing_packages, outdated_packages
-        
-    except Exception as e:
-        log(f"Fehler beim Überprüfen von Systempaketen: {str(e)}", "ERROR")
-        return [], []
+                
+    return len(missing_packages) == 0, missing_packages
 
 def check_python_requirements():
     """Überprüft fehlende Python-Pakete basierend auf requirements.txt"""
@@ -157,12 +237,12 @@ def check_python_requirements():
     
     missing_packages = []
     outdated_packages = []
-    if not os.path.exists(PYTHON_REQUIREMENTS_PATH):
-        log(f"requirements_python.inf nicht gefunden: {PYTHON_REQUIREMENTS_PATH}", "WARNING")
+    if not os.path.exists(PYTHON_REQUIREMENTS):
+        logger.warning(f"requirements_python.inf nicht gefunden: {PYTHON_REQUIREMENTS}")
         return [], []
         
     try:
-        with open(PYTHON_REQUIREMENTS_PATH, 'r') as f:
+        with open(PYTHON_REQUIREMENTS, 'r') as f:
             requirements = [line.strip() for line in f if line.strip() and not line.startswith('#')]
             
         # Installierte Pakete prüfen
@@ -172,7 +252,7 @@ def check_python_requirements():
             # Paketname und Version trennen
             match = re.match(r'^([a-zA-Z0-9\-_\.]+)(?:>=|==|>)?([\d\.]+)?$', req)
             if not match:
-                log(f"Ungültiges Format für Python-Paket: {req}", "WARNING")
+                logger.warning(f"Ungültiges Format für Python-Paket: {req}")
                 continue
                 
             package, min_version = match.groups()
@@ -186,13 +266,13 @@ def check_python_requirements():
         return missing_packages, outdated_packages
         
     except Exception as e:
-        log(f"Fehler beim Überprüfen von Python-Paketen: {str(e)}", "ERROR")
+        logger.error(f"Fehler beim Überprüfen von Python-Paketen: {str(e)}")
         return [], []
 
 def install_system_requirements():
     """Installiert fehlende Systempakete basierend auf system_requirements.txt"""
     if os.name == 'nt':  # Windows
-        log("Installation von Systempaketen unter Windows nicht unterstützt", "WARNING")
+        logger.warning("Installation von Systempaketen unter Windows nicht unterstützt")
         return False, "Installation von Systempaketen unter Windows nicht unterstützt"
 
     package_manager = detect_package_manager()
@@ -206,7 +286,7 @@ def install_system_requirements():
         return True, "Alle Systempakete sind bereits installiert"
 
     try:
-        log(f"Installiere {len(packages_to_install)} fehlende/veraltete Systempakete", "INFO")
+        logger.info(f"Installiere {len(packages_to_install)} fehlende/veraltete Systempakete")
         
         # Paketliste aktualisieren
         if package_manager == 'apt':
@@ -225,7 +305,7 @@ def install_system_requirements():
         
         return True, f"{len(packages_to_install)} Systempakete installiert"
     except Exception as e:
-        log(f"Fehler beim Installieren von Systempaketen: {str(e)}", "ERROR")
+        logger.error(f"Fehler beim Installieren von Systempaketen: {str(e)}")
         return False, str(e)
 
 def get_dependencies_status():
@@ -439,7 +519,7 @@ def update_backend():
     run([venv_pip, 'install', '--upgrade', 'pip'])
     
     # Python-Abhängigkeiten aus der neuen requirements_python.inf installieren
-    run([venv_pip, 'install', '-r', PYTHON_REQUIREMENTS_PATH])
+    run([venv_pip, 'install', '-r', PYTHON_REQUIREMENTS])
     log('Backend-Abhängigkeiten aktualisiert.')
 
 # -------------------------------------------------------------------------------

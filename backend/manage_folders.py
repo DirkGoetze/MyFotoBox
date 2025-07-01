@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# ------------------------------------------------------------------------------
-# manage_folders.py
-# ------------------------------------------------------------------------------
-# Funktion: Python-Wrapper für die zentrale Ordnerverwaltung (manage_folders.sh)
-# Erlaubt Python-Modulen den einheitlichen Zugriff auf die Ordnerstruktur.
-# ------------------------------------------------------------------------------
 """
 Modul zur Verwaltung der Fotobox-Ordnerstruktur.
 
@@ -15,254 +9,188 @@ bietet einen einheitlichen Zugriff auf Verzeichnispfade in der gesamten Anwendun
 """
 
 import os
-import subprocess
+import sys
 import logging
-from typing import Optional
+import subprocess
+from typing import Optional, Dict, Any
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# Globale Instanz des FolderManagers für die Zugangsfunktionen
-_FOLDER_MANAGER = None
-
-def _get_folder_manager():
-    """Liefert eine singleton Instanz des FolderManagers"""
-    # pylint: disable=global-statement
-    global _FOLDER_MANAGER
-    if _FOLDER_MANAGER is None:
-        _FOLDER_MANAGER = FolderManager()
-    return _FOLDER_MANAGER
-
-# Globale Funktionen für den einfachen Import in anderen Modulen
-def get_install_dir() -> str:
-    """Gibt den Pfad zum Installationsverzeichnis zurück"""
-    return _get_folder_manager().get_install_dir()
-
-def get_data_dir() -> str:
-    """Gibt den Pfad zum Datenverzeichnis zurück"""
-    return _get_folder_manager().get_data_dir()
-
-def get_backup_dir() -> str:
-    """Gibt den Pfad zum Backup-Verzeichnis zurück"""
-    return _get_folder_manager().get_backup_dir()
-
-def get_log_dir() -> str:
-    """Gibt den Pfad zum Log-Verzeichnis zurück"""
-    return _get_folder_manager().get_log_dir()
-
-def get_frontend_dir() -> str:
-    """Gibt den Pfad zum Frontend-Verzeichnis zurück"""
-    return _get_folder_manager().get_frontend_dir()
-
-def get_config_dir() -> str:
-    """Gibt den Pfad zum Konfigurationsverzeichnis zurück"""
-    return _get_folder_manager().get_config_dir()
-
-def get_camera_conf_dir() -> str:
-    """Gibt den Pfad zum Kamera-Konfigurationsverzeichnis zurück"""
-    return _get_folder_manager().get_camera_conf_dir()
-
-def get_photos_dir() -> str:
-    """Gibt den Pfad zum Fotos-Verzeichnis zurück"""
-    return _get_folder_manager().get_photos_dir()
-
-def get_photos_originals_dir(event_name: Optional[str] = None) -> str:
-    """Gibt den Pfad zum Originalfotos-Verzeichnis zurück"""
-    return _get_folder_manager().get_photos_originals_dir(event_name)
-
-def get_photos_gallery_dir(event_name: Optional[str] = None) -> str:
-    """Gibt den Pfad zum Galerie-Verzeichnis zurück"""
-    return _get_folder_manager().get_photos_gallery_dir(event_name)
-
-def get_frontend_css_dir() -> str:
-    """Gibt den Pfad zum Frontend-CSS-Verzeichnis zurück"""
-    return _get_folder_manager().get_frontend_css_dir()
-
-def get_frontend_js_dir() -> str:
-    """Gibt den Pfad zum Frontend-JavaScript-Verzeichnis zurück"""
-    return _get_folder_manager().get_frontend_js_dir()
-
-def get_frontend_fonts_dir() -> str:
-    """Gibt den Pfad zum Frontend-Fonts-Verzeichnis zurück"""
-    return _get_folder_manager().get_frontend_fonts_dir()
-
-def get_frontend_picture_dir() -> str:
-    """Gibt den Pfad zum Frontend-Bilder-Verzeichnis zurück"""
-    return _get_folder_manager().get_frontend_picture_dir()
-
-def get_script_dir() -> str:
-    """Gibt den Pfad zum Backend-Skript-Verzeichnis zurück"""
-    return _get_folder_manager().get_script_dir()
-
-def get_https_conf_dir() -> str:
-    """Gibt den Pfad zum HTTPS-Konfigurations-Verzeichnis zurück"""
-    return _get_folder_manager().get_https_conf_dir()
-
-def get_https_backup_dir() -> str:
-    """Gibt den Pfad zum HTTPS-Backup-Verzeichnis zurück"""
-    return _get_folder_manager().get_https_backup_dir()
-
-def ensure_folder_structure() -> bool:
-    """
-    Stellt sicher, dass die gesamte Ordnerstruktur existiert und
-    alle benötigten Verzeichnisse mit korrekten Berechtigungen angelegt sind
-
-    Returns:
-        True bei erfolgreicher Erstellung aller Verzeichnisse, False bei einem Fehler
-
-    Notes:
-        Verwendet die Shell-Implementierung falls verfügbar,
-        mit Python-Fallback wenn die Shell-Skripte nicht erreichbar sind
-    """
-    return _get_folder_manager().ensure_folder_structure()
+class FolderConfigError(Exception):
+    """Ausnahme für Fehler bei der Verzeichniskonfiguration"""
+    pass
 
 class FolderManager:
-    """
-    Verwaltet die Ordnerstruktur für die Fotobox durch Zugriff auf manage_folders.sh
-    """
-
+    """Verwaltung der Fotobox-Ordnerstruktur"""
+    
     def __init__(self):
-        """Initialisiert den FolderManager"""
-        self._script_path = os.path.join(
-            os.path.dirname(__file__), 'scripts', 'manage_folders.sh'
-        )
-
-        # Prüfen, ob das Skript existiert und ausführbar ist
-        if not os.path.isfile(self._script_path):
-            logger.warning("manage_folders.sh nicht gefunden unter %s", self._script_path)
-            # Fallback zur alten Struktur (für Abwärtskompatibilität)
-            self._script_path = None
-        elif not os.access(self._script_path, os.X_OK):
-            try:
-                os.chmod(self._script_path, 0o755)
-            except OSError as e:
-                logger.warning("Konnte manage_folders.sh nicht ausführbar machen: %s", e)
-                # Skript nicht auf None setzen, damit wir es mit bash aufrufen können
-
-    def _run_command(self, cmd_name: str, cmd_param: Optional[str] = None) -> str:
-        """
-        Führt einen Befehl in manage_folders.sh aus und gibt die Ausgabe zurück        Args:
-            cmd_name: Der auszuführende Befehl
-            cmd_param: Optionaler Parameter für den Befehl
-
-        Returns:
-            Die Ausgabe des Befehls oder einen Fallback-Pfad bei Fehler
-        """
-        if not self._script_path:
-            # Fallback zur alten Struktur, wenn das Skript nicht verfügbar ist
-            return self._get_fallback_path(cmd_name)
-
+        self._cache: Dict[str, str] = {}
+        self._script_path = self._find_shell_script()
+        self._base_dir = self._get_base_dir()
+        self._init_base_dirs()
+    
+    def _find_shell_script(self) -> str:
+        """Findet den Pfad zum Shell-Skript"""
+        script_name = "manage_folders.sh"
+        current_dir = Path(__file__).parent
+        script_locations = [
+            current_dir / "scripts" / script_name,
+            current_dir / ".." / "scripts" / script_name,
+            Path("/opt/fotobox/backend/scripts") / script_name
+        ]
+        
+        for location in script_locations:
+            if location.is_file():
+                logger.debug(f"Shell-Skript gefunden: {location}")
+                return str(location)
+            else:
+                logger.debug(f"Shell-Skript nicht gefunden unter: {location}")
+        
+        # Wenn wir hier ankommen, wurde kein Skript gefunden
+        logger.error(f"Shell-Skript '{script_name}' konnte nicht gefunden werden")
+        # Fallback auf Standardpfad
+        return "/opt/fotobox/backend/scripts/manage_folders.sh"
+    
+    def _get_base_dir(self) -> str:
+        """Ermittelt das Basis-Installationsverzeichnis"""
         try:
-            cmd = ['bash', self._script_path, cmd_name]
-            if cmd_param:
-                cmd.append(cmd_param)
-
-            result = subprocess.check_output(cmd, stderr=subprocess.STDOUT, universal_newlines=True)
-            return result.strip()
+            # Versuche zuerst, das Installationsverzeichnis über das Shell-Skript zu ermitteln
+            if os.path.exists(self._script_path):
+                result = subprocess.run(
+                    [self._script_path, "--get-install-dir"],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    base_dir = result.stdout.strip()
+                    logger.info(f"Basis-Verzeichnis über Shell-Skript ermittelt: {base_dir}")
+                    return base_dir
+            
+            # Wenn das Shell-Skript nicht verfügbar ist oder fehlschlägt,
+            # verwende den Standardpfad
+            base_dir = "/opt/fotobox"
+            logger.warning(f"Verwende Standard-Basis-Verzeichnis: {base_dir}")
+            return base_dir
+            
         except subprocess.CalledProcessError as e:
-            logger.error("Fehler beim Ausführen von %s: %s", cmd_name, e)
-            return self._get_fallback_path(cmd_name)
-        except OSError as e:
-            logger.error("Unerwarteter Fehler: %s", e)
-            return self._get_fallback_path(cmd_name)
-
-    def _get_fallback_path(self, cmd_name: str) -> str:
-        """
-        Liefert einen Fallback-Pfad basierend auf dem angeforderten Befehl
-
-        Args:
-            cmd_name: Der angeforderte Befehl
-
-        Returns:
-            Ein Fallback-Pfad für den angeforderten Befehl
-        """
-        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-        # Mapping von Befehlen zu Fallback-Pfaden
-        fallbacks = {
-            'install_dir': base_dir,
-            'data_dir': os.path.join(base_dir, 'data'),
-            'backup_dir': os.path.join(base_dir, 'backup'),
-            'log_dir': os.path.join(base_dir, 'log'),
-            'frontend_dir': os.path.join(base_dir, 'frontend'),
-            'config_dir': os.path.join(base_dir, 'conf'),
-            'photos_dir': os.path.join(base_dir, 'frontend', 'photos'),
-            'photos_originals_dir': os.path.join(base_dir, 'frontend', 'photos', 'originals'),
-            'photos_gallery_dir': os.path.join(base_dir, 'frontend', 'photos', 'gallery'),
-            'frontend_css_dir': os.path.join(base_dir, 'frontend', 'css'),
-            'frontend_js_dir': os.path.join(base_dir, 'frontend', 'js'),
-            'frontend_fonts_dir': os.path.join(base_dir, 'frontend', 'fonts'),
-            'frontend_picture_dir': os.path.join(base_dir, 'frontend', 'picture'),
-            'script_dir': os.path.join(base_dir, 'backend', 'scripts'),
-            'https_conf_dir': os.path.join(base_dir, 'conf', 'https'),
-            'https_backup_dir': os.path.join(base_dir, 'backup', 'https'),
+            logger.error(f"Fehler beim Ermitteln des Basis-Verzeichnisses: {e}")
+            # Fallback zu Standardpfad
+            return "/opt/fotobox"
+    
+    def _init_base_dirs(self) -> None:
+        """Initialisiert die Basis-Verzeichnisse"""
+        base_dirs = {
+            "log": "log",
+            "data": "data",
+            "config": "conf",
+            "frontend": "frontend",
+            "backend": "backend",
+            "camera_conf": "conf/cameras",
+            "photos": "frontend/photos",
+            "photos_originals": "frontend/photos/originals",
+            "photos_gallery": "frontend/photos/gallery",
+            "frontend_css": "frontend/css",
+            "frontend_js": "frontend/js",
+            "frontend_fonts": "frontend/fonts",
+            "frontend_picture": "frontend/picture",
+            "script": "backend/scripts",
+            "https_conf": "conf/https",
+            "https_backup": "backup/https"
         }
-
-        return fallbacks.get(cmd_name, base_dir)
-
-    def ensure_dir(self, path: str) -> bool:
-        """
-        Stellt sicher, dass ein Verzeichnis existiert
-
-        Args:
-            path: Der zu prüfende und ggf. zu erstellende Pfad
-
-        Returns:
-            True, wenn das Verzeichnis existiert oder erstellt wurde, sonst False
-        """
-        try:
-            if not os.path.exists(path):
-                os.makedirs(path, exist_ok=True)
-            return os.path.isdir(path)
-        except OSError as e:
-            logger.error("Fehler beim Erstellen des Verzeichnisses %s: %s", path, e)
-            return False
+        
+        for key, path in base_dirs.items():
+            full_path = os.path.join(self._base_dir, path)
+            try:
+                # Versuche zuerst, den Pfad über das Shell-Skript zu erstellen
+                if os.path.exists(self._script_path):
+                    result = subprocess.run(
+                        [self._script_path, f"--create-{key}-dir"],
+                        capture_output=True,
+                        text=True
+                    )
+                    if result.returncode == 0:
+                        actual_path = result.stdout.strip()
+                        if actual_path and os.path.exists(actual_path):
+                            self._cache[key] = actual_path
+                            logger.debug(f"Verzeichnis über Shell-Skript erstellt: {actual_path}")
+                            continue
+                
+                # Wenn das Shell-Skript nicht verfügbar ist oder fehlschlägt,
+                # erstelle das Verzeichnis direkt
+                os.makedirs(full_path, exist_ok=True)
+                # Setze Berechtigungen (aus lib_core.sh)
+                os.chmod(full_path, 0o755)  # Entspricht DEFAULT_MODE_FOLDER
+                self._cache[key] = full_path
+                logger.debug(f"Verzeichnis direkt erstellt: {full_path}")
+                
+            except OSError as e:
+                logger.error(f"Fehler beim Erstellen des Verzeichnisses {full_path}: {e}")
+                raise FolderConfigError(f"Konnte Verzeichnis {key} nicht initialisieren") from e
+    
+    def _get_path(self, key: str, create: bool = True) -> str:
+        """Generische Methode zum Abrufen und Cachen von Verzeichnispfaden"""
+        if key not in self._cache:
+            try:
+                # Versuche zuerst den Pfad über das Shell-Skript zu bekommen
+                if os.path.exists(self._script_path):
+                    result = subprocess.run(
+                        [self._script_path, f"--get-{key}-dir"],
+                        capture_output=True,
+                        text=True,
+                        check=True
+                    )
+                    if result.returncode == 0 and result.stdout.strip():
+                        path = result.stdout.strip()
+                        if create:
+                            os.makedirs(path, exist_ok=True)
+                        self._cache[key] = path
+                        return path
+                
+                # Wenn das Shell-Skript nicht verfügbar ist, verwende die Standard-Struktur
+                base_path = os.path.join(self._base_dir, key.replace('_', '/'))
+                if create:
+                    os.makedirs(base_path, exist_ok=True)
+                self._cache[key] = base_path
+                
+            except (subprocess.CalledProcessError, OSError) as e:
+                logger.error(f"Fehler beim Abrufen/Erstellen des Pfads für {key}: {e}")
+                raise FolderConfigError(f"Konnte Pfad für {key} nicht ermitteln")
+        
+        return self._cache[key]
 
     def get_install_dir(self) -> str:
         """Gibt den Pfad zum Installationsverzeichnis zurück"""
-        path = self._run_command('install_dir')
-        self.ensure_dir(path)
-        return path
+        return self._base_dir
 
     def get_data_dir(self) -> str:
         """Gibt den Pfad zum Datenverzeichnis zurück"""
-        path = self._run_command('data_dir')
-        self.ensure_dir(path)
-        return path
+        return self._get_path("data")
 
     def get_backup_dir(self) -> str:
         """Gibt den Pfad zum Backup-Verzeichnis zurück"""
-        path = self._run_command('backup_dir')
-        self.ensure_dir(path)
-        return path
+        return self._get_path("backup")
 
     def get_log_dir(self) -> str:
         """Gibt den Pfad zum Log-Verzeichnis zurück"""
-        path = self._run_command('log_dir')
-        self.ensure_dir(path)
-        return path
+        return self._get_path("log")
 
     def get_frontend_dir(self) -> str:
         """Gibt den Pfad zum Frontend-Verzeichnis zurück"""
-        path = self._run_command('frontend_dir')
-        self.ensure_dir(path)
-        return path
+        return self._get_path("frontend")
 
     def get_config_dir(self) -> str:
         """Gibt den Pfad zum Konfigurationsverzeichnis zurück"""
-        path = self._run_command('config_dir')
-        self.ensure_dir(path)
-        return path
+        return self._get_path("config")
 
     def get_camera_conf_dir(self) -> str:
         """Gibt den Pfad zum Kamera-Konfigurationsverzeichnis zurück"""
-        path = self._run_command('camera_conf_dir')
-        self.ensure_dir(path)
-        return path
+        return self._get_path("camera_conf")
 
     def get_photos_dir(self) -> str:
         """Gibt den Pfad zum Fotos-Verzeichnis zurück"""
-        path = self._run_command('photos_dir')
-        self.ensure_dir(path)
-        return path
+        return self._get_path("photos")
 
     def get_photos_originals_dir(self, event_name: Optional[str] = None) -> str:
         """
@@ -274,12 +202,20 @@ class FolderManager:
         Returns:
             Pfad zum Originalfotos-Verzeichnis
         """
+        key = "photos_originals"
+        base_path = self._get_path(key)
+        
         if event_name:
-            path = self._run_command('photos_originals_dir', event_name)
-        else:
-            path = self._run_command('photos_originals_dir')
-        self.ensure_dir(path)
-        return path
+            # Bereinige den Event-Namen für die Verzeichnisnutzung
+            clean_name = event_name.strip().replace(' ', '_').lower()
+            if not clean_name:
+                raise ValueError("Event-Name darf nicht leer sein")
+                
+            event_path = os.path.join(base_path, clean_name)
+            os.makedirs(event_path, exist_ok=True)
+            return event_path
+            
+        return base_path
 
     def get_photos_gallery_dir(self, event_name: Optional[str] = None) -> str:
         """
@@ -291,54 +227,48 @@ class FolderManager:
         Returns:
             Pfad zum Galerie-Verzeichnis
         """
+        key = "photos_gallery"
+        base_path = self._get_path(key)
+        
         if event_name:
-            path = self._run_command('photos_gallery_dir', event_name)
-        else:
-            path = self._run_command('photos_gallery_dir')
-        self.ensure_dir(path)
-        return path
+            # Bereinige den Event-Namen für die Verzeichnisnutzung
+            clean_name = event_name.strip().replace(' ', '_').lower()
+            if not clean_name:
+                raise ValueError("Event-Name darf nicht leer sein")
+                
+            event_path = os.path.join(base_path, clean_name)
+            os.makedirs(event_path, exist_ok=True)
+            return event_path
+            
+        return base_path
 
     def get_frontend_css_dir(self) -> str:
         """Gibt den Pfad zum Frontend-CSS-Verzeichnis zurück"""
-        path = self._run_command('frontend_css_dir')
-        self.ensure_dir(path)
-        return path
+        return self._get_path("frontend_css")
 
     def get_frontend_js_dir(self) -> str:
         """Gibt den Pfad zum Frontend-JavaScript-Verzeichnis zurück"""
-        path = self._run_command('frontend_js_dir')
-        self.ensure_dir(path)
-        return path
+        return self._get_path("frontend_js")
 
     def get_frontend_fonts_dir(self) -> str:
         """Gibt den Pfad zum Frontend-Fonts-Verzeichnis zurück"""
-        path = self._run_command('frontend_fonts_dir')
-        self.ensure_dir(path)
-        return path
+        return self._get_path("frontend_fonts")
 
     def get_frontend_picture_dir(self) -> str:
         """Gibt den Pfad zum Frontend-Bilder-Verzeichnis zurück"""
-        path = self._run_command('frontend_picture_dir')
-        self.ensure_dir(path)
-        return path
+        return self._get_path("frontend_picture")
 
     def get_script_dir(self) -> str:
         """Gibt den Pfad zum Backend-Skript-Verzeichnis zurück"""
-        path = self._run_command('script_dir')
-        self.ensure_dir(path)
-        return path
+        return self._get_path("script")
 
     def get_https_conf_dir(self) -> str:
         """Gibt den Pfad zum HTTPS-Konfigurations-Verzeichnis zurück"""
-        path = self._run_command('https_conf_dir')
-        self.ensure_dir(path)
-        return path
+        return self._get_path("https_conf")
 
     def get_https_backup_dir(self) -> str:
         """Gibt den Pfad zum HTTPS-Backup-Verzeichnis zurück"""
-        path = self._run_command('https_backup_dir')
-        self.ensure_dir(path)
-        return path
+        return self._get_path("https_backup")
 
     def ensure_folder_structure(self) -> bool:
         """

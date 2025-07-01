@@ -1,13 +1,31 @@
 [Unit]
 Description=Fotobox Backend (Flask)
 After=network.target
+Wants=network-online.target
 
 [Service]
 Type=simple
 User=fotobox
+Group=fotobox
 WorkingDirectory=/opt/fotobox/backend
+Environment=PYTHONPATH=/opt/fotobox/backend
+Environment=FOTOBOX_ENV=production
+Environment=FLASK_APP=app.py
+Environment=FLASK_ENV=production
+
+# Verzeichnisinitialisierung vor dem Start
+ExecStartPre=/bin/mkdir -p /opt/fotobox/log
+ExecStartPre=/bin/mkdir -p /opt/fotobox/data
+ExecStartPre=/bin/chown -R fotobox:fotobox /opt/fotobox/log
+ExecStartPre=/bin/chown -R fotobox:fotobox /opt/fotobox/data
+
 ExecStart=/opt/fotobox/backend/venv/bin/python app.py
 Restart=on-failure
+RestartSec=5
+
+# Logging
+StandardOutput=append:/opt/fotobox/log/backend-service.log
+StandardError=append:/opt/fotobox/log/backend-service.error.log
 
 [Install]
 WantedBy=multi-user.target

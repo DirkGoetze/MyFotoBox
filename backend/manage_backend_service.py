@@ -6,253 +6,305 @@ manage_backend_service.py - Verwaltung des Fotobox Backend-Services
 Dieses Modul stellt Funktionen zur Verwaltung des systemd-Services für das Fotobox-Backend
 bereit. Es erlaubt das Installieren, Aktivieren, Starten, Stoppen, Neustarten und 
 Deinstallieren des Services.
-
-Das Modul nutzt die shell.py-Hilfsfunktionen für Shell-Aufrufe mit sudo-Rechten.
 """
 
 import os
 import sys
 import datetime
 import subprocess
+import logging
 from pathlib import Path
 
-# Fügt den übergeordneten Ordner zum Suchpfad hinzu, um Modul-Importe zu ermöglichen
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Logger einrichten
+logger = logging.getLogger(__name__)
 
-from backend.utils import get_project_root, get_config_dir, get_backup_dir
-from backend.utils import run, log_info, log_error, log_success, log_warning
+# Importiere manage_folders für zentrale Pfadverwaltung
+try:
+    from manage_folders import get_config_dir, get_backup_dir, get_log_dir
+    CONFIG_DIR = get_config_dir()
+    BACKUP_DIR = get_backup_dir()
+    LOG_DIR = get_log_dir()
+except ImportError as e:
+    logger.error(f"Fehler beim Import von manage_folders: {e}")
+    # Fallback zu Standardpfaden
+    CONFIG_DIR = "/opt/fotobox/conf"
+    BACKUP_DIR = "/opt/fotobox/backup"
+    LOG_DIR = "/opt/fotobox/log"
 
-# Konstanten
-CONFIG_DIR = get_config_dir()
-BACKUP_DIR = get_backup_dir()
+# Service-Konfiguration
 SYSTEMD_SERVICE = os.path.join(CONFIG_DIR, 'fotobox-backend.service')
 SYSTEMD_DST = '/etc/systemd/system/fotobox-backend.service'
 SERVICE_NAME = 'fotobox-backend'
 
-def install_backend_service():
+def check_service_dependencies() -> bool:
     """
-    Installiert den Backend-Service (kopiert die Service-Datei und lädt systemd neu)
+    Prüft, ob alle notwendigen Verzeichnisse und Abhängigkeiten für den Service existieren
+    
+    Returns:
+        bool: True wenn alle Abhängigkeiten erfüllt sind, False sonst
+    """
+    required_dirs = [
+        ('/opt/fotobox/backend', 'Backend-Verzeichnis'),
+        ('/opt/fotobox/backend/venv', 'Python Virtual Environment'),
+        (LOG_DIR, 'Log-Verzeichnis'),
+        (os.path.join(CONFIG_DIR, 'cameras'), 'Kamera-Konfiguration')
+    ]
+    
+    all_ok = True
+    for dir_path, description in required_dirs:
+        if not os.path.exists(dir_path):
+            logger.error(f"Fehlendes {description}: {dir_path}")
+            all_ok = False
+            
+    return all_ok
+
+def verify_service_file() -> bool:
+    """
+    Überprüft die Service-Datei auf notwendige Einträge
+    
+    Returns:
+        bool: True wenn die Service-Datei valide ist, False sonst
+    """
+    try:
+        if not os.path.exists(SYSTEMD_SERVICE):
+            logger.error(f"Service-Datei nicht gefunden: {SYSTEMD_SERVICE}")
+            return False
+            
+        with open(SYSTEMD_SERVICE, 'r') as f:
+            content = f.read()
+            
+        required_entries = [
+            'Description=Fotobox Backend',
+            'User=fotobox',
+            'Group=fotobox',
+            'WorkingDirectory=/opt/fotobox/backend',
+            'Environment=PYTHONPATH=/opt/fotobox/backend'
+        ]
+        
+        for entry in required_entries:
+            if entry not in content:
+                logger.error(f"Fehlender Eintrag in Service-Datei: {entry}")
+                return False
+                
+        return True
+    except Exception as e:
+        logger.error(f"Fehler beim Überprüfen der Service-Datei: {e}")
+        return False
+
+def install_backend_service() -> bool:
+    """
+    Installiert den Backend-Service
     
     Returns:
         bool: True bei Erfolg, False bei Fehler
     """
-    log_info("Installiere Backend-Service...")
+    logger.info("Installiere Backend-Service...")
+    
+    # Prüfe Abhängigkeiten
+    if not check_service_dependencies():
+        logger.error("Service-Abhängigkeiten nicht erfüllt")
+        return False
+        
+    # Prüfe Service-Datei
+    if not verify_service_file():
+        logger.error("Service-Datei ungültig")
+        return False
     
     # Erstelle Backup falls Service bereits existiert
     if os.path.exists(SYSTEMD_DST):
-        backup = os.path.join(BACKUP_DIR, 
-                              f'fotobox-backend.service.bak.{datetime.datetime.now():%Y%m%d%H%M%S}')
+        backup = os.path.join(
+            BACKUP_DIR, 
+            f'fotobox-backend.service.bak.{datetime.datetime.now():%Y%m%d%H%M%S}'
+        )
         try:
-            run(['cp', SYSTEMD_DST, backup], sudo=True)
-            log_success(f"Backup der bestehenden systemd-Unit nach {backup} erstellt.")
-        except subprocess.CalledProcessError:
-            log_error("Erstellen des Backups fehlgeschlagen.")
+            subprocess.run(['sudo', 'cp', SYSTEMD_DST, backup], check=True)
+            logger.info(f"Backup erstellt: {backup}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Backup fehlgeschlagen: {e}")
             return False
     
     # Kopiere Service-Datei
     try:
-        run(['cp', SYSTEMD_SERVICE, SYSTEMD_DST], sudo=True)
-        log_success("Service-Datei erfolgreich kopiert.")
-    except subprocess.CalledProcessError:
-        log_error("Kopieren der Service-Datei fehlgeschlagen.")
+        subprocess.run(['sudo', 'cp', SYSTEMD_SERVICE, SYSTEMD_DST], check=True)
+        subprocess.run(['sudo', 'systemctl', 'daemon-reload'], check=True)
+        logger.info("Service-Datei installiert und systemd aktualisiert")
+        return True
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Installation fehlgeschlagen: {e}")
         return False
-    
-    # Aktualisiere systemd
-    try:
-        run(['systemctl', 'daemon-reload'], sudo=True)
-        log_success("Systemd-Daemon neu geladen.")
-    except subprocess.CalledProcessError:
-        log_warning("Aktualisieren des systemd-Daemons fehlgeschlagen.")
-        # Keine Rückgabe von False, da dies nicht unbedingt einen Fehler darstellt
-    
-    return True
 
-def enable_backend_service():
+def enable_backend_service() -> bool:
     """
     Aktiviert den Backend-Service (startet automatisch beim Systemstart)
     
     Returns:
         bool: True bei Erfolg, False bei Fehler
     """
-    log_info("Aktiviere Backend-Service...")
+    logger.info("Aktiviere Backend-Service...")
     try:
-        run(['systemctl', 'enable', SERVICE_NAME], sudo=True)
-        log_success("Backend-Service aktiviert.")
+        subprocess.run(['sudo', 'systemctl', 'enable', SERVICE_NAME], check=True)
+        logger.info("Backend-Service aktiviert")
         return True
-    except subprocess.CalledProcessError:
-        log_error("Aktivieren des Backend-Services fehlgeschlagen.")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Aktivierung fehlgeschlagen: {e}")
         return False
 
-def disable_backend_service():
+def disable_backend_service() -> bool:
     """
-    Deaktiviert den Backend-Service (startet nicht mehr automatisch beim Systemstart)
+    Deaktiviert den Backend-Service
     
     Returns:
         bool: True bei Erfolg, False bei Fehler
     """
-    log_info("Deaktiviere Backend-Service...")
+    logger.info("Deaktiviere Backend-Service...")
     try:
-        run(['systemctl', 'disable', SERVICE_NAME], sudo=True)
-        log_success("Backend-Service deaktiviert.")
+        subprocess.run(['sudo', 'systemctl', 'disable', SERVICE_NAME], check=True)
+        logger.info("Backend-Service deaktiviert")
         return True
-    except subprocess.CalledProcessError:
-        log_error("Deaktivieren des Backend-Services fehlgeschlagen.")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Deaktivierung fehlgeschlagen: {e}")
         return False
 
-def start_backend_service():
+def start_backend_service() -> bool:
     """
     Startet den Backend-Service
     
     Returns:
         bool: True bei Erfolg, False bei Fehler
     """
-    log_info("Starte Backend-Service...")
+    logger.info("Starte Backend-Service...")
     try:
-        run(['systemctl', 'start', SERVICE_NAME], sudo=True)
-    except subprocess.CalledProcessError:
-        log_error("Starten des Backend-Services fehlgeschlagen.")
-        return False
-    
-    # Überprüfe, ob der Service läuft
-    if is_backend_service_active():
-        log_success("Backend-Service erfolgreich gestartet.")
+        subprocess.run(['sudo', 'systemctl', 'start', SERVICE_NAME], check=True)
+        logger.info("Backend-Service gestartet")
         return True
-    else:
-        log_warning("Backend-Service konnte nicht gestartet werden oder läuft nicht.")
-        log_info("Der Status kann mit 'systemctl status fotobox-backend' überprüft werden.")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Start fehlgeschlagen: {e}")
         return False
 
-def stop_backend_service():
+def stop_backend_service() -> bool:
     """
     Stoppt den Backend-Service
     
     Returns:
         bool: True bei Erfolg, False bei Fehler
     """
-    log_info("Stoppe Backend-Service...")
+    logger.info("Stoppe Backend-Service...")
     try:
-        run(['systemctl', 'stop', SERVICE_NAME], sudo=True)
-        log_success("Backend-Service gestoppt.")
+        subprocess.run(['sudo', 'systemctl', 'stop', SERVICE_NAME], check=True)
+        logger.info("Backend-Service gestoppt")
         return True
-    except subprocess.CalledProcessError:
-        log_error("Stoppen des Backend-Services fehlgeschlagen.")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Stop fehlgeschlagen: {e}")
         return False
 
-def restart_backend_service():
+def restart_backend_service() -> bool:
     """
     Startet den Backend-Service neu
     
     Returns:
         bool: True bei Erfolg, False bei Fehler
     """
-    log_info("Starte Backend-Service neu...")
+    logger.info("Starte Backend-Service neu...")
     try:
-        run(['systemctl', 'restart', SERVICE_NAME], sudo=True)
-    except subprocess.CalledProcessError:
-        log_error("Neustart des Backend-Services fehlgeschlagen.")
-        return False
-    
-    # Überprüfe, ob der Service läuft
-    if is_backend_service_active():
-        log_success("Backend-Service erfolgreich neugestartet.")
+        subprocess.run(['sudo', 'systemctl', 'restart', SERVICE_NAME], check=True)
+        logger.info("Backend-Service neugestartet")
         return True
-    else:
-        log_warning("Backend-Service konnte nicht neugestartet werden oder läuft nicht.")
-        log_info("Der Status kann mit 'systemctl status fotobox-backend' überprüft werden.")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Neustart fehlgeschlagen: {e}")
         return False
 
-def is_backend_service_active():
+def get_service_status() -> dict:
     """
-    Überprüft, ob der Backend-Service aktiv und am Laufen ist
+    Ruft den Status des Backend-Services ab
     
     Returns:
-        bool: True wenn aktiv, False wenn inaktiv
+        Dict mit Status-Informationen:
+        - active (bool): True wenn Service aktiv
+        - enabled (bool): True wenn Service beim Boot aktiviert
+        - status (str): Detaillierter Status-Text
+        - error (str, optional): Fehlermeldung falls vorhanden
     """
     try:
-        result = run(['systemctl', 'is-active', SERVICE_NAME], 
-                     sudo=True, check=False, capture_output=True)
-        return result.stdout.strip() == b'active'
-    except Exception:
-        return False
+        # Prüfe ob Service aktiv ist
+        active_result = subprocess.run(
+            ['systemctl', 'is-active', SERVICE_NAME],
+            capture_output=True,
+            text=True
+        )
+        is_active = active_result.returncode == 0
+        
+        # Prüfe ob Service enabled ist
+        enabled_result = subprocess.run(
+            ['systemctl', 'is-enabled', SERVICE_NAME],
+            capture_output=True,
+            text=True
+        )
+        is_enabled = enabled_result.returncode == 0
+        
+        # Hole detaillierten Status
+        status_result = subprocess.run(
+            ['systemctl', 'status', SERVICE_NAME],
+            capture_output=True,
+            text=True
+        )
+        
+        return {
+            'active': is_active,
+            'enabled': is_enabled,
+            'status': status_result.stdout,
+            'error': status_result.stderr if status_result.returncode != 0 else None
+        }
+    except Exception as e:
+        logger.error(f"Fehler beim Abrufen des Service-Status: {e}")
+        return {
+            'active': False,
+            'enabled': False,
+            'status': 'Unbekannt',
+            'error': str(e)
+        }
 
-def get_backend_service_status():
+def uninstall_backend_service() -> bool:
     """
-    Gibt den aktuellen Status des Backend-Services zurück
-    
-    Returns:
-        str: Status des Backend-Services (z.B. "active", "inactive", "failed")
-    """
-    try:
-        result = run(['systemctl', 'is-active', SERVICE_NAME], 
-                     sudo=True, check=False, capture_output=True)
-        return result.stdout.strip().decode('utf-8')
-    except Exception:
-        return "unknown"
-
-def get_backend_service_details():
-    """
-    Gibt detaillierte Informationen zum Backend-Service zurück
-    
-    Returns:
-        str: Detaillierte Statusinformationen
-    """
-    try:
-        result = run(['systemctl', 'status', SERVICE_NAME], 
-                     sudo=True, check=False, capture_output=True)
-        return result.stdout.decode('utf-8')
-    except Exception:
-        return "Fehler beim Abrufen des Service-Status."
-
-def uninstall_backend_service():
-    """
-    Deinstalliert den Backend-Service (stoppt, deaktiviert und entfernt)
+    Deinstalliert den Backend-Service vollständig
     
     Returns:
         bool: True bei Erfolg, False bei Fehler
     """
-    # Stoppe den Service zuerst
-    log_info("Stoppe Backend-Service vor der Deinstallation...")
-    try:
-        run(['systemctl', 'stop', SERVICE_NAME], sudo=True, check=False)
-    except subprocess.CalledProcessError:
-        log_warning("Stoppen des Services fehlgeschlagen. Fahre trotzdem fort.")
+    logger.info("Deinstalliere Backend-Service...")
     
-    # Deaktiviere den Service
-    log_info("Deaktiviere Backend-Service...")
+    # Stoppe und deaktiviere den Service
     try:
-        run(['systemctl', 'disable', SERVICE_NAME], sudo=True, check=False)
-    except subprocess.CalledProcessError:
-        log_warning("Deaktivieren des Services fehlgeschlagen. Fahre trotzdem fort.")
+        subprocess.run(['sudo', 'systemctl', 'stop', SERVICE_NAME], 
+                      check=False)  # Ignoriere Fehler
+        subprocess.run(['sudo', 'systemctl', 'disable', SERVICE_NAME], 
+                      check=False)  # Ignoriere Fehler
+    except Exception as e:
+        logger.warning(f"Fehler beim Stoppen/Deaktivieren: {e}")
     
-    # Erstelle Backup vor dem Löschen
+    # Erstelle Backup der Service-Datei
     if os.path.exists(SYSTEMD_DST):
-        backup = os.path.join(BACKUP_DIR, 
-                              f'fotobox-backend.service.bak.{datetime.datetime.now():%Y%m%d%H%M%S}')
+        backup = os.path.join(
+            BACKUP_DIR,
+            f'fotobox-backend.service.uninstall.{datetime.datetime.now():%Y%m%d%H%M%S}'
+        )
         try:
-            run(['cp', SYSTEMD_DST, backup], sudo=True)
-            log_success(f"Backup der systemd-Unit nach {backup} erstellt.")
-        except subprocess.CalledProcessError:
-            log_warning("Erstellen des Backups fehlgeschlagen. Fahre trotzdem fort.")
-        
-        # Entferne Service-Datei
-        try:
-            run(['rm', '-f', SYSTEMD_DST], sudo=True)
-            log_success("Service-Datei erfolgreich entfernt.")
-        except subprocess.CalledProcessError:
-            log_error("Entfernen der Service-Datei fehlgeschlagen.")
-            return False
-    else:
-        log_info("Keine Service-Datei zum Entfernen gefunden.")
+            subprocess.run(['sudo', 'cp', SYSTEMD_DST, backup], check=True)
+            logger.info(f"Backup erstellt: {backup}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Backup fehlgeschlagen: {e}")
     
-    # Lade systemd neu
+    # Entferne Service-Datei
     try:
-        run(['systemctl', 'daemon-reload'], sudo=True)
-        log_success("Systemd-Daemon neu geladen.")
-    except subprocess.CalledProcessError:
-        log_warning("Aktualisieren des systemd-Daemons fehlgeschlagen.")
-    
-    log_success("Backend-Service erfolgreich deinstalliert.")
-    return True
+        if os.path.exists(SYSTEMD_DST):
+            subprocess.run(['sudo', 'rm', '-f', SYSTEMD_DST], check=True)
+        
+        # Lade systemd neu
+        subprocess.run(['sudo', 'systemctl', 'daemon-reload'], check=True)
+        logger.info("Backend-Service erfolgreich deinstalliert")
+        return True
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Deinstallation fehlgeschlagen: {e}")
+        return False
 
 def setup_backend_service():
     """

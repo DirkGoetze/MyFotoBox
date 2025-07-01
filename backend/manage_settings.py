@@ -8,52 +8,129 @@ Es fungiert als zentrale Schnittstelle für alle einstellungsbezogenen Operation
 import os
 import json
 import logging
+import shutil
 from datetime import datetime
 from typing import Dict, Any, List, Union, Optional, Tuple
 
 # Logger einrichten
 logger = logging.getLogger(__name__)
 
+# Importiere manage_folders für zentrale Pfadverwaltung
+try:
+    from manage_folders import (
+        get_data_dir, get_config_dir, get_backup_dir,
+        get_log_dir, get_photos_dir
+    )
+    
+    DATA_DIR = get_data_dir()
+    CONFIG_DIR = get_config_dir()
+    BACKUP_DIR = get_backup_dir()
+    LOG_DIR = get_log_dir()
+    PHOTOS_DIR = get_photos_dir()
+    
+except ImportError as e:
+    logger.error(f"Fehler beim Import von manage_folders: {e}")
+    # Fallback auf Standardpfade, aber mit Warnung
+    DATA_DIR = "/opt/fotobox/data"
+    CONFIG_DIR = "/opt/fotobox/conf"
+    BACKUP_DIR = "/opt/fotobox/backup"
+    LOG_DIR = "/opt/fotobox/log"
+    PHOTOS_DIR = "/opt/fotobox/frontend/photos"
+    logger.warning(f"Verwende Standardpfade: DATA_DIR={DATA_DIR}")
+
+# Stelle sicher, dass die Verzeichnisse existieren
+for directory in [DATA_DIR, CONFIG_DIR, BACKUP_DIR, LOG_DIR, PHOTOS_DIR]:
+    os.makedirs(directory, mode=0o755, exist_ok=True)
+    # Setze Benutzer/Gruppe auf fotobox
+    try:
+        shutil.chown(directory, user='fotobox', group='fotobox')
+    except Exception as e:
+        logger.warning(f"Konnte Berechtigungen für {directory} nicht setzen: {e}")
+
+# Pfad zur Einstellungsdatei
+SETTINGS_FILE = os.path.join(DATA_DIR, "settings.json")
+
 # Standard-Einstellungen (als Fallback)
 DEFAULT_SETTINGS = {
-    "event_name": "Fotobox Event",
-    "event_date": datetime.now().strftime("%Y-%m-%d"),
-    "color_mode": "system",
-    "screensaver_timeout": 120,
-    "gallery_timeout": 60,
-    "countdown_duration": 3,
-    "camera_id": "auto",
-    "flash_mode": "auto"
+    "system": {
+        "event_name": "Fotobox Event",
+        "event_date": datetime.now().strftime("%Y-%m-%d"),
+        "color_mode": "system",
+        "language": "de_DE",
+        "debug_mode": False
+    },
+    "interface": {
+        "screensaver_timeout": 120,
+        "gallery_timeout": 60,
+        "countdown_duration": 3
+    },
+    "camera": {
+        "camera_id": "auto",
+        "flash_mode": "auto",
+        "image_format": "jpeg",
+        "image_quality": 95
+    },
+    "storage": {
+        "backup_enabled": True,
+        "auto_cleanup": True,
+        "min_free_space": 1000  # MB
+    }
 }
 
 # Validierungsregeln
 VALIDATION_RULES = {
-    "event_name": {
+    "system.event_name": {
         "required": True,
         "max_length": 50
     },
-    "screensaver_timeout": {
+    "interface.screensaver_timeout": {
         "required": True,
         "type": "number",
         "min": 30,
         "max": 600
     },
-    "gallery_timeout": {
+    "interface.gallery_timeout": {
         "required": True,
         "type": "number",
         "min": 30,
         "max": 300
     },
-    "countdown_duration": {
+    "interface.countdown_duration": {
         "required": True,
         "type": "number",
         "min": 1,
         "max": 10
+    },
+    "camera.image_quality": {
+        "required": True,
+        "type": "number",
+        "min": 1,
+        "max": 100
     }
 }
 
-# Pfad zur Einstellungsdatei (relativ zum Skriptverzeichnis)
-SETTINGS_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "settings.json")
+def ensure_settings_backup() -> bool:
+    """
+    Erstellt ein Backup der Einstellungsdatei falls nötig
+    
+    Returns:
+        bool: True wenn Backup erstellt oder nicht nötig, False bei Fehler
+    """
+    if not os.path.exists(SETTINGS_FILE):
+        return True
+        
+    try:
+        # Erstelle Backup mit Zeitstempel
+        backup_file = os.path.join(
+            BACKUP_DIR,
+            f"settings_{datetime.now():%Y%m%d_%H%M%S}.json"
+        )
+        shutil.copy2(SETTINGS_FILE, backup_file)
+        logger.info(f"Einstellungs-Backup erstellt: {backup_file}")
+        return True
+    except Exception as e:
+        logger.error(f"Fehler beim Erstellen des Einstellungs-Backups: {e}")
+        return False
 
 def load_settings() -> Dict[str, Any]:
     """Lädt alle Einstellungen aus der Datenbank oder Datei

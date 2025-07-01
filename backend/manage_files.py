@@ -4,9 +4,6 @@ Manage Filesystem Modul für die Fotobox2 Backend-Anwendung
 Dieses Modul bietet Funktionen für Dateisystem-Operationen wie das Auflisten,
 Speichern und Löschen von Bildern sowie Funktionen zur Verwaltung von Verzeichnissen
 und zur Überwachung des Speicherplatzes.
-
-Zusätzlich enthält es zentrale Funktionen zur Verwaltung von Dateipfaden für alle
-Komponenten des Systems, einschließlich Konfigurationsdateien, Log-Dateien und Systemdateien.
 """
 
 import os
@@ -14,7 +11,6 @@ import shutil
 import glob
 import json
 import logging
-import time
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple, Union
 import mimetypes
@@ -25,34 +21,110 @@ from werkzeug.utils import secure_filename
 # Logger einrichten
 logger = logging.getLogger(__name__)
 
-# Pfadkonfiguration über das zentrale Verzeichnismanagement
+# Verzeichnisverwaltung initialisieren
 try:
-    from manage_folders import get_data_dir, get_photos_dir, get_photos_gallery_dir
+    from manage_folders import (
+        FolderManager, get_data_dir, get_photos_dir, 
+        get_photos_gallery_dir, get_photos_originals_dir
+    )
+    folder_manager = FolderManager()
     DATA_DIR = get_data_dir()
     PHOTOS_DIR = get_photos_dir()
     DEFAULT_GALLERY_DIR = get_photos_gallery_dir()
-except ImportError:
-    # Fallback falls manage_folders nicht verfügbar ist
-    DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data'))
-    PHOTOS_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'frontend', 'photos'))
-    DEFAULT_GALLERY_DIR = os.path.join(PHOTOS_DIR, 'gallery')
+    ORIGINALS_DIR = get_photos_originals_dir()
+except ImportError as e:
+    logger.error(f"Fehler beim Import von manage_folders: {e}")
+    # Fallback zu Standardpfaden
+    DATA_DIR = "/opt/fotobox/data"
+    PHOTOS_DIR = "/opt/fotobox/frontend/photos"
+    DEFAULT_GALLERY_DIR = "/opt/fotobox/frontend/photos/gallery"
+    ORIGINALS_DIR = "/opt/fotobox/frontend/photos/originals"
 
-# Standard-Bildgrößen für Thumbnail-Generierung
+# Standard-Bildgrößen
 THUMBNAIL_SIZE = (200, 200)
+PREVIEW_SIZE = (800, 800)
+
+def secure_directory(directory: str) -> str:
+    """
+    Bereinigt einen Verzeichnisnamen für sichere Verwendung
+    
+    Args:
+        directory: Der zu bereinigende Verzeichnisname
+        
+    Returns:
+        Der bereinigte Verzeichnisname
+    """
+    # Entferne ".." und führende "/"
+    clean_dir = os.path.normpath(directory).lstrip(os.sep)
+    # Erlaube nur alphanumerische Zeichen, Unterstriche und einzelne Verzeichnisebenen
+    parts = [secure_filename(part) for part in clean_dir.split(os.sep)]
+    return os.path.join(*parts)
 
 def ensure_directories_exist() -> None:
-    """Stellt sicher, dass alle notwendigen Verzeichnisse existieren
-
-    Erstellt die Verzeichnisse für Daten, Fotos und Galerie, falls sie noch nicht vorhanden sind.
     """
-    os.makedirs(DATA_DIR, exist_ok=True)
-    os.makedirs(PHOTOS_DIR, exist_ok=True)
-    os.makedirs(DEFAULT_GALLERY_DIR, exist_ok=True)
+    Stellt sicher, dass alle notwendigen Verzeichnisse existieren
+    """
+    directories = [
+        (DATA_DIR, 0o755),
+        (PHOTOS_DIR, 0o755),
+        (DEFAULT_GALLERY_DIR, 0o755),
+        (ORIGINALS_DIR, 0o755),
+        (os.path.join(PHOTOS_DIR, 'thumbnails'), 0o755),
+        (os.path.join(PHOTOS_DIR, 'preview'), 0o755)
+    ]
     
-    # Thumbnail-Verzeichnis
-    os.makedirs(os.path.join(PHOTOS_DIR, 'thumbnails'), exist_ok=True)
+    for directory, mode in directories:
+        try:
+            os.makedirs(directory, mode=mode, exist_ok=True)
+            # Setze Benutzer/Gruppe auf fotobox
+            shutil.chown(directory, user='fotobox', group='fotobox')
+            logger.debug(f"Verzeichnis vorbereitet: {directory}")
+        except Exception as e:
+            logger.error(f"Fehler beim Erstellen von {directory}: {e}")
+            raise
+
+def get_directory_structure() -> Dict[str, Any]:
+    """
+    Gibt die komplette Verzeichnisstruktur mit Statusinfos zurück
     
-    logger.debug(f"Verzeichnisstruktur überprüft: {DATA_DIR}, {PHOTOS_DIR}, {DEFAULT_GALLERY_DIR}")
+    Returns:
+        Dict mit Verzeichnispfaden und Statusinformationen
+    """
+    try:
+        structure = {
+            'data_dir': {
+                'path': DATA_DIR,
+                'exists': os.path.exists(DATA_DIR),
+                'writable': os.access(DATA_DIR, os.W_OK),
+                'size': get_directory_size(DATA_DIR)
+            },
+            'photos_dir': {
+                'path': PHOTOS_DIR,
+                'exists': os.path.exists(PHOTOS_DIR),
+                'writable': os.access(PHOTOS_DIR, os.W_OK),
+                'size': get_directory_size(PHOTOS_DIR)
+            },
+            'gallery_dir': {
+                'path': DEFAULT_GALLERY_DIR,
+                'exists': os.path.exists(DEFAULT_GALLERY_DIR),
+                'writable': os.access(DEFAULT_GALLERY_DIR, os.W_OK),
+                'size': get_directory_size(DEFAULT_GALLERY_DIR)
+            }
+        }
+        
+        # Prüfe Speicherplatz
+        disk = psutil.disk_usage(os.path.dirname(DATA_DIR))
+        structure['disk_space'] = {
+            'total': disk.total,
+            'used': disk.used,
+            'free': disk.free,
+            'percent': disk.percent
+        }
+        
+        return structure
+    except Exception as e:
+        logger.error(f"Fehler beim Ermitteln der Verzeichnisstruktur: {e}")
+        raise
 
 def get_image_list(directory: str = 'gallery') -> Dict[str, Any]:
     """Ruft eine Liste aller Bilder in einem Verzeichnis ab
@@ -358,32 +430,27 @@ def create_image_thumbnail(source_path: str, target_path: str, size: Tuple[int, 
             format_name = 'JPEG'
         img.save(target_path, format_name)
 
-def secure_directory(directory: str) -> str:
-    """Stellt sicher, dass ein Verzeichnispfad sicher ist
-    
-    Verhindert den Zugriff auf Verzeichnisse außerhalb des erlaubten Bereichs
-    durch Entfernen von potenziell gefährlichen Pfadkomponenten.
+def get_directory_size(path: str) -> int:
+    """
+    Berechnet die Größe eines Verzeichnisses in Bytes
     
     Args:
-        directory (str): Der zu sichernde Verzeichnispfad
-    
+        path: Pfad zum Verzeichnis
+        
     Returns:
-        str: Der bereinigte Verzeichnispfad
+        Größe in Bytes
     """
-    # Entferne führende Schrägstriche und eventuell vorhandene Laufwerksbuchstaben
-    safe_path = directory.lstrip('/\\').lstrip('ABCDEFGHIJKLMNOPQRSTUVWXYZ:')
-    
-    # Entferne alle ".." und versteckten Verzeichnisse
-    components = []
-    for part in safe_path.split(os.sep):
-        if part and part != '..' and not part.startswith('.'):
-            components.append(secure_filename(part))
-    
-    # Wenn keine gültigen Komponenten übrig bleiben, Standardverzeichnis verwenden
-    if not components:
-        return 'gallery'
-    
-    return os.path.join(*components)
+    try:
+        total_size = 0
+        for dirpath, dirnames, filenames in os.walk(path):
+            for filename in filenames:
+                file_path = os.path.join(dirpath, filename)
+                if not os.path.islink(file_path):
+                    total_size += os.path.getsize(file_path)
+        return total_size
+    except Exception as e:
+        logger.error(f"Fehler beim Ermitteln der Verzeichnisgröße von {path}: {e}")
+        return 0
 
 # -----------------------------------------------
 # ZENTRALE DATEIPFAD-FUNKTIONEN

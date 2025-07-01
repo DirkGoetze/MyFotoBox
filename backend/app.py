@@ -1,207 +1,159 @@
-import sqlite3
-from flask import Flask, request, jsonify, session, redirect, url_for, render_template_string, send_from_directory
+"""
+app.py - Hauptmodul der Fotobox2 Backend-Anwendung
+
+Dieses Modul initialisiert die Flask-Anwendung und konfiguriert alle
+notwendigen Erweiterungen, Blueprints und Middleware-Komponenten.
+"""
+
+from flask import Flask, request, jsonify, session
+from flask_cors import CORS
 import os
-import subprocess
-import bcrypt
-import re
-import json
+import logging
+import sys
+from werkzeug.middleware.proxy_fix import ProxyFix
 
-# Importiere die Module
-import manage_auth
+# Importiere Kernmodule
 import manage_logging
-import manage_database
-import manage_files
-import manage_api
-import manage_camera  # Neu importiert für Kamerafunktionalität
-import manage_backend_service  # Neu importiert für Backend-Service-Verwaltung
+import manage_folders
+import manage_auth
+import manage_settings
+import manage_backend_service
 
-# Importiere die API-Module
+# Importiere API-Module
 import api_auth
 import api_camera
 import api_camera_config
 import api_database
+import api_files
 import api_filesystem
+import api_folders
 import api_logging
 import api_settings
-import api_uninstall
 import api_update
-import api_backend_service  # Neu importiert für Backend-Service API
-import api_files  # Neu importiert für Dateiverwaltung API
+import api_backend_service
 
-# -------------------------------------------------------------------------------
-# DB_PATH und Datenverzeichnis sicherstellen
-# -------------------------------------------------------------------------------
-DB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
-DB_PATH = os.path.join(DB_DIR, 'fotobox_settings.db')
-os.makedirs(DB_DIR, exist_ok=True)
+# Logging einrichten (vor Flask-App-Erstellung)
+manage_logging.setup_logging()
+logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
-app.secret_key = os.environ.get('FOTOBOX_SECRET_KEY', 'fotobox_default_secret')
-
-# Registriere Blueprints für API-Module
-app.register_blueprint(api_auth.api_auth)
-app.register_blueprint(api_camera.api_camera)
-app.register_blueprint(api_camera_config.api_camera_config)
-app.register_blueprint(api_database.api_database)
-app.register_blueprint(api_filesystem.api_filesystem)
-app.register_blueprint(api_logging.api_logging)
-app.register_blueprint(api_settings.api_settings)
-app.register_blueprint(api_uninstall.api_uninstall)
-app.register_blueprint(api_update.api_update)
-app.register_blueprint(api_backend_service.api_backend_service, url_prefix='/api/backend_service')
-app.register_blueprint(api_files.api_files_bp)  # Neu: API für Dateiverwaltung
-
-# Cache-Kontrolle für die Testphase
-@app.after_request
-def add_no_cache_headers(response):
-    """
-    Fügt No-Cache-Header zu allen Antworten für die Testphase hinzu
-    """
-    # Prüfe, ob wir uns im Testmodus befinden
-    test_mode = os.environ.get('FOTOBOX_TEST_MODE', 'true').lower() == 'true'
+def create_app(test_config=None):
+    """Factory-Funktion zur Erstellung der Flask-App"""
     
-    if test_mode:
-        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
-        
-        # Debug-Header hinzufügen, um zu zeigen, dass die Cache-Deaktivierung aktiv ist
-        response.headers['X-Fotobox-Test-Mode'] = 'active'
+    # Flask-App erstellen
+    app = Flask(__name__)
     
-    return response
+    # Konfiguration laden
+    if test_config is None:
+        # Produktionskonfiguration
+        app.config.from_object('config.ProductionConfig')
+        # Umgebungsvariablen überschreiben Standardkonfiguration
+        if os.environ.get('FOTOBOX_CONFIG'):
+            app.config.from_envvar('FOTOBOX_CONFIG')
+    else:
+        # Testkonfiguration
+        app.config.from_mapping(test_config)
+    
+    # Secret Key setzen
+    app.secret_key = os.environ.get('FOTOBOX_SECRET_KEY', os.urandom(24))
+    
+    # CORS konfigurieren
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": app.config.get('CORS_ORIGINS', "*"),
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"]
+        }
+    })
+    
+    # Proxy-Konfiguration (für nginx)
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
+    )
+    
+    # Blueprints registrieren
+    api_auth.register_blueprint(app)
+    api_camera.register_blueprint(app)
+    api_camera_config.register_blueprint(app)
+    api_database.register_blueprint(app)
+    api_files.register_blueprint(app)
+    api_filesystem.register_blueprint(app)
+    api_folders.register_blueprint(app)
+    api_logging.register_blueprint(app)
+    api_settings.register_blueprint(app)
+    api_update.register_blueprint(app)
+    api_backend_service.register_blueprint(app)
+    
+    # Fehlerbehandlung
+    @app.errorhandler(400)
+    def bad_request(error):
+        return jsonify({
+            'success': False,
+            'error': 'Ungültige Anfrage',
+            'details': str(error)
+        }), 400
 
-# Datenbank initialisieren (bei jedem Start sicherstellen)
-subprocess.run(['python3', os.path.join(os.path.dirname(__file__), 'manage_database.py'), 'init'])
+    @app.errorhandler(401)
+    def unauthorized(error):
+        return jsonify({
+            'success': False,
+            'error': 'Nicht autorisiert'
+        }), 401
 
-# -------------------------------------------------------------------------------
-# check_first_run
-# -------------------------------------------------------------------------------
-# Funktion: Prüft, ob die Fotobox das erste Mal aufgerufen wird (keine Konfiguration vorhanden)
-# Rückgabe: True = erste Inbetriebnahme, False = Konfiguration vorhanden
-# -------------------------------------------------------------------------------
-def check_first_run():
-    return not manage_auth.is_password_set()
+    @app.errorhandler(403)
+    def forbidden(error):
+        return jsonify({
+            'success': False,
+            'error': 'Zugriff verweigert'
+        }), 403
 
-# -------------------------------------------------------------------------------
-# / (Root-Route)
-# -------------------------------------------------------------------------------
-@app.route('/')
-def root():
-    if check_first_run():
-        manage_logging.log("Erste Inbetriebnahme erkannt - Weiterleitung zur Setup-Seite")
-        return redirect('/setup.html')
-    manage_logging.debug("Startseite wird angezeigt")
-    return send_from_directory('../frontend', 'index.html')
+    @app.errorhandler(404)
+    def not_found(error):
+        return jsonify({
+            'success': False,
+            'error': 'Ressource nicht gefunden'
+        }), 404
 
-# -------------------------------------------------------------------------------
-# /login (GET, POST)
-# -------------------------------------------------------------------------------
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        pw = request.form.get('password', '')
-        if manage_auth.login(pw):
-            manage_logging.log(f"Erfolgreicher Web-Login von IP {request.remote_addr}")
-            return redirect(url_for('config'))
-        else:
-            manage_logging.warn(f"Fehlgeschlagener Web-Login-Versuch von IP {request.remote_addr}")
-            return render_template_string('<h3>Falsches Passwort!</h3><a href="/login">Zurück</a>')
-    return render_template_string('<form method="post">\n        <h3>Fotobox Konfiguration Login</h3>\n        Passwort: <input type="password" name="password" autofocus>\n        <input type="submit" value="Login">\n    </form>')
+    @app.errorhandler(500)
+    def server_error(error):
+        logger.error(f"Interner Serverfehler: {error}")
+        return jsonify({
+            'success': False,
+            'error': 'Interner Serverfehler'
+        }), 500
 
-# -------------------------------------------------------------------------------
-# /logout
-# -------------------------------------------------------------------------------
-@app.route('/logout')
-def logout():
-    manage_logging.log("Benutzer-Logout durchgeführt")
-    manage_auth.logout()
-    return redirect(url_for('login'))
+    # Globale Middleware für Logging
+    @app.before_request
+    def log_request_info():
+        logger.debug(f"Request: {request.method} {request.path}")
 
-# -------------------------------------------------------------------------------
-# /config (GET)
-# -------------------------------------------------------------------------------
-@app.route('/config')
-@manage_auth.login_required
-def config():
-    if check_first_run():
-        manage_logging.log("Zugriff auf /config während Ersteinrichtung - Weiterleitung zur Setup-Seite")
-        return redirect('/setup.html')
-    manage_logging.debug("Konfigurationsseite wird angezeigt")
-    return render_template_string('<h2>Fotobox Konfiguration</h2>\n    <a href="/logout">Logout</a>')
+    @app.after_request
+    def log_response_info(response):
+        logger.debug(f"Response: {response.status}")
+        return response
+    
+    return app
 
-# -------------------------------------------------------------------------------
-# API-Routen wurden in die entsprechenden API-Module ausgelagert
-# -------------------------------------------------------------------------------
-
-# -------------------------------------------------------------------------------
-# Diese Route wurde in das settings_api.py Modul ausgelagert
-# -------------------------------------------------------------------------------
-
-# -------------------------------------------------------------------------------
-# Diese Routen wurden in das auth_api.py Modul ausgelagert
-# -------------------------------------------------------------------------------
-
-# -------------------------------------------------------------------------------
-# Diese Routen wurden in das logging_api.py Modul ausgelagert
-# -------------------------------------------------------------------------------
-
-# -------------------------------------------------------------------------------
-# Error-Handler mit Logging
-# -------------------------------------------------------------------------------
-@app.errorhandler(404)
-def page_not_found(e):
-    """404-Handler mit Logging"""
-    path = request.path
-    ip = request.remote_addr
-    manage_logging.warn(f"404 Nicht gefunden: {path}", context={'ip': ip}, source="error_handler")
-    return jsonify({'error': 'not_found', 'message': 'Die angeforderte Resource wurde nicht gefunden'}), 404
-
-@app.errorhandler(500)
-def server_error(e):
-    """500-Handler mit Logging"""
-    path = request.path
-    ip = request.remote_addr
-    manage_logging.error(f"500 Server-Fehler: {path}", exception=e, context={'ip': ip}, source="error_handler")
-    return jsonify({'error': 'server_error', 'message': 'Ein interner Serverfehler ist aufgetreten'}), 500
-
-@app.errorhandler(403)
-def forbidden(e):
-    """403-Handler mit Logging"""
-    path = request.path
-    ip = request.remote_addr
-    manage_logging.warn(f"403 Verboten: {path}", context={'ip': ip}, source="error_handler")
-    return jsonify({'error': 'forbidden', 'message': 'Zugriff verweigert'}), 403
-
-@app.errorhandler(401)
-def unauthorized(e):
-    """401-Handler mit Logging"""
-    path = request.path
-    ip = request.remote_addr
-    manage_logging.warn(f"401 Nicht autorisiert: {path}", context={'ip': ip}, source="error_handler")
-    return jsonify({'error': 'unauthorized', 'message': 'Authentifizierung erforderlich'}), 401
-
-# -------------------------------------------------------------------------------
-# Diese Routen wurden in das database_api.py Modul ausgelagert
-# -------------------------------------------------------------------------------
-
-# -------------------------------------------------------------------------------
-# Flask-Anwendung starten, wenn Skript direkt aufgerufen wird
-# -------------------------------------------------------------------------------
-# Register API Blueprints
-# -------------------------------------------------------------------------------
-# Initialisiere alle API-Module
-api_auth.init_app(app)
-api_camera.init_app(app)
-api_camera_config.init_app(app)
-api_database.init_app(app)
-api_filesystem.init_app(app)
-api_logging.init_app(app)
-api_settings.init_app(app)
-api_uninstall.init_app(app)
-api_update.init_app(app)
-
-# -------------------------------------------------------------------------------
+# Anwendung starten
 if __name__ == '__main__':
-    # Initialisiere die Anwendung
-    manage_logging.log("Fotobox Backend wurde gestartet", source="app_startup")
-    app.run(debug=True, host='0.0.0.0')
+    app = create_app()
+    port = int(os.environ.get('FOTOBOX_PORT', 5000))
+    debug = os.environ.get('FOTOBOX_DEBUG', '0').lower() in ('true', '1', 't')
+    
+    try:
+        # Stelle sicher, dass alle notwendigen Verzeichnisse existieren
+        manage_folders.init_folders()
+        
+        # Stelle sicher, dass die Einstellungen initialisiert sind
+        manage_settings.load_settings()
+        
+        # Starte die Anwendung
+        logger.info(f"Starte Fotobox2 Backend auf Port {port} (Debug: {debug})")
+        app.run(
+            host='0.0.0.0',
+            port=port,
+            debug=debug,
+            use_reloader=debug
+        )
+    except Exception as e:
+        logger.error(f"Fehler beim Starten der Anwendung: {e}")
+        sys.exit(1)

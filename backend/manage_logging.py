@@ -12,47 +12,69 @@ import sqlite3
 from datetime import datetime
 import traceback
 
+# Initialisiere Basis-Logging für Bootstrapping-Phase
+bootstrap_logger = logging.getLogger('bootstrap')
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(logging.Formatter('[%(levelname)s] %(message)s'))
+bootstrap_logger.addHandler(console_handler)
+bootstrap_logger.setLevel(logging.INFO)
+
 # Pfadkonfiguration über das zentrale Verzeichnismanagement
 try:
     from manage_folders import get_log_dir, get_data_dir
     LOG_DIR = get_log_dir()
     DB_DIR = get_data_dir()
-except ImportError:
+    
+    # Stelle sicher, dass die Verzeichnisse existieren
+    os.makedirs(LOG_DIR, exist_ok=True)
+    os.makedirs(DB_DIR, exist_ok=True)
+    
+    bootstrap_logger.info(f"Log-Verzeichnis initialisiert: {LOG_DIR}")
+    bootstrap_logger.info(f"Datenbank-Verzeichnis initialisiert: {DB_DIR}")
+    
+except ImportError as e:
+    bootstrap_logger.error(f"Fehler beim Import von manage_folders: {e}")
     # Fallback falls manage_folders nicht verfügbar ist
     LOG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'log'))
     DB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data'))
+    
+    try:
+        os.makedirs(LOG_DIR, exist_ok=True)
+        os.makedirs(DB_DIR, exist_ok=True)
+        bootstrap_logger.info("Fallback-Verzeichnisse erstellt")
+    except Exception as e:
+        bootstrap_logger.error(f"Kritischer Fehler bei Verzeichniserstellung: {e}")
+        raise
 
 DB_PATH = os.path.join(DB_DIR, 'fotobox_logs.db')
-LOG_FILE = os.path.join(LOG_DIR, 'fotobox.log')
-DEBUG_LOG_FILE = os.path.join(LOG_DIR, 'fotobox_debug.log')
-
-# Stelle sicher, dass die Verzeichnisse existieren
-os.makedirs(LOG_DIR, exist_ok=True)
-os.makedirs(DB_DIR, exist_ok=True)
+LOG_FILE = os.path.join(LOG_DIR, f"{datetime.now().strftime('%Y-%m-%d')}_fotobox.log")
+DEBUG_LOG_FILE = os.path.join(LOG_DIR, f"{datetime.now().strftime('%Y-%m-%d')}_fotobox_debug.log")
 
 # Logging-Level konfigurieren - kann aus einer Konfigurationsdatei geladen werden
-# Default: INFO, für Entwicklung: DEBUG
 DEFAULT_LOG_LEVEL = logging.INFO
 
-# Setup für Dateilogging
-file_handler = logging.FileHandler(LOG_FILE)
-file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+try:
+    # Setup für Dateilogging
+    file_handler = logging.FileHandler(LOG_FILE)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
 
-# Setup für Debug-Logging
-debug_handler = logging.FileHandler(DEBUG_LOG_FILE)
-debug_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s - %(pathname)s:%(lineno)d'))
-debug_handler.setLevel(logging.DEBUG)
+    # Setup für Debug-Logging
+    debug_handler = logging.FileHandler(DEBUG_LOG_FILE)
+    debug_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s - %(pathname)s:%(lineno)d'))
+    debug_handler.setLevel(logging.DEBUG)
 
-# Setup für Konsolen-Logging
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(logging.Formatter('[%(levelname)s] %(message)s'))
-
-# Root Logger konfigurieren
-logger = logging.getLogger('fotobox')
-logger.setLevel(DEFAULT_LOG_LEVEL)
-logger.addHandler(file_handler)
-logger.addHandler(debug_handler)
-logger.addHandler(console_handler)
+    # Root Logger konfigurieren
+    logger = logging.getLogger('fotobox')
+    logger.setLevel(DEFAULT_LOG_LEVEL)
+    logger.addHandler(file_handler)
+    logger.addHandler(debug_handler)
+    logger.addHandler(console_handler)
+    
+    bootstrap_logger.info("Logging-System erfolgreich initialisiert")
+    
+except Exception as e:
+    bootstrap_logger.error(f"Fehler bei der Logger-Initialisierung: {e}")
+    raise
 
 def _init_db():
     """
