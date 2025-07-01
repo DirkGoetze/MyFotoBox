@@ -892,46 +892,12 @@ dlg_backend_integration() {
     fi
     
     # systemd-Service anlegen und starten
-    echo -n "[/] Erstelle systemd-Service ..."
-    install_backend_service
-    local service_pid=$!
-    show_spinner "$service_pid" "dots"
-    wait $service_pid
-    print_success "Backend-Service wurde erfolgreich eingerichtet."
-    
-    # Service aktivieren und starten
-    echo -n "[/] Aktiviere systemd-Service ..."
-    enable_backend_service
-    local enable_pid=$!
-    show_spinner "$enable_pid" "dots"
-    wait $enable_pid
+    setup_backend_service
     if [ $? -ne 0 ]; then
-        print_error "Fehler beim Aktivieren des Backend-Services."
-        print_info "Stellen Sie sicher, dass die systemd-Konfiguration korrekt ist."
+        print_error "Fehler beim Einrichten des systemd-Services für das Backend."
+        print_info "Stellen Sie sicher, dass die Datei manage_backend_service.sh vorhanden ist und korrekt funktioniert."
         return 1
     fi
-    print_success "Backend-Service wurde erfolgreich aktiviert."
-
-    # Service starten
-    echo -n "[/] Starte systemd-Service ..."
-    start_backend_service
-    local start_pid=$!
-    show_spinner "$start_pid" "dots"
-    wait $start_pid
-    if [ $? -ne 0 ]; then
-        print_error "Fehler beim Starten des Backend-Services."
-        print_info "Stellen Sie sicher, dass der Service korrekt konfiguriert ist."
-        return 1
-    fi
-    print_success "Backend-Service wurde erfolgreich gestartet."
-
-    # Prüfen, ob der Service läuft
-    echo -n "[/] Prüfe Backend-Service-Status ..."
-    if ! get_backend_service_status; then
-        print_error "Backend-Service läuft nicht. Bitte überprüfen Sie die Logs für weitere Details."
-        return 1
-    fi
-    print_success "Backend-Service läuft erfolgreich."
 
     return 0
 }

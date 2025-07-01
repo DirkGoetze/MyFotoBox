@@ -46,15 +46,39 @@ DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 # Funktionen zur Verwaltung des Backend-Services
 # ===========================================================================
 
+# install_backend_service
+install_backend_service_debug_0001="INFO: Installiere Backend-Service ..."
+install_backend_service_debug_0002="ERROR: Systemd-Service-Datei konnte nicht ermittelt werden."
+install_backend_service_debug_0003="INFO: Verwende systemd-Service-Datei: '%s'"
+install_backend_service_debug_0004="INFO: Verwende systemd-Service-Backup-Datei: '%s'"
+install_backend_service_debug_0005="ERROR: Erstellen des Backups fehlgeschlagen."
+install_backend_service_debug_0006="SUCCESS: Backup der bestehenden systemd-Service-Datei erstellt."
+install_backend_service_debug_0007="ERROR: Systemd-Service-Template nicht gefunden."
+install_backend_service_debug_0008="INFO: Verwende systemd-Service-Template: '%s'"
+install_backend_service_debug_0009="INFO: Kopiere systemd-Service-Template nach: '%s'"
+install_backend_service_debug_0010="ERROR: Kopieren der systemd-Service-Template-Datei fehlgeschlagen."
+install_backend_service_debug_0011="SUCCESS: Systemd-Service-Template erfolgreich kopiert."
+install_backend_service_debug_0012="ERROR: Ersetzen des Backend-Verzeichnisses in der Service-Datei fehlgeschlagen."
+install_backend_service_debug_0013="ERROR: Ersetzen des Python-Kommandos in der Service-Datei fehlgeschlagen."
+install_backend_service_debug_0014="SUCCESS: Platzhalter in der systemd-Service-Datei ersetzt."
+install_backend_service_debug_0015="ERROR: Systemd-Systemverzeichnis konnte nicht ermittelt werden."
+install_backend_service_debug_0016="INFO: Verwende systemd-Systemverzeichnis: '%s'"
+install_backend_service_debug_0017="INFO: Kopiere systemd-Service-Datei in den systemd-Systemordner: '%s'"
+install_backend_service_debug_0018="ERROR: Kopieren der systemd-Service-Datei in den systemd-Systemordner fehlgeschlagen."
+install_backend_service_debug_0019="SUCCESS: Systemd-Service-Datei erfolgreich in den systemd-Systemordner kopiert."
+install_backend_service_debug_0020="INFO: Aktualisiere systemd-Service"
+install_backend_service_debug_0021="ERROR: Aktualisieren des systemd-Service fehlgeschlagen."
+install_backend_service_debug_0022="SUCCESS: Systemd-Daemon neu geladen."
+
 install_backend_service() {
     # -----------------------------------------------------------------------
     # install_backend_service
     # -----------------------------------------------------------------------
-    # Funktion.: Erstellt im Systemd Konfigurationsordner eine Kopie der im
-    # .........  Templateordner vorliegenden Service Datei, ergänzt die 
-    # .........  Vorgaben. Im zweiten Schritt wird eine Kopie der systemd
-    # .........  Service-Datei in den System-Ordner, aktualisiert den systemd
-    # .........  Service und aktiviert den Service.
+    # Funktion.: Erstellt im systemd Konfigurationsordner des Projekt eine 
+    # .........  Kopie der im Templateordner vorliegenden Service Datei,  
+    # .........  ergänzt die Vorgaben. Im zweiten Schritt wird eine Kopie der 
+    # .........  systemd-Service-Datei in den System-Ordner kopiert, der 
+    # .........  Service aktualisiert und wieder aktiviert
     # Parameter: keine
     # Rückgabe.: 0 bei Erfolg, 1 bei Fehler
     # -----------------------------------------------------------------------
@@ -64,196 +88,268 @@ install_backend_service() {
     local systemd_file_template
 
     # Eröffnungsmeldung im Debug Modus
-    debug "INFO: Installiere Backend-Service ..."
+    debug "$install_backend_service_debug_0001"
 
     # Ermitteln des Pfades zur systemd-Service-Datei
     systemd_file="$(get_system_file systemd fotobox-backend 0)"
     if [ $? -ne 0 ] || [ -z "$systemd_file" ]; then
-        debug "ERROR: Systemd-Service-Datei konnte nicht ermittelt werden."
+        debug "$install_backend_service_debug_0002"
         return 1
     fi
-    debug "INFO: Verwende systemd-Service-Datei: '$systemd_file'"
+    debug "$(printf "$install_backend_service_debug_0003" "$systemd_file")"
 
     # --- 1. Erstelle Backup falls Service bereits existiert
     if [ -f "$systemd_file" ]; then
         # Ermitteln des Pfades zur systemd-Service-Backup-Datei
         systemd_file_backup="$(get_systemd_backup_dir)/$(basename $systemd_file).bak.$(date +%Y%m%d%H%M%S)"
-        debug "INFO: Verwende systemd-Service-Backup-Datei: '$systemd_file_backup'"
+        debug "$(printf "$install_backend_service_debug_0004" "$systemd_file_backup")"
         if ! cp "$systemd_file" "$systemd_file_backup"; then
-            debug "ERROR: Erstellen des Backups fehlgeschlagen."
+            debug "$install_backend_service_debug_0005"
             return 1
         fi
-        debug "SUCCESS: Backup der bestehenden systemd-Service-Datei erstellt."
+        debug "$install_backend_service_debug_0006"
     fi
 
     # --- 2. Kopiere systemd-Service-Template als neue Datei in den Config Ordner
     # Ermitteln des systemd-Service-Templates
     systemd_file_template="$(get_template_file systemd fotobox-backend)"
     if [ $? -ne 0 ] || [ -z "$systemd_file_template" ]; then
-        debug "ERROR: Systemd-Service-Template nicht gefunden."
+        debug "$install_backend_service_debug_0007"
         return 1
     fi
-    debug "INFO: Verwende systemd-Service-Template: '$systemd_file_template'"
+    debug "$(printf "$install_backend_service_debug_0008" "$systemd_file_template")"
     # Kopiere das Template in den Config-Ordner
+    debug "$(printf "$install_backend_service_debug_0009" "$systemd_file")"
     if ! cp "$systemd_file_template" "$systemd_file"; then
-        debug "ERROR: Kopieren des systemd-Service-Templates fehlgeschlagen."
+        debug "$install_backend_service_debug_0010"
         return 1
     fi
-    debug "SUCCESS: Systemd-Service-Template erfolgreich kopiert."
+    debug "$install_backend_service_debug_0011"
 
     # --- 3. Einsetzen der Werte in die systemd-Service-Datei
     # Hier können weitere Anpassungen an der Service-Datei vorgenommen werden
     # wie z.B. das Einfügen von Umgebungsvariablen oder Pfaden
     if ! sed -i "s|{{BACKEND_DIR}}|$(get_backend_dir)|g" "$systemd_file"; then
-        debug "ERROR: Ersetzen des Backend-Verzeichnisses in der Service-Datei fehlgeschlagen."
+        debug "$install_backend_service_debug_0012"
         return 1
     fi
     if ! sed -i "s|{{PYTHON_CMD}}|$(get_python_cmd)|g" "$systemd_file"; then
-        debug "ERROR: Ersetzen des Python-Kommandos in der Service-Datei fehlgeschlagen."
+        debug "$install_backend_service_debug_0013"
         return 1
     fi
-    debug "SUCCESS: Platzhalter in der systemd-Service-Datei ersetzt."
+    debug "$install_backend_service_debug_0014"
 
     # --- 4. Kopiere die systemd-Service-Datei in den systemd-Systemordner
     # Ermitteln des vollen Pfades zur systemd-Service-Datei im Systemordner
     systemd_file_system="$(get_system_file systemd fotobox-backend 1)"
     if [ $? -ne 0 ] || [ -z "$systemd_file_system" ]; then
-        debug "ERROR: Systemd-Systemverzeichnis konnte nicht ermittelt werden."
+        debug "$install_backend_service_debug_0015"
         return 1
     fi
-    debug "INFO: Verwende systemd-Systemverzeichnis: '$systemd_file_system'"
+    debug "$(printf "$install_backend_service_debug_0016" "$systemd_file_system")"
     # Kopiere die systemd-Service-Datei in den systemd-Service-Systemordner
+    debug "$(printf "$install_backend_service_debug_0017" "$systemd_file_system")"
     if ! cp "$systemd_file" "$systemd_file_system"; then
-        debug "ERROR: Kopieren der Service-Datei in den systemd-Systemordner fehlgeschlagen."
+        debug "$install_backend_service_debug_0018"
         return 1
     fi
-    debug "SUCCESS: Service-Datei erfolgreich in den systemd-Systemordner kopiert."
+    debug "$install_backend_service_debug_0019"
 
     # --- 5. Aktualisiere systemd
     # Aktualisiere den systemd-Daemon, damit die Änderungen wirksam werden
-    debug "INFO: Aktualisiere systemd..."
+    debug "$install_backend_service_debug_0020"
     if ! systemctl daemon-reload; then
-        debug "WARNING: Aktualisieren des systemd-Daemons fehlgeschlagen."
+        debug "$install_backend_service_debug_0021"
+        return 1
     else
-        debug "SUCCESS: Systemd-Daemon neu geladen."
+        debug "$install_backend_service_debug_0022"
     fi
 
     return 0
 }
 
-# -----------------------------------------------------------------------
 # enable_backend_service
-# -----------------------------------------------------------------------
-# Funktion: Aktiviert den Backend-Service, damit er beim Systemstart startet
-# Parameter: keine
-# Rückgabe: 0 bei Erfolg, 1 bei Fehler
+enable_backend_service_debug_0001="INFO: Aktiviere Backend-Service..."
+enable_backend_service_debug_0002="ERROR: Aktivieren des Backend-Services fehlgeschlagen."
+enable_backend_service_debug_0003="SUCCESS: Backend-Service aktiviert."
+
 enable_backend_service() {
-    print_info "Aktiviere Backend-Service..."
+    # -----------------------------------------------------------------------
+    # enable_backend_service
+    # -----------------------------------------------------------------------
+    # Funktion.: Aktiviert den Backend-Service, damit er beim Systemstart 
+    # .........  automatisch startet
+    # Parameter: keine
+    # Rückgabe.: 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    debug "$enable_backend_service_debug_0001"
+    
     if ! systemctl enable fotobox-backend; then
-        print_error "Aktivieren des Backend-Services fehlgeschlagen."
+        debug "$enable_backend_service_debug_0002"
         return 1
     fi
-    print_success "Backend-Service aktiviert."
+    
+    debug "$enable_backend_service_debug_0003"
     return 0
 }
 
-# -----------------------------------------------------------------------
 # disable_backend_service
-# -----------------------------------------------------------------------
-# Funktion: Deaktiviert den Backend-Service, sodass er nicht mehr beim Systemstart startet
-# Parameter: keine
-# Rückgabe: 0 bei Erfolg, 1 bei Fehler
+disable_backend_service_debug_0001="INFO: Deaktiviere Backend-Service..."
+disable_backend_service_debug_0002="ERROR: Deaktivieren des Backend-Services fehlgeschlagen."
+disable_backend_service_debug_0003="SUCCESS: Backend-Service deaktiviert."
+
 disable_backend_service() {
-    print_info "Deaktiviere Backend-Service..."
+    # -----------------------------------------------------------------------
+    # disable_backend_service
+    # -----------------------------------------------------------------------
+    # Funktion.: Deaktiviert den Backend-Service, sodass er nicht mehr beim 
+    # .........  Systemstart startet
+    # Parameter: keine
+    # Rückgabe.: 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    debug "$disable_backend_service_debug_0001"
+    
     if ! systemctl disable fotobox-backend; then
-        print_error "Deaktivieren des Backend-Services fehlgeschlagen."
+        debug "$disable_backend_service_debug_0002"
         return 1
     fi
-    print_success "Backend-Service deaktiviert."
+    
+    debug "$disable_backend_service_debug_0003"
     return 0
 }
 
-# -----------------------------------------------------------------------
 # start_backend_service
-# -----------------------------------------------------------------------
-# Funktion: Startet den Backend-Service
-# Parameter: keine
-# Rückgabe: 0 bei Erfolg, 1 bei Fehler
+start_backend_service_debug_0001="INFO: Starte Backend-Service..."
+start_backend_service_debug_0002="ERROR: Starten des Backend-Services fehlgeschlagen."
+start_backend_service_debug_0003="SUCCESS: Backend-Service erfolgreich gestartet."
+start_backend_service_debug_0004="WARNING: Backend-Service konnte nicht gestartet werden oder läuft nicht."
+start_backend_service_debug_0005="INFO: Der Status kann mit 'systemctl status fotobox-backend' überprüft werden."
+
 start_backend_service() {
-    print_info "Starte Backend-Service..."
+    # -----------------------------------------------------------------------
+    # start_backend_service
+    # -----------------------------------------------------------------------
+    # Funktion.: Startet den Backend-Service
+    # Parameter: keine
+    # Rückgabe.: 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    debug "$start_backend_service_debug_0001"
+    
     if ! systemctl start fotobox-backend; then
-        print_error "Starten des Backend-Services fehlgeschlagen."
+        debug "$start_backend_service_debug_0002"
         return 1
     fi
     
     # Überprüfe, ob der Service läuft
     if systemctl is-active --quiet fotobox-backend; then
-        print_success "Backend-Service erfolgreich gestartet."
+        debug "$start_backend_service_debug_0003"
         return 0
     else
-        print_warning "Backend-Service konnte nicht gestartet werden oder läuft nicht."
-        print_info "Der Status kann mit 'systemctl status fotobox-backend' überprüft werden."
+        debug "$start_backend_service_debug_0004"
+        debug "$start_backend_service_debug_0005"
         return 1
     fi
 }
 
-# -----------------------------------------------------------------------
 # stop_backend_service
-# -----------------------------------------------------------------------
-# Funktion: Stoppt den Backend-Service
-# Parameter: keine
-# Rückgabe: 0 bei Erfolg, 1 bei Fehler
+stop_backend_service_debug_0001="INFO: Stoppe Backend-Service..."
+stop_backend_service_debug_0002="ERROR: Stoppen des Backend-Services fehlgeschlagen."
+stop_backend_service_debug_0003="SUCCESS: Backend-Service gestoppt."
+
 stop_backend_service() {
-    print_info "Stoppe Backend-Service..."
+    # -----------------------------------------------------------------------
+    # stop_backend_service
+    # -----------------------------------------------------------------------
+    # Funktion.: Stoppt den Backend-Service
+    # Parameter: keine
+    # Rückgabe.: 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    debug "$stop_backend_service_debug_0001"
+
     if ! systemctl stop fotobox-backend; then
-        print_error "Stoppen des Backend-Services fehlgeschlagen."
+        debug "$stop_backend_service_debug_0002"
         return 1
     fi
-    print_success "Backend-Service gestoppt."
+    
+    # Überprüfe, ob der Service gestoppt wurde
+    if systemctl is-active --quiet fotobox-backend; then
+        debug "$stop_backend_service_debug_0002"
+        return 1
+    fi
+
+    debug "$stop_backend_service_debug_0003"
     return 0
 }
 
-# -----------------------------------------------------------------------
 # restart_backend_service
-# -----------------------------------------------------------------------
-# Funktion: Startet den Backend-Service neu
-# Parameter: keine
-# Rückgabe: 0 bei Erfolg, 1 bei Fehler
+restart_backend_service_debug_0001="INFO: Starte Backend-Service neu..."
+restart_backend_service_debug_0002="ERROR: Neustart des Backend-Services fehlgeschlagen."
+restart_backend_service_debug_0003="SUCCESS: Backend-Service erfolgreich neugestartet."
+restart_backend_service_debug_0004="WARNING: Backend-Service konnte nicht neugestartet werden oder läuft nicht."
+restart_backend_service_debug_0005="INFO: Der Status kann mit 'systemctl status fotobox-backend' überprüft werden."
+
 restart_backend_service() {
-    print_info "Starte Backend-Service neu..."
+    # -----------------------------------------------------------------------
+    # restart_backend_service
+    # -----------------------------------------------------------------------
+    # Funktion.: Startet den Backend-Service neu
+    # Parameter: keine
+    # Rückgabe.: 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    debug "$restart_backend_service_debug_0001"
+
     if ! systemctl restart fotobox-backend; then
-        print_error "Neustart des Backend-Services fehlgeschlagen."
+        debug "$restart_backend_service_debug_0002"
         return 1
     fi
     
     # Überprüfe, ob der Service läuft
     if systemctl is-active --quiet fotobox-backend; then
-        print_success "Backend-Service erfolgreich neugestartet."
+        debug "$restart_backend_service_debug_0003"
         return 0
     else
-        print_warning "Backend-Service konnte nicht neugestartet werden oder läuft nicht."
-        print_info "Der Status kann mit 'systemctl status fotobox-backend' überprüft werden."
+        debug "$restart_backend_service_debug_0004"
+        debug "$restart_backend_service_debug_0005"
         return 1
     fi
 }
 
-# -----------------------------------------------------------------------
 # get_backend_service_status
-# -----------------------------------------------------------------------
-# Funktion: Gibt den Status des Backend-Services zurück
-# Parameter: keine
-# Rückgabe: 0 wenn aktiv, 1 wenn inaktiv, 2 bei Fehler
+get_backend_service_status_debug_0001="INFO: Überprüfe Backend-Service-Status..."
+get_backend_service_status_debug_0002="SUCCESS: Backend-Service ist aktiv und läuft."
+get_backend_service_status_debug_0003="INFO: Backend-Service ist inaktiv (gestoppt)."
+get_backend_service_status_debug_0004="INFO: Backend-Service-Status: %s"
+get_backend_service_status_debug_0005="ERROR: Backend-Service-Status konnte nicht ermittelt werden."
+
 get_backend_service_status() {
+    # -----------------------------------------------------------------------
+    # get_backend_service_status
+    # -----------------------------------------------------------------------
+    # Funktion.: Gibt den Status des Backend-Services zurück
+    # Parameter: keine
+    # Rückgabe.: 0 wenn aktiv
+    # .........  1 wenn inaktiv
+    # .........  2 bei Fehler
+    # -----------------------------------------------------------------------
+    debug "$get_backend_service_status_debug_0001"
+
+    # Status des Backend-Services abfragen
     if systemctl is-active --quiet fotobox-backend; then
-        print_success "Backend-Service ist aktiv und läuft."
+        debug "$get_backend_service_status_debug_0002"
         return 0
     else
         status=$(systemctl is-active fotobox-backend)
         if [ "$status" = "inactive" ]; then
-            print_warning "Backend-Service ist inaktiv (gestoppt)."
+            debug "$get_backend_service_status_debug_0003"
+            return 1
+        elif [ "$status" = "failed" ]; then
+            debug "$(printf "$get_backend_service_status_debug_0004" "$status")"
+            return 2
+        elif [ -n "$status" ]; then
+            debug "$(printf "$get_backend_service_status_debug_0004" "$status")"
             return 1
         else
-            print_error "Backend-Service-Status: $status"
+            debug "$get_backend_service_status_debug_0005"
             return 2
         fi
     fi
@@ -305,24 +401,85 @@ uninstall_backend_service() {
     return 0
 }
 
-# -----------------------------------------------------------------------
-# setup_backend_service
-# -----------------------------------------------------------------------
-# Funktion: Führt die komplette Installation des Backend-Services durch
-# Parameter: keine
-# Rückgabe: 0 bei Erfolg, 1 bei Fehler
 setup_backend_service() {
-    # Installiere den Service
-    install_backend_service || return 1
-    
-    # Aktiviere den Service
-    enable_backend_service || return 1
-    
-    # Starte den Service
-    start_backend_service || return 1
+    # -----------------------------------------------------------------------
+    # setup_backend_service
+    # -----------------------------------------------------------------------
+    # Funktion: Führt die komplette Installation des Backend-Services durch
+    # Parameter: $1 - Optional: CLI oder JSON-Ausgabe. Wenn nicht angegeben, 
+    # .........       wird die Standardausgabe verwendet (CLI-Ausgabe)
+    # Rückgabe: 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    local output_mode="${1:-cli}"  # Standardmäßig CLI-Ausgabe
+    local service_pid
 
-    # Überprüfe den Status des Services
-    get_backend_service_status || return 1
+    if [ "$output_mode" = "json" ]; then
+        # Installiere den Service
+        install_backend_service || return 1
+    else
+        # Ausgabe im CLI-Modus, Spinner anzeigen
+        echo -n "[/] Installiere systemd-Backend-Service ..."
+        # Installiere den Service
+        install_backend_service
+        service_pid=$!
+        show_spinner "$service_pid" "dots"
+        # Überprüfe, ob die Installation erfolgreich war
+        if [ $? -ne 0 ]; then
+            print_error "Installation des Backend-Services fehlgeschlagen."
+            return 1
+        fi
+        print_success "systemd-Backend-Service wurde erfolgreich installiert."
+    fi
+
+    if [ "$output_mode" = "json" ]; then
+        # Aktiviere den Service
+        enable_backend_service || return 1
+    else
+        # Ausgabe im CLI-Modus, Spinner anzeigen
+        echo -n "[/] Aktiviere systemd-Backend-Service ..."
+        # Aktiviere den Service
+        enable_backend_service
+        service_pid=$!
+        show_spinner "$service_pid" "dots"
+        # Überprüfe, ob die Aktivierung erfolgreich war
+        if [ $? -ne 0 ]; then
+            print_error "Aktivierung des systemd-Backend-Services fehlgeschlagen."
+            return 1
+        fi
+        print_success "systemd-Backend-Service Autostart wurde erfolgreich aktiviert."
+    fi
     
+    if [ "$output_mode" = "json" ]; then
+        # Starte den Service
+        start_backend_service || return 1
+    else
+        # Ausgabe im CLI-Modus, Spinner anzeigen
+        echo -n "[/] Starte systemd-Backend-Service ..."
+        # Starte den Service
+        start_backend_service
+        service_pid=$!
+        show_spinner "$service_pid" "dots"
+        # Überprüfe, ob der Service erfolgreich gestartet wurde
+        if [ $? -ne 0 ]; then
+            print_error "systemd-Backend-Service konnte nicht gestartet werden. Bitte überprüfen Sie die Logs für weitere Details."
+            return 1
+        fi
+        print_success "systemd-Backend-Service wurde erfolgreich gestartet."
+
+
+    if [ "$output_mode" = "json" ]; then
+        # Überprüfe den Status des Services
+        get_backend_service_status || return 1
+    else
+        # Ausgabe im CLI-Modus, Spinner anzeigen
+        echo -n "[/] Prüfe systemd-Backend-Service-Status ..."
+        # Überprüfe den Status des Services
+        if ! get_backend_service_status; then
+            print_error "systemd-Backend-Service läuft nicht. Bitte überprüfen Sie die Logs für weitere Details."
+            return 1
+        fi
+        print_success "systemd-Backend-Service läuft und ist aktiv."
+    fi
+
     return 0
 }
