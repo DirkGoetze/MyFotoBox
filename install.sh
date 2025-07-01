@@ -740,7 +740,7 @@ set_systemd_service() {
     DEBUG_MOD_GLOBAL=1
 
     # Ermitteln des Pfads zur systemd-Service-Datei
-    systemd_file="$(get_system_file systemd)"
+    systemd_file="$(get_system_file systemd fotobox-backend)"
     if [ $? -ne 0 ] || [ -z "$systemd_file" ]; then
         print_error "Systemd-Service-Datei nicht gefunden."
         return 1
