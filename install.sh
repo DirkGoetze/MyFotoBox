@@ -729,6 +729,186 @@ dlg_prepare_structure() {
     esac
 }
 
+dlg_backend_integration() {
+    # -----------------------------------------------------------------------
+    # dlg_backend_integration
+    # -----------------------------------------------------------------------
+    # Funktion: Richtet das Python-Backend (venv, requirements, systemd) ein 
+    # ........  und startet es
+    # Rückgabe: 0 = OK, !=0 = Fehler
+    # -----------------------------------------------------------------------
+    ((STEP_COUNTER++))
+    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Python-Umgebung und Backend-Service werden eingerichtet ..."
+    local rc
+    local backend_dir
+    local venv_dir
+    local venv_output
+
+    # Pfade für Backend und Virtualenv ermitteln
+    backend_dir=$(get_backend_dir)
+    if [ $? -ne 0 ]; then
+        print_error "Fehler beim Ermitteln des Backend-Verzeichnisses."
+        return 1
+    fi
+    venv_dir=$(get_venv_dir)
+    if [ $? -ne 0 ]; then
+        print_error "Fehler beim Ermitteln des Backend-Verzeichnisses."
+        return 1
+    fi
+    
+    # Python venv anlegen, falls nicht vorhanden
+    if [ ! -d "$venv_dir" ]; then
+        echo -n "[/] Erstelle Python-Virtualenv..."
+        
+        # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
+        venv_output="$(get_tmp_file)"
+        
+        # Ermittlung des Python-Interpreters (python3 oder python)
+        local python_cmd
+        if command -v python3 &>/dev/null; then
+            python_cmd="python3"
+        elif command -v python &>/dev/null; then
+            python_cmd="python"
+        else
+            echo -e "\r  → [FEHLER] Kein Python-Interpreter gefunden. Bitte installieren Sie Python 3."
+            return 1
+        fi
+        
+        debug "Verwende Python-Interpreter: $python_cmd" "CLI" "dlg_backend_integration"
+        "$python_cmd" -m venv "$venv_dir" &> "$venv_output" &
+        local venv_pid=$!
+        show_spinner "$venv_pid" "dots"
+        wait $venv_pid
+        
+        # Logge die Ausgabe in die zentrale Logdatei
+        log "VENV CREATE AUSGABE: $(cat "$venv_output")" "install.sh" "venv_create"
+        
+        if [ $? -ne 0 ]; then
+            echo -e "\r  → [FEHLER] Virtualenv-Erstellung fehlgeschlagen."
+            print_error "Konnte venv nicht anlegen! Log-Auszug:"
+            tail -n 10 "$venv_output"
+            # Lösche temporäre Datei
+            rm -f "$venv_output"
+            return 1
+        else
+            echo -e "\r  → [OK] Python-Virtualenv erfolgreich erstellt."
+            # Lösche temporäre Datei
+            rm -f "$venv_output"
+        fi
+    else
+        echo "  → [OK] Python-Virtualenv existiert bereits."
+    fi
+    
+    # Abhängigkeiten installieren
+    echo -n "[/] Installiere/aktualisiere pip ..."
+    
+    # Python-Executable und pip-Pfad aus dem venv ermitteln
+    local python_bin="$venv_dir/bin/python3"
+    local pip_bin="$venv_dir/bin/pip"
+    
+    # Als Fallback prüfen wir, ob wir auf Windows sind (wo die Binaries in Scripts/ liegen)
+    if [ ! -f "$python_bin" ] && [ -f "$venv_dir/Scripts/python.exe" ]; then
+        python_bin="$venv_dir/Scripts/python.exe"
+        pip_bin="$venv_dir/Scripts/pip.exe"
+    fi
+    
+    # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
+    pip_output="$(get_tmp_file)"
+    
+    # Prüfen ob pip direkt oder via python -m pip aufgerufen werden soll
+    if [ -f "$pip_bin" ]; then
+        ("$pip_bin" install --upgrade pip) &> "$pip_output" &
+    else
+        ("$python_bin" -m pip install --upgrade pip) &> "$pip_output" &
+    fi
+    
+    local pip_pid=$!
+    show_spinner "$pip_pid" "dots"
+    wait $pip_pid
+    local pip_result=$?
+    
+    # Logge die Ausgabe in die zentrale Logdatei
+    log "PIP UPGRADE AUSGABE: $(cat "$pip_output")" "install.sh" "pip_upgrade"
+    
+    if [ $pip_result -ne 0 ]; then
+        echo -e "\r  → [FEHLER] Pip-Upgrade fehlgeschlagen."
+        print_error "Fehler beim Upgrade von pip. Log-Auszug:"
+        tail -n 10 "$pip_output"
+        # Lösche temporäre Datei
+        rm -f "$pip_output"
+        return 1
+    else
+        echo -e "\r  → [OK] Pip erfolgreich aktualisiert."
+        # Lösche temporäre Datei
+        rm -f "$pip_output"
+    fi
+    
+    echo -n "[/] Installiere Python-Abhängigkeiten ..."
+    
+    # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
+    req_output="$(get_tmp_file)"
+    
+    local conf_dir
+    if type -t get_config_dir >/dev/null; then
+        conf_dir=$(get_config_dir)
+    else
+        conf_dir="$INSTALL_DIR/conf"
+    fi
+    
+    # Python-Executable und pip-Pfad aus dem venv ermitteln
+    local python_bin="$venv_dir/bin/python3"
+    local pip_bin="$venv_dir/bin/pip"
+    
+    # Als Fallback prüfen wir, ob wir auf Windows sind (wo die Binaries in Scripts/ liegen)
+    if [ ! -f "$python_bin" ] && [ -f "$venv_dir/Scripts/python.exe" ]; then
+        python_bin="$venv_dir/Scripts/python.exe"
+        pip_bin="$venv_dir/Scripts/pip.exe"
+    fi
+    
+    # Prüfen ob pip direkt oder via python -m pip aufgerufen werden soll
+    if [ -f "$pip_bin" ]; then
+        debug "Verwende pip-Binary: $pip_bin" "CLI" "dlg_backend_integration"
+        ("$pip_bin" install -r "$conf_dir/requirements_python.inf") &> "$req_output" &
+    else
+        debug "Verwende python -m pip: $python_bin" "CLI" "dlg_backend_integration"
+        ("$python_bin" -m pip install -r "$conf_dir/requirements_python.inf") &> "$req_output" &
+    fi
+    
+    local req_pid=$!
+    show_spinner "$req_pid" "dots"
+    wait $req_pid
+    local req_result=$?
+    
+    # Logge die Ausgabe in die zentrale Logdatei
+    log "PIP REQUIREMENTS AUSGABE: $(cat "$req_output")" "install.sh" "pip_requirements"
+    
+    if [ $req_result -ne 0 ]; then
+        echo -e "\r  → [FEHLER] Installation der Python-Abhängigkeiten fehlgeschlagen."
+        print_error "Konnte Python-Abhängigkeiten nicht installieren! Log-Auszug:"
+        tail -n 10 "$req_output"
+        # Lösche temporäre Datei
+        rm -f "$req_output"
+        return 1
+    else
+        echo -e "\r  → [OK] Python-Abhängigkeiten erfolgreich installiert (inkl. bcrypt für sichere Passwörter)."
+        # Lösche temporäre Datei
+        rm -f "$req_output"
+    fi
+    # systemd-Service anlegen und starten
+    echo -n "[/] Erstelle systemd-Service-Datei..."
+    set_systemd_service &>/dev/null &
+    local service_pid=$!
+    show_spinner "$service_pid" "dots"
+    wait $service_pid
+    echo -e "\r  → [OK] Systemd-Service-Datei wurde erstellt."
+    
+    # Service installieren und starten
+    set_systemd_install
+    
+    print_success "Backend-Service wurde erfolgreich eingerichtet und gestartet."
+    return 0
+}
+
 dlg_nginx_installation() {
     # -----------------------------------------------------------------------
     # dlg_nginx_installation
@@ -945,188 +1125,6 @@ dlg_nginx_installation() {
         fi
     fi
     debug "Dialog erfolgreich abgeschlossen" "CLI" "dlg_nginx_installation"
-    return 0
-}
-
-dlg_backend_integration() {
-    # -----------------------------------------------------------------------
-    # dlg_backend_integration
-    # -----------------------------------------------------------------------
-    # Funktion: Richtet das Python-Backend (venv, requirements, systemd) ein 
-    # ........  und startet es
-    # Rückgabe: 0 = OK, !=0 = Fehler
-    # -----------------------------------------------------------------------
-    ((STEP_COUNTER++))
-    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Python-Umgebung und Backend-Service werden eingerichtet ..."
-    # Stellen Sie sicher, dass das Logverzeichnis vorhanden ist
-    # LOG_DIR wird bereits in set_fallback_security_settings korrekt gesetzt
-    
-    # Pfade für Backend und Virtualenv ermitteln
-    local backend_dir
-    local venv_dir
-    
-    if type -t get_backend_dir >/dev/null; then
-        backend_dir=$(get_backend_dir)
-    else
-        backend_dir="$INSTALL_DIR/backend"
-    fi
-    
-    if type -t get_venv_dir >/dev/null; then
-        venv_dir=$(get_venv_dir)
-    else
-        venv_dir="$backend_dir/venv"
-    fi
-    
-    # Python venv anlegen, falls nicht vorhanden
-    if [ ! -d "$venv_dir" ]; then
-        echo -n "[/] Erstelle Python-Virtualenv..."
-        
-        # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
-        venv_output="$(get_tmp_file)"
-        
-        # Ermittlung des Python-Interpreters (python3 oder python)
-        local python_cmd
-        if command -v python3 &>/dev/null; then
-            python_cmd="python3"
-        elif command -v python &>/dev/null; then
-            python_cmd="python"
-        else
-            echo -e "\r  → [FEHLER] Kein Python-Interpreter gefunden. Bitte installieren Sie Python 3."
-            return 1
-        fi
-        
-        debug "Verwende Python-Interpreter: $python_cmd" "CLI" "dlg_backend_integration"
-        "$python_cmd" -m venv "$venv_dir" &> "$venv_output" &
-        local venv_pid=$!
-        show_spinner "$venv_pid" "dots"
-        wait $venv_pid
-        
-        # Logge die Ausgabe in die zentrale Logdatei
-        log "VENV CREATE AUSGABE: $(cat "$venv_output")" "install.sh" "venv_create"
-        
-        if [ $? -ne 0 ]; then
-            echo -e "\r  → [FEHLER] Virtualenv-Erstellung fehlgeschlagen."
-            print_error "Konnte venv nicht anlegen! Log-Auszug:"
-            tail -n 10 "$venv_output"
-            # Lösche temporäre Datei
-            rm -f "$venv_output"
-            return 1
-        else
-            echo -e "\r  → [OK] Python-Virtualenv erfolgreich erstellt."
-            # Lösche temporäre Datei
-            rm -f "$venv_output"
-        fi
-    else
-        echo "  → [OK] Python-Virtualenv existiert bereits."
-    fi
-    
-    # Abhängigkeiten installieren
-    echo -n "[/] Installiere/aktualisiere pip ..."
-    
-    # Python-Executable und pip-Pfad aus dem venv ermitteln
-    local python_bin="$venv_dir/bin/python3"
-    local pip_bin="$venv_dir/bin/pip"
-    
-    # Als Fallback prüfen wir, ob wir auf Windows sind (wo die Binaries in Scripts/ liegen)
-    if [ ! -f "$python_bin" ] && [ -f "$venv_dir/Scripts/python.exe" ]; then
-        python_bin="$venv_dir/Scripts/python.exe"
-        pip_bin="$venv_dir/Scripts/pip.exe"
-    fi
-    
-    # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
-    pip_output="$(get_tmp_file)"
-    
-    # Prüfen ob pip direkt oder via python -m pip aufgerufen werden soll
-    if [ -f "$pip_bin" ]; then
-        ("$pip_bin" install --upgrade pip) &> "$pip_output" &
-    else
-        ("$python_bin" -m pip install --upgrade pip) &> "$pip_output" &
-    fi
-    
-    local pip_pid=$!
-    show_spinner "$pip_pid" "dots"
-    wait $pip_pid
-    local pip_result=$?
-    
-    # Logge die Ausgabe in die zentrale Logdatei
-    log "PIP UPGRADE AUSGABE: $(cat "$pip_output")" "install.sh" "pip_upgrade"
-    
-    if [ $pip_result -ne 0 ]; then
-        echo -e "\r  → [FEHLER] Pip-Upgrade fehlgeschlagen."
-        print_error "Fehler beim Upgrade von pip. Log-Auszug:"
-        tail -n 10 "$pip_output"
-        # Lösche temporäre Datei
-        rm -f "$pip_output"
-        return 1
-    else
-        echo -e "\r  → [OK] Pip erfolgreich aktualisiert."
-        # Lösche temporäre Datei
-        rm -f "$pip_output"
-    fi
-    
-    echo -n "[/] Installiere Python-Abhängigkeiten ..."
-    
-    # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
-    req_output="$(get_tmp_file)"
-    
-    local conf_dir
-    if type -t get_config_dir >/dev/null; then
-        conf_dir=$(get_config_dir)
-    else
-        conf_dir="$INSTALL_DIR/conf"
-    fi
-    
-    # Python-Executable und pip-Pfad aus dem venv ermitteln
-    local python_bin="$venv_dir/bin/python3"
-    local pip_bin="$venv_dir/bin/pip"
-    
-    # Als Fallback prüfen wir, ob wir auf Windows sind (wo die Binaries in Scripts/ liegen)
-    if [ ! -f "$python_bin" ] && [ -f "$venv_dir/Scripts/python.exe" ]; then
-        python_bin="$venv_dir/Scripts/python.exe"
-        pip_bin="$venv_dir/Scripts/pip.exe"
-    fi
-    
-    # Prüfen ob pip direkt oder via python -m pip aufgerufen werden soll
-    if [ -f "$pip_bin" ]; then
-        debug "Verwende pip-Binary: $pip_bin" "CLI" "dlg_backend_integration"
-        ("$pip_bin" install -r "$conf_dir/requirements_python.inf") &> "$req_output" &
-    else
-        debug "Verwende python -m pip: $python_bin" "CLI" "dlg_backend_integration"
-        ("$python_bin" -m pip install -r "$conf_dir/requirements_python.inf") &> "$req_output" &
-    fi
-    
-    local req_pid=$!
-    show_spinner "$req_pid" "dots"
-    wait $req_pid
-    local req_result=$?
-    
-    # Logge die Ausgabe in die zentrale Logdatei
-    log "PIP REQUIREMENTS AUSGABE: $(cat "$req_output")" "install.sh" "pip_requirements"
-    
-    if [ $req_result -ne 0 ]; then
-        echo -e "\r  → [FEHLER] Installation der Python-Abhängigkeiten fehlgeschlagen."
-        print_error "Konnte Python-Abhängigkeiten nicht installieren! Log-Auszug:"
-        tail -n 10 "$req_output"
-        # Lösche temporäre Datei
-        rm -f "$req_output"
-        return 1
-    else
-        echo -e "\r  → [OK] Python-Abhängigkeiten erfolgreich installiert (inkl. bcrypt für sichere Passwörter)."
-        # Lösche temporäre Datei
-        rm -f "$req_output"
-    fi
-    # systemd-Service anlegen und starten
-    echo -n "[/] Erstelle systemd-Service-Datei..."
-    set_systemd_service &>/dev/null &
-    local service_pid=$!
-    show_spinner "$service_pid" "dots"
-    wait $service_pid
-    echo -e "\r  → [OK] Systemd-Service-Datei wurde erstellt."
-    
-    # Service installieren und starten
-    set_systemd_install
-    
-    print_success "Backend-Service wurde erfolgreich eingerichtet und gestartet."
     return 0
 }
 
@@ -1356,10 +1354,10 @@ main() {
     run_step dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
     run_step dlg_prepare_users            # Erstelle Benutzer und Gruppe 'fotobox'
     run_step dlg_prepare_structure        # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
+    run_step dlg_backend_integration      # Python-Backend, venv, systemd-Service, Start
+    exit 0
     run_step dlg_nginx_installation       # NGINX-Konfiguration (Integration oder eigene Site)
     run_step dlg_firewall_config          # Firewall-Konfiguration für HTTP/HTTPS-Ports
-    exit 0
-    run_step dlg_backend_integration      # Python-Backend, venv, systemd-Service, Start
     run_step dlg_show_summary             # Zeige Zusammenfassung der Installation an
     
 }
