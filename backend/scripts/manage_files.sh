@@ -665,6 +665,7 @@ get_python_cmd() {
         echo "$PYTHON_EXEC"
         return 0
     fi
+    debug "INFO: Suche PYTHON Interpreter im VENV: $path_default und $path_fallback"
 
     # Python-Interpreter-Pfad ermitteln und setzen
     if [ -x "$path_default" ]; then
