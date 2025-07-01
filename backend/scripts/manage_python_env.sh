@@ -307,6 +307,7 @@ install_python_requirements() {
 
      # Führe den Befehl im Hintergrund aus und leite die Ausgabe in
     # die temporäre Datei um.
+    debug "INFO: $pip_cmd install -r $requirements_file"
     "$pip_cmd" install -r "$requirements_file" &> "$pip_output" &
     local pip_pid=$!
     # Warte auf den Abschluss des Hintergrundprozesses
@@ -352,9 +353,7 @@ setup_python_env() {
         # Erstellt ein Python Virtual Environment, Spinner anzeigen
         echo -n "[/] Erstelle Python Virtual Environment ..."
         # Erstellt ein Python Virtual Environment
-        DEBUG_MOD_GLOBAL=1
         create_python_env
-        DEBUG_MOD_GLOBAL=0
         service_pid=$!
         show_spinner "$service_pid" "dots"
         # Überprüfe, ob die Installation erfolgreich war
@@ -372,9 +371,7 @@ setup_python_env() {
         # Installiert/aktualisiert den Python-Paketmanager PIP, Spinner anzeigen
         echo -n "[/] Installiert/aktualisiert den Python-Paketmanager PIP ..."
         # Installiert/aktualisiert den Python-Paketmanager PIP
-        DEBUG_MOD_GLOBAL=1
         install_pip
-        DEBUG_MOD_GLOBAL=0
         service_pid=$!
         show_spinner "$service_pid" "dots"
         # Überprüfe, ob die Installation erfolgreich war
