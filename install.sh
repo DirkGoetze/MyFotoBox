@@ -403,83 +403,15 @@ set_structure() {
     # set_structure
     # -----------------------------------------------------------------------
     # Funktion: Prüft die Projektstruktur und delegiert die Ordnerstrukturierung an manage_folders.sh
-    debug "Starte mit INSTALL_DIR=$INSTALL_DIR" "CLI" "set_structure"
-    
-    # Prüfe, ob die benötigten Verzeichnisse und wichtige Dateien existieren
-    local backend_dir
-    local conf_dir
-    
-    if type -t get_backend_dir >/dev/null; then
-        backend_dir=$(get_backend_dir)
-    else
-        backend_dir="$INSTALL_DIR/backend"
-    fi
-    
-    if type -t get_config_dir >/dev/null; then
-        conf_dir=$(get_config_dir)
-    else
-        conf_dir="$INSTALL_DIR/conf"
-    fi
-    
-    if [ ! -d "$backend_dir" ] || [ ! -d "$backend_dir/scripts" ] || [ ! -f "$conf_dir/requirements_python.inf" ]; then
-        print_error "Fehler: Die Projektstruktur ist unvollständig. Bitte stellen Sie sicher, dass das Repository vollständig geklont wurde (inkl. backend/, backend/scripts/, conf/requirements_python.inf)."
-        return 10
-    fi
-    
-    # manage_folders.sh ausführbar machen
-    if [ -d "$backend_dir/scripts" ]; then
-        chmod +x "$backend_dir"/scripts/*.sh || true
-    else
-        chmod +x "$SCRIPT_DIR"/*.sh || true
-    fi
-    
-    # Prüfe, ob manage_folders.sh vorhanden ist
-    if [ ! -f "$backend_dir/scripts/manage_folders.sh" ] && [ ! -f "$SCRIPT_DIR/manage_folders.sh" ]; then
-        print_error "manage_folders.sh nicht gefunden. Die Projektstruktur scheint unvollständig zu sein."
-        debug "manage_folders.sh nicht gefunden" "CLI" "set_structure"
+    debug "Starte mit Prüfung der Projektstruktur" 
+    ensure_folder_structure
+    rc=$?
+    if [ $rc -ne 0 ]; then
+        print_error "Fehler bei der Prüfung der Projektstruktur. Bitte überprüfen Sie die Installation."
+        debug "Fehler bei der Prüfung der Projektstruktur" 
         return 1
     fi
-    
-    # Umgebungsvariablen für manage_folders.sh setzen
-    export INSTALL_DIR="$INSTALL_DIR"
-    export DATA_DIR="$DATA_DIR"
-    export BACKUP_DIR="$BACKUP_DIR"
-    export LOG_DIR="$LOG_DIR"
-    export FRONTEND_DIR="$FRONTEND_DIR"
-    export CONFIG_DIR="$CONFIG_DIR"
-    
-    # manage_folders.sh für die Ordnerstruktur nutzen
-    debug "Delegiere Ordnerverwaltung an manage_folders.sh" "CLI" "set_structure"
-    if [ -f "$backend_dir/scripts/manage_folders.sh" ]; then
-        if ! "$backend_dir/scripts/manage_folders.sh" ensure_structure; then
-            print_error "Fehler bei der Erstellung der Ordnerstruktur über manage_folders.sh."
-            debug "Fehler bei manage_folders.sh"
-            return 1
-        else
-            debug "Erstellung der Ordnerstruktur über manage_folders.sh Funktion ensure_structure erfolgreich"
-            exit 0
-        fi
-    elif [ -f "$SCRIPT_DIR/manage_folders.sh" ]; then
-        if ! "$SCRIPT_DIR/manage_folders.sh" ensure_structure; then
-            print_error "Fehler bei der Erstellung der Ordnerstruktur über manage_folders.sh."
-            debug "Fehler bei manage_folders.sh" "CLI" "set_structure"
-            return 1
-        fi
-    else
-        print_error "manage_folders.sh konnte nicht ausgeführt werden."
-        return 1
-    fi
-    echo "  → [OK] Abbruch"
-    exit 0
-
-    # Abschließende Rechteanpassung (Policy-Konformität)
-    if ! chown -R fotobox:fotobox "$INSTALL_DIR"; then
-        print_warning "chown auf $INSTALL_DIR fehlgeschlagen, Rechte könnten nicht vollständig korrekt sein."
-        debug "chown auf $INSTALL_DIR fehlgeschlagen" "CLI" "set_structure"
-        return 7
-    fi
-    
-    debug "Ordnerstruktur erfolgreich eingerichtet" "CLI" "set_structure"
+    debug "Ordnerstruktur erfolgreich geprüft"
     return 0
 }
 
