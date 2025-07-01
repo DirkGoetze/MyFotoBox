@@ -743,19 +743,43 @@ dlg_backend_integration() {
     local backend_dir
     local venv_dir
     local venv_output
+    local python_cmd
 
-    # Pfade für Backend und Virtualenv ermitteln
+    # Pfade für Backend-Verzeichnis ermitteln
     backend_dir=$(get_backend_dir)
     if [ $? -ne 0 ]; then
         print_error "Fehler beim Ermitteln des Backend-Verzeichnisses."
         return 1
     fi
+    debug "Verwende Backend-Verzeichnis: '$backend_dir'"
+
+    # Pfade für Python-Virtual-Environment-Verzeichnis ermitteln
     venv_dir=$(get_venv_dir)
     if [ $? -ne 0 ]; then
-        print_error "Fehler beim Ermitteln des Backend-Verzeichnisses."
+        print_error "Fehler beim Ermitteln des Python-Virtual-Environment-Verzeichnisses."
         return 1
     fi
-    
+    debug "Verwende Python-Virtual-Environment-Verzeichnis: '$venv_dir'"
+
+    # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
+    venv_output="$(get_tmp_file)"
+    if [ $? -ne 0 ]; then
+        print_error "Fehler beim Erstellen der temporären Datei für die Kommandoausgabe."
+        return 1
+    fi
+    debug "Verwende für Kommandoausgabe im Projektverzeichnis Temporäre Datei: '$venv_output'"
+
+    # Ermitteln des Python-Interpreters (python3 oder python)
+    python_cmd="$get_python_path"
+    if [ $? -ne 0 ]; then
+        print_error "Kein Python-Interpreter gefunden. Bitte installieren Sie Python 3."
+        return 1
+    fi
+    debug "Verwende Python-Interpreter: '$python_cmd'"
+
+    return 0
+
+
     # Python venv anlegen, falls nicht vorhanden
     if [ ! -d "$venv_dir" ]; then
         echo -n "[/] Erstelle Python-Virtualenv..."

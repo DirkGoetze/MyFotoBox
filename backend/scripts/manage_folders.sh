@@ -564,8 +564,11 @@ get_venv_dir() {
 # get_python_path
 get_python_path_debug_0001="INFO: Ermittle Pfad zum Python-Interpreter"
 get_python_path_debug_0002="SUCCESS: Verwende für Python-Interpreter \$PYTHON_EXEC: %s"
-get_python_path_debug_0003="SUCCESS: Verwendeter Pfad zum Python-Interpreter: %s"
-get_python_path_debug_0004="ERROR: Ermittlung des Python-Interpreter fehlgeschlagen. Python scheint nicht installiert zu sein!"
+get_python_path_debug_0003="SUCCESS: Verwende Standard-Python-Pfad: %s"
+get_python_path_debug_0004="SUCCESS: Verwende Fallback-Python-Pfad: %s"
+get_python_path_debug_0005="SUCCESS: Verwendeter als Fallback System-Python3 zum Python-Interpreter: %s"
+get_python_path_debug_0006="SUCCESS: Verwendeter als Fallback System-Python zum Python-Interpreter: %s"
+get_python_path_debug_0007="ERROR: Ermittlung des Python-Interpreter fehlgeschlagen. Python scheint nicht installiert zu sein!"
 
 get_python_path() {
     # -----------------------------------------------------------------------
@@ -604,27 +607,27 @@ get_python_path() {
         # Verwende Fallback-Python-Pfad, wenn ausführbar
         PYTHON_EXEC="$path_fallback"
         export PYTHON_EXEC
-        debug "$(printf "$get_python_path_debug_0003" "$PYTHON_EXEC")"
+        debug "$(printf "$get_python_path_debug_0004" "$PYTHON_EXEC")"
         echo "$PYTHON_EXEC"
         return 0
     elif command -v python3 &>/dev/null; then
         # Verwende System-Python3, wenn verfügbar
         PYTHON_EXEC="$(command -v python3)"
         export PYTHON_EXEC
-        debug "$(printf "$get_python_path_debug_0003" "$PYTHON_EXEC")"
+        debug "$(printf "$get_python_path_debug_0005" "$PYTHON_EXEC")"
         echo "$PYTHON_EXEC"
         return 0
     elif command -v python &>/dev/null; then
         # Verwende System-Python, als letzten Fallback
         PYTHON_EXEC="$(command -v python)"
         export PYTHON_EXEC
-        debug "$(printf "$get_python_path_debug_0003" "$PYTHON_EXEC")"
+        debug "$(printf "$get_python_path_debug_0006" "$PYTHON_EXEC")"
         echo "$PYTHON_EXEC"
         return 0
     else
         # Fehlerfall: Kein Python gefunden
         PYTHON_EXEC=""
-        debug "$get_python_path_debug_0004"
+        debug "$get_python_path_debug_0007"
         echo ""
         return 1
     fi
