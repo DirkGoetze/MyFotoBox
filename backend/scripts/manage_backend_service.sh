@@ -320,6 +320,9 @@ setup_backend_service() {
     
     # Starte den Service
     start_backend_service || return 1
+
+    # Überprüfe den Status des Services
+    get_backend_service_status || return 1
     
     return 0
 }
