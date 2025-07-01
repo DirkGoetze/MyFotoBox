@@ -612,6 +612,75 @@ set_python_venv() {
     rm -f "$venv_output"        
 }
 
+set_pip_venv() {
+    # -----------------------------------------------------------------------
+    # set_python_venv
+    # -----------------------------------------------------------------------
+    # Funktion: Installiert/aktualisiert pip im Python Virtual Environment 
+    # ........  für das Backend
+    # Parameter: Keine
+    # Rückgabe: 0 bei Erfolg, 1 bei Fehler
+    # Seiteneffekte: Benötigt Python 3 und venv-Modul, erstellt Verzeichnis
+    # -----------------------------------------------------------------------
+    local pip_cmd
+    local pip_output
+
+    # pip-Executable ermitteln
+    pip_cmd="$(get_pip_cmd)"
+    if [ $? -ne 0 ]; then
+        print_error "Kein pip-Interpreter gefunden. Bitte installieren Sie pip für Python 3."
+        return 1
+    fi
+    debug "Verwende pip-Binary: '$pip_cmd'"
+
+    # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
+    pip_output="$(get_tmp_file)"
+    if [ $? -ne 0 ]; then
+        print_error "Fehler beim Erstellen der temporären Datei für die Kommandoausgabe."
+        return 1
+    fi
+    debug "Verwende für Kommandoausgabe im Projektverzeichnis Temporäre Datei: '$pip_output'"
+
+    # Abhängigkeiten installieren
+    echo -n "[/] Installiere/aktualisiere pip ..."
+        
+    # Prüfen ob pip direkt oder via python -m pip aufgerufen werden soll
+    if [ -f "$pip_cmd" ]; then
+        ("$pip_cmd" install --upgrade pip) &> "$pip_output" &
+    else
+        # Python-Executable ermitteln
+        local python_cmd
+        python_cmd="$(get_python_cmd)"
+        if [ $? -ne 0 ]; then
+            print_error "Kein Python-Interpreter gefunden. Bitte installieren Sie Python 3."
+            return 1
+        fi
+        debug "Verwende Python-Interpreter: '$python_cmd'"
+
+        ("$python_cmd" -m pip install --upgrade pip) &> "$pip_output" &
+    fi
+    local pip_pid=$!
+    show_spinner "$pip_pid" "dots"
+    wait $pip_pid
+    local pip_result=$?
+    
+    # Logge die Ausgabe in die zentrale Logdatei
+    log "PIP UPGRADE AUSGABE: $(cat "$pip_output")" "install.sh" "pip_upgrade"
+    
+    if [ $pip_result -ne 0 ]; then
+        echo -e "\r  → [FEHLER] Pip-Upgrade fehlgeschlagen."
+        print_error "Fehler beim Upgrade von pip. Log-Auszug:"
+        tail -n 10 "$pip_output"
+        # Lösche temporäre Datei
+        rm -f "$pip_output"
+        return 1
+    fi
+
+    print_success "Pip erfolgreich aktualisiert."
+    # Lösche temporäre Datei
+    rm -f "$pip_output"
+}
+
 set_systemd_service() {
     # -----------------------------------------------------------------------
     # set_systemd_service
@@ -805,64 +874,6 @@ dlg_backend_integration() {
         return 1
     fi
 
-    local python_bin
-    local pip_bin
-    local pip_output
-
-    # Python-Executable ermitteln
-    python_bin="$(get_python_cmd)"
-    if [ $? -ne 0 ]; then
-        print_error "Kein Python-Interpreter gefunden. Bitte installieren Sie Python 3."
-        return 1
-    fi
-    debug "Verwende Python-Interpreter: '$python_bin'"
-
-    # pip-Executable ermitteln
-    pip_bin="$(get_pip_cmd)"
-    if [ $? -ne 0 ]; then
-        print_error "Kein pip-Interpreter gefunden. Bitte installieren Sie pip für Python 3."
-        return 1
-    fi
-    debug "Verwende pip-Binary: '$pip_bin'"
-
-    # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
-    pip_output="$(get_tmp_file)"
-    if [ $? -ne 0 ]; then
-        print_error "Fehler beim Erstellen der temporären Datei für die Kommandoausgabe."
-        return 1
-    fi
-    debug "Verwende für Kommandoausgabe im Projektverzeichnis Temporäre Datei: '$pip_output'"
-
-    # Abhängigkeiten installieren
-    echo -n "[/] Installiere/aktualisiere pip ..."
-        
-    # Prüfen ob pip direkt oder via python -m pip aufgerufen werden soll
-    if [ -f "$pip_bin" ]; then
-        ("$pip_bin" install --upgrade pip) &> "$pip_output" &
-    else
-        ("$python_bin" -m pip install --upgrade pip) &> "$pip_output" &
-    fi
-    
-    local pip_pid=$!
-    show_spinner "$pip_pid" "dots"
-    wait $pip_pid
-    local pip_result=$?
-    
-    # Logge die Ausgabe in die zentrale Logdatei
-    log "PIP UPGRADE AUSGABE: $(cat "$pip_output")" "install.sh" "pip_upgrade"
-    
-    if [ $pip_result -ne 0 ]; then
-        echo -e "\r  → [FEHLER] Pip-Upgrade fehlgeschlagen."
-        print_error "Fehler beim Upgrade von pip. Log-Auszug:"
-        tail -n 10 "$pip_output"
-        # Lösche temporäre Datei
-        rm -f "$pip_output"
-        return 1
-    else
-        echo -e "\r  → [OK] Pip erfolgreich aktualisiert."
-        # Lösche temporäre Datei
-        rm -f "$pip_output"
-    fi
     
     return 0
 
@@ -879,12 +890,12 @@ dlg_backend_integration() {
     fi
     
     # Python-Executable und pip-Pfad aus dem venv ermitteln
-    local python_bin="$venv_dir/bin/python3"
+    local python_cmd="$venv_dir/bin/python3"
     local pip_bin="$venv_dir/bin/pip"
     
     # Als Fallback prüfen wir, ob wir auf Windows sind (wo die Binaries in Scripts/ liegen)
-    if [ ! -f "$python_bin" ] && [ -f "$venv_dir/Scripts/python.exe" ]; then
-        python_bin="$venv_dir/Scripts/python.exe"
+    if [ ! -f "$python_cmd" ] && [ -f "$venv_dir/Scripts/python.exe" ]; then
+        python_cmd="$venv_dir/Scripts/python.exe"
         pip_bin="$venv_dir/Scripts/pip.exe"
     fi
     
@@ -893,8 +904,8 @@ dlg_backend_integration() {
         debug "Verwende pip-Binary: $pip_bin" "CLI" "dlg_backend_integration"
         ("$pip_bin" install -r "$conf_dir/requirements_python.inf") &> "$req_output" &
     else
-        debug "Verwende python -m pip: $python_bin" "CLI" "dlg_backend_integration"
-        ("$python_bin" -m pip install -r "$conf_dir/requirements_python.inf") &> "$req_output" &
+        debug "Verwende python -m pip: $python_cmd" "CLI" "dlg_backend_integration"
+        ("$python_cmd" -m pip install -r "$conf_dir/requirements_python.inf") &> "$req_output" &
     fi
     
     local req_pid=$!
