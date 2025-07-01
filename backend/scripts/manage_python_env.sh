@@ -234,12 +234,102 @@ install_pip() {
     fi
 
     # Erfolgreiche Erstellung des Python-Virtual-Environment
-    debug "$install_pip_log_0006"
+    debug "$install_pip_debug_0011"
     log "$install_pip_log_0006"
     # Lösche temporäre Datei
     rm -f "$venv_output"        
     return 0
 }
+
+# install_python_requirements
+install_python_requirements_debug_0001="INFO: Installieren der Python-Virtual-Environment Abhängigkeiten..."
+install_python_requirements_debug_0002="ERROR: Fehler beim Erstellen der temporären Datei für die Kommandoausgabe."
+install_python_requirements_debug_0003="SUCCESS: Temporäre Datei für Kommandoausgabe im Projektverzeichnis: '%s'"
+install_python_requirements_debug_0004="INFO: Ermitteln des Pfads zur Python-Anforderungsdatei..."
+install_python_requirements_debug_0005="ERROR: Python-Anforderungsdatei nicht gefunden."
+install_python_requirements_debug_0006="SUCCESS: Python-Anforderungsdatei: '%s'"
+install_python_requirements_debug_0007="INFO: Ermitteln des Python-Paketmanager (PIP)..."
+install_python_requirements_debug_0008="ERROR: Kein Python-Paketmanager (PIP) gefunden. Bitte installieren Sie Python-Paketmanager (PIP) für Python 3."
+install_python_requirements_debug_0009="SUCCESS: Python-Paketmanager (PIP): '%s'"
+install_python_requirements_debug_0010="Installation der Python-Abhängigkeiten fehlgeschlagen. Konnte Abhängigkeiten nicht installieren! Log-Auszug: %s"
+install_python_requirements_debug_0011="SUCCESS: Python-Abhängigkeiten erfolgreich installiert."
+
+install_python_requirements_log_0001="ERROR: Fehler beim Erstellen der temporären Datei für die Kommandoausgabe."
+install_python_requirements_log_0002="ERROR: Python-Anforderungsdatei nicht gefunden."
+install_python_requirements_log_0003="ERROR: Python-Paketmanager (PIP) nicht gefunden. Bitte installieren Sie Python-Paketmanager (PIP) für Python 3."
+install_python_requirements_log_0004="PIP install AUSGABE: %s"
+install_python_requirements_log_0005="ERROR: Konnte Abhängigkeiten nicht installieren! Log-Auszug: %s. Log-Auszug: %s"
+install_python_requirements_log_0006="SUCCESS: Python-Abhängigkeiten erfolgreich installiert."
+
+install_python_requirements() {
+    # -----------------------------------------------------------------------
+    # set_python_requirements
+    # -----------------------------------------------------------------------
+    # Funktion.: Installiert die Python-Abhängigkeiten für das Backend
+    # Parameter: Keine
+    # Rückgabe.: 0 bei Erfolg
+    # .........  1 bei Fehler
+    # Seiteneffekte: Benötigt Python 3 und venv-Modul, erstellt Verzeichnis
+    # -----------------------------------------------------------------------
+    local pip_output
+    local requirements_file
+    local pip_cmd
+
+    # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
+    debug "$install_python_requirements_debug_0001"
+    pip_output="$(get_tmp_file)"
+    if [ $? -ne 0 ]; then
+        debug "$install_python_requirements_debug_0002"
+        log "$install_python_requirements_log_0001"
+        return 1
+    fi
+    debug "$(printf "$install_python_requirements_debug_0003" "$pip_output")"
+
+    # Ermitteln des Pfads zur Python-Anforderungsdatei
+    debug "$install_python_requirements_debug_0004"
+    requirements_file="$(get_requirements_python_file)"
+    if [ $? -ne 0 ] || [ -z "$requirements_file" ]; then
+        debug "$install_python_requirements_debug_0005"
+        log "$install_python_requirements_log_0002"
+        return 1
+    fi
+    debug "$(printf "$install_python_requirements_debug_0006" "$requirements_file")"
+
+    # Ermitteln des Python-Paketmanager (PIP)
+    debug "$install_python_requirements_debug_0007"
+    pip_cmd="$(get_pip_cmd)"
+    if [ $? -ne 0 ]; then
+        debug "$install_python_requirements_debug_0008"
+        log "$install_python_requirements_log_0003"
+        return 1
+    fi
+    debug "$(printf "$install_python_requirements_debug_0009" "$pip_cmd")"
+
+     # Führe den Befehl im Hintergrund aus und leite die Ausgabe in
+    # die temporäre Datei um.
+    "$pip_cmd" install -r "$requirements_file" &> "$pip_output" &
+    local pip_pid=$!
+    # Warte auf den Abschluss des Hintergrundprozesses
+    wait $pip_pid
+
+    # Ausgabe des Hintergrundprozesses in die Logdatei übernehmen
+    log "$(printf "$install_python_requirements_log_0004" "$(cat "$pip_output")")"
+    
+    if [ $? -ne 0 ]; then
+        debug "$(printf "$install_python_requirements_debug_0010" "$(tail -n 10 "$pip_output")")"
+        log "$(printf "$install_python_requirements_log_0005" "$(tail -n 10 "$pip_output")")"
+        # Lösche temporäre Datei
+        rm -f "$pip_output"
+        return 1
+    fi
+
+    debug "$install_python_requirements_debug_0011"
+    log "$install_python_requirements_log_0006"
+    # Lösche temporäre Datei
+    rm -f "$pip_output"
+    return 0
+}
+
 
 # setup_python_env
 
@@ -291,4 +381,24 @@ setup_python_env() {
         print_success "Python-Paketmanager PIP wurde erfolgreich installiert/aktualisiert."
     fi
 
+    if [ "$output_mode" = "json" ]; then
+        # Installieren der Python-Abhängigkeiten
+        install_python_requirements || return 1
+    else
+        # Installieren der Python-Abhängigkeiten, Spinner anzeigen
+        echo -n "[/] Installiert/aktualisiert die Python-Abhängigkeiten ..."
+        # Installiert/aktualisiert die Python-Abhängigkeiten
+        install_python_requirements
+        service_pid=$!
+        show_spinner "$service_pid" "dots"
+        # Überprüfe, ob die Installation erfolgreich war
+        if [ $? -ne 0 ]; then
+            print_error "Installation/Aktualisierung der Python-Abhängigkeiten fehlgeschlagen."
+            return 1
+        fi
+        print_success "Python-Abhängigkeiten wurden erfolgreich installiert/aktualisiert."
+    fi
+
+    # Erfolgreiche Installation der Python-Umgebung
+    return 0
 }
