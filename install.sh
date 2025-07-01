@@ -764,7 +764,7 @@ set_systemd_service() {
     debug "INFO: Verwende Python-Interpreter: '$python_cmd'"
 
     # Ermitteln des systemd-Service-Templates
-    systemd_template="$(get_systemd_service_template)"
+    systemd_template="$(get_template_file systemd fotobox-backend)"
     if [ $? -ne 0 ] || [ -z "$systemd_template" ]; then
         print_error "Systemd-Service-Template nicht gefunden."
         return 1
