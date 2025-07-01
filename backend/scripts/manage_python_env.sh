@@ -379,9 +379,7 @@ setup_python_env() {
         # Installieren der Python-Abhängigkeiten, Spinner anzeigen
         echo -n "[/] Installiert/aktualisiert die Python-Abhängigkeiten ..."
         # Installiert/aktualisiert die Python-Abhängigkeiten
-        DEBUG_MOD_GLOBAL=1
         install_python_requirements
-        DEBUG_MOD_GLOBAL=0
         service_pid=$!
         show_spinner "$service_pid" "dots"
         # Überprüfe, ob die Installation erfolgreich war

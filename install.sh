@@ -545,28 +545,6 @@ install_system_requirements() {
     fi
 }
 
-set_systemd_install() {
-    # -----------------------------------------------------------------------
-    # set_systemd_install
-    # -----------------------------------------------------------------------
-    # Funktion: Nutzt manage_backend_service.sh um den systemd-Service zu installieren
-    # Rückgabe: 0 bei Erfolg, 1 bei Fehler
-    
-    # Stelle sicher, dass das Modul geladen ist
-    if ! source "$SCRIPT_DIR/manage_backend_service.sh" 2>/dev/null; then
-        echo "  → [FEHLER] Backend-Service-Modul konnte nicht geladen werden."
-        return 1
-    fi
-    
-    # Führe die Einrichtung des Backend-Services durch
-    if ! setup_backend_service; then
-        echo "  → [FEHLER] Backend-Service konnte nicht eingerichtet werden."
-        return 1
-    fi
-    
-    return 0
-}
-
 # ===========================================================================
 # Dialogfunktionen
 # ===========================================================================
@@ -696,10 +674,8 @@ dlg_backend_integration() {
     fi
 
     # systemd-Service anlegen und starten
-    setup_backend_service
-    if [ $? -ne 0 ]; then
+    if ! setup_backend_service; then
         print_error "Fehler beim Einrichten des systemd-Services für das Backend."
-        print_info "Stellen Sie sicher, dass die Datei manage_backend_service.sh vorhanden ist und korrekt funktioniert."
         return 1
     fi
 
