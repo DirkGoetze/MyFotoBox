@@ -1,22 +1,10 @@
-# Python-Abhängigkeiten für Fotobox2
-# Format: paket>=version
-
-# Web-Framework und Routing
 Flask>=2.0.0
-Flask-CORS>=3.0.10  # Für Cross-Origin Resource Sharing
-requests>=2.26.0    # Für HTTP-Anfragen von Python aus
-
-# Sicherheit und Authentifizierung
+Flask-CORS>=3.0.10
+requests>=2.26.0
 bcrypt>=3.2.0
-
-# Bildverarbeitung
 Pillow>=9.0.0
-opencv-python>=4.5.0  # Für Kamerasteuerung und Bildverarbeitung
-
-# Kamera-Steuerung
-gphoto2>=2.3.0  # Für DSLR-Kamerasteuerung (optional)
-pyrealsense2>=2.50.0  # Für Intel RealSense Tiefensensor-Kameras (optional)
-numpy>=1.20.0  # Für Bildverarbeitung und RealSense-Unterstützung
-
-# Systemüberwachung
+opencv-python>=4.5.0
+gphoto2>=2.3.0
+pyrealsense2>=2.50.0
+numpy>=1.20.0
 psutil>=5.9.0
