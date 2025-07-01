@@ -8,6 +8,7 @@ Es nutzt das manage_folders-Modul für die eigentliche Implementierung.
 """
 
 import os
+import shutil
 from typing import Dict, Any
 from flask import Blueprint, jsonify, request
 import logging
