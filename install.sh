@@ -737,6 +737,8 @@ set_systemd_service() {
     local python_cmd
     local systemd_template
 
+    DEBUG_MOD_GLOBAL=1
+
     # Ermitteln des Pfads zur systemd-Service-Datei
     systemd_file="$(get_system_file systemd)"
     if [ $? -ne 0 ] || [ -z "$systemd_file" ]; then
@@ -800,6 +802,8 @@ EOF
     log "Systemd-Service-Datei erfolgreich erstellt: $systemd_file"
     print_success "Systemd-Service-Datei erfolgreich erstellt: $systemd_file"
     
+    DEBUG_MOD_GLOBAL=0
+
     return 0
 }
 
