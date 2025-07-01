@@ -544,7 +544,7 @@ get_venv_dir() {
 
     # Verwende die für diesen Ordner definierten Pfade
     # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
-    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 0 0)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_venv_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig

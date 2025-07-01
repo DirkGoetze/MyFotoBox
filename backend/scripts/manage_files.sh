@@ -680,20 +680,20 @@ get_python_cmd() {
         debug "$(printf "$get_python_cmd_debug_0004" "$PYTHON_EXEC")"
         echo "$PYTHON_EXEC"
         return 0
-    elif command -v python3 &>/dev/null; then
-        # Verwende System-Python3, wenn verfügbar
-        PYTHON_EXEC="$(command -v python3)"
-        export PYTHON_EXEC
-        debug "$(printf "$get_python_cmd_debug_0005" "$PYTHON_EXEC")"
-        echo "$PYTHON_EXEC"
-        return 0
-    elif command -v python &>/dev/null; then
-        # Verwende System-Python, als letzten Fallback
-        PYTHON_EXEC="$(command -v python)"
-        export PYTHON_EXEC
-        debug "$(printf "$get_python_cmd_debug_0006" "$PYTHON_EXEC")"
-        echo "$PYTHON_EXEC"
-        return 0
+    #elif command -v python3 &>/dev/null; then
+    #    # Verwende System-Python3, wenn verfügbar
+    #    PYTHON_EXEC="$(command -v python3)"
+    #    export PYTHON_EXEC
+    #    debug "$(printf "$get_python_cmd_debug_0005" "$PYTHON_EXEC")"
+    #    echo "$PYTHON_EXEC"
+    #    return 0
+    #elif command -v python &>/dev/null; then
+    #    # Verwende System-Python, als letzten Fallback
+    #    PYTHON_EXEC="$(command -v python)"
+    #    export PYTHON_EXEC
+    #    debug "$(printf "$get_python_cmd_debug_0006" "$PYTHON_EXEC")"
+    #    echo "$PYTHON_EXEC"
+    #    return 0
     else
         # Fehlerfall: Kein Python gefunden
         PYTHON_EXEC=""
@@ -757,39 +757,39 @@ get_pip_cmd() {
     fi
 
     # 3. Fallback: Python-Module pip verwenden
-    python_cmd=$(get_python_cmd)
+    # python_cmd=$(get_python_cmd)
 
-    if [ -n "$python_cmd" ] && [ -f "$python_cmd" ] && [ -x "$python_cmd" ]; then
-        # Prüfen, ob das Python-Modul pip verfügbar ist
-        if "$python_cmd" -c "import pip" &>/dev/null; then
-            debug "$(printf "$get_pip_cmd_debug_0005" "$python_cmd")"
-            PIP_EXEC="$python_cmd -m pip"
-            export PIP_EXEC
-            echo "$PIP_EXEC"
-            return 0
-        fi
-    fi
+    #if [ -n "$python_cmd" ] && [ -f "$python_cmd" ] && [ -x "$python_cmd" ]; then
+    #    # Prüfen, ob das Python-Modul pip verfügbar ist
+    #    if "$python_cmd" -c "import pip" &>/dev/null; then
+    #        debug "$(printf "$get_pip_cmd_debug_0005" "$python_cmd")"
+    #        PIP_EXEC="$python_cmd -m pip"
+    #        export PIP_EXEC
+    #        echo "$PIP_EXEC"
+    #        return 0
+    #    fi
+    #fi
 
     # 4. Systemweite pip-Installation prüfen
-    debug "$get_pip_cmd_debug_0006"
+    # debug "$get_pip_cmd_debug_0006"
 
-    if command -v pip3 &>/dev/null; then
-        pip_cmd=$(command -v pip3)
-        debug "$(printf "$get_pip_cmd_debug_0007" "$pip_cmd")"
-        PIP_EXEC="$pip_cmd"
-        export PIP_EXEC
-        echo "$PIP_EXEC"
-        return 0
-    fi
+    #if command -v pip3 &>/dev/null; then
+    #    pip_cmd=$(command -v pip3)
+    #    debug "$(printf "$get_pip_cmd_debug_0007" "$pip_cmd")"
+    #    PIP_EXEC="$pip_cmd"
+    #    export PIP_EXEC
+    #    echo "$PIP_EXEC"
+    #    return 0
+    #fi
 
-    if command -v pip &>/dev/null; then
-        pip_cmd=$(command -v pip)
-        debug "$(printf "$get_pip_cmd_debug_0008" "$pip_cmd")"
-        PIP_EXEC="$pip_cmd"
-        export PIP_EXEC
-        echo "$PIP_EXEC"
-        return 0
-    fi
+    #if command -v pip &>/dev/null; then
+    #    pip_cmd=$(command -v pip)
+    #    debug "$(printf "$get_pip_cmd_debug_0008" "$pip_cmd")"
+    #    PIP_EXEC="$pip_cmd"
+    #    export PIP_EXEC
+    #    echo "$PIP_EXEC"
+    #    return 0
+    #fi
 
     # 5. Keine pip-Installation gefunden
     debug "$get_pip_cmd_debug_0009"
