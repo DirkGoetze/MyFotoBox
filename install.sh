@@ -777,6 +777,30 @@ dlg_backend_integration() {
     fi
     debug "Verwende Python-Interpreter: '$python_cmd'"
 
+    # Einrichten der Python-Environment-Umgebung
+    debug "Verwende Python-Interpreter '$python_cmd' zur Einrichtung des Virtualenvs"
+    "$python_cmd" -m venv "$venv_dir" &> "$venv_output" &
+    local venv_pid=$!
+    show_spinner "$venv_pid" "dots"
+    wait $venv_pid
+    
+    # Logge die Ausgabe in die zentrale Logdatei
+    log "VENV CREATE AUSGABE: $(cat "$venv_output")" "install.sh" "venv_create"
+    
+    if [ $? -ne 0 ]; then
+        echo -e "\r  → [FEHLER] Virtualenv-Erstellung fehlgeschlagen."
+        print_error "Konnte venv nicht anlegen! Log-Auszug:"
+        tail -n 10 "$venv_output"
+        # Lösche temporäre Datei
+        rm -f "$venv_output"
+        return 1
+    else
+        echo -e "\r  → [OK] Python-Virtualenv erfolgreich erstellt."
+        # Lösche temporäre Datei
+        rm -f "$venv_output"
+    fi
+
+
     return 0
 
 
