@@ -1358,6 +1358,7 @@ main() {
     run_step dlg_prepare_structure        # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
     run_step dlg_nginx_installation       # NGINX-Konfiguration (Integration oder eigene Site)
     run_step dlg_firewall_config          # Firewall-Konfiguration für HTTP/HTTPS-Ports
+    exit 0
     run_step dlg_backend_integration      # Python-Backend, venv, systemd-Service, Start
     run_step dlg_show_summary             # Zeige Zusammenfassung der Installation an
     
