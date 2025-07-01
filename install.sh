@@ -732,24 +732,35 @@ set_systemd_service() {
     # -----------------------------------------------------------------------
     # Funktion: Erstellt oder kopiert die systemd-Service-Datei für das Backend
     # Rückgabe: keine (Seitenwirkung: legt Datei an, gibt Erfolgsmeldung aus)
+    local systemd_file
 
-    if [ ! -f "$SYSTEMD_SERVICE" ]; then
-        local backend_dir
-        local venv_dir
-        
-        if type -t get_backend_dir >/dev/null; then
-            backend_dir=$(get_backend_dir)
-        else
-            backend_dir="$INSTALL_DIR/backend"
-        fi
-        
-        if type -t get_venv_dir >/dev/null; then
-            venv_dir=$(get_venv_dir)
-        else
-            venv_dir="$backend_dir/venv"
-        fi
-        
-        cat > "$SYSTEMD_SERVICE" <<EOF
+    # Ermitteln des Pfads zur systemd-Service-Datei
+    systemd_file="$(get_systemd_service_file "systemd")"
+    if [ $? -ne 0 ] || [ -z "$systemd_file" ]; then
+        print_error "Systemd-Service-Datei nicht gefunden."
+        return 1
+    fi
+    debug "Verwende systemd-Service-Datei: '$systemd_file'"
+
+    # Ermitteln des Backend-Verzeichnisses
+    local backend_dir
+    backend_dir="$(get_backend_dir)"
+    if [ $? -ne 0 ] || [ -z "$backend_dir" ]; then
+        print_error "Backend-Verzeichnis nicht gefunden."
+        return 1
+    fi
+    debug "Verwende Backend-Verzeichnis: '$backend_dir'"
+
+    # Ermitteln der Python-Binary Datei 
+    local python_cmd
+    python_cmd="$(get_python_cmd)"
+    if [ $? -ne 0 ] || [ -z "$python_cmd" ]; then
+        print_error "Python-Interpreter nicht gefunden. Bitte installieren Sie Python 3."
+        return 1
+    fi
+    debug "Verwende Python-Interpreter: '$python_cmd'"
+
+    cat > "$systemd_file" <<EOF
 [Unit]
 Description=Fotobox Backend (Flask)
 After=network.target
@@ -758,14 +769,24 @@ After=network.target
 Type=simple
 User=fotobox
 WorkingDirectory=$backend_dir
-ExecStart=$venv_dir/bin/python app.py
+ExecStart=$python_cmd app.py
 Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
 EOF
-        print_success "Standard-Service-Datei erzeugt: $SYSTEMD_SERVICE"
-    fi
+
+    # Setze die richtigen Rechte für die systemd-Service-Datei
+    chmod 644 "$systemd_file" || {
+        print_error "Fehler beim Setzen der Rechte für die systemd-Service-Datei."
+        return 1
+    }
+    
+    # Logge die erfolgreiche Erstellung der Datei
+    log "Systemd-Service-Datei erfolgreich erstellt: $systemd_file"
+    print_success "Systemd-Service-Datei erfolgreich erstellt: $systemd_file"
+    
+    return 0
 }
 
 set_systemd_install() {
@@ -933,8 +954,6 @@ dlg_backend_integration() {
         return 1
     fi
     
-    return 0
-
     # systemd-Service anlegen und starten
     echo -n "[/] Erstelle systemd-Service-Datei..."
     set_systemd_service &>/dev/null &
@@ -943,6 +962,8 @@ dlg_backend_integration() {
     wait $service_pid
     echo -e "\r  → [OK] Systemd-Service-Datei wurde erstellt."
     
+    return 0
+
     # Service installieren und starten
     set_systemd_install
     

@@ -830,87 +830,87 @@ get_system_file() {
     if ! check_param "$file_type" "file_type"; then return 1; fi
     if ! check_param "$name" "name"; then return 1; fi
 
-    debug "$(printf "$get_system_file_debug_0001" "$file_type" "$name")" "CLI" "get_system_file"
+    debug "$(printf "$get_system_file_debug_0001" "$file_type" "$name")"
 
     # Bestimmen des Ordnerpfads basierend auf dem Dateityp
     case "$file_type" in
         "nginx")
             # Pfad für Nginx-Konfigurationsdateien
-            system_folder=$("$MANAGE_FOLDERS_SH" get_nginx_systemdir)
+            system_folder=$(get_nginx_systemdir)
             if [ $? -ne 0 ]; then
-                log "$get_system_file_log_0001" "get_system_file" "manage_files"
-                debug "$get_system_file_log_0001" "get_system_file" "manage_files"
+                log "$get_system_file_log_0001"
+                debug "$get_system_file_log_0001"
                 return 1
             fi
 
             # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
             if [ -z "$system_folder" ]; then
-                log "$get_system_file_log_0002" "get_system_file" "manage_files" 
-                debug "$get_system_file_log_0002" "get_system_file" "manage_files"
+                log "$get_system_file_log_0002"
+                debug "$get_system_file_log_0002"
                 return 1
             fi
             file_ext="$CONFIG_FILE_EXT_NGINX"
             ;;
         "systemd")
             # Pfad für Systemd-Dienste
-            system_folder=$("$MANAGE_FOLDERS_SH" get_systemd_systemdir)
+            system_folder=$(get_systemd_systemdir)
             if [ $? -ne 0 ]; then
-                log "$get_system_file_log_0003" "get_system_file" "manage_files"
-                debug "$get_system_file_log_0003" "get_system_file" "manage_files"
+                log "$get_system_file_log_0003"
+                debug "$get_system_file_log_0003"
                 return 1
             fi
 
             # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
             if [ -z "$system_folder" ]; then
-                log "$get_system_file_log_0004" "get_system_file" "manage_files"
-                debug "$get_system_file_log_0004" "get_system_file" "manage_files"
+                log "$get_system_file_log_0004"
+                debug "$get_system_file_log_0004"
                 return 1
             fi
             file_ext="$CONFIG_FILE_EXT_SYSTEMD"
             ;;
         "ssl_cert")
             # Pfad für SSL-Zertifikate
-            system_folder=$("$MANAGE_FOLDERS_SH" get_ssl_cert_systemdir)
+            system_folder=$(get_ssl_cert_systemdir)
             if [ $? -ne 0 ]; then
-                log "$get_system_file_log_0005" "get_system_file" "manage_files"
-                debug "$get_system_file_log_0005" "get_system_file" "manage_files"
+                log "$get_system_file_log_0005"
+                debug "$get_system_file_log_0005"
                 return 1
             fi
 
             # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
             if [ -z "$system_folder" ]; then
-                log "$get_system_file_log_0006" "get_system_file" "manage_files"
-                debug "$get_system_file_log_0006" "get_system_file" "manage_files"
+                log "$get_system_file_log_0006"
+                debug "$get_system_file_log_0006"
                 return 1
             fi
             file_ext="$CONFIG_FILE_EXT_SSL_CERT"
             ;;
         "ssl_key")
             # Pfad für SSL-Schlüsseldateien
-            system_folder=$("$MANAGE_FOLDERS_SH" get_ssl_key_systemdir)
+            system_folder=$(get_ssl_key_systemdir)
             if [ $? -ne 0 ]; then
-                log "$get_system_file_log_0007" "get_system_file" "manage_files"
-                debug "$get_system_file_log_0007" "get_system_file" "manage_files"
+                log "$get_system_file_log_0007"
+                debug "$get_system_file_log_0007"
                 return 1
             fi
 
             # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
             if [ -z "$system_folder" ]; then
-                log "$get_system_file_log_0008" "get_system_file" "manage_files"
-                debug "$get_system_file_log_0008" "get_system_file" "manage_files"
+                log "$get_system_file_log_0008"
+                debug "$get_system_file_log_0008"
                 return 1
             fi
             file_ext="$CONFIG_FILE_EXT_SSL_KEY"
             ;;
         *)
-            log "$(printf "$get_system_file_log_0009" "$file_type")" "get_config_file" "manage_files"
-            debug "$(printf "$get_system_file_log_0009" "$file_type")" "get_config_file" "manage_files"
+            log "$(printf "$get_system_file_log_0009" "$file_type")"
+            debug "$(printf "$get_system_file_log_0009" "$file_type")"
             return 1
             ;;
     esac
 
     # Debug-Ausgabe des Systemordners
-    debug "$(printf "$get_system_file_debug_0002" "$file_type" "$system_folder")" "CLI" "get_system_file"
+    debug "$(printf "$get_system_file_debug_0002" "$file_type" "$system_folder")"
 
     # Rückgabe des vollständigen Pfads zur Systemdatei
     echo "${system_folder}/${name}${file_ext}"
