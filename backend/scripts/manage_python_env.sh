@@ -88,7 +88,7 @@ create_python_env() {
     local venv_dir
     local venv_output
     local python_cmd
-
+    
     # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
     debug "$create_python_env_debug_0001"
     venv_output="$(get_tmp_file)"
@@ -352,7 +352,9 @@ setup_python_env() {
         # Erstellt ein Python Virtual Environment, Spinner anzeigen
         echo -n "[/] Erstelle Python Virtual Environment ..."
         # Erstellt ein Python Virtual Environment
+        DEBUG_MOD_GLOBAL=1
         create_python_env
+        DEBUG_MOD_GLOBAL=0
         service_pid=$!
         show_spinner "$service_pid" "dots"
         # Überprüfe, ob die Installation erfolgreich war
