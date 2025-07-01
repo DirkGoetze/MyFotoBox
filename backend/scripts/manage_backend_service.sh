@@ -428,7 +428,7 @@ setup_backend_service() {
         # Ausgabe im CLI-Modus, Spinner anzeigen
         echo -n "[/] Installiere systemd-Backend-Service ..."
         # Installiere den Service
-        install_backend_service
+        (install_backend_service) &> /dev/null 2>&1 &
         service_pid=$!
         show_spinner "$service_pid" "dots"
         # Überprüfe, ob die Installation erfolgreich war
@@ -446,7 +446,7 @@ setup_backend_service() {
         # Ausgabe im CLI-Modus, Spinner anzeigen
         echo -n "[/] Aktiviere systemd-Backend-Service ..."
         # Aktiviere den Service
-        enable_backend_service
+        (enable_backend_service) &> /dev/null 2>&1 &
         service_pid=$!
         show_spinner "$service_pid" "dots"
         # Überprüfe, ob die Aktivierung erfolgreich war
@@ -464,7 +464,7 @@ setup_backend_service() {
         # Ausgabe im CLI-Modus, Spinner anzeigen
         echo -n "[/] Starte systemd-Backend-Service ..."
         # Starte den Service
-        start_backend_service
+        (start_backend_service) &> /dev/null 2>&1 &
         service_pid=$!
         show_spinner "$service_pid" "dots"
         # Überprüfe, ob der Service erfolgreich gestartet wurde

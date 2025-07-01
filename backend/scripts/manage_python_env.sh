@@ -343,7 +343,7 @@ setup_python_env() {
         # Erstellt ein Python Virtual Environment, Spinner anzeigen
         echo -n "[/] Erstelle Python Virtual Environment ..."
         # Erstellt ein Python Virtual Environment
-        create_python_env
+        (create_python_env) &> /dev/null 2>&1
         service_pid=$!
         show_spinner "$service_pid" "dots"
         # Überprüfe, ob die Installation erfolgreich war
@@ -361,7 +361,7 @@ setup_python_env() {
         # Installiert/aktualisiert den Python-Paketmanager PIP, Spinner anzeigen
         echo -n "[/] Installiert/aktualisiert den Python-Paketmanager PIP ..."
         # Installiert/aktualisiert den Python-Paketmanager PIP
-        install_pip
+        (install_pip) &> /dev/null 2>&1 &
         service_pid=$!
         show_spinner "$service_pid" "dots"
         # Überprüfe, ob die Installation erfolgreich war
@@ -379,7 +379,7 @@ setup_python_env() {
         # Installieren der Python-Abhängigkeiten, Spinner anzeigen
         echo -n "[/] Installiert/aktualisiert die Python-Abhängigkeiten ..."
         # Installiert/aktualisiert die Python-Abhängigkeiten
-        install_python_requirements
+        (install_python_requirements) &> /dev/null 2>&1 &
         service_pid=$!
         show_spinner "$service_pid" "dots"
         # Überprüfe, ob die Installation erfolgreich war
