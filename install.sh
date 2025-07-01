@@ -871,12 +871,6 @@ dlg_backend_integration() {
     print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Python-Umgebung und Backend-Service werden eingerichtet ..."
 
     setup_python_env
-    rc=$?
-    if [ $rc -ne 0 ]; then
-        print_error "Fehler beim Einrichten der Python-Umgebung. Bitte überprüfen Sie die Logdateien für Details."
-        print_info "Stellen Sie sicher, dass Python 3 und das venv-Modul installiert sind."
-        return 1
-    fi
     return 0
 
     # Python-Virtual-Environment einrichten
