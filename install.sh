@@ -625,14 +625,6 @@ set_pip_venv() {
     local pip_cmd
     local pip_output
 
-    # pip-Executable ermitteln
-    pip_cmd="$(get_pip_cmd)"
-    if [ $? -ne 0 ]; then
-        print_error "Kein Python-Paketmanager pip gefunden. Bitte installieren Sie Python-Paketmanager pip für Python 3."
-        return 1
-    fi
-    debug "Verwende Python-Paketmanager pip-Binary: '$pip_cmd'"
-
     # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
     pip_output="$(get_tmp_file)"
     if [ $? -ne 0 ]; then
@@ -644,21 +636,15 @@ set_pip_venv() {
     # Abhängigkeiten installieren
     echo -n "[/] Installiere/aktualisiere Python-Paketmanager pip ..."
         
-    # Prüfen ob pip direkt oder via python -m pip aufgerufen werden soll
-    if [ -f "$pip_cmd" ]; then
-        ("$pip_cmd" install --upgrade pip) &> "$pip_output" &
-    else
-        # Python-Executable ermitteln
-        local python_cmd
-        python_cmd="$(get_python_cmd)"
-        if [ $? -ne 0 ]; then
-            print_error "Kein Python-Interpreter gefunden. Bitte installieren Sie Python 3."
-            return 1
-        fi
-        debug "Verwende Python-Interpreter: '$python_cmd'"
-
-        ("$python_cmd" -m pip install --upgrade pip) &> "$pip_output" &
+    # pip-Executable ermitteln
+    pip_cmd="$(get_pip_cmd)"
+    if [ $? -ne 0 ]; then
+        print_error "Kein Python-Paketmanager pip gefunden. Bitte installieren Sie Python-Paketmanager pip für Python 3."
+        return 1
     fi
+    debug "Verwende Python-Paketmanager pip-Binary: '$pip_cmd'"
+
+    ("$pip_cmd" install --upgrade pip) &> "$pip_output" &
     local pip_pid=$!
     show_spinner "$pip_pid" "dots"
     wait $pip_pid
