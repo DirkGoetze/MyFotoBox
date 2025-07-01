@@ -737,16 +737,13 @@ set_systemd_service() {
     local python_cmd
     local systemd_template
 
-DEBUG_MOD_LOCAL=1
-DEBUG_MOD_GLOBAL=1
-
     # Ermitteln des Pfads zur systemd-Service-Datei
     systemd_file="$(get_systemd_service_file "systemd")"
     if [ $? -ne 0 ] || [ -z "$systemd_file" ]; then
         print_error "Systemd-Service-Datei nicht gefunden."
         return 1
     fi
-    debug "Verwende systemd-Service-Datei: '$systemd_file'"
+    debug "INFO: Verwende systemd-Service-Datei: '$systemd_file'"
 
     # Ermitteln des Backend-Verzeichnisses
     backend_dir="$(get_backend_dir)"
@@ -754,7 +751,7 @@ DEBUG_MOD_GLOBAL=1
         print_error "Backend-Verzeichnis nicht gefunden."
         return 1
     fi
-    debug "Verwende Backend-Verzeichnis: '$backend_dir'"
+    debug "INFO: Verwende Backend-Verzeichnis: '$backend_dir'"
 
     # Ermitteln der Python-Binary Datei 
     python_cmd="$(get_python_cmd)"
@@ -762,7 +759,7 @@ DEBUG_MOD_GLOBAL=1
         print_error "Python-Interpreter nicht gefunden. Bitte installieren Sie Python 3."
         return 1
     fi
-    debug "Verwende Python-Interpreter: '$python_cmd'"
+    debug "INFO: Verwende Python-Interpreter: '$python_cmd'"
 
     # Ermitteln des systemd-Service-Templates
     systemd_template="$(get_systemd_service_template)"
@@ -770,7 +767,7 @@ DEBUG_MOD_GLOBAL=1
         print_error "Systemd-Service-Template nicht gefunden."
         return 1
     fi
-    debug "Verwende systemd-Service-Template: '$systemd_template'"
+    debug "INFO: Verwende systemd-Service-Template: '$systemd_template'"
 
     # Template laden und Werte eintragen
 
@@ -803,9 +800,6 @@ EOF
     log "Systemd-Service-Datei erfolgreich erstellt: $systemd_file"
     print_success "Systemd-Service-Datei erfolgreich erstellt: $systemd_file"
     
-DEBUG_MOD_LOCAL=0 
-DEBUG_MOD_GLOBAL=0
-
     return 0
 }
 
