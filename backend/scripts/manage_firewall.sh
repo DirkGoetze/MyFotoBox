@@ -52,24 +52,40 @@ DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 # Hilfsfunktionen
 # ===========================================================================
 
-detect_firewall() {
+# _detect_firewall
+detect_firewall_debug_0001="INFO: Erkenne installierte Firewall"
+detect_firewall_debug_0002="SUCCESS: Firewall-Typ erkannt: '%s'"
+detect_firewall_debug_0003="ERROR: Kein unterstütztes Firewall-System gefunden oder keine Firewall installiert"
+
+_detect_firewall() {
     # -------------------------------------------------------------------------
-    # detect_firewall
+    # _detect_firewall
     # -------------------------------------------------------------------------
-    # Funktion: Erkennt das auf dem System installierte Firewall-System
-    # Rückgabe: String mit Namen des Firewall-Systems oder "none"
-    # Fehlercode: 0=Erfolg, 1=Fehler
+    # Funktion.: Versucht die Ermittlung des auf dem System installierten
+    # ......... Firewall-Systems
+    # Parameter: Keine
+    # Rückgabe.: String mit Namen des Firewall-Systems oder "none"
+    # .........  Fehlercode: 0=Erfolg, 1=Fehler
+    # -------------------------------------------------------------------------
     
+    # Eröffnungsmeldung im Debug Modus
+    debug "$detect_firewall_debug_0001"
+
+    # Prüfe, ob UFW, Firewalld oder iptables installiert ist
     if command -v ufw >/dev/null 2>&1; then
+        debug "$detect_firewall_debug_0002" "ufw"
         echo "ufw"
         return 0
     elif command -v firewalld >/dev/null 2>&1; then
+        debug "$detect_firewall_debug_0002" "firewalld"
         echo "firewalld"
         return 0
     elif command -v iptables >/dev/null 2>&1; then
+        debug "$detect_firewall_debug_0002" "iptables"
         echo "iptables"
         return 0
     else
+        debug "$detect_firewall_debug_0003"
         echo "none"
         return 1
     fi
@@ -265,14 +281,34 @@ iptables_setup() {
     return 0
 }
 
+# setup_firewall
+setup_firewall_debug_0001="INFO: Richte Firewall-Regeln für das Projekt ein"
+setup_firewall_debug_0002="ERROR: Fehler bei der Erkennung der installierten Firewall"
+setup_firewall_debug_0003="INFO: Firewall-Typ erkannt: %s"
+setup_firewall_debug_0004="INFO: Öffne Ports: %s"
+
 setup_firewall() {
     # -------------------------------------------------------------------------
     # setup_firewall
     # -------------------------------------------------------------------------
-    # Funktion: Richtet Firewall-Regeln für Fotobox ein
-    # Rückgabe: 0=Erfolg, 1=Fehler
-    
-    local firewall_type=$(detect_firewall)
+    # Funktion.: Richtet die Firewall-Regeln für das Projekt ein
+    # Parameter: Keine
+    # Rückgabe.: 0 = Erfolg
+    # .........  $? = Exitcode der Firewall beim Öffnen der Ports
+    # .........  2 = Fehler bei der Erkennung der installierten Firewall
+    # -------------------------------------------------------------------------
+
+    # Eröffnungsmeldung im Debug Modus
+    debug "$setup_firewall_debug_0001"
+
+    # Versuch der Erkennung der installierten Firewall
+    local firewall_type=$(_detect_firewall)
+    if [ $? -ne 0 ]; then
+        print_error "Fehler bei der Erkennung des Firewall-Systems."
+        return 2
+    fi
+    debug "$setup_firewall_debug_0002" "$firewall_type"
+
     local ports=$(get_required_ports)
     
     case "$firewall_type" in
