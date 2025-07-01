@@ -970,7 +970,7 @@ dlg_backend_integration() {
     
     # systemd-Service anlegen und starten
     echo -n "[/] Erstelle systemd-Service-Datei..."
-    set_systemd_service &>/dev/null &
+    set_systemd_service #&>/dev/null &
     local service_pid=$!
     show_spinner "$service_pid" "dots"
     wait $service_pid
