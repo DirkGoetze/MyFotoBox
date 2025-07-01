@@ -811,25 +811,38 @@ dlg_backend_integration() {
         print_info "Stellen Sie sicher, dass Python 3 und das venv-Modul installiert sind."
         return 1
     fi
-    
-    return 0
-        
-    # Abhängigkeiten installieren
-    echo -n "[/] Installiere/aktualisiere pip ..."
-    
-    # Python-Executable und pip-Pfad aus dem venv ermitteln
-    local python_bin="$venv_dir/bin/python3"
-    local pip_bin="$venv_dir/bin/pip"
-    
-    # Als Fallback prüfen wir, ob wir auf Windows sind (wo die Binaries in Scripts/ liegen)
-    if [ ! -f "$python_bin" ] && [ -f "$venv_dir/Scripts/python.exe" ]; then
-        python_bin="$venv_dir/Scripts/python.exe"
-        pip_bin="$venv_dir/Scripts/pip.exe"
+
+    local python_bin
+    local pip_bin
+    local pip_output
+
+    # Python-Executable ermitteln
+    python_bin="$(get_python_cmd)"
+    if [ $? -ne 0 ]; then
+        print_error "Kein Python-Interpreter gefunden. Bitte installieren Sie Python 3."
+        return 1
     fi
-    
+    debug "Verwende Python-Interpreter: '$python_bin'"
+
+    # pip-Executable ermitteln
+    pip_bin="$(get_pip_cmd)"
+    if [ $? -ne 0 ]; then
+        print_error "Kein pip-Interpreter gefunden. Bitte installieren Sie pip für Python 3."
+        return 1
+    fi
+    debug "Verwende pip-Binary: '$pip_bin'"
+
     # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
     pip_output="$(get_tmp_file)"
-    
+    if [ $? -ne 0 ]; then
+        print_error "Fehler beim Erstellen der temporären Datei für die Kommandoausgabe."
+        return 1
+    fi
+    debug "Verwende für Kommandoausgabe im Projektverzeichnis Temporäre Datei: '$pip_output'"
+
+    # Abhängigkeiten installieren
+    echo -n "[/] Installiere/aktualisiere pip ..."
+        
     # Prüfen ob pip direkt oder via python -m pip aufgerufen werden soll
     if [ -f "$pip_bin" ]; then
         ("$pip_bin" install --upgrade pip) &> "$pip_output" &
@@ -858,6 +871,8 @@ dlg_backend_integration() {
         rm -f "$pip_output"
     fi
     
+    return 0
+
     echo -n "[/] Installiere Python-Abhängigkeiten ..."
     
     # Temporäre Datei für Kommandoausgabe im Projektverzeichnis

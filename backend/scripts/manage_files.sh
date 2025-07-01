@@ -648,6 +648,99 @@ get_python_cmd() {
     fi
 }
 
+# get_pip_cmd
+get_pip_cmd_debug_0001="INFO: Ermittle Pfad zur pip-Binary"
+get_pip_cmd_debug_0002="SUCCESS: Verwende bereits gesetzten PIP_EXEC: %s"
+get_pip_cmd_debug_0003="SUCCESS: Verwende Unix/Linux pip3-Pfad: %s"
+get_pip_cmd_debug_0004="SUCCESS: Verwende Unix/Linux pip-Pfad: %s"
+get_pip_cmd_debug_0005="SUCCESS: Verwende Python-Modul für pip: %s -m pip"
+get_pip_cmd_debug_0006="INFO: Kein pip im venv gefunden, fallback auf System-pip"
+get_pip_cmd_debug_0007="SUCCESS: Verwende System-pip3: %s"
+get_pip_cmd_debug_0008="SUCCESS: Verwende System-pip: %s"
+get_pip_cmd_debug_0009="ERROR: Keine pip-Installation gefunden"
+
+get_pip_cmd() {
+    # -----------------------------------------------------------------------
+    # get_pip_cmd
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zur pip-Binary im Virtual Environment zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zur pip-Binary oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    # Sicherstellen, dass BACKEND_VENV_DIR gesetzt ist
+    : "${BACKEND_VENV_DIR:=$(get_venv_dir)}"
+    local pip_cmd
+    local python_cmd
+
+    debug "$get_pip_cmd_debug_0001"
+
+    # 1. Prüfe, ob PIP_EXEC bereits korrekt gesetzt ist
+    if [ -n "${PIP_EXEC:-}" ] && [ -f "$PIP_EXEC" ] && [ -x "$PIP_EXEC" ]; then
+        debug "$(printf "$get_pip_cmd_debug_0002" "$PIP_EXEC")"
+        echo "$PIP_EXEC"
+        return 0
+    fi    
+
+    # 2. Prüfe Standard-Unix/Linux-Pfade im venv
+    pip_cmd="${BACKEND_VENV_DIR}/bin/pip3"
+    if [ -f "$pip_cmd" ] && [ -x "$pip_cmd" ]; then
+        PIP_EXEC="$pip_cmd"
+        export PIP_EXEC
+        debug "$(printf "$get_pip_cmd_debug_0003" "$pip_cmd")"
+        echo "$pip_cmd"
+        return 0
+    fi
+
+    pip_cmd="${BACKEND_VENV_DIR}/bin/pip"
+    if [ -f "$pip_cmd" ] && [ -x "$pip_cmd" ]; then
+        PIP_EXEC="$pip_cmd"
+        export PIP_EXEC
+        debug "$(printf "$get_pip_cmd_debug_0004" "$pip_cmd")"
+        echo "$pip_cmd"
+        return 0
+    fi
+
+    # 3. Fallback: Python-Module pip verwenden
+    python_cmd=$(get_python_cmd)
+
+    if [ -n "$python_cmd" ] && [ -f "$python_cmd" ] && [ -x "$python_cmd" ]; then
+        # Prüfen, ob das Python-Modul pip verfügbar ist
+        if "$python_cmd" -c "import pip" &>/dev/null; then
+            debug "$(printf "$get_pip_cmd_debug_0005" "$python_cmd")"
+            PIP_EXEC="$python_cmd -m pip"
+            export PIP_EXEC
+            echo "$PIP_EXEC"
+            return 0
+        fi
+    fi
+
+    # 4. Systemweite pip-Installation prüfen
+    debug "$get_pip_cmd_debug_0006"
+
+    if command -v pip3 &>/dev/null; then
+        pip_cmd=$(command -v pip3)
+        debug "$(printf "$get_pip_cmd_debug_0007" "$pip_cmd")"
+        PIP_EXEC="$pip_cmd"
+        export PIP_EXEC
+        echo "$PIP_EXEC"
+        return 0
+    fi
+
+    if command -v pip &>/dev/null; then
+        pip_cmd=$(command -v pip)
+        debug "$(printf "$get_pip_cmd_debug_0008" "$pip_cmd")"
+        PIP_EXEC="$pip_cmd"
+        export PIP_EXEC
+        echo "$PIP_EXEC"
+        return 0
+    fi
+
+    # 5. Keine pip-Installation gefunden
+    debug "$get_pip_cmd_debug_0009"
+    echo ""
+    return 1
+}
+
 # get_system_file
 get_system_file_debug_0001="Ermittle Systemdatei für Typ: %s, Name: %s"
 get_system_file_debug_0002="Systemverzeichnis für %s: %s"
