@@ -547,6 +547,71 @@ install_system_requirements() {
     fi
 }
 
+set_python_venv() {
+    # -----------------------------------------------------------------------
+    # set_python_venv
+    # -----------------------------------------------------------------------
+    # Funktion: Erstellt ein Python Virtual Environment für das Backend
+    # Parameter: Keine
+    # Rückgabe: 0 bei Erfolg, 1 bei Fehler
+    # Seiteneffekte: Benötigt Python 3 und venv-Modul, erstellt Verzeichnis
+    # -----------------------------------------------------------------------
+    local venv_dir
+    local venv_output
+    local python_cmd
+
+    # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
+    venv_output="$(get_tmp_file)"
+    if [ $? -ne 0 ]; then
+        print_error "Fehler beim Erstellen der temporären Datei für die Kommandoausgabe."
+        return 1
+    fi
+    debug "Verwende für Kommandoausgabe im Projektverzeichnis Temporäre Datei: '$venv_output'"
+
+    # Pfade für Python-Virtual-Environment-Verzeichnis ermitteln
+    venv_dir=$(get_venv_dir)
+    if [ $? -ne 0 ]; then
+        print_error "Fehler beim Ermitteln des Python-Virtual-Environment-Verzeichnisses."
+        return 1
+    fi
+    debug "Verwende Python-Virtual-Environment-Verzeichnis: '$venv_dir'"
+
+    # Ermitteln des Python-Interpreters (python3 oder python)
+    python_cmd="$(get_python_cmd)"
+    if [ $? -ne 0 ]; then
+        print_error "Kein Python-Interpreter gefunden. Bitte installieren Sie Python 3."
+        return 1
+    fi
+    debug "Verwende Python-Interpreter: '$python_cmd'"
+
+    # Einrichten der Python-Environment-Umgebung
+    debug "Versuche mit Python-Interpreter die Einrichtung des Virtualen Environments"
+    echo -n "[/] Erstelle Python-Virtual-Environment ..."
+
+    # Führe den Befehl im Hintergrund aus und leite die Ausgabe in die temporäre Datei um
+    # Verwende den Python-Interpreter, um das Virtual Environment zu erstellen
+    "$python_cmd" -m venv "$venv_dir" &> "$venv_output" &
+    local venv_pid=$!
+    show_spinner "$venv_pid" "dots"
+    wait $venv_pid
+    
+    # Logge die Ausgabe in die zentrale Logdatei
+    log "VENV CREATE AUSGABE: $(cat "$venv_output")"
+    
+    if [ $? -ne 0 ]; then
+        print_error "Virtualenv-Erstellung fehlgeschlagen."
+        print_error "Konnte venv nicht anlegen! Log-Auszug:"
+        tail -n 10 "$venv_output"
+        # Lösche temporäre Datei
+        rm -f "$venv_output"
+        return 1
+    fi
+
+    print_success "Python-Virtual-Environment erfolgreich erstellt."
+    # Lösche temporäre Datei
+    rm -f "$venv_output"        
+}
+
 set_systemd_service() {
     # -----------------------------------------------------------------------
     # set_systemd_service
@@ -739,63 +804,16 @@ dlg_backend_integration() {
     # -----------------------------------------------------------------------
     ((STEP_COUNTER++))
     print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Python-Umgebung und Backend-Service werden eingerichtet ..."
-    local venv_dir
-    local venv_output
-    local python_cmd
 
-    # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
-    venv_output="$(get_tmp_file)"
-    if [ $? -ne 0 ]; then
-        print_error "Fehler beim Erstellen der temporären Datei für die Kommandoausgabe."
+    # Python-Virtual-Environment einrichten
+    if ! set_python_venv; then
+        print_error "Fehler beim Einrichten des Python-Virtual-Environment."
+        print_info "Stellen Sie sicher, dass Python 3 und das venv-Modul installiert sind."
         return 1
     fi
-    debug "Verwende für Kommandoausgabe im Projektverzeichnis Temporäre Datei: '$venv_output'"
-
-    # Pfade für Python-Virtual-Environment-Verzeichnis ermitteln
-    venv_dir=$(get_venv_dir)
-    if [ $? -ne 0 ]; then
-        print_error "Fehler beim Ermitteln des Python-Virtual-Environment-Verzeichnisses."
-        return 1
-    fi
-    debug "Verwende Python-Virtual-Environment-Verzeichnis: '$venv_dir'"
-
-    # Ermitteln des Python-Interpreters (python3 oder python)
-    python_cmd="$(get_python_cmd)"
-    if [ $? -ne 0 ]; then
-        print_error "Kein Python-Interpreter gefunden. Bitte installieren Sie Python 3."
-        return 1
-    fi
-    debug "Verwende Python-Interpreter: '$python_cmd'"
-
-    # Einrichten der Python-Environment-Umgebung
-    debug "Versuche mit Python-Interpreter die Einrichtung des Virtualen Environments"
-    echo -n "[/] Erstelle Python-Virtual-Environment ..."
-
-    # Führe den Befehl im Hintergrund aus und leite die Ausgabe in die temporäre Datei um
-    # Verwende den Python-Interpreter, um das Virtual Environment zu erstellen
-    "$python_cmd" -m venv "$venv_dir" &> "$venv_output" &
-    local venv_pid=$!
-    show_spinner "$venv_pid" "dots"
-    wait $venv_pid
     
-    # Logge die Ausgabe in die zentrale Logdatei
-    log "VENV CREATE AUSGABE: $(cat "$venv_output")"
-    
-    if [ $? -ne 0 ]; then
-        print_error "Virtualenv-Erstellung fehlgeschlagen."
-        print_error "Konnte venv nicht anlegen! Log-Auszug:"
-        tail -n 10 "$venv_output"
-        # Lösche temporäre Datei
-        rm -f "$venv_output"
-        return 1
-    else
-        print_success "Python-Virtual-Environment erfolgreich erstellt."
-        # Lösche temporäre Datei
-        rm -f "$venv_output"
-    fi
-
     return 0
-    
+        
     # Abhängigkeiten installieren
     echo -n "[/] Installiere/aktualisiere pip ..."
     
