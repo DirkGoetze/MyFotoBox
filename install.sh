@@ -616,8 +616,8 @@ set_pip_venv() {
     # -----------------------------------------------------------------------
     # set_python_venv
     # -----------------------------------------------------------------------
-    # Funktion: Installiert/aktualisiert pip im Python Virtual Environment 
-    # ........  für das Backend
+    # Funktion: Installiert/aktualisiert Python-Paketmanager pip im Python 
+    # ........  Virtual Environment für das Backend
     # Parameter: Keine
     # Rückgabe: 0 bei Erfolg, 1 bei Fehler
     # Seiteneffekte: Benötigt Python 3 und venv-Modul, erstellt Verzeichnis
@@ -628,10 +628,10 @@ set_pip_venv() {
     # pip-Executable ermitteln
     pip_cmd="$(get_pip_cmd)"
     if [ $? -ne 0 ]; then
-        print_error "Kein pip-Interpreter gefunden. Bitte installieren Sie pip für Python 3."
+        print_error "Kein Python-Paketmanager pip gefunden. Bitte installieren Sie Python-Paketmanager pip für Python 3."
         return 1
     fi
-    debug "Verwende pip-Binary: '$pip_cmd'"
+    debug "Verwende Python-Paketmanager pip-Binary: '$pip_cmd'"
 
     # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
     pip_output="$(get_tmp_file)"
@@ -642,7 +642,7 @@ set_pip_venv() {
     debug "Verwende für Kommandoausgabe im Projektverzeichnis Temporäre Datei: '$pip_output'"
 
     # Abhängigkeiten installieren
-    echo -n "[/] Installiere/aktualisiere pip ..."
+    echo -n "[/] Installiere/aktualisiere Python-Paketmanager pip ..."
         
     # Prüfen ob pip direkt oder via python -m pip aufgerufen werden soll
     if [ -f "$pip_cmd" ]; then
@@ -668,15 +668,15 @@ set_pip_venv() {
     log "PIP UPGRADE AUSGABE: $(cat "$pip_output")" "install.sh" "pip_upgrade"
     
     if [ $pip_result -ne 0 ]; then
-        echo -e "\r  → [FEHLER] Pip-Upgrade fehlgeschlagen."
-        print_error "Fehler beim Upgrade von pip. Log-Auszug:"
+        echo -e "\r  → [FEHLER] Python-Paketmanager pip-Upgrade fehlgeschlagen."
+        print_error "Fehler beim Upgrade von Python-Paketmanager pip. Log-Auszug:"
         tail -n 10 "$pip_output"
         # Lösche temporäre Datei
         rm -f "$pip_output"
         return 1
     fi
 
-    print_success "Pip erfolgreich aktualisiert."
+    print_success "Python-Paketmanager pip erfolgreich aktualisiert."
     # Lösche temporäre Datei
     rm -f "$pip_output"
 }
