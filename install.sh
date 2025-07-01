@@ -733,6 +733,9 @@ set_systemd_service() {
     # Funktion: Erstellt oder kopiert die systemd-Service-Datei für das Backend
     # Rückgabe: keine (Seitenwirkung: legt Datei an, gibt Erfolgsmeldung aus)
     local systemd_file
+    local backend_dir
+    local python_cmd
+    local systemd_template
 
     # Ermitteln des Pfads zur systemd-Service-Datei
     systemd_file="$(get_systemd_service_file "systemd")"
@@ -743,7 +746,6 @@ set_systemd_service() {
     debug "Verwende systemd-Service-Datei: '$systemd_file'"
 
     # Ermitteln des Backend-Verzeichnisses
-    local backend_dir
     backend_dir="$(get_backend_dir)"
     if [ $? -ne 0 ] || [ -z "$backend_dir" ]; then
         print_error "Backend-Verzeichnis nicht gefunden."
@@ -752,7 +754,6 @@ set_systemd_service() {
     debug "Verwende Backend-Verzeichnis: '$backend_dir'"
 
     # Ermitteln der Python-Binary Datei 
-    local python_cmd
     python_cmd="$(get_python_cmd)"
     if [ $? -ne 0 ] || [ -z "$python_cmd" ]; then
         print_error "Python-Interpreter nicht gefunden. Bitte installieren Sie Python 3."
@@ -760,6 +761,18 @@ set_systemd_service() {
     fi
     debug "Verwende Python-Interpreter: '$python_cmd'"
 
+    # Ermitteln des systemd-Service-Templates
+    systemd_template="$(get_systemd_service_template)"
+    if [ $? -ne 0 ] || [ -z "$systemd_template" ]; then
+        print_error "Systemd-Service-Template nicht gefunden."
+        return 1
+    fi
+    debug "Verwende systemd-Service-Template: '$systemd_template'"
+
+    # Template laden und Werte eintragen
+    
+
+    # Erstellen des systemd-Service-Datei
     cat > "$systemd_file" <<EOF
 [Unit]
 Description=Fotobox Backend (Flask)
@@ -781,6 +794,7 @@ EOF
         print_error "Fehler beim Setzen der Rechte für die systemd-Service-Datei."
         return 1
     }
+    debug "Rechte für systemd-Service-Datei gesetzt: 644"
     
     # Logge die erfolgreiche Erstellung der Datei
     log "Systemd-Service-Datei erfolgreich erstellt: $systemd_file"
