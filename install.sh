@@ -58,7 +58,7 @@ set +e
 # Debug-Modus: Lokal und global steuerbar
 # DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
-DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
+DEBUG_MOD_LOCAL=1            # Lokales Debug-Flag für einzelne Skripte
 : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
 # ---------------------------------------------------------------------------
 # Diese Variablen werden global deklariert und später sicher initialisiert
@@ -770,7 +770,7 @@ set_systemd_service() {
     debug "Verwende systemd-Service-Template: '$systemd_template'"
 
     # Template laden und Werte eintragen
-    
+
 
     # Erstellen des systemd-Service-Datei
     cat > "$systemd_file" <<EOF
