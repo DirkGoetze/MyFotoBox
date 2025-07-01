@@ -667,6 +667,65 @@ set_pip_venv() {
     rm -f "$pip_output"
 }
 
+set_python_requirements() {
+    # -----------------------------------------------------------------------
+    # set_python_requirements
+    # -----------------------------------------------------------------------
+    # Funktion: Installiert die Python-Abhängigkeiten für das Backend
+    # Rückgabe: 0 bei Erfolg, 1 bei Fehler
+    local requirements_file
+    local pip_output
+    local pip_cmd
+
+    # Ermitteln des Pfads zur Python-Anforderungsdatei
+    requirements_file="$(get_requirements_python_file)"
+    if [ $? -ne 0 ] || [ -z "$requirements_file" ]; then
+        print_error "Python-Anforderungsdatei nicht gefunden."
+        return 1
+    fi
+
+    # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
+    pip_output="$(get_tmp_file)"
+    if [ $? -ne 0 ]; then
+        print_error "Fehler beim Erstellen der temporären Datei für die Kommandoausgabe."
+        return 1
+    fi
+    debug "Verwende für Kommandoausgabe im Projektverzeichnis Temporäre Datei: '$pip_output'"
+
+    # Abhängigkeiten installieren
+    echo -n "[/] Installiere Python-Abhängigkeiten ..."
+    
+    # pip-Executable ermitteln
+    pip_cmd="$(get_pip_cmd)"
+    if [ $? -ne 0 ]; then
+        print_error "Kein Python-Paketmanager pip gefunden. Bitte installieren Sie Python-Paketmanager pip für Python 3."
+        return 1
+    fi
+    debug "Verwende Python-Paketmanager pip-Binary: '$pip_cmd'"
+
+    # Führe den Befehl im Hintergrund aus und leite die Ausgabe in die temporäre Datei um
+    ("$pip_cmd" install -r "$requirements_file") &> "$pip_output" &
+    local pip_pid=$!
+    show_spinner "$pip_pid" "dots"
+    wait $pip_pid
+    
+    # Logge die Ausgabe in die zentrale Logdatei
+    log "PIP INSTALL AUSGABE: $(cat "$pip_output")" "install.sh" "pip_install"
+    
+    if [ $? -ne 0 ]; then
+        print_error "Installation der Python-Abhängigkeiten fehlgeschlagen."
+        print_error "Konnte Abhängigkeiten nicht installieren! Log-Auszug:"
+        tail -n 10 "$pip_output"
+        # Lösche temporäre Datei
+        rm -f "$pip_output"
+        return 1
+    fi
+
+    print_success "Python-Abhängigkeiten erfolgreich installiert."
+    # Lösche temporäre Datei
+    rm -f "$pip_output"
+}
+
 set_systemd_service() {
     # -----------------------------------------------------------------------
     # set_systemd_service
@@ -862,64 +921,20 @@ dlg_backend_integration() {
 
     # Python-Paketmanager pip im venv aktualisieren
     if ! set_pip_venv; then
-        print_error "Fehler beim Aktualisieren von pip im Python-Virtual-Environment."
-        print_info "Stellen Sie sicher, dass pip korrekt installiert ist."
+        print_error "Fehler beim Aktualisieren von Python-Paketmanager pip im Python-Virtual-Environment."
+        print_info "Stellen Sie sicher, dass Python-Paketmanager pip korrekt installiert ist."
+        return 1
+    fi
+
+    # Python-Abhängigkeiten installieren
+    if ! set_python_requirements; then
+        print_error "Fehler beim Installieren der Python-Abhängigkeiten."
+        print_info "Stellen Sie sicher, dass die Datei requirements_python.inf vorhanden ist und die Abhängigkeiten korrekt definiert sind."
         return 1
     fi
     
     return 0
 
-    echo -n "[/] Installiere Python-Abhängigkeiten ..."
-    
-    # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
-    req_output="$(get_tmp_file)"
-    
-    local conf_dir
-    if type -t get_config_dir >/dev/null; then
-        conf_dir=$(get_config_dir)
-    else
-        conf_dir="$INSTALL_DIR/conf"
-    fi
-    
-    # Python-Executable und pip-Pfad aus dem venv ermitteln
-    local python_cmd="$venv_dir/bin/python3"
-    local pip_bin="$venv_dir/bin/pip"
-    
-    # Als Fallback prüfen wir, ob wir auf Windows sind (wo die Binaries in Scripts/ liegen)
-    if [ ! -f "$python_cmd" ] && [ -f "$venv_dir/Scripts/python.exe" ]; then
-        python_cmd="$venv_dir/Scripts/python.exe"
-        pip_bin="$venv_dir/Scripts/pip.exe"
-    fi
-    
-    # Prüfen ob pip direkt oder via python -m pip aufgerufen werden soll
-    if [ -f "$pip_bin" ]; then
-        debug "Verwende pip-Binary: $pip_bin" "CLI" "dlg_backend_integration"
-        ("$pip_bin" install -r "$conf_dir/requirements_python.inf") &> "$req_output" &
-    else
-        debug "Verwende python -m pip: $python_cmd" "CLI" "dlg_backend_integration"
-        ("$python_cmd" -m pip install -r "$conf_dir/requirements_python.inf") &> "$req_output" &
-    fi
-    
-    local req_pid=$!
-    show_spinner "$req_pid" "dots"
-    wait $req_pid
-    local req_result=$?
-    
-    # Logge die Ausgabe in die zentrale Logdatei
-    log "PIP REQUIREMENTS AUSGABE: $(cat "$req_output")" "install.sh" "pip_requirements"
-    
-    if [ $req_result -ne 0 ]; then
-        echo -e "\r  → [FEHLER] Installation der Python-Abhängigkeiten fehlgeschlagen."
-        print_error "Konnte Python-Abhängigkeiten nicht installieren! Log-Auszug:"
-        tail -n 10 "$req_output"
-        # Lösche temporäre Datei
-        rm -f "$req_output"
-        return 1
-    else
-        echo -e "\r  → [OK] Python-Abhängigkeiten erfolgreich installiert (inkl. bcrypt für sichere Passwörter)."
-        # Lösche temporäre Datei
-        rm -f "$req_output"
-    fi
     # systemd-Service anlegen und starten
     echo -n "[/] Erstelle systemd-Service-Datei..."
     set_systemd_service &>/dev/null &

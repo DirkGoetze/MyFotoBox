@@ -334,6 +334,61 @@ get_requirements_system_file() {
     return 1
 }
 
+get_requirements_python_file_debug_0001="INFO: Ermittle Python-Requirements-Datei"
+get_requirements_python_file_debug_0002="SUCCESS: Verwende für Python-Requirements-Datei : '%s'"
+get_requirements_python_file_debug_0003="INFO: Genutzter Verzeichnispfad zur Python-Requirements-Datei: '%s'"
+get_requirements_python_file_debug_0004="SUCCESS: Vollständiger Pfad zur Python-Requirements-Datei: '%s'"
+get_requirements_python_file_debug_0005="ERROR: Python-Requirements-Datei nicht gefunden oder nicht lesbar/beschreibbar"
+
+get_requirements_python_file() {
+    # -----------------------------------------------------------------------
+    # get_requirements_python_file
+    # -----------------------------------------------------------------------
+    # Funktion : Gibt den Pfad zur Python-Requirements-Datei zurück
+    # Parameter: Keine
+    # Rückgabe : Der vollständige Name, inklusive Pfad zur Datei
+    # .........  Exit-Code-> 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    local folder_path                         # Pfad zum Konfigurationsordner
+    local file_name                           # Name der Konfigurationsdatei
+    local file_ext                            # Standard-Dateiendung
+    local full_filename
+
+    # Eröffnungsmeldung für die Debug-Ausgabe
+    debug "$(printf "$get_requirements_python_file_debug_0001")"
+
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${REQUIREMENTS_PYTHON_FILENAME+x}" ] && [ -n "$REQUIREMENTS_PYTHON_FILENAME" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_requirements_python_file_debug_0002" "$REQUIREMENTS_PYTHON_FILENAME")"
+        echo "$REQUIREMENTS_PYTHON_FILENAME"
+        return 0
+    fi
+
+    # Festlegen der Bestandteile für den Dateinamen
+    file_name="requirements_python"
+    file_ext="$CONFIG_FILE_EXT_DEFAULT"
+    folder_path="$(get_config_dir)"
+    debug "$(printf "$get_requirements_python_file_debug_0003" "$folder_path")"
+
+    # Zusammensetzen des vollständigen Dateinamens erfolgreich
+    full_filename="$(_get_file_name "$file_name" "$file_ext" "$folder_path")"
+    if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
+        # Erfolg: Datei existiert und ist les-/schreibbar
+        debug "$(printf "$get_requirements_python_file_debug_0004" "$full_filename")"
+        # System-Variable aktualisieren
+        REQUIREMENTS_PYTHON_FILENAME="$full_filename"
+        export REQUIREMENTS_PYTHON_FILENAME
+        # Vollständigen Pfad zurückgeben
+        echo "$full_filename"
+        return 0
+    fi
+
+    # Fehlerfall
+    debug "$get_requirements_python_file_debug_0005"
+    return 1
+}
+
 # get_tmp_file
 get_tmp_file_debug_0001="INFO: Ermittle temporäre Datei: %s"
 get_tmp_file_debug_0002="INFO: Genutzter Verzeichnispfad zur temporären Datei: '%s'"
