@@ -684,20 +684,20 @@ get_python_cmd() {
         echo "$PYTHON_EXEC"
         DEBUG_MOD_GLOBAL=0
         return 0
-    #elif command -v python3 &>/dev/null; then
-    #    # Verwende System-Python3, wenn verfügbar
-    #    PYTHON_EXEC="$(command -v python3)"
-    #    export PYTHON_EXEC
-    #    debug "$(printf "$get_python_cmd_debug_0005" "$PYTHON_EXEC")"
-    #    echo "$PYTHON_EXEC"
-    #    return 0
-    #elif command -v python &>/dev/null; then
-    #    # Verwende System-Python, als letzten Fallback
-    #    PYTHON_EXEC="$(command -v python)"
-    #    export PYTHON_EXEC
-    #    debug "$(printf "$get_python_cmd_debug_0006" "$PYTHON_EXEC")"
-    #    echo "$PYTHON_EXEC"
-    #    return 0
+    elif command -v python3 &>/dev/null; then
+        # Verwende System-Python3, wenn verfügbar
+        PYTHON_EXEC="$(command -v python3)"
+        export PYTHON_EXEC
+        debug "$(printf "$get_python_cmd_debug_0005" "$PYTHON_EXEC")"
+        echo "$PYTHON_EXEC"
+        return 0
+    elif command -v python &>/dev/null; then
+        # Verwende System-Python, als letzten Fallback
+        PYTHON_EXEC="$(command -v python)"
+        export PYTHON_EXEC
+        debug "$(printf "$get_python_cmd_debug_0006" "$PYTHON_EXEC")"
+        echo "$PYTHON_EXEC"
+        return 0
     else
         # Fehlerfall: Kein Python gefunden
         PYTHON_EXEC=""
