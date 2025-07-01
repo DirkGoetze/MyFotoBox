@@ -732,13 +732,15 @@ dlg_prepare_system() {
     print_success "Softwarepakete wurden erfolgreich installiert."
 }
 
-dlg_prepare_users() {
+dlg_prepare_structure() {
     # -----------------------------------------------------------------------
-    # dlg_prepare_users
+    # dlg_prepare_structure
     # -----------------------------------------------------------------------
-    # Funktion: Erstellen des Benutzer und der Gruppe 'fotobox'
+    # Funktion: Prüft die Projektstruktur und richtet über manage_folders.sh die Verzeichnisstruktur ein
+    local rc
     ((STEP_COUNTER++))
-    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfe und lege Benutzer/Gruppe an ..."
+    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfe Verzeichnistruktur und lege Benutzer/Gruppe an ..."
+    
     set_user_group
     rc=$?
     if [ $rc -eq 1 ]; then
@@ -755,16 +757,7 @@ dlg_prepare_users() {
         exit 1
     fi
     print_success "Benutzer und Gruppe 'fotobox' wurden erfolgreich angelegt."
-}
 
-dlg_prepare_structure() {
-    # -----------------------------------------------------------------------
-    # dlg_prepare_structure
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft die Projektstruktur und richtet über manage_folders.sh die Verzeichnisstruktur ein
-    ((STEP_COUNTER++))
-    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfe Projektstruktur und richte Verzeichnisse ein..."
-    
     # Basierend auf manage_folders.sh die Struktur einrichten
     set_structure
     rc=$?
@@ -1382,7 +1375,6 @@ main() {
     # Ausführung der einzelnen Dialogschritte, robuste Fehlerbehandlung
     run_step dlg_check_system_requirements "$@"  # Prüfe Systemvoraussetzungen 
     run_step dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
-    run_step dlg_prepare_users            # Erstelle Benutzer und Gruppe 'fotobox'
     run_step dlg_prepare_structure        # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
     run_step dlg_backend_integration      # Python-Backend, venv, systemd-Service, Start
     exit 0
