@@ -786,7 +786,7 @@ dlg_backend_integration() {
         rm -f "$venv_output"
         return 1
     else
-        print_success "Python-Virtualenv erfolgreich erstellt."
+        print_success "Python-Virtual-Environment erfolgreich erstellt."
         # Lösche temporäre Datei
         rm -f "$venv_output"
     fi
