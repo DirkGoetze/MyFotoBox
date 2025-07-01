@@ -576,6 +576,78 @@ get_image_file() {
 # Hauptfunktionen für die Ermittlung von System-Dateipfaden
 # ===========================================================================
 
+# get_python_cmd
+get_python_cmd_debug_0001="INFO: Ermittle Pfad zum Python-Interpreter"
+get_python_cmd_debug_0002="SUCCESS: Verwende für Python-Interpreter \$PYTHON_EXEC: %s"
+get_python_cmd_debug_0003="SUCCESS: Verwende Standard-Python-Pfad: %s"
+get_python_cmd_debug_0004="SUCCESS: Verwende Fallback-Python-Pfad: %s"
+get_python_cmd_debug_0005="SUCCESS: Verwendeter als Fallback System-Python3 zum Python-Interpreter: %s"
+get_python_cmd_debug_0006="SUCCESS: Verwendeter als Fallback System-Python zum Python-Interpreter: %s"
+get_python_cmd_debug_0007="ERROR: Ermittlung des Python-Interpreter fehlgeschlagen. Python scheint nicht installiert zu sein!"
+
+get_python_cmd() {
+    # -----------------------------------------------------------------------
+    # get_python_cmd
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Python-Interpreter zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Python-Interpreter oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    # Sicherstellen, dass BACKEND_VENV_DIR gesetzt ist
+    : "${BACKEND_VENV_DIR:=$(get_venv_dir)}"
+    # Pfade für zum Python-Interpreter-Verzeichnis
+    local path_default="$BACKEND_VENV_DIR/bin/python3"
+    local path_fallback="$BACKEND_VENV_DIR/bin/python"
+
+    # Prüfen, ob PYTHON_EXEC bereits gesetzt ist (z.B. vom install.sh)
+    debug "$get_python_cmd_debug_0001"
+
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${PYTHON_EXEC+x}" ] && [ -n "$PYTHON_EXEC" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_python_cmd_debug_0002" "$PYTHON_EXEC")"
+        echo "$PYTHON_EXEC"
+        return 0
+    fi
+
+    # Python-Interpreter-Pfad ermitteln und setzen
+    if [ -x "$path_default" ]; then
+        # Verwende Standard-Python-Pfad, wenn ausführbar
+        PYTHON_EXEC="$path_default"
+        export PYTHON_EXEC
+        debug "$(printf "$get_python_cmd_debug_0003" "$PYTHON_EXEC")"
+        echo "$PYTHON_EXEC"
+        return 0
+    elif [ -x "$path_fallback" ]; then
+        # Verwende Fallback-Python-Pfad, wenn ausführbar
+        PYTHON_EXEC="$path_fallback"
+        export PYTHON_EXEC
+        debug "$(printf "$get_python_cmd_debug_0004" "$PYTHON_EXEC")"
+        echo "$PYTHON_EXEC"
+        return 0
+    elif command -v python3 &>/dev/null; then
+        # Verwende System-Python3, wenn verfügbar
+        PYTHON_EXEC="$(command -v python3)"
+        export PYTHON_EXEC
+        debug "$(printf "$get_python_cmd_debug_0005" "$PYTHON_EXEC")"
+        echo "$PYTHON_EXEC"
+        return 0
+    elif command -v python &>/dev/null; then
+        # Verwende System-Python, als letzten Fallback
+        PYTHON_EXEC="$(command -v python)"
+        export PYTHON_EXEC
+        debug "$(printf "$get_python_cmd_debug_0006" "$PYTHON_EXEC")"
+        echo "$PYTHON_EXEC"
+        return 0
+    else
+        # Fehlerfall: Kein Python gefunden
+        PYTHON_EXEC=""
+        debug "$get_python_cmd_debug_0007"
+        echo ""
+        return 1
+    fi
+}
+
 # get_system_file
 get_system_file_debug_0001="Ermittle Systemdatei für Typ: %s, Name: %s"
 get_system_file_debug_0002="Systemverzeichnis für %s: %s"

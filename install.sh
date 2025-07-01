@@ -770,7 +770,7 @@ dlg_backend_integration() {
     debug "Verwende für Kommandoausgabe im Projektverzeichnis Temporäre Datei: '$venv_output'"
 
     # Ermitteln des Python-Interpreters (python3 oder python)
-    python_cmd="$(get_python_path)"
+    python_cmd="$(get_python_cmd)"
     if [ $? -ne 0 ]; then
         print_error "Kein Python-Interpreter gefunden. Bitte installieren Sie Python 3."
         return 1
