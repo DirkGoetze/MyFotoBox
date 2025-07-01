@@ -453,8 +453,11 @@ set_structure() {
     if [ -f "$backend_dir/scripts/manage_folders.sh" ]; then
         if ! "$backend_dir/scripts/manage_folders.sh" ensure_structure; then
             print_error "Fehler bei der Erstellung der Ordnerstruktur über manage_folders.sh."
-            debug "Fehler bei manage_folders.sh" "CLI" "set_structure"
+            debug "Fehler bei manage_folders.sh"
             return 1
+        else
+            debug "Erstellung der Ordnerstruktur über manage_folders.sh Funktion ensure_structure erfolgreich"
+            exit 0
         fi
     elif [ -f "$SCRIPT_DIR/manage_folders.sh" ]; then
         if ! "$SCRIPT_DIR/manage_folders.sh" ensure_structure; then
@@ -468,7 +471,7 @@ set_structure() {
     fi
     echo "  → [OK] Abbruch"
     exit 0
-    
+
     # Abschließende Rechteanpassung (Policy-Konformität)
     if ! chown -R fotobox:fotobox "$INSTALL_DIR"; then
         print_warning "chown auf $INSTALL_DIR fehlgeschlagen, Rechte könnten nicht vollständig korrekt sein."
