@@ -58,7 +58,7 @@ set +e
 # Debug-Modus: Lokal und global steuerbar
 # DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
-DEBUG_MOD_LOCAL=1            # Lokales Debug-Flag für einzelne Skripte
+DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
 # ---------------------------------------------------------------------------
 # Diese Variablen werden global deklariert und später sicher initialisiert
@@ -737,6 +737,9 @@ set_systemd_service() {
     local python_cmd
     local systemd_template
 
+DEBUG_MOD_LOCAL=1
+DEBUG_MOD_GLOBAL=1
+
     # Ermitteln des Pfads zur systemd-Service-Datei
     systemd_file="$(get_systemd_service_file "systemd")"
     if [ $? -ne 0 ] || [ -z "$systemd_file" ]; then
@@ -800,6 +803,9 @@ EOF
     log "Systemd-Service-Datei erfolgreich erstellt: $systemd_file"
     print_success "Systemd-Service-Datei erfolgreich erstellt: $systemd_file"
     
+DEBUG_MOD_LOCAL=0 
+DEBUG_MOD_GLOBAL=0
+
     return 0
 }
 

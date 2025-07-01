@@ -36,8 +36,11 @@ SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
 SYSTEMD_DST="/etc/systemd/system/fotobox-backend.service"
 
 # Konfigurationsvariablen aus lib_core.sh werden verwendet
-# Debug-Modus für dieses Skript (lokales Flag)
-DEBUG_MOD_LOCAL=0  # Nur für dieses Skript
+# Debug-Modus: Lokal und global steuerbar
+# DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
+# DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
+DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
+: "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
 
 # ===========================================================================
 # Funktionen zur Verwaltung des Backend-Services
