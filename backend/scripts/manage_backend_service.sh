@@ -325,9 +325,8 @@ restart_backend_service() {
 # get_backend_service_status
 get_backend_service_status_debug_0001="INFO: Überprüfe Backend-Service-Status..."
 get_backend_service_status_debug_0002="SUCCESS: Backend-Service ist aktiv und läuft."
-get_backend_service_status_debug_0003="INFO: Backend-Service ist inaktiv (gestoppt)."
-get_backend_service_status_debug_0004="INFO: Backend-Service-Status: %s"
-get_backend_service_status_debug_0005="ERROR: Backend-Service-Status konnte nicht ermittelt werden."
+get_backend_service_status_debug_0003="WARN: Backend-Service ist inaktiv (gestoppt)."
+get_backend_service_status_debug_0004="ERROR: Backend-Service-Status: %s"
 
 get_backend_service_status() {
     # -----------------------------------------------------------------------
@@ -335,31 +334,30 @@ get_backend_service_status() {
     # -----------------------------------------------------------------------
     # Funktion.: Gibt den Status des Backend-Services zurück
     # Parameter: keine
-    # Rückgabe.: 0 wenn aktiv
+    # Rückgabe.: 0 wenn aktiv und läuft
     # .........  1 wenn inaktiv
-    # .........  2 bei Fehler
+    # .........  2 bei Fehler oder Failed
     # -----------------------------------------------------------------------
     debug "$get_backend_service_status_debug_0001"
 
-    # Status des Backend-Services abfragen
-    if systemctl is-active --quiet fotobox-backend; then
+    # Prüfe erst den Status
+    status=$(systemctl is-active fotobox-backend)
+    
+    # Prüfe dann die Unit für Fehler
+    failed=$(systemctl show -p ActiveState fotobox-backend | cut -d= -f2)
+
+    if [ "$status" = "active" ] && [ "$failed" = "active" ]; then
+        # Service läuft wirklich
         debug "$get_backend_service_status_debug_0002"
         return 0
+    elif [ "$status" = "inactive" ]; then
+        # Service ist gestoppt
+        debug "$get_backend_service_status_debug_0003" 
+        return 1
     else
-        status=$(systemctl is-active fotobox-backend)
-        if [ "$status" = "inactive" ]; then
-            debug "$get_backend_service_status_debug_0003"
-            return 1
-        elif [ "$status" = "failed" ]; then
-            debug "$(printf "$get_backend_service_status_debug_0004" "$status")"
-            return 2
-        elif [ -n "$status" ]; then
-            debug "$(printf "$get_backend_service_status_debug_0004" "$status")"
-            return 1
-        else
-            debug "$get_backend_service_status_debug_0005"
-            return 2
-        fi
+        # Service hat Fehler oder unbekannter Status
+        debug "$(printf "$get_backend_service_status_debug_0004" "$status ($failed)")"
+        return 2
     fi
 }
 
