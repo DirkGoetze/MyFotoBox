@@ -874,6 +874,12 @@ dlg_backend_integration() {
         return 1
     fi
 
+    # Python-Paketmanager pip im venv aktualisieren
+    if ! set_pip_venv; then
+        print_error "Fehler beim Aktualisieren von pip im Python-Virtual-Environment."
+        print_info "Stellen Sie sicher, dass pip korrekt installiert ist."
+        return 1
+    fi
     
     return 0
 

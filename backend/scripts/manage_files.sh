@@ -663,7 +663,8 @@ get_pip_cmd() {
     # -----------------------------------------------------------------------
     # get_pip_cmd
     # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zur pip-Binary im Virtual Environment zurück
+    # Funktion: Gibt den Pfad zum Python-Paketmanager pip im Virtual 
+    # ........  Environment zurück
     # Parameter: keine
     # Rückgabe: Pfad zur pip-Binary oder leerer String bei Fehler
     # -----------------------------------------------------------------------
