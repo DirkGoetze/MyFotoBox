@@ -259,14 +259,12 @@ setup_python_env() {
         # Erstellt ein Python Virtual Environment
         create_python_env || return 1
     else
-        DEBUG_MOD_GLOBAL=0
         # Erstellt ein Python Virtual Environment, Spinner anzeigen
         echo -n "[/] Erstelle Python Virtual Environment ..."
         # Erstellt ein Python Virtual Environment
         create_python_env
         service_pid=$!
         show_spinner "$service_pid" "dots"
-        DEBUG_MOD_GLOBAL=0
         # Überprüfe, ob die Installation erfolgreich war
         if [ $? -ne 0 ]; then
             print_error "Installation des Python Virtual Environment fehlgeschlagen."
@@ -279,14 +277,12 @@ setup_python_env() {
         # Installiert/aktualisiert den Python-Paketmanager PIP
         install_pip || return 1
     else
-        DEBUG_MOD_GLOBAL=0
         # Installiert/aktualisiert den Python-Paketmanager PIP, Spinner anzeigen
         echo -n "[/] Installiert/aktualisiert den Python-Paketmanager PIP ..."
         # Installiert/aktualisiert den Python-Paketmanager PIP
         install_pip
         service_pid=$!
         show_spinner "$service_pid" "dots"
-        DEBUG_MOD_GLOBAL=0
         # Überprüfe, ob die Installation erfolgreich war
         if [ $? -ne 0 ]; then
             print_error "Installation/Aktualisierung des Python-Paketmanagers PIP fehlgeschlagen."
