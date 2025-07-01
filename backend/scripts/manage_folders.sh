@@ -721,6 +721,58 @@ get_https_backup_dir() {
     return 1
 }
 
+# get_systemd_backup_dir
+get_systemd_backup_dir_debug_0001="INFO: Ermittle systemd-Backup-Verzeichnis"
+get_systemd_backup_dir_debug_0002="SUCCESS: Verwende für systemd-Backup-Verzeichnis \$BACKUP_DIR_SYSTEMD: %s"
+get_systemd_backup_dir_debug_0003="SUCCESS: Verwendeter Pfad für systemd-Backup-Verzeichnis: %s"
+get_systemd_backup_dir_debug_0004="ERROR: Alle Pfade für systemd-Backup-Verzeichnis fehlgeschlagen"
+
+get_systemd_backup_dir() {
+    # -----------------------------------------------------------------------
+    # get_systemd_backup_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum systemd-Backup-Verzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    # Sicherstellen, dass BACKUP_DIR gesetzt ist
+    : "${BACKUP_DIR:=$(get_backup_dir)}"
+    # Pfade für systemd-Backup-Verzeichnis
+    local dir
+    local path_system="$BACKUP_DIR/systemd"
+    local path_default="$BACKUP_DIR/systemd"
+    local path_fallback="$BACKUP_DIR/systemd"
+
+    # Eröffnungsmeldung im Debug Modus
+    debug "$get_systemd_backup_dir_debug_0001"
+
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${BACKUP_DIR_SYSTEMD+x}" ] && [ -n "$BACKUP_DIR_SYSTEMD" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_systemd_backup_dir_debug_0002" "$BACKUP_DIR_SYSTEMD")"
+        echo "$BACKUP_DIR_SYSTEMD"
+        return 0
+    fi
+
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_systemd_backup_dir_debug_0003" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ -z "${BACKUP_DIR_SYSTEMD+x}" ] || [ -z "$BACKUP_DIR_SYSTEMD" ] || [ "$dir" != "$BACKUP_DIR_SYSTEMD" ]; then
+            BACKUP_DIR_SYSTEMD="$dir"
+            export BACKUP_DIR_SYSTEMD
+        fi
+        echo "$dir"
+        return 0
+    fi
+
+    debug "$get_systemd_backup_dir_debug_0004"
+    echo ""
+    return 1
+}   
+
 # ---------------------------------------------------------------------------
 # Konfigurations-Verzeichnis
 # ---------------------------------------------------------------------------
@@ -1845,12 +1897,15 @@ get_systemd_systemdir() {
     # -----------------------------------------------------------------------
     # get_systemd_systemdir
     # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zum systemd-Systemverzeichnis zurück
-    # Parameter: keine
+    # Funktion.: Gibt den Pfad zum systemd-Systemverzeichnis zurück
+    # Parameter: $1 - Optional: Das Systemverzeichnis (Standard: 0)
+    # ..........      Wenn '1', wird das Systemverzeichnis verwendet.
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
     # Sicherstellen, dass CONF_DIR gesetzt ist
     : "${CONF_DIR:=$(get_config_dir)}"
+    local system_dir="${1:-0}"
+
     # Pfade zu möglichen systemd-Systemverzeichnis
     local dir
     local path_system="/etc/systemd/system"
@@ -1861,8 +1916,14 @@ get_systemd_systemdir() {
     debug "$get_systemd_systemdir_debug_0001"
 
     # Verwende die für diesen Ordner definierten Pfade
-    # Deaktiviere Fallback Order(1) und das Erzeugen von Symlink (1)
-    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
+    # Deaktiviere Fallback Order(0) und das Erzeugen von Symlink (0)
+    # Wenn system_dir '1' ist, wird das Systemverzeichnis verwendet
+    if [ "$system_dir" -eq 1 ]; then
+        dir=$(_get_folder_path "$path_system" "$path_system" "$path_fallback" 0 0)
+    else
+        dir=$(_get_folder_path "$path_default" "$path_default" "$path_fallback" 0 0)
+    fi
+
     if [ -n "$dir" ]; then
         debug "$(printf "$get_systemd_systemdir_debug_0002" "$dir")"
         # System-Variable aktualisieren, wenn nötig

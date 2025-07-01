@@ -819,10 +819,13 @@ get_system_file() {
     # ......... Systemd-Dienste und SSL-Zertifikate gedacht.
     # Parameter: $1 - Der Typ der Konfigurationsdatei
     # .........  $2 - Der Name der Konfigurationsdatei (ohne Erweiterung)
+    # .........  $3 - Optional: Das Systemverzeichnis (Standard: 0)
+    # ..........      Wenn '1', wird das Systemverzeichnis verwendet.
     # Rückgabewert: Der vollständige Pfad zur Datei
     # -----------------------------------------------------------------------
     local file_type="$1"
     local name="$2"
+    local system_dir="${3:-0}"  
     local file_ext="conf"
     local system_folder
   
@@ -853,7 +856,7 @@ get_system_file() {
             ;;
         "systemd")
             # Pfad für Systemd-Dienste
-            system_folder=$(get_systemd_systemdir)
+            system_folder=$(get_systemd_systemdir "$system_dir")
             if [ $? -ne 0 ]; then
                 log "$get_system_file_log_0003"
                 debug "$get_system_file_log_0003"
