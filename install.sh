@@ -769,6 +769,7 @@ dlg_backend_integration() {
 
     # Einrichten der Python-Environment-Umgebung
     debug "Versuche mit Python-Interpreter die Einrichtung des Virtualen Environments"
+    echo -n "[/] Erstelle Python-Virtual-Environment in $venv_dir ..."
     "$python_cmd" -m venv "$venv_dir" &> "$venv_output" &
     local venv_pid=$!
     show_spinner "$venv_pid" "dots"
