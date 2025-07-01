@@ -2,12 +2,12 @@
 # ------------------------------------------------------------------------------
 # manage_backend_service.sh
 # ------------------------------------------------------------------------------
-# Funktion: Installation, Konfiguration und Verwaltung des Fotobox-Backend-Services
+# Funktion: Installation, Konfiguration und Verwaltung des Backend-Services
+# .........  für die Fotobox-Anwendung. Dies umfasst das Erstellen, Aktivieren,
+# .........  Starten, Stoppen und Überprüfen des Status des systemd-Services.
+# .........  Das Skript ermöglicht die einfache Verwaltung des Backend-Services
+# .........  und stellt sicher, dass der Service korrekt konfiguriert ist.
 # ------------------------------------------------------------------------------
-# HINWEIS: Dieses Skript ist Bestandteil der Backend-Logik und darf nur im
-# Unterordner 'backend/scripts/' abgelegt werden 
-#
-# ---------------------------------------------------------------------------
 # HINWEIS: Dieses Skript ist Bestandteil der Backend-Logik und darf nur im
 # Unterordner 'backend/scripts/' abgelegt werden 
 # ---------------------------------------------------------------------------
@@ -16,7 +16,8 @@
 # CLI-Programm ist nicht vorgesehen. Die Policy zur main()-Funktion gilt nur 
 # für Hauptskripte.
 #
-# HINWEIS: Dieses Skript erfordert lib_core.sh und sollte nie direkt aufgerufen werden.
+# HINWEIS: Dieses Skript erfordert lib_core.sh und sollte nie direkt 
+# .......  aufgerufen werden.
 # ---------------------------------------------------------------------------
 
 # ===========================================================================
@@ -29,18 +30,25 @@ MANAGE_BACKEND_SERVICE_LOADED=0
 # ===========================================================================
 # Globale Konstanten die für die Nutzung des Moduls erforderlich sind
 # ===========================================================================
+# Die meisten globalen Konstanten werden bereits durch lib_core.sh gesetzt.
+# bereitgestellt. Hier definieren wir nur Konstanten, die noch nicht durch 
+# lib_core.sh gesetzt wurden oder die speziell für die Installation 
+# überschrieben werden müssen.
 # ---------------------------------------------------------------------------
-# Einstellungen: Backend Service 
-# ---------------------------------------------------------------------------
-SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
-SYSTEMD_DST="/etc/systemd/system/fotobox-backend.service"
 
-# Konfigurationsvariablen aus lib_core.sh werden verwendet
+# ===========================================================================
+# Lokale Konstanten (Vorgaben und Defaults nur für die Installation)
+# ===========================================================================
 # Debug-Modus: Lokal und global steuerbar
 # DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
 DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
+# ---------------------------------------------------------------------------
+
+# ===========================================================================
+# Hilfsfunktionen
+# ===========================================================================
 
 # ===========================================================================
 # Funktionen zur Verwaltung des Backend-Services
