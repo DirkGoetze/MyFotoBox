@@ -547,65 +547,6 @@ install_system_requirements() {
     fi
 }
 
-set_python_requirements() {
-    # -----------------------------------------------------------------------
-    # set_python_requirements
-    # -----------------------------------------------------------------------
-    # Funktion: Installiert die Python-Abhängigkeiten für das Backend
-    # Rückgabe: 0 bei Erfolg, 1 bei Fehler
-    local requirements_file
-    local pip_output
-    local pip_cmd
-
-    # Ermitteln des Pfads zur Python-Anforderungsdatei
-    requirements_file="$(get_requirements_python_file)"
-    if [ $? -ne 0 ] || [ -z "$requirements_file" ]; then
-        print_error "Python-Anforderungsdatei nicht gefunden."
-        return 1
-    fi
-
-    # Temporäre Datei für Kommandoausgabe im Projektverzeichnis
-    pip_output="$(get_tmp_file)"
-    if [ $? -ne 0 ]; then
-        print_error "Fehler beim Erstellen der temporären Datei für die Kommandoausgabe."
-        return 1
-    fi
-    debug "Verwende für Kommandoausgabe im Projektverzeichnis Temporäre Datei: '$pip_output'"
-
-    # Abhängigkeiten installieren
-    echo -n "[/] Installiere Python-Abhängigkeiten ..."
-    
-    # pip-Executable ermitteln
-    pip_cmd="$(get_pip_cmd)"
-    if [ $? -ne 0 ]; then
-        print_error "Kein Python-Paketmanager pip gefunden. Bitte installieren Sie Python-Paketmanager pip für Python 3."
-        return 1
-    fi
-    debug "Verwende Python-Paketmanager pip-Binary: '$pip_cmd'"
-
-    # Führe den Befehl im Hintergrund aus und leite die Ausgabe in die temporäre Datei um
-    ("$pip_cmd" install -r "$requirements_file") &> "$pip_output" &
-    local pip_pid=$!
-    show_spinner "$pip_pid" "dots"
-    wait $pip_pid
-    
-    # Logge die Ausgabe in die zentrale Logdatei
-    log "PIP INSTALL AUSGABE: $(cat "$pip_output")" "install.sh" "pip_install"
-    
-    if [ $? -ne 0 ]; then
-        print_error "Installation der Python-Abhängigkeiten fehlgeschlagen."
-        print_error "Konnte Abhängigkeiten nicht installieren! Log-Auszug:"
-        tail -n 10 "$pip_output"
-        # Lösche temporäre Datei
-        rm -f "$pip_output"
-        return 1
-    fi
-
-    print_success "Python-Abhängigkeiten erfolgreich installiert."
-    # Lösche temporäre Datei
-    rm -f "$pip_output"
-}
-
 set_systemd_install() {
     # -----------------------------------------------------------------------
     # set_systemd_install
@@ -750,16 +691,12 @@ dlg_backend_integration() {
     ((STEP_COUNTER++))
     print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Python-Umgebung und Backend-Service werden eingerichtet ..."
 
-    setup_python_env
-    return 0
-
-    # Python-Abhängigkeiten installieren
-    if ! set_python_requirements; then
-        print_error "Fehler beim Installieren der Python-Abhängigkeiten."
-        print_info "Stellen Sie sicher, dass die Datei requirements_python.inf vorhanden ist und die Abhängigkeiten korrekt definiert sind."
+    # Python Umgebung anlegen 
+    if ! setup_python_env; then
+        print_error "Fehler beim Einrichten der Python-Umgebung."
         return 1
     fi
-    
+
     # systemd-Service anlegen und starten
     setup_backend_service
     if [ $? -ne 0 ]; then
