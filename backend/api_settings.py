@@ -9,9 +9,10 @@ from flask import Blueprint, request, jsonify
 import logging
 from typing import Dict, Any, Optional
 
+from manage_folders import FolderManager, get_config_dir
 import manage_settings
-import manage_logging
 from api_auth import token_required
+from manage_api import ApiResponse, handle_api_exception
 
 # Logger konfigurieren
 logger = logging.getLogger(__name__)
@@ -19,22 +20,22 @@ logger = logging.getLogger(__name__)
 # Blueprint für die Settings-API erstellen
 api_settings = Blueprint('api_settings', __name__)
 
+# FolderManager für Pfadverwaltung
+folder_manager = FolderManager()
+
 @api_settings.route('/api/settings', methods=['GET'])
 @token_required
 def get_settings():
     """API-Endpunkt zum Abrufen aller Einstellungen"""
     try:
         settings = manage_settings.load_settings()
-        return jsonify({
-            'success': True,
-            'settings': settings
+        return ApiResponse.success(data={
+            'settings': settings,
+            'timestamp': manage_settings.get_last_modified()
         })
     except Exception as e:
         logger.error(f"Fehler beim Abrufen der Einstellungen: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return handle_api_exception(e, endpoint='/api/settings')
 
 @api_settings.route('/api/settings/<key>', methods=['GET'])
 @token_required

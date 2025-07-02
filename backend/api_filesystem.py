@@ -5,158 +5,187 @@ Dieses Modul stellt die Flask-API-Endpunkte für Dateisystemoperationen bereit u
 dient als Schnittstelle zwischen dem Frontend und dem manage_files-Modul.
 """
 
-from flask import Blueprint, request, jsonify, send_from_directory, Response, current_app
+from flask import Blueprint, request, jsonify, send_from_directory, Response
 import os
 import logging
-import time
+import mimetypes
+from typing import Dict, Any, List, Optional
 from werkzeug.utils import secure_filename
+from pathlib import Path
 
-# Import der Dateisystem-Funktionen
+from manage_folders import FolderManager, get_photos_dir
 import manage_files
-import manage_auth
-import manage_logging
+from api_auth import token_required
+from manage_api import ApiResponse, handle_api_exception
 
-# Logger einrichten
+# Logger konfigurieren
 logger = logging.getLogger(__name__)
 
 # Blueprint für Filesystem-API-Endpunkte erstellen
 api_filesystem = Blueprint('api_filesystem', __name__)
 
-def init_app(app):
-    """Initialisiert die Filesystem-API mit der Flask-Anwendung"""
-    app.register_blueprint(api_filesystem)
-
 @api_filesystem.route('/api/filesystem/images', methods=['GET'])
-def api_get_images():
+@token_required
+def get_images():
     """API-Endpunkt zum Abrufen einer Liste von Bildern"""
     try:
         directory = request.args.get('directory', 'gallery')
-        result = manage_files.get_image_list(directory)
-        return jsonify(result)
-    except Exception as e:
-        logger.error(f"API-Fehler beim Abrufen der Bilderliste: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@api_filesystem.route('/api/filesystem/save', methods=['POST'])
-def api_save_image():
-    """API-Endpunkt zum Speichern eines Bildes"""
-    try:
-        # Prüfen, ob eine Datei hochgeladen wurde
-        if 'image' not in request.files:
-            return jsonify({'success': False, 'error': 'Keine Bilddatei gefunden'}), 400
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 50, type=int)
+        sort_by = request.args.get('sort', 'date')
+        order = request.args.get('order', 'desc')
         
-        image_file = request.files['image']
-        
-        # Prüfen, ob ein Dateiname vorhanden ist
-        if image_file.filename == '':
-            return jsonify({'success': False, 'error': 'Kein Dateiname angegeben'}), 400
-        
-        # Formular-Parameter abrufen
-        directory = request.form.get('directory', 'gallery')
-        create_thumbnail = request.form.get('create_thumbnail', 'true').lower() == 'true'
-        
-        # Sicherer Dateiname
-        filename = secure_filename(image_file.filename)
-        if not filename:
-            filename = f"photo_{int(time.time())}.jpg"
-        
-        # Bild speichern
-        result = manage_files.save_image(
-            image_data=image_file.read(),
-            filename=filename,
+        result = manage_files.get_image_list(
             directory=directory,
-            create_thumbnail=create_thumbnail
+            page=page,
+            limit=limit,
+            sort_by=sort_by,
+            order=order
         )
         
-        if result.get('success', False):
-            manage_logging.log(f"Bild {filename} erfolgreich in {directory} gespeichert")
-        else:
-            manage_logging.error(f"Fehler beim Speichern von {filename}: {result.get('error')}")
-            
-        return jsonify(result)
+        return ApiResponse.success(data={
+            'images': result['images'],
+            'total': result['total'],
+            'page': page,
+            'pages': (result['total'] + limit - 1) // limit
+        })
     except Exception as e:
-        logger.error(f"API-Fehler beim Speichern des Bildes: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler beim Abrufen der Bilderliste: {e}")
+        return handle_api_exception(e, endpoint='/api/filesystem/images')
 
-@api_filesystem.route('/api/filesystem/delete', methods=['POST'])
-@manage_auth.require_auth
-def api_delete_image():
-    """API-Endpunkt zum Löschen eines Bildes (erfordert Authentifizierung)"""
+@api_filesystem.route('/api/filesystem/image/<path:filename>', methods=['GET'])
+@token_required
+def get_image(filename: str):
+    """API-Endpunkt zum Abrufen eines einzelnen Bildes"""
     try:
-        data = request.get_json()
-        filename = data.get('filename')
-        directory = data.get('directory', 'gallery')
+        photos_dir = get_photos_dir()
+        file_path = os.path.join(photos_dir, secure_filename(filename))
         
-        if not filename:
-            return jsonify({'success': False, 'error': 'Kein Dateiname angegeben'}), 400
-        
-        result = manage_files.delete_image(filename, directory)
-        
-        if result.get('success', False):
-            manage_logging.log(f"Bild {filename} aus {directory} gelöscht")
-        else:
-            manage_logging.error(f"Fehler beim Löschen von {filename}: {result.get('error')}")
+        if not os.path.exists(file_path):
+            return ApiResponse.error(
+                "Bild nicht gefunden",
+                error_code=404
+            )
             
-        return jsonify(result)
+        # Prüfe MIME-Type
+        mime_type, _ = mimetypes.guess_type(file_path)
+        if not mime_type or not mime_type.startswith('image/'):
+            return ApiResponse.error(
+                "Ungültiger Dateityp",
+                error_code=400
+            )
+            
+        return send_from_directory(
+            photos_dir,
+            secure_filename(filename),
+            mimetype=mime_type
+        )
     except Exception as e:
-        logger.error(f"API-Fehler beim Löschen des Bildes: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler beim Abrufen des Bildes {filename}: {e}")
+        return handle_api_exception(e, endpoint=f'/api/filesystem/image/{filename}')
 
-@api_filesystem.route('/api/filesystem/info', methods=['GET'])
-def api_get_file_info():
-    """API-Endpunkt zum Abrufen von Dateimetadaten"""
+@api_filesystem.route('/api/filesystem/upload', methods=['POST'])
+@token_required
+def upload_file():
+    """API-Endpunkt zum Hochladen von Dateien"""
     try:
-        filename = request.args.get('filename')
+        if 'file' not in request.files:
+            return ApiResponse.error(
+                "Keine Datei übermittelt",
+                error_code=400
+            )
+            
+        file = request.files['file']
+        if not file.filename:
+            return ApiResponse.error(
+                "Kein Dateiname angegeben",
+                error_code=400
+            )
+            
+        filename = secure_filename(file.filename)
+        directory = request.form.get('directory', 'gallery')
+        
+        # Prüfe MIME-Type
+        mime_type = file.content_type
+        if not mime_type or not mime_type.startswith('image/'):
+            return ApiResponse.error(
+                "Nur Bilddateien sind erlaubt",
+                error_code=400
+            )
+            
+        # Speichere Datei
+        file_path = manage_files.save_uploaded_file(file, filename, directory)
+        
+        # Erstelle Thumbnail
+        thumb_path = manage_files.create_thumbnail(file_path)
+        
+        return ApiResponse.success(
+            message="Datei erfolgreich hochgeladen",
+            data={
+                'filename': filename,
+                'path': file_path,
+                'thumbnail': thumb_path,
+                'mime_type': mime_type
+            }
+        )
+    except Exception as e:
+        logger.error(f"Fehler beim Hochladen der Datei: {e}")
+        return handle_api_exception(e, endpoint='/api/filesystem/upload')
+
+@api_filesystem.route('/api/filesystem/delete/<path:filename>', methods=['DELETE'])
+@token_required
+def delete_file(filename: str):
+    """API-Endpunkt zum Löschen von Dateien"""
+    try:
         directory = request.args.get('directory', 'gallery')
+        file_path = os.path.join(get_photos_dir(), directory, secure_filename(filename))
         
-        if not filename:
-            return jsonify({'success': False, 'error': 'Kein Dateiname angegeben'}), 400
-        
-        result = manage_files.get_file_info(filename, directory)
-        return jsonify(result)
-    except Exception as e:
-        logger.error(f"API-Fehler beim Abrufen der Dateimetadaten: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@api_filesystem.route('/api/filesystem/mkdir', methods=['POST'])
-@manage_auth.require_auth
-def api_create_directory():
-    """API-Endpunkt zum Erstellen eines Verzeichnisses (erfordert Authentifizierung)"""
-    try:
-        data = request.get_json()
-        path = data.get('path')
-        
-        if not path:
-            return jsonify({'success': False, 'error': 'Kein Verzeichnispfad angegeben'}), 400
-        
-        result = manage_files.create_directory(path)
-        
-        if result.get('success', False):
-            manage_logging.log(f"Verzeichnis {path} erstellt")
-        else:
-            manage_logging.error(f"Fehler beim Erstellen des Verzeichnisses {path}: {result.get('error')}")
+        if not os.path.exists(file_path):
+            return ApiResponse.error(
+                "Datei nicht gefunden",
+                error_code=404
+            )
             
-        return jsonify(result)
+        # Lösche Datei und zugehöriges Thumbnail
+        manage_files.delete_file(file_path)
+        
+        return ApiResponse.success(
+            message="Datei erfolgreich gelöscht"
+        )
     except Exception as e:
-        logger.error(f"API-Fehler beim Erstellen des Verzeichnisses: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler beim Löschen der Datei {filename}: {e}")
+        return handle_api_exception(e, endpoint=f'/api/filesystem/delete/{filename}')
 
-@api_filesystem.route('/api/filesystem/space', methods=['GET'])
-def api_check_disk_space():
-    """API-Endpunkt zum Prüfen des verfügbaren Speicherplatzes"""
+@api_filesystem.route('/api/filesystem/thumbnail/<path:filename>', methods=['GET'])
+@token_required
+def get_thumbnail(filename: str):
+    """API-Endpunkt zum Abrufen eines Thumbnails"""
     try:
-        result = manage_files.check_disk_space()
-        return jsonify(result)
+        directory = request.args.get('directory', 'gallery')
+        thumb_path = manage_files.get_thumbnail_path(filename, directory)
+        
+        if not os.path.exists(thumb_path):
+            # Erstelle Thumbnail falls nicht vorhanden
+            original_path = os.path.join(get_photos_dir(), directory, secure_filename(filename))
+            if os.path.exists(original_path):
+                thumb_path = manage_files.create_thumbnail(original_path)
+            else:
+                return ApiResponse.error(
+                    "Originalbild nicht gefunden",
+                    error_code=404
+                )
+                
+        return send_from_directory(
+            os.path.dirname(thumb_path),
+            os.path.basename(thumb_path),
+            mimetype='image/jpeg'
+        )
     except Exception as e:
-        logger.error(f"API-Fehler beim Prüfen des Speicherplatzes: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler beim Abrufen des Thumbnails {filename}: {e}")
+        return handle_api_exception(e, endpoint=f'/api/filesystem/thumbnail/{filename}')
 
-@api_filesystem.route('/api/gallery', methods=['GET'])
-def api_gallery():
-    """Abwärtskompatibilität: Leitet zum neuen Endpunkt für Bilder weiter"""
-    try:
-        result = manage_files.get_image_list('gallery')
-        return jsonify(result)
-    except Exception as e:
-        logger.error(f"API-Fehler beim Abrufen der Galerie: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+# Blueprint-Registrierung
+def register_blueprint(app):
+    """Registriert den Blueprint bei der Flask-App"""
+    app.register_blueprint(api_filesystem)
+    logger.info("API-Endpunkte für Dateisystem registriert")

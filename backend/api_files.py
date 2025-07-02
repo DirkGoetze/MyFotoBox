@@ -11,367 +11,239 @@
 #
 
 import os
-import flask
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, send_from_directory, Response
 import logging
 import mimetypes
 from typing import Dict, Any, List, Optional
+from pathlib import Path
+import utils.path_utils as utils  # Sicherheitsutils für Pfadoperationen
 
 # Eigene Module importieren
 import manage_files
-import manage_folders
-import utils
-import manage_auth
+from manage_api import ApiResponse, handle_api_exception
 from api_auth import token_required
+from manage_folders import FolderManager
 
 # Logger konfigurieren
 logger = logging.getLogger(__name__)
 
 # Blueprint definieren
-api_files_bp = Blueprint('api_files', __name__)
+api_files = Blueprint('api_files', __name__)
 
-@api_files_bp.route('/files/config', methods=['GET'])
+# FolderManager Instanz
+folder_manager = FolderManager()
+
+@api_files.route('/api/files/config', methods=['GET'])
 @token_required
-def get_config_file_path():
-    """API-Endpunkt zum Abrufen des Pfads zu einer Konfigurationsdatei.
+def get_config_file_path() -> Dict[str, Any]:
+    """
+    API-Endpunkt zum Abrufen des Pfads zu einer Konfigurationsdatei.
     
     Erfordert Parameter:
     - category: Die Kategorie der Konfigurationsdatei (nginx, camera, system)
     - name: Der Name der Konfigurationsdatei (ohne Erweiterung)
     
     Returns:
-        flask.Response: JSON-Response mit Erfolgs-Flag und Pfad zur Konfigurationsdatei
+        Dict mit Pfad zur Konfigurationsdatei
     """
     try:
         category = request.args.get('category')
         name = request.args.get('name')
         
         if not category or not name:
-            return jsonify({
-                'success': False,
-                'error': 'Kategorie und Name müssen angegeben werden'
-            }), 400
+            return ApiResponse.error(
+                message="Kategorie und Name müssen angegeben werden",
+                status_code=400
+            )
         
         file_path = manage_files.get_config_file_path(category=category, name=name)
+        exists = Path(file_path).exists()
         
-        return jsonify({
-            'success': True,
+        return ApiResponse.success(data={
             'path': file_path,
-            'exists': os.path.exists(file_path)
+            'exists': exists,
+            'category': category,
+            'name': name
         })
     
     except ValueError as e:
-        logger.error(f"Fehler bei get_config_file_path: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 400
+        logger.error(f"Ungültige Parameter bei get_config_file_path: {e}")
+        return ApiResponse.error(
+            message=str(e),
+            status_code=400
+        )
     except Exception as e:
-        logger.error(f"Unerwarteter Fehler bei get_config_file_path: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': "Interner Serverfehler"
-        }), 500
+        logger.error(f"Fehler bei get_config_file_path: {e}")
+        return handle_api_exception(e, endpoint='/api/files/config')
 
-@api_files_bp.route('/files/system', methods=['GET'])
+@api_files.route('/api/files/system', methods=['GET'])
 @token_required
-def get_system_file_path():
-    """API-Endpunkt zum Abrufen des Pfads zu einer Systemdatei (mit Fallback).
+def get_system_file_path() -> Dict[str, Any]:
+    """
+    API-Endpunkt zum Abrufen des Pfads zu einer Systemdatei.
     
     Erfordert Parameter:
     - file_type: Der Typ der Systemdatei (nginx, systemd, ssl_cert, ssl_key)
     - name: Der Name der Systemdatei (ohne Erweiterung)
     
     Returns:
-        flask.Response: JSON-Response mit Erfolgs-Flag und Pfad zur Systemdatei
+        Dict mit Pfad zur Systemdatei
     """
     try:
         file_type = request.args.get('file_type')
         name = request.args.get('name')
         
         if not file_type or not name:
-            return jsonify({
-                'success': False,
-                'error': 'Dateityp und Name müssen angegeben werden'
-            }), 400
+            return ApiResponse.error(
+                message="Dateityp und Name müssen angegeben werden",
+                status_code=400
+            )
         
         file_path = manage_files.get_system_file_path(file_type=file_type, name=name)
+        exists = Path(file_path).exists()
         
-        return jsonify({
-            'success': True,
+        return ApiResponse.success(data={
             'path': file_path,
-            'exists': os.path.exists(file_path),
-            'is_primary': file_path.startswith('/etc/') or file_path.startswith('/var/')
+            'exists': exists,
+            'type': file_type,
+            'name': name
         })
     
     except ValueError as e:
-        logger.error(f"Fehler bei get_system_file_path: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 400
+        logger.error(f"Ungültige Parameter bei get_system_file_path: {e}")
+        return ApiResponse.error(
+            message=str(e),
+            status_code=400
+        )
     except Exception as e:
-        logger.error(f"Unerwarteter Fehler bei get_system_file_path: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': "Interner Serverfehler"
-        }), 500
+        logger.error(f"Fehler bei get_system_file_path: {e}")
+        return handle_api_exception(e, endpoint='/api/files/system')
 
-@api_files_bp.route('/files/log', methods=['GET'])
+@api_files.route('/api/files/download/<path:file_path>', methods=['GET'])
 @token_required
-def get_log_file_path():
-    """API-Endpunkt zum Abrufen des Pfads zu einer Log-Datei.
-    
-    Erfordert Parameter:
-    - component: Die Komponente, für die die Log-Datei bestimmt ist
-    
-    Returns:
-        flask.Response: JSON-Response mit Erfolgs-Flag und Pfad zur Log-Datei
+def download_file(file_path: str) -> Response:
     """
-    try:
-        component = request.args.get('component')
-        
-        if not component:
-            return jsonify({
-                'success': False,
-                'error': 'Komponente muss angegeben werden'
-            }), 400
-        
-        file_path = manage_files.get_log_file_path(component=component)
-        
-        return jsonify({
-            'success': True,
-            'path': file_path,
-            'exists': os.path.exists(file_path)
-        })
-    
-    except ValueError as e:
-        logger.error(f"Fehler bei get_log_file_path: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 400
-    except Exception as e:
-        logger.error(f"Unerwarteter Fehler bei get_log_file_path: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': "Interner Serverfehler"
-        }), 500
-
-@api_files_bp.route('/files/template', methods=['GET'])
-@token_required
-def get_template_file_path():
-    """API-Endpunkt zum Abrufen des Pfads zu einer Template-Datei.
-    
-    Erfordert Parameter:
-    - category: Die Kategorie des Templates (nginx, backup)
-    - name: Der Name des Templates
-    
-    Returns:
-        flask.Response: JSON-Response mit Erfolgs-Flag und Pfad zur Template-Datei
-    """
-    try:
-        category = request.args.get('category')
-        name = request.args.get('name')
-        
-        if not category or not name:
-            return jsonify({
-                'success': False,
-                'error': 'Kategorie und Name müssen angegeben werden'
-            }), 400
-        
-        file_path = manage_files.get_template_file_path(category=category, name=name)
-        
-        return jsonify({
-            'success': True,
-            'path': file_path,
-            'exists': os.path.exists(file_path)
-        })
-    
-    except ValueError as e:
-        logger.error(f"Fehler bei get_template_file_path: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 400
-    except Exception as e:
-        logger.error(f"Unerwarteter Fehler bei get_template_file_path: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': "Interner Serverfehler"
-        }), 500
-
-@api_files_bp.route('/files/exists', methods=['GET'])
-@token_required
-def check_file_exists():
-    """API-Endpunkt zum Überprüfen, ob eine Datei existiert.
-    
-    Erfordert Parameter:
-    - path: Der vollständige Pfad zur Datei
-    
-    Returns:
-        flask.Response: JSON-Response mit Erfolgs-Flag und Existenz-Status der Datei
-    """
-    try:
-        file_path = request.args.get('path')
-        
-        if not file_path:
-            return jsonify({
-                'success': False,
-                'error': 'Dateipfad muss angegeben werden'
-            }), 400
-        
-        # Sicherheitscheck durchführen
-        if not utils.is_safe_path(file_path):
-            return jsonify({
-                'success': False,
-                'error': 'Dateipfad ist nicht sicher'
-            }), 403
-        
-        exists = manage_files.file_exists(file_path)
-        
-        return jsonify({
-            'success': True,
-            'exists': exists
-        })
-    
-    except ValueError as e:
-        logger.error(f"Fehler bei check_file_exists: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 400
-    except Exception as e:
-        logger.error(f"Unerwarteter Fehler bei check_file_exists: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': "Interner Serverfehler"
-        }), 500
-
-@api_files_bp.route('/files/content', methods=['GET'])
-@token_required
-def get_file_content():
-    """API-Endpunkt zum Abrufen des Inhalts einer Datei.
-    
-    Erfordert Parameter:
-    - path: Der vollständige Pfad zur Datei
-    
-    Returns:
-        flask.Response: JSON-Response mit Erfolgs-Flag und Inhalt der Datei
-    """
-    try:
-        file_path = request.args.get('path')
-        
-        if not file_path:
-            return jsonify({
-                'success': False,
-                'error': 'Dateipfad muss angegeben werden'
-            }), 400
-        
-        # Sicherheitscheck durchführen
-        if not utils.is_safe_path(file_path):
-            return jsonify({
-                'success': False,
-                'error': 'Dateipfad ist nicht sicher'
-            }), 403
-        
-        if not os.path.exists(file_path):
-            return jsonify({
-                'success': False,
-                'error': 'Datei existiert nicht'
-            }), 404
-            
-        # Dateityp überprüfen (binäre Dateien vermeiden)
-        mime_type, encoding = mimetypes.guess_type(file_path)
-        if mime_type and not mime_type.startswith('text/'):
-            return jsonify({
-                'success': False,
-                'error': 'Nur Text-Dateien können angezeigt werden'
-            }), 400
-        
-        # Inhalt der Datei lesen
-        try:
-            with open(file_path, 'r', encoding='utf-8') as file:
-                content = file.read()
-        except UnicodeDecodeError:
-            # Fallback für nicht-UTF-8-Dateien
-            with open(file_path, 'r', encoding='latin-1') as file:
-                content = file.read()
-        
-        return jsonify({
-            'success': True,
-            'content': content,
-            'mime_type': mime_type or 'text/plain'
-        })
-    
-    except Exception as e:
-        logger.error(f"Unerwarteter Fehler bei get_file_content: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@api_files_bp.route('/files/write', methods=['POST'])
-@token_required
-def write_file_content():
-    """API-Endpunkt zum Schreiben von Inhalt in eine Datei.
-    
-    Erfordert einen JSON-Body mit:
-    - path: Der vollständige Pfad zur Datei
-    - content: Der zu schreibende Inhalt
-    - create_dirs (optional): Flag, ob Verzeichnisse erstellt werden sollen (default: True)
-    
-    Returns:
-        flask.Response: JSON-Response mit Erfolgs-Flag
-    """
-    try:
-        data = request.get_json()
-        
-        if not data or 'path' not in data or 'content' not in data:
-            return jsonify({
-                'success': False,
-                'error': 'Pfad und Inhalt müssen angegeben werden'
-            }), 400
-        
-        file_path = data['path']
-        content = data['content']
-        create_dirs = data.get('create_dirs', True)
-        
-        # Sicherheitscheck durchführen
-        if not utils.is_safe_path(file_path):
-            return jsonify({
-                'success': False,
-                'error': 'Dateipfad ist nicht sicher'
-            }), 403
-        
-        # Sicherstellen, dass das Verzeichnis existiert
-        if create_dirs:
-            directory = os.path.dirname(file_path)
-            if directory and not os.path.exists(directory):
-                os.makedirs(directory, exist_ok=True)
-        
-        # Inhalt in die Datei schreiben
-        with open(file_path, 'w', encoding='utf-8') as file:
-            file.write(content)
-        
-        return jsonify({
-            'success': True,
-            'path': file_path
-        })
-    
-    except Exception as e:
-        logger.error(f"Unerwarteter Fehler bei write_file_content: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-# Flask-App-Konfiguration: Blueprint wird in app.py registriert
-def register_blueprint(app):
-    """Registriert den Blueprint bei der Flask-App
+    API-Endpunkt zum Herunterladen einer Datei.
     
     Args:
-        app (Flask): Die Flask-App-Instanz
+        file_path: Relativer Pfad zur Datei
+        
+    Returns:
+        Response mit der angeforderten Datei
     """
-    app.register_blueprint(api_files_bp, url_prefix='/api')
+    try:
+        if not file_path:
+            return ApiResponse.error(
+                message="Kein Dateipfad angegeben",
+                status_code=400
+            )
+            
+        # Sicherheitscheck für Pfad
+        abs_path = Path(folder_manager.get_path('data')) / file_path
+        if not utils.is_safe_path(str(abs_path)):
+            return ApiResponse.error(
+                message="Ungültiger Dateipfad",
+                status_code=400
+            )
+            
+        if not abs_path.exists():
+            return ApiResponse.error(
+                message="Datei nicht gefunden",
+                status_code=404
+            )
+            
+        return send_from_directory(
+            os.path.dirname(abs_path),
+            os.path.basename(abs_path),
+            as_attachment=True
+        )
+        
+    except Exception as e:
+        logger.error(f"Fehler beim Herunterladen der Datei {file_path}: {e}")
+        return handle_api_exception(e, endpoint=f'/api/files/download/{file_path}')
+
+@api_files.route('/api/files/info/<path:file_path>', methods=['GET'])
+@token_required
+def get_file_info(file_path: str) -> Dict[str, Any]:
+    """
+    API-Endpunkt zum Abrufen von Dateiinformationen.
+    
+    Args:
+        file_path: Relativer Pfad zur Datei
+        
+    Returns:
+        Dict mit Dateiinformationen
+    """
+    try:
+        if not file_path:
+            return ApiResponse.error(
+                message="Kein Dateipfad angegeben",
+                status_code=400
+            )
+            
+        # Sicherheitscheck für Pfad
+        abs_path = Path(folder_manager.get_path('data')) / file_path
+        if not utils.is_safe_path(str(abs_path)):
+            return ApiResponse.error(
+                message="Ungültiger Dateipfad",
+                status_code=400
+            )
+            
+        if not abs_path.exists():
+            return ApiResponse.error(
+                message="Datei nicht gefunden",
+                status_code=404
+            )
+            
+        file_info = manage_files.get_file_info(str(abs_path))
+        return ApiResponse.success(data=file_info)
+        
+    except Exception as e:
+        logger.error(f"Fehler beim Abrufen der Dateiinformationen für {file_path}: {e}")
+        return handle_api_exception(e, endpoint=f'/api/files/info/{file_path}')
+
+@api_files.route('/api/files/delete/<path:file_path>', methods=['DELETE'])
+@token_required
+def delete_file(file_path: str) -> Dict[str, Any]:
+    """
+    API-Endpunkt zum Löschen einer Datei.
+    
+    Args:
+        file_path: Relativer Pfad zur Datei
+        
+    Returns:
+        Dict mit Status der Operation
+    """
+    try:
+        if not file_path:
+            return ApiResponse.error(
+                message="Kein Dateipfad angegeben",
+                status_code=400
+            )
+            
+        # Sicherheitscheck für Pfad
+        abs_path = Path(folder_manager.get_path('data')) / file_path
+        if not utils.is_safe_path(str(abs_path)):
+            return ApiResponse.error(
+                message="Ungültiger Dateipfad",
+                status_code=400
+            )
+            
+        if not abs_path.exists():
+            return ApiResponse.error(
+                message="Datei nicht gefunden",
+                status_code=404
+            )
+            
+        manage_files.delete_file(str(abs_path))
+        return ApiResponse.success(message="Datei erfolgreich gelöscht")
+        
+    except Exception as e:
+        logger.error(f"Fehler beim Löschen der Datei {file_path}: {e}")
+        return handle_api_exception(e, endpoint=f'/api/files/delete/{file_path}')
+
+# Blueprint-Registrierung
+def register_blueprint(app):
+    """Registriert den Blueprint bei der Flask-App"""
+    app.register_blueprint(api_files)
     logger.info("API-Endpunkte für Dateiverwaltung registriert")

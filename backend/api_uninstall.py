@@ -5,182 +5,171 @@ Dieses Modul stellt die Flask-API-Endpunkte für Deinstallationsoperationen bere
 und dient als Schnittstelle zwischen dem Frontend und dem manage_uninstall-Modul.
 """
 
-from flask import Blueprint, jsonify, request
-import os
-import subprocess
-import sys
-from datetime import datetime
-import manage_auth
-import manage_logging
+from flask import Blueprint, request
+from typing import Dict, Any
+import logging
+
+from manage_api import ApiResponse, handle_api_exception
+from api_auth import token_required
 import manage_uninstall
-import manage_api
+from manage_folders import FolderManager
+
+# Logger konfigurieren
+logger = logging.getLogger(__name__)
 
 # Blueprint für die Deinstallation-API erstellen
 api_uninstall = Blueprint('api_uninstall', __name__)
 
-# -------------------------------------------------------------------------------
-# API-Endpunkte für Deinstallationsoperationen
-# -------------------------------------------------------------------------------
+# FolderManager Instanz
+folder_manager = FolderManager()
 
 @api_uninstall.route('/api/uninstall/backup-configs', methods=['POST'])
-@manage_auth.require_auth
-def api_backup_configs():
-    """API-Endpunkt für das Sichern von Konfigurationsdateien"""
+@token_required
+def backup_configs() -> Dict[str, Any]:
+    """
+    API-Endpunkt für das Sichern von Konfigurationsdateien
+    
+    Returns:
+        Dict mit Status und Details der Backup-Operation
+    """
     try:
-        manage_api.log_api_request('/api/uninstall/backup-configs', request.method, 
-                                   request_data=request.get_json(force=True) if request.method == 'POST' else None,
-                                   user_id=request.cookies.get('user_id'))
+        result = manage_uninstall.backup_configs()
+        if not result['success']:
+            return ApiResponse.error(
+                message='Fehler beim Backup der Konfigurationen',
+                details=result.get('error'),
+                status_code=500
+            )
+            
+        return ApiResponse.success(
+            message='Konfigurationen wurden erfolgreich gesichert',
+            data=result
+        )
         
-        if not manage_auth.is_admin():
-            manage_logging.warn(f"Nicht autorisierter Zugriff auf Deinstallation-Backup von {request.remote_addr}")
-            return jsonify({'success': False, 'error': 'Nicht autorisiert'}), 403
-        
-        manage_uninstall.backup_configs()
-        return jsonify({
-            'success': True,
-            'message': 'Konfigurationen wurden erfolgreich gesichert'
-        })
     except Exception as e:
-        manage_logging.error(f"Fehler beim Sichern der Konfigurationen: {str(e)}", exception=e)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler beim Sichern der Konfigurationen: {e}")
+        return handle_api_exception(e, endpoint='/api/uninstall/backup-configs')
 
 @api_uninstall.route('/api/uninstall/systemd', methods=['POST'])
-@manage_auth.require_auth
-def api_remove_systemd():
-    """API-Endpunkt zum Entfernen des systemd-Services"""
+@token_required
+def remove_systemd() -> Dict[str, Any]:
+    """
+    API-Endpunkt zum Entfernen des systemd-Services
+    
+    Returns:
+        Dict mit Status und Details der Operation
+    """
     try:
-        manage_api.log_api_request('/api/uninstall/systemd', request.method, 
-                                  request_data=request.get_json(force=True) if request.method == 'POST' else None,
-                                  user_id=request.cookies.get('user_id'))
+        result = manage_uninstall.remove_systemd()
+        if not result['success']:
+            return ApiResponse.error(
+                message='Fehler beim Entfernen des systemd-Service',
+                details=result.get('error'),
+                status_code=500
+            )
+            
+        return ApiResponse.success(
+            message='systemd-Service wurde erfolgreich entfernt',
+            data=result
+        )
         
-        if not manage_auth.is_admin():
-            manage_logging.warn(f"Nicht autorisierter Zugriff auf Deinstallation-systemd von {request.remote_addr}")
-            return jsonify({'success': False, 'error': 'Nicht autorisiert'}), 403
-        
-        manage_uninstall.backup_and_remove_systemd()
-        return jsonify({
-            'success': True,
-            'message': 'systemd-Service wurde gesichert und entfernt'
-        })
     except Exception as e:
-        manage_logging.error(f"Fehler beim Entfernen des systemd-Service: {str(e)}", exception=e)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler beim Entfernen des systemd-Service: {e}")
+        return handle_api_exception(e, endpoint='/api/uninstall/systemd')
 
 @api_uninstall.route('/api/uninstall/nginx', methods=['POST'])
-@manage_auth.require_auth
-def api_remove_nginx():
-    """API-Endpunkt zum Entfernen der NGINX-Konfiguration"""
+@token_required
+def remove_nginx() -> Dict[str, Any]:
+    """
+    API-Endpunkt zum Entfernen der NGINX-Konfiguration
+    
+    Returns:
+        Dict mit Status und Details der Operation
+    """
     try:
-        manage_api.log_api_request('/api/uninstall/nginx', request.method, 
-                                  request_data=request.get_json(force=True) if request.method == 'POST' else None,
-                                  user_id=request.cookies.get('user_id'))
+        result = manage_uninstall.remove_nginx()
+        if not result['success']:
+            return ApiResponse.error(
+                message='Fehler beim Entfernen der NGINX-Konfiguration',
+                details=result.get('error'),
+                status_code=500
+            )
+            
+        return ApiResponse.success(
+            message='NGINX-Konfiguration wurde erfolgreich entfernt',
+            data=result
+        )
         
-        if not manage_auth.is_admin():
-            manage_logging.warn(f"Nicht autorisierter Zugriff auf Deinstallation-nginx von {request.remote_addr}")
-            return jsonify({'success': False, 'error': 'Nicht autorisiert'}), 403
-        
-        manage_uninstall.backup_and_remove_nginx()
-        return jsonify({
-            'success': True,
-            'message': 'NGINX-Konfiguration wurde gesichert und entfernt'
-        })
     except Exception as e:
-        manage_logging.error(f"Fehler beim Entfernen der NGINX-Konfiguration: {str(e)}", exception=e)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler beim Entfernen der NGINX-Konfiguration: {e}")
+        return handle_api_exception(e, endpoint='/api/uninstall/nginx')
 
 @api_uninstall.route('/api/uninstall/project', methods=['POST'])
-@manage_auth.require_auth
-def api_remove_project():
-    """API-Endpunkt zum Entfernen des Projektverzeichnisses"""
+@token_required
+def remove_project() -> Dict[str, Any]:
+    """
+    API-Endpunkt zum Entfernen des Projektverzeichnisses
+    
+    Returns:
+        Dict mit Status und Details der Operation
+    """
     try:
-        manage_api.log_api_request('/api/uninstall/project', request.method, 
-                                  request_data=request.get_json(force=True) if request.method == 'POST' else None,
-                                  user_id=request.cookies.get('user_id'))
+        result = manage_uninstall.remove_project()
+        if not result['success']:
+            return ApiResponse.error(
+                message='Fehler beim Entfernen des Projektverzeichnisses',
+                details=result.get('error'),
+                status_code=500
+            )
+            
+        return ApiResponse.success(
+            message='Projektverzeichnis wurde erfolgreich entfernt',
+            data=result
+        )
         
-        if not manage_auth.is_admin():
-            manage_logging.warn(f"Nicht autorisierter Zugriff auf Deinstallation-project von {request.remote_addr}")
-            return jsonify({'success': False, 'error': 'Nicht autorisiert'}), 403
-        
-        manage_uninstall.remove_project()
-        return jsonify({
-            'success': True,
-            'message': 'Projektverzeichnis wurde entfernt'
-        })
     except Exception as e:
-        manage_logging.error(f"Fehler beim Entfernen des Projektverzeichnisses: {str(e)}", exception=e)
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@api_uninstall.route('/api/uninstall/db-cleanup', methods=['POST'])
-@manage_auth.require_auth
-def api_cleanup_optimize_db():
-    """API-Endpunkt zur Bereinigung und Optimierung der Datenbank"""
-    try:
-        manage_api.log_api_request('/api/uninstall/db-cleanup', request.method, 
-                                  request_data=request.get_json(force=True) if request.method == 'POST' else None,
-                                  user_id=request.cookies.get('user_id'))
-        
-        if not manage_auth.is_admin():
-            manage_logging.warn(f"Nicht autorisierter Zugriff auf DB-Cleanup von {request.remote_addr}")
-            return jsonify({'success': False, 'error': 'Nicht autorisiert'}), 403
-        
-        manage_uninstall.cleanup_and_optimize_db()
-        return jsonify({
-            'success': True,
-            'message': 'Datenbank wurde bereinigt und optimiert'
-        })
-    except Exception as e:
-        manage_logging.error(f"Fehler bei der Datenbankbereinigung: {str(e)}", exception=e)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler beim Entfernen des Projektverzeichnisses: {e}")
+        return handle_api_exception(e, endpoint='/api/uninstall/project')
 
 @api_uninstall.route('/api/uninstall/complete', methods=['POST'])
-@manage_auth.require_auth
-def api_complete_uninstall():
-    """API-Endpunkt für den kompletten Deinstallationsprozess"""
+@token_required
+def complete_uninstall() -> Dict[str, Any]:
+    """
+    API-Endpunkt für die vollständige Deinstallation
+    
+    Führt alle Deinstallationsschritte nacheinander aus:
+    1. Backup der Konfigurationen
+    2. Entfernen des systemd-Service
+    3. Entfernen der NGINX-Konfiguration
+    4. Entfernen des Projektverzeichnisses
+    
+    Returns:
+        Dict mit Status und Details aller Operationen
+    """
     try:
-        manage_api.log_api_request('/api/uninstall/complete', request.method, 
-                                  request_data=request.get_json(force=True) if request.method == 'POST' else None,
-                                  user_id=request.cookies.get('user_id'))
+        results = {
+            'backup': manage_uninstall.backup_configs(),
+            'systemd': manage_uninstall.remove_systemd(),
+            'nginx': manage_uninstall.remove_nginx(),
+            'project': manage_uninstall.remove_project()
+        }
         
-        if not manage_auth.is_admin():
-            manage_logging.warn(f"Nicht autorisierter Zugriff auf vollständige Deinstallation von {request.remote_addr}")
-            return jsonify({'success': False, 'error': 'Nicht autorisiert'}), 403
+        # Prüfe auf Fehler
+        errors = {k: v.get('error') for k, v in results.items() 
+                 if not v['success'] and 'error' in v}
+                 
+        if errors:
+            return ApiResponse.error(
+                message='Fehler bei der vollständigen Deinstallation',
+                details=errors,
+                status_code=500
+            )
+            
+        return ApiResponse.success(
+            message='Fotobox2 wurde erfolgreich deinstalliert',
+            data=results
+        )
         
-        data = request.get_json(force=True)
-        remove_backups = data.get('remove_backups', False)
-        
-        # Führe die vollständige Deinstallation durch
-        manage_uninstall.backup_configs()
-        manage_uninstall.backup_and_remove_systemd()
-        manage_uninstall.backup_and_remove_nginx()
-        manage_uninstall.remove_systemd()
-        manage_uninstall.remove_nginx()
-        manage_uninstall.remove_project()
-        
-        # Backup-Verzeichnis entfernen, wenn angefordert
-        message = 'Deinstallation abgeschlossen. Backup-Verzeichnis wurde beibehalten.'
-        if remove_backups:
-            backup_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backup'))
-            if os.path.exists(backup_dir):
-                import shutil
-                try:
-                    shutil.rmtree(backup_dir)
-                    message = 'Deinstallation abgeschlossen. Backup-Verzeichnis wurde entfernt.'
-                except Exception as e:
-                    manage_logging.error(f"Fehler beim Entfernen des Backup-Verzeichnisses: {str(e)}", exception=e)
-                    return jsonify({
-                        'success': True,
-                        'message': 'Deinstallation abgeschlossen, aber Backup-Verzeichnis konnte nicht entfernt werden.',
-                        'error': str(e)
-                    })
-        
-        return jsonify({
-            'success': True,
-            'message': message
-        })
     except Exception as e:
-        manage_logging.error(f"Fehler bei der vollständigen Deinstallation: {str(e)}", exception=e)
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-def init_app(app):
-    """Initialisiert die Uninstall-API mit der Flask-Anwendung"""
-    app.register_blueprint(api_uninstall)
+        logger.error(f"Fehler bei der vollständigen Deinstallation: {e}")
+        return handle_api_exception(e, endpoint='/api/uninstall/complete')

@@ -2,6 +2,14 @@
 # -*- coding: utf-8 -*-
 """
 utils.py - Allgemeine Hilfsfunktionen für das Fotobox2-Backend
+
+Dieses Modul stellt wiederverwendbare Hilfsfunktionen bereit, die von verschiedenen
+Backend-Modulen genutzt werden. Es bietet Funktionen für:
+- Dateigrößen-Formatierung
+- String-Normalisierung
+- Datum/Zeit-Formatierung
+- Hash-Generierung
+- JSON-Verarbeitung
 """
 
 import os
@@ -11,10 +19,16 @@ import uuid
 import time
 import datetime
 import hashlib
-from typing import Dict, List, Union, Optional, Any, Callable
+from typing import Dict, List, Union, Optional, Any, Callable, TypeVar, Generic
 
 import logging
+
+# Logger konfigurieren
 logger = logging.getLogger(__name__)
+
+# Type-Alias für bessere Typenhinweise
+JsonDict = Dict[str, Any]
+T = TypeVar('T')
 
 
 def format_bytes(size: int, decimal_places: int = 2) -> str:
@@ -338,6 +352,91 @@ def retry(max_tries: int = 3, delay_seconds: int = 1,
             return func(*args, **kwargs)
         return wrapper
     return decorator
+
+
+class Result(Generic[T]):
+    """
+    Generische Klasse für Rückgabewerte mit Status und Fehlerbehandlung
+    
+    Attributes:
+        success (bool): True wenn die Operation erfolgreich war
+        data (Optional[T]): Die Rückgabedaten bei Erfolg
+        error (Optional[str]): Die Fehlermeldung bei Misserfolg
+    """
+    
+    def __init__(self, success: bool, data: Optional[T] = None, error: Optional[str] = None):
+        self.success = success
+        self.data = data
+        self.error = error
+        
+    @classmethod
+    def ok(cls, data: T) -> 'Result[T]':
+        """Erstellt ein erfolgreiches Result-Objekt"""
+        return cls(True, data=data)
+        
+    @classmethod
+    def fail(cls, error: str) -> 'Result[T]':
+        """Erstellt ein fehlgeschlagenes Result-Objekt"""
+        return cls(False, error=error)
+        
+    def to_dict(self) -> JsonDict:
+        """Konvertiert das Result in ein Dict"""
+        result = {'success': self.success}
+        if self.data is not None:
+            result['data'] = self.data
+        if self.error is not None:
+            result['error'] = self.error
+        return result
+
+def safe_json_loads(data: str, default: T = None) -> T:
+    """
+    Versucht einen JSON-String sicher zu parsen
+    
+    Args:
+        data: Der zu parsende JSON-String
+        default: Rückgabewert im Fehlerfall
+
+    Returns:
+        Geparste Daten oder default bei Fehler
+    """
+    try:
+        return json.loads(data)
+    except Exception as e:
+        logger.warning(f"JSON Parsing fehlgeschlagen: {str(e)}")
+        return default
+
+def safe_get(obj: Dict[str, Any], key: str, default: T = None) -> T:
+    """
+    Sicherer Dict-Zugriff mit Typ-Konvertierung
+    
+    Args:
+        obj: Das Dictionary
+        key: Der Schlüssel
+        default: Rückgabewert wenn Schlüssel nicht existiert
+
+    Returns:
+        Wert aus dem Dict oder default
+    """
+    try:
+        value = obj.get(key, default)
+        return type(default)(value) if default is not None else value
+    except (ValueError, TypeError):
+        return default
+
+def generate_temp_filename(prefix: str = "", suffix: str = "") -> str:
+    """
+    Generiert einen eindeutigen temporären Dateinamen
+    
+    Args:
+        prefix: Optionaler Prefix
+        suffix: Optionale Dateiendung
+
+    Returns:
+        Eindeutiger Dateiname
+    """
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    random_str = str(uuid.uuid4())[:8]
+    return f"{prefix}{timestamp}_{random_str}{suffix}"
 
 
 # Füge hier weitere nützliche Hilfsfunktionen hinzu

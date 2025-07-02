@@ -5,126 +5,242 @@ Dieses Modul stellt die Flask-API-Endpunkte für Datenbankoperationen bereit und
 dient als Schnittstelle zwischen dem Frontend und dem manage_database-Modul.
 """
 
-from flask import Blueprint, request, jsonify, session
+from flask import Blueprint, request
+from typing import Dict, Any, List, Optional
+import logging
 import os
 import sqlite3
 
+from manage_api import ApiResponse, handle_api_exception
+from api_auth import token_required
 import manage_database
-import manage_logging
-import manage_auth
-import manage_api
+from manage_folders import FolderManager
+
+# Logger konfigurieren
+logger = logging.getLogger(__name__)
 
 # Blueprint für die Datenbank-API erstellen
 api_database = Blueprint('api_database', __name__)
+
+# FolderManager Instanz
+folder_manager = FolderManager()
+
+# Liste erlaubter SQL-Operationen für Nicht-Admins
+ALLOWED_SQL_OPS = {'SELECT'}
+
+def validate_sql_query(sql: str, is_admin: bool = False) -> bool:
+    """
+    Validiert eine SQL-Abfrage auf potenziell gefährliche Operationen
+    
+    Args:
+        sql: Die zu prüfende SQL-Abfrage
+        is_admin: Ob der Benutzer Admin-Rechte hat
+    
+    Returns:
+        bool: True wenn die Abfrage sicher ist
+    
+    Raises:
+        ValueError: Wenn die Abfrage potenziell gefährlich ist
+    """
+    if is_admin:
+        return True
+        
+    sql_upper = sql.upper()
+    ops = {word for word in sql_upper.split() if word in 
+           {'SELECT', 'INSERT', 'UPDATE', 'DELETE', 'DROP', 'ALTER', 'CREATE', 'TRUNCATE'}}
+    
+    if not ops.issubset(ALLOWED_SQL_OPS):
+        forbidden = ops - ALLOWED_SQL_OPS
+        raise ValueError(f"Nicht erlaubte SQL-Operationen: {', '.join(forbidden)}")
+        
+    return True
 
 # -------------------------------------------------------------------------------
 # API-Endpunkte für Datenbankoperationen
 # -------------------------------------------------------------------------------
 
 @api_database.route('/api/database/query', methods=['POST'])
-@manage_auth.require_auth
-def db_query():
-    """API-Endpunkt für Datenbankabfragen"""
+@token_required
+def db_query() -> Dict[str, Any]:
+    """
+    API-Endpunkt für Datenbankabfragen
+    
+    Returns:
+        Dict mit Abfrageergebnis
+    """
     try:
         data = request.get_json()
-        sql = data.get('sql')
-        params = data.get('params')
-        
-        if not sql:
-            return jsonify({'success': False, 'error': 'SQL-Statement fehlt'}), 400
+        if not data or 'sql' not in data:
+            return ApiResponse.error(
+                message="SQL-Statement fehlt",
+                status_code=400
+            )
             
-        # SQL-Injection-Prüfung
-        if not manage_auth.is_admin():
-            # Einfache Sicherheitsprüfung für Nicht-Admins
-            forbidden_patterns = ['DROP', 'DELETE', 'UPDATE', 'INSERT', 'ALTER', 'CREATE', 'TRUNCATE']
-            if any(pattern in sql.upper() for pattern in forbidden_patterns):
-                manage_logging.warn(f"Versuchter SQL-Injection-Angriff: {sql}", 
-                                  context={'user_id': session.get('user_id')})
-                return jsonify({'success': False, 'error': 'Operation nicht erlaubt'}), 403
+        sql = data['sql']
+        params = data.get('params', [])
+        
+        # SQL-Validierung
+        try:
+            validate_sql_query(sql, is_admin=False)  # TODO: Admin-Status prüfen
+        except ValueError as e:
+            logger.warning(f"SQL-Validierung fehlgeschlagen: {e}")
+            return ApiResponse.error(
+                message="Operation nicht erlaubt",
+                details=str(e),
+                status_code=403
+            )
         
         # Führe die Abfrage durch
         result = manage_database.query(sql, params)
-        return jsonify(result)
+        if not result['success']:
+            return ApiResponse.error(
+                message="Datenbankabfrage fehlgeschlagen",
+                details=result.get('error'),
+                status_code=400
+            )
+            
+        return ApiResponse.success(data=result.get('data', []))
+        
     except Exception as e:
-        manage_logging.error(f"Fehler bei DB-Abfrage: {str(e)}", exception=e)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler bei DB-Abfrage: {e}")
+        return handle_api_exception(e, endpoint='/api/database/query')
 
 @api_database.route('/api/database/insert', methods=['POST'])
-@manage_auth.require_auth
-def db_insert():
-    """API-Endpunkt zum Einfügen von Daten"""
+@token_required
+def db_insert() -> Dict[str, Any]:
+    """
+    API-Endpunkt zum Einfügen von Daten
+    
+    Returns:
+        Dict mit Status der Operation
+    """
     try:
         data = request.get_json()
-        table = data.get('table')
-        insert_data = data.get('data')
-        
-        if not table or not insert_data:
-            return jsonify({'success': False, 'error': 'Tabelle oder Daten fehlen'}), 400
+        if not data or 'table' not in data or 'data' not in data:
+            return ApiResponse.error(
+                message="Tabelle oder Daten fehlen",
+                status_code=400
+            )
             
+        table = data['table']
+        insert_data = data['data']
+        
         # Führe den Insert durch
         result = manage_database.insert(table, insert_data)
-        return jsonify(result)
+        if not result['success']:
+            return ApiResponse.error(
+                message="Einfügen fehlgeschlagen",
+                details=result.get('error'),
+                status_code=400
+            )
+            
+        return ApiResponse.success(
+            message="Daten erfolgreich eingefügt",
+            data={'id': result.get('last_id')}
+        )
+        
     except Exception as e:
-        manage_logging.error(f"Fehler beim DB-Insert: {str(e)}", exception=e)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler beim DB-Insert: {e}")
+        return handle_api_exception(e, endpoint='/api/database/insert')
 
 @api_database.route('/api/database/update', methods=['POST'])
-@manage_auth.require_auth
-def db_update():
-    """API-Endpunkt zum Aktualisieren von Daten"""
+@token_required
+def db_update() -> Dict[str, Any]:
+    """
+    API-Endpunkt zum Aktualisieren von Daten
+    
+    Returns:
+        Dict mit Status der Operation
+    """
     try:
         data = request.get_json()
-        table = data.get('table')
-        update_data = data.get('data')
-        condition = data.get('condition')
-        params = data.get('params')
-        
-        if not table or not update_data or not condition:
-            return jsonify({'success': False, 'error': 'Tabelle, Daten oder Bedingung fehlen'}), 400
+        if not data or 'table' not in data or 'data' not in data or 'condition' not in data:
+            return ApiResponse.error(
+                message="Tabelle, Daten oder Bedingung fehlen",
+                status_code=400
+            )
             
+        table = data['table']
+        update_data = data['data']
+        condition = data['condition']
+        params = data.get('params', [])
+        
         # Führe das Update durch
         result = manage_database.update(table, update_data, condition, params)
-        return jsonify(result)
+        if not result['success']:
+            return ApiResponse.error(
+                message="Aktualisierung fehlgeschlagen",
+                details=result.get('error'),
+                status_code=400
+            )
+            
+        return ApiResponse.success(
+            message="Daten erfolgreich aktualisiert",
+            data={'rows_affected': result.get('rows_affected', 0)}
+        )
+        
     except Exception as e:
-        manage_logging.error(f"Fehler beim DB-Update: {str(e)}", exception=e)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler beim DB-Update: {e}")
+        return handle_api_exception(e, endpoint='/api/database/update')
 
 @api_database.route('/api/database/delete', methods=['POST'])
-@manage_auth.require_auth
-def db_delete():
-    """API-Endpunkt zum Löschen von Daten"""
+@token_required
+def db_delete() -> Dict[str, Any]:
+    """
+    API-Endpunkt zum Löschen von Daten
+    
+    Returns:
+        Dict mit Status der Operation
+    """
     try:
         data = request.get_json()
-        table = data.get('table')
-        condition = data.get('condition')
-        params = data.get('params')
-        
-        if not table or not condition:
-            return jsonify({'success': False, 'error': 'Tabelle oder Bedingung fehlen'}), 400
+        if not data or 'table' not in data or 'condition' not in data:
+            return ApiResponse.error(
+                message="Tabelle oder Bedingung fehlen",
+                status_code=400
+            )
             
+        table = data['table']
+        condition = data['condition']
+        params = data.get('params', [])
+        
         # Führe das Delete durch
         result = manage_database.delete(table, condition, params)
-        return jsonify(result)
+        if not result['success']:
+            return ApiResponse.error(
+                message="Löschen fehlgeschlagen",
+                details=result.get('error'),
+                status_code=400
+            )
+            
+        return ApiResponse.success(
+            message="Daten erfolgreich gelöscht",
+            data={'rows_affected': result.get('rows_affected', 0)}
+        )
+        
     except Exception as e:
-        manage_logging.error(f"Fehler beim DB-Delete: {str(e)}", exception=e)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler beim DB-Delete: {e}")
+        return handle_api_exception(e, endpoint='/api/database/delete')
 
 @api_database.route('/api/database/settings/<key>', methods=['GET'])
-@manage_auth.require_auth
-def get_db_setting(key):
+@token_required
+def get_db_setting(key) -> Dict[str, Any]:
     """API-Endpunkt zum Abrufen einer Einstellung"""
     try:
         value = manage_database.get_setting(key)
         if value is None:
-            return jsonify({'success': False, 'error': 'Einstellung nicht gefunden'}), 404
-        return jsonify({'success': True, 'data': value})
+            return ApiResponse.error(
+                message="Einstellung nicht gefunden",
+                status_code=404
+            )
+        return ApiResponse.success(data=value)
     except Exception as e:
-        manage_logging.error(f"Fehler beim Abrufen der Einstellung {key}: {str(e)}", exception=e)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler beim Abrufen der Einstellung {key}: {e}")
+        return handle_api_exception(e, endpoint=f'/api/database/settings/{key}')
 
 @api_database.route('/api/database/settings', methods=['POST'])
-@manage_auth.require_auth
-def set_db_setting():
+@token_required
+def set_db_setting() -> Dict[str, Any]:
     """API-Endpunkt zum Speichern einer Einstellung"""
     try:
         data = request.get_json()
@@ -132,28 +248,38 @@ def set_db_setting():
         value = data.get('value')
         
         if not key:
-            return jsonify({'success': False, 'error': 'Schlüssel fehlt'}), 400
+            return ApiResponse.error(
+                message="Schlüssel fehlt",
+                status_code=400
+            )
             
         result = manage_database.set_setting(key, value)
-        return jsonify(result)
+        if not result['success']:
+            return ApiResponse.error(
+                message="Speichern der Einstellung fehlgeschlagen",
+                details=result.get('error'),
+                status_code=400
+            )
+            
+        return ApiResponse.success(message="Einstellung erfolgreich gespeichert")
     except Exception as e:
-        manage_logging.error(f"Fehler beim Speichern der Einstellung: {str(e)}", exception=e)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler beim Speichern der Einstellung: {e}")
+        return handle_api_exception(e, endpoint='/api/database/settings')
 
 @api_database.route('/api/database/check-integrity', methods=['GET'])
-@manage_auth.require_auth
-def check_db_integrity():
+@token_required
+def check_db_integrity() -> Dict[str, Any]:
     """API-Endpunkt zur Überprüfung der Datenbankintegrität"""
     try:
         result = manage_database.check_integrity()
-        return jsonify(result)
+        return ApiResponse.success(data=result)
     except Exception as e:
-        manage_logging.error(f"Fehler bei der Datenbankintegritätsprüfung: {str(e)}", exception=e)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler bei der Datenbankintegritätsprüfung: {e}")
+        return handle_api_exception(e, endpoint='/api/database/check-integrity')
 
 @api_database.route('/api/database/stats', methods=['GET'])
-@manage_auth.require_auth
-def get_db_stats():
+@token_required
+def get_db_stats() -> Dict[str, Any]:
     """API-Endpunkt zum Abrufen von Datenbankstatistiken"""
     try:
         # Hier müssen wir die Statistiken manuell sammeln, da diese nicht direkt in manage_database implementiert sind
@@ -177,22 +303,19 @@ def get_db_stats():
         
         conn.close()
         
-        return jsonify({
-            'success': True,
-            'data': {
-                'tables': tables,
-                'stats': stats,
-                'size_bytes': db_size,
-                'size_mb': round(db_size / (1024 * 1024), 2)
-            }
+        return ApiResponse.success(data={
+            'tables': tables,
+            'stats': stats,
+            'size_bytes': db_size,
+            'size_mb': round(db_size / (1024 * 1024), 2)
         })
     except Exception as e:
-        manage_logging.error(f"Fehler beim Abrufen der Datenbankstatistiken: {str(e)}", exception=e)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler beim Abrufen der Datenbankstatistiken: {e}")
+        return handle_api_exception(e, endpoint='/api/database/stats')
 
 @api_database.route('/api/database/backup', methods=['POST'])
-@manage_auth.require_auth
-def backup_database():
+@token_required
+def backup_database() -> Dict[str, Any]:
     """API-Endpunkt zum Erstellen einer Datenbanksicherung"""
     try:
         # Datenbankdatei sichern
@@ -216,28 +339,27 @@ def backup_database():
         # Datei kopieren
         shutil.copy2(manage_database.DB_PATH, backup_path)
         
-        manage_logging.info(f"Datenbanksicherung erstellt: {backup_path}")
-        return jsonify({
-            'success': True,
-            'data': {
+        logger.info(f"Datenbanksicherung erstellt: {backup_path}")
+        return ApiResponse.success(
+            data={
                 'filename': backup_filename,
                 'path': backup_path,
                 'size': os.path.getsize(backup_path)
             }
-        })
+        )
     except Exception as e:
-        manage_logging.error(f"Fehler bei der Datenbanksicherung: {str(e)}", exception=e)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler bei der Datenbanksicherung: {e}")
+        return handle_api_exception(e, endpoint='/api/database/backup')
 
 @api_database.route('/api/database/sync-metadata', methods=['POST'])
-@manage_auth.require_auth
-def sync_metadata_with_filesystem():
+@token_required
+def sync_metadata_with_filesystem() -> Dict[str, Any]:
     """API-Endpunkt zum Synchronisieren von Bildmetadaten mit dem Dateisystem"""
     try:
         import glob
         from manage_photo import PHOTO_DIR
         
-        manage_logging.info("Starte Metadaten-Synchronisation mit dem Dateisystem")
+        logger.info("Starte Metadaten-Synchronisation mit dem Dateisystem")
         
         # Zähle erstellt und aktualisierte Metadaten
         created_count = 0
@@ -289,27 +411,26 @@ def sync_metadata_with_filesystem():
         conn.commit()
         conn.close()
         
-        manage_logging.info(f"Metadaten-Synchronisation abgeschlossen. Erstellt: {created_count}, Aktualisiert: {updated_count}")
-        return jsonify({
-            'success': True,
-            'data': {
+        logger.info(f"Metadaten-Synchronisation abgeschlossen. Erstellt: {created_count}, Aktualisiert: {updated_count}")
+        return ApiResponse.success(
+            data={
                 'created': created_count,
                 'updated': updated_count
             }
-        })
+        )
     except Exception as e:
-        manage_logging.error(f"Fehler bei der Metadaten-Synchronisation: {str(e)}", exception=e)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler bei der Metadaten-Synchronisation: {e}")
+        return handle_api_exception(e, endpoint='/api/database/sync-metadata')
 
 @api_database.route('/api/database/cleanup-metadata', methods=['POST'])
-@manage_auth.require_auth
-def cleanup_orphaned_metadata():
+@token_required
+def cleanup_orphaned_metadata() -> Dict[str, Any]:
     """API-Endpunkt zum Bereinigen verwaister Metadateneinträge"""
     try:
         import glob
         from manage_photo import PHOTO_DIR
         
-        manage_logging.info("Starte Bereinigung verwaister Metadateneinträge")
+        logger.info("Starte Bereinigung verwaister Metadateneinträge")
         
         # Verbindung zur Datenbank herstellen
         conn = manage_database.connect_db()
@@ -329,22 +450,21 @@ def cleanup_orphaned_metadata():
                 # Wenn die Datei nicht existiert, Metadaten löschen
                 cursor.execute("DELETE FROM image_metadata WHERE id = ?", (entry['id'],))
                 removed_count += 1
-                manage_logging.debug(f"Verwaisten Metadateneintrag entfernt: {entry['filename']}")
+                logger.debug(f"Verwaisten Metadateneintrag entfernt: {entry['filename']}")
         
         # Änderungen speichern
         conn.commit()
         conn.close()
         
-        manage_logging.info(f"Bereinigung verwaister Metadateneinträge abgeschlossen. Entfernt: {removed_count}")
-        return jsonify({
-            'success': True,
-            'data': {
+        logger.info(f"Bereinigung verwaister Metadateneinträge abgeschlossen. Entfernt: {removed_count}")
+        return ApiResponse.success(
+            data={
                 'removed': removed_count
             }
-        })
+        )
     except Exception as e:
-        manage_logging.error(f"Fehler bei der Bereinigung verwaister Metadaten: {str(e)}", exception=e)
-        return jsonify({'success': False, 'error': str(e)}), 500
+        logger.error(f"Fehler bei der Bereinigung verwaister Metadaten: {e}")
+        return handle_api_exception(e, endpoint='/api/database/cleanup-metadata')
 
 def init_app(app):
     """Initialisiert die Datenbank-API mit der Flask-Anwendung"""

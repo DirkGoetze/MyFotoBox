@@ -1,122 +1,175 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-API-Endpunkte für Authentifizierung und Berechtigungen in Fotobox2
+api_auth.py - API-Endpunkte für Authentifizierung und Berechtigungen in Fotobox2
 
 Dieses Modul stellt die Flask-API-Endpunkte für Authentifizierung, Passwort-
-Management und Berechtigungsüberprüfungen bereit. Es fügt die Routen zur Flask-App 
-hinzu und verarbeitet die API-Anfragen, indem es die Funktionen aus dem manage_auth-Modul aufruft.
+Management und Berechtigungsüberprüfungen bereit. Es implementiert Token-basierte
+Authentifizierung und sichere Passwort-Verwaltung.
 """
 
-from flask import request, jsonify, session, Blueprint
+from flask import Blueprint, request
+from typing import Dict, Any, Optional
 import logging
+from datetime import datetime
 
-# Import der Auth-Funktionen
+from manage_api import ApiResponse, handle_api_exception, token_required
 import manage_auth
-import manage_logging
+from manage_folders import FolderManager
 
-# Logger einrichten
+# Logger konfigurieren
 logger = logging.getLogger(__name__)
 
 # Blueprint für Auth-API-Endpunkte erstellen
 api_auth = Blueprint('api_auth', __name__)
 
-@api_auth.route('/api/login', methods=['POST'])
-def api_login():
-    """API-Endpunkt für den Login"""
+# FolderManager Instanz
+folder_manager = FolderManager()
+
+@api_auth.route('/api/auth/login', methods=['POST'])
+def api_login() -> Dict[str, Any]:
+    """
+    API-Endpunkt für den Login
+    
+    Returns:
+        Dict mit JWT-Token bei erfolgreicher Authentifizierung
+    """
     try:
         data = request.get_json()
         if not data or 'password' not in data:
-            return jsonify({'success': False, 'error': 'Passwort erforderlich'}), 400
+            return ApiResponse.error('Passwort erforderlich', status_code=400)
         
         password = data['password']
-        if manage_auth.check_password(password):
-            session['authenticated'] = True
-            manage_logging.log_info('Login erfolgreich', 'api_auth')
-            return jsonify({'success': True})
-        else:
-            manage_logging.log_warning('Login fehlgeschlagen: Falsches Passwort', 'api_auth')
-            return jsonify({'success': False, 'error': 'Falsches Passwort'}), 401
-    
-    except Exception as e:
-        manage_logging.log_error(f'Login-Fehler: {str(e)}', 'api_auth')
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@api_auth.route('/api/logout', methods=['POST'])
-def api_logout():
-    """API-Endpunkt für den Logout"""
-    try:
-        session.pop('authenticated', None)
-        manage_logging.log_info('Benutzer ausgeloggt', 'api_auth')
-        return jsonify({'success': True})
-    except Exception as e:
-        manage_logging.log_error(f'Logout-Fehler: {str(e)}', 'api_auth')
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@api_auth.route('/api/session-check', methods=['GET'])
-def api_session_check():
-    """API-Endpunkt zur Überprüfung der Session"""
-    try:
-        is_authenticated = session.get('authenticated', False)
-        return jsonify({'authenticated': is_authenticated})
-    except Exception as e:
-        manage_logging.log_error(f'Session-Check-Fehler: {str(e)}', 'api_auth')
-        return jsonify({'authenticated': False, 'error': str(e)}), 500
-
-@api_auth.route('/api/password', methods=['POST'])
-def api_set_password():
-    """API-Endpunkt zum Ändern des Passworts"""
-    try:
-        # Prüfen, ob Benutzer authentifiziert ist (außer beim Setup)
-        is_setup = manage_auth.check_if_setup_needed()
-        if not is_setup and not session.get('authenticated', False):
-            manage_logging.log_warning('Unautorisierter Zugriff: Passwort-Änderungsversuch', 'api_auth')
-            return jsonify({'success': False, 'error': 'Nicht autorisiert'}), 401
+        if not manage_auth.check_password(password):
+            logger.warning('Login fehlgeschlagen: Falsches Passwort')
+            return ApiResponse.error('Falsches Passwort', status_code=401)
+            
+        # Token generieren
+        token = manage_auth.generate_token()
+        logger.info('Login erfolgreich')
         
+        return ApiResponse.success(data={
+            'token': token,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Fehler beim Login: {str(e)}")
+        return handle_api_exception(e, endpoint='/api/auth/login')
+
+@api_auth.route('/api/auth/logout', methods=['POST'])
+@token_required
+def api_logout() -> Dict[str, Any]:
+    """
+    API-Endpunkt für den Logout
+    
+    Returns:
+        Dict mit Bestätigung
+    """
+    try:
+        token = request.headers.get('X-Auth-Token')
+        if token:
+            manage_auth.invalidate_token(token)
+            logger.info('Benutzer ausgeloggt')
+        
+        return ApiResponse.success(data={
+            'message': 'Erfolgreich ausgeloggt',
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Fehler beim Logout: {str(e)}")
+        return handle_api_exception(e, endpoint='/api/auth/logout')
+
+@api_auth.route('/api/auth/verify', methods=['GET'])
+def api_verify_token() -> Dict[str, Any]:
+    """
+    API-Endpunkt zur Token-Überprüfung
+    
+    Returns:
+        Dict mit Token-Status
+    """
+    try:
+        token = request.headers.get('X-Auth-Token')
+        if not token:
+            return ApiResponse.error('Kein Token gefunden', status_code=401)
+            
+        is_valid = manage_auth.verify_token(token)
+        
+        return ApiResponse.success(data={
+            'valid': is_valid,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Fehler bei Token-Überprüfung: {str(e)}")
+        return handle_api_exception(e, endpoint='/api/auth/verify')
+
+@api_auth.route('/api/auth/password', methods=['POST'])
+def api_set_password() -> Dict[str, Any]:
+    """
+    API-Endpunkt zum Ändern des Passworts
+    
+    Returns:
+        Dict mit Bestätigung
+    """
+    try:
         data = request.get_json()
         if not data:
-            return jsonify({'success': False, 'error': 'Keine Daten erhalten'}), 400
+            return ApiResponse.error('Keine Daten erhalten', status_code=400)
+        
+        # Setup-Modus prüfen
+        is_setup = manage_auth.check_if_setup_needed()
+        
+        # Prüfen, ob Benutzer authentifiziert ist (außer beim Setup)
+        if not is_setup:
+            token = request.headers.get('X-Auth-Token')
+            if not token or not manage_auth.verify_token(token):
+                logger.warning('Unautorisierter Zugriff: Passwort-Änderungsversuch')
+                return ApiResponse.error('Nicht autorisiert', status_code=401)
         
         # Bei Ersteinrichtung
         if is_setup and 'new_password' in data:
-            success = manage_auth.set_password(data['new_password'])
-            if success:
-                manage_logging.log_info('Passwort bei Ersteinrichtung gesetzt', 'api_auth')
-                session['authenticated'] = True
-                return jsonify({'success': True})
-            else:
-                manage_logging.log_error('Fehler beim Setzen des ersten Passworts', 'api_auth')
-                return jsonify({'success': False, 'error': 'Passwort konnte nicht gesetzt werden'}), 500
+            if not manage_auth.set_password(data['new_password']):
+                logger.error('Fehler beim Setzen des ersten Passworts')
+                return ApiResponse.error('Passwort konnte nicht gesetzt werden', status_code=500)
+                
+            # Token für initiale Anmeldung generieren
+            token = manage_auth.generate_token()
+            logger.info('Passwort bei Ersteinrichtung gesetzt')
+            
+            return ApiResponse.success(data={
+                'message': 'Initiales Passwort gesetzt',
+                'token': token,
+                'timestamp': datetime.now().isoformat()
+            })
         
-        # Passwort ändern
+        # Passwort ändern im normalen Betrieb
         elif 'current_password' in data and 'new_password' in data:
-            if manage_auth.check_password(data['current_password']):
-                success = manage_auth.set_password(data['new_password'])
-                if success:
-                    manage_logging.log_info('Passwort erfolgreich geändert', 'api_auth')
-                    return jsonify({'success': True})
-                else:
-                    manage_logging.log_error('Fehler beim Ändern des Passworts', 'api_auth')
-                    return jsonify({'success': False, 'error': 'Passwort konnte nicht geändert werden'}), 500
-            else:
-                manage_logging.log_warning('Passwort-Änderung fehlgeschlagen: Aktuelles Passwort falsch', 'api_auth')
-                return jsonify({'success': False, 'error': 'Aktuelles Passwort ist falsch'}), 401
+            if not manage_auth.check_password(data['current_password']):
+                logger.warning('Passwort-Änderung fehlgeschlagen: Aktuelles Passwort falsch')
+                return ApiResponse.error('Aktuelles Passwort falsch', status_code=401)
+                
+            if not manage_auth.set_password(data['new_password']):
+                logger.error('Fehler beim Ändern des Passworts')
+                return ApiResponse.error('Passwort konnte nicht geändert werden', status_code=500)
+            
+            # Altes Token invalidieren und neues generieren
+            token = request.headers.get('X-Auth-Token')
+            if token:
+                manage_auth.invalidate_token(token)
+            new_token = manage_auth.generate_token()
+            
+            logger.info('Passwort erfolgreich geändert')
+            return ApiResponse.success(data={
+                'message': 'Passwort erfolgreich geändert',
+                'token': new_token,
+                'timestamp': datetime.now().isoformat()
+            })
         
         else:
-            return jsonify({'success': False, 'error': 'Fehlende Passwort-Informationen'}), 400
-    
+            return ApiResponse.error('Ungültige Daten', status_code=400)
+            
     except Exception as e:
-        manage_logging.log_error(f'Passwort-Änderungsfehler: {str(e)}', 'api_auth')
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@api_auth.route('/api/check-setup', methods=['GET'])
-def api_check_setup():
-    """API-Endpunkt zur Überprüfung, ob die Ersteinrichtung erforderlich ist"""
-    try:
-        needs_setup = manage_auth.check_if_setup_needed()
-        return jsonify({'setup_required': needs_setup})
-    except Exception as e:
-        manage_logging.log_error(f'Setup-Check-Fehler: {str(e)}', 'api_auth')
-        return jsonify({'error': str(e)}), 500
-
-def init_app(app):
-    """Initialisiert die Auth-API mit der Flask-Anwendung"""
-    app.register_blueprint(api_auth)
+        logger.error(f"Fehler bei Passwort-Änderung: {str(e)}")
+        return handle_api_exception(e, endpoint='/api/auth/password')

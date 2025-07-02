@@ -8,204 +8,184 @@ Dieses Modul definiert die API-Endpunkte zur Verwaltung des Fotobox-Backend-Serv
 Statusabruf des Services bereit.
 """
 
-from flask import Blueprint, jsonify, request
-from functools import wraps
-import datetime
+from flask import Blueprint, request
+from typing import Dict, Any
+import logging
+from datetime import datetime
 
-# Import der Backend-Service-Verwaltungsfunktionen
-import backend.manage_backend_service as mbs
-from backend.manage_auth import requires_admin_auth, requires_auth
-from backend.utils import log_info, log_error
+from manage_api import ApiResponse, handle_api_exception
+from api_auth import token_required
+import manage_backend_service
+from manage_folders import FolderManager
+
+# Logger konfigurieren
+logger = logging.getLogger(__name__)
 
 # Blueprint für Backend-Service-Verwaltung erstellen
 api_backend_service = Blueprint('api_backend_service', __name__)
 
-# Hilfsfunktion zum Wrapper von API-Antworten
-def service_api_response(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            result = func(*args, **kwargs)
-            if isinstance(result, dict):
-                return jsonify(result), 200
-            elif isinstance(result, tuple) and len(result) == 2:
-                return jsonify(result[0]), result[1]
-            else:
-                return jsonify({"success": True, "result": result}), 200
-        except Exception as e:
-            log_error(f"Fehler in Backend-Service-API: {str(e)}")
-            return jsonify({
-                "success": False, 
-                "error": str(e),
-                "timestamp": datetime.datetime.now().isoformat()
-            }), 500
-    return wrapper
+# FolderManager Instanz
+folder_manager = FolderManager()
 
-@api_backend_service.route('/status', methods=['GET'])
-@requires_auth
-@service_api_response
-def get_service_status():
+# Backend-Service Instanz
+backend_service = manage_backend_service.BackendService()
+
+@api_backend_service.route('/api/service/status', methods=['GET'])
+@token_required
+def get_service_status() -> Dict[str, Any]:
     """
     Gibt den aktuellen Status des Backend-Services zurück
-    """
-    status = mbs.get_backend_service_status()
-    is_active = status == "active"
     
-    return {
-        "success": True, 
-        "status": status,
-        "is_active": is_active,
-        "timestamp": datetime.datetime.now().isoformat()
-    }
+    Returns:
+        Dict mit Service-Status
+    """
+    try:
+        status = backend_service.get_status()
+        return ApiResponse.success(data={
+            'status': status.get('state', 'unknown'),
+            'is_active': status.get('is_active', False),
+            'uptime': status.get('uptime', None),
+            'last_start': status.get('last_start', None),
+            'pid': status.get('pid', None),
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Fehler beim Abrufen des Service-Status: {e}")
+        return handle_api_exception(e, endpoint='/api/service/status')
 
-@api_backend_service.route('/details', methods=['GET'])
-@requires_auth
-@service_api_response
-def get_service_details():
+@api_backend_service.route('/api/service/details', methods=['GET'])
+@token_required
+def get_service_details() -> Dict[str, Any]:
     """
     Gibt detaillierte Informationen zum Backend-Service zurück
-    """
-    details = mbs.get_backend_service_details()
-    status = mbs.get_backend_service_status()
-    is_active = status == "active"
     
-    return {
-        "success": True, 
-        "details": details,
-        "status": status,
-        "is_active": is_active,
-        "timestamp": datetime.datetime.now().isoformat()
-    }
+    Returns:
+        Dict mit Service-Details
+    """
+    try:
+        details = backend_service.get_details()
+        status = backend_service.get_status()
+        
+        # Prüfe Abhängigkeiten
+        dependencies = backend_service.check_dependencies()
+        
+        return ApiResponse.success(data={
+            'status': status,
+            'details': details,
+            'dependencies': dependencies,
+            'config': {
+                'service_file': backend_service.service_file,
+                'systemd_path': backend_service.systemd_path
+            },
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Fehler beim Abrufen der Service-Details: {e}")
+        return handle_api_exception(e, endpoint='/api/service/details')
 
-@api_backend_service.route('/start', methods=['POST'])
-@requires_admin_auth
-@service_api_response
-def start_service():
+@api_backend_service.route('/api/service/start', methods=['POST'])
+@token_required
+def start_service() -> Dict[str, Any]:
     """
     Startet den Backend-Service
-    """
-    log_info("API: Starte Backend-Service...")
-    result = mbs.start_backend_service()
     
-    return {
-        "success": result,
-        "message": "Backend-Service erfolgreich gestartet" if result else "Starten des Backend-Services fehlgeschlagen",
-        "status": mbs.get_backend_service_status(),
-        "timestamp": datetime.datetime.now().isoformat()
-    }
+    Returns:
+        Dict mit Status der Operation
+    """
+    try:
+        logger.info("Starte Backend-Service...")
+        result = backend_service.start()
+        
+        if not result['success']:
+            return ApiResponse.error(
+                message="Starten des Backend-Services fehlgeschlagen",
+                details=result.get('error'),
+                status_code=500
+            )
+            
+        # Hole aktuellen Status
+        status = backend_service.get_status()
+            
+        return ApiResponse.success(
+            message="Backend-Service erfolgreich gestartet",
+            data={
+                'status': status,
+                'timestamp': datetime.now().isoformat()
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Fehler beim Starten des Services: {e}")
+        return handle_api_exception(e, endpoint='/api/service/start')
 
-@api_backend_service.route('/stop', methods=['POST'])
-@requires_admin_auth
-@service_api_response
-def stop_service():
+@api_backend_service.route('/api/service/stop', methods=['POST'])
+@token_required
+def stop_service() -> Dict[str, Any]:
     """
     Stoppt den Backend-Service
-    """
-    log_info("API: Stoppe Backend-Service...")
-    result = mbs.stop_backend_service()
     
-    return {
-        "success": result,
-        "message": "Backend-Service erfolgreich gestoppt" if result else "Stoppen des Backend-Services fehlgeschlagen",
-        "status": mbs.get_backend_service_status(),
-        "timestamp": datetime.datetime.now().isoformat()
-    }
+    Returns:
+        Dict mit Status der Operation
+    """
+    try:
+        logger.info("Stoppe Backend-Service...")
+        result = backend_service.stop()
+        
+        if not result['success']:
+            return ApiResponse.error(
+                message="Stoppen des Backend-Services fehlgeschlagen",
+                details=result.get('error'),
+                status_code=500
+            )
+            
+        # Hole aktuellen Status
+        status = backend_service.get_status()
+            
+        return ApiResponse.success(
+            message="Backend-Service erfolgreich gestoppt",
+            data={
+                'status': status,
+                'timestamp': datetime.now().isoformat()
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Fehler beim Stoppen des Services: {e}")
+        return handle_api_exception(e, endpoint='/api/service/stop')
 
-@api_backend_service.route('/restart', methods=['POST'])
-@requires_admin_auth
-@service_api_response
-def restart_service():
+@api_backend_service.route('/api/service/restart', methods=['POST'])
+@token_required
+def restart_service() -> Dict[str, Any]:
     """
     Startet den Backend-Service neu
-    """
-    log_info("API: Starte Backend-Service neu...")
-    result = mbs.restart_backend_service()
     
-    return {
-        "success": result,
-        "message": "Backend-Service erfolgreich neugestartet" if result else "Neustart des Backend-Services fehlgeschlagen",
-        "status": mbs.get_backend_service_status(),
-        "timestamp": datetime.datetime.now().isoformat()
-    }
-
-@api_backend_service.route('/enable', methods=['POST'])
-@requires_admin_auth
-@service_api_response
-def enable_service():
+    Returns:
+        Dict mit Status der Operation
     """
-    Aktiviert den Backend-Service (automatischer Start beim Systemstart)
-    """
-    log_info("API: Aktiviere Backend-Service...")
-    result = mbs.enable_backend_service()
-    
-    return {
-        "success": result,
-        "message": "Backend-Service erfolgreich aktiviert" if result else "Aktivieren des Backend-Services fehlgeschlagen",
-        "timestamp": datetime.datetime.now().isoformat()
-    }
-
-@api_backend_service.route('/disable', methods=['POST'])
-@requires_admin_auth
-@service_api_response
-def disable_service():
-    """
-    Deaktiviert den Backend-Service (kein automatischer Start beim Systemstart)
-    """
-    log_info("API: Deaktiviere Backend-Service...")
-    result = mbs.disable_backend_service()
-    
-    return {
-        "success": result,
-        "message": "Backend-Service erfolgreich deaktiviert" if result else "Deaktivieren des Backend-Services fehlgeschlagen",
-        "timestamp": datetime.datetime.now().isoformat()
-    }
-
-@api_backend_service.route('/install', methods=['POST'])
-@requires_admin_auth
-@service_api_response
-def install_service():
-    """
-    Installiert den Backend-Service (kopiert die Service-Datei)
-    """
-    log_info("API: Installiere Backend-Service...")
-    result = mbs.install_backend_service()
-    
-    return {
-        "success": result,
-        "message": "Backend-Service erfolgreich installiert" if result else "Installation des Backend-Services fehlgeschlagen",
-        "timestamp": datetime.datetime.now().isoformat()
-    }
-
-@api_backend_service.route('/uninstall', methods=['DELETE'])
-@requires_admin_auth
-@service_api_response
-def uninstall_service():
-    """
-    Deinstalliert den Backend-Service vollständig
-    """
-    log_info("API: Deinstalliere Backend-Service...")
-    result = mbs.uninstall_backend_service()
-    
-    return {
-        "success": result,
-        "message": "Backend-Service erfolgreich deinstalliert" if result else "Deinstallation des Backend-Services fehlgeschlagen",
-        "timestamp": datetime.datetime.now().isoformat()
-    }
-
-@api_backend_service.route('/setup', methods=['POST'])
-@requires_admin_auth
-@service_api_response
-def setup_service():
-    """
-    Führt die vollständige Einrichtung des Backend-Services durch
-    (Installation, Aktivierung und Start)
-    """
-    log_info("API: Richte Backend-Service vollständig ein...")
-    result = mbs.setup_backend_service()
-    
-    return {
-        "success": result,
-        "message": "Backend-Service erfolgreich eingerichtet" if result else "Einrichtung des Backend-Services fehlgeschlagen",
-        "status": mbs.get_backend_service_status(),
-        "timestamp": datetime.datetime.now().isoformat()
-    }
+    try:
+        logger.info("Starte Backend-Service neu...")
+        result = backend_service.restart()
+        
+        if not result['success']:
+            return ApiResponse.error(
+                message="Neustart des Backend-Services fehlgeschlagen",
+                details=result.get('error'),
+                status_code=500
+            )
+            
+        # Hole aktuellen Status
+        status = backend_service.get_status()
+            
+        return ApiResponse.success(
+            message="Backend-Service erfolgreich neugestartet",
+            data={
+                'status': status,
+                'timestamp': datetime.now().isoformat()
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Fehler beim Neustarten des Services: {e}")
+        return handle_api_exception(e, endpoint='/api/service/restart')

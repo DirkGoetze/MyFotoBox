@@ -38,6 +38,7 @@ class AuthManager:
         self.data_dir = get_data_dir()
         self._secret_key = os.environ.get('FOTOBOX_SECRET_KEY', os.urandom(32))
         self._token_expiry = datetime.timedelta(hours=24)
+        self.db_manager = DatabaseManager()
         
     def _hash_password(self, password: str) -> bytes:
         """Erstellt einen sicheren Hash des Passworts"""
@@ -98,6 +99,33 @@ class AuthManager:
         except Exception as e:
             logger.error(f"Fehler bei Token-Verifizierung: {e}")
             return False, {'error': str(e)}
+
+    def get_password_status(self) -> Dict[str, Any]:
+        """
+        Überprüft den Status des Admin-Passworts
+        
+        Returns:
+            Dict mit Status-Informationen
+        """
+        try:
+            password_hash = get_setting('config_password')
+            
+            status = {
+                'is_set': password_hash is not None,
+                'timestamp': datetime.datetime.now().isoformat(),
+                'settings_count': len(self.db_manager.get_all_settings())
+            }
+            
+            logger.info(f"Passwort-Status abgerufen: {'gesetzt' if status['is_set'] else 'nicht gesetzt'}")
+            return status
+            
+        except Exception as e:
+            logger.error(f"Fehler beim Abrufen des Passwort-Status: {str(e)}")
+            return {
+                'error': str(e),
+                'is_set': False,
+                'timestamp': datetime.datetime.now().isoformat()
+            }
 
 # Globale Instanz
 _auth_manager = AuthManager()
