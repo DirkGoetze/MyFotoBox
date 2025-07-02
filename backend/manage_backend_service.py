@@ -172,6 +172,49 @@ class BackendService:
         except Exception as e:
             logger.error(f"Fehler beim Abrufen des Service-Status: {e}")
             raise ServiceOperationError(f"Status-Abfrage fehlgeschlagen: {e}")
+    
+    def get_status_with_comparison(self, comparison_status: str = None) -> Tuple[bool, str]:
+        """
+        Bash-kompatible Statusabfrage mit optionalem Vergleich
+        
+        Args:
+            comparison_status: Optional. Wenn angegeben, wird der aktuelle Status mit diesem verglichen.
+                Gültige Werte: active, inactive, failed, unknown, enabled, disabled
+        
+        Returns:
+            Tuple aus (bool, str):
+            - bool: True wenn Status übereinstimmt oder (ohne Vergleich) Service aktiv und enabled ist
+            - str: Kombinierter Status "state enabled/disabled" (z.B. "active enabled")
+        
+        Raises:
+            ServiceOperationError: Wenn der Status nicht abgerufen werden kann
+        """
+        valid_statuses = ["active", "inactive", "failed", "unknown", "enabled", "disabled"]
+        
+        try:
+            status_info = self.status()
+            current_status = status_info['state']
+            autostart_status = "enabled" if status_info['enabled'] else "disabled"
+            
+            # Kombinierter Status für Bash-Kompatibilität
+            combined_status = f"{current_status} {autostart_status}"
+            
+            # Wenn ein Vergleichsstatus angegeben wurde
+            if comparison_status:
+                # Prüfen ob der Vergleichsstatus gültig ist
+                if comparison_status not in valid_statuses:
+                    logger.error(f"Ungültiger Vergleichsstatus: {comparison_status}")
+                    return False, combined_status
+                
+                # Prüfen ob der angegebene Status im kombinierten Status enthalten ist
+                return comparison_status in combined_status, combined_status
+            else:
+                # Ohne Parameter: True wenn Service läuft und Autostart aktiviert
+                return current_status == "active" and autostart_status == "enabled", combined_status
+                
+        except Exception as e:
+            logger.error(f"Fehler beim Statusvergleich: {e}")
+            raise ServiceOperationError(f"Statusvergleich fehlgeschlagen: {e}")
             
     def enable(self) -> bool:
         """Aktiviert den Service für Autostart"""
@@ -234,6 +277,18 @@ def restart_service() -> bool:
     
 def get_service_status() -> Dict[str, Any]:
     return _service.status()
+
+def get_service_status_with_comparison(comparison_status: str = None) -> Tuple[bool, str]:
+    """
+    Bash-kompatible Funktion für die Statusabfrage
+    
+    Args:
+        comparison_status: Optional. Status mit dem verglichen werden soll.
+    
+    Returns:
+        Tuple aus (bool, str): Success-Flag und kombinierter Status
+    """
+    return _service.get_status_with_comparison(comparison_status)
     
 def enable_service() -> bool:
     return _service.enable()

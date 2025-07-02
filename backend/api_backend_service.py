@@ -41,12 +41,17 @@ def get_service_status() -> Dict[str, Any]:
     """
     try:
         status = backend_service.get_status()
+        # Bash-kompatiblen Status auch zurückgeben
+        success, combined_status = backend_service.get_status_with_comparison()
+        
         return ApiResponse.success(data={
             'status': status.get('state', 'unknown'),
             'is_active': status.get('is_active', False),
             'uptime': status.get('uptime', None),
             'last_start': status.get('last_start', None),
             'pid': status.get('pid', None),
+            'combined_status': combined_status,  # Für Bash-Kompatibilität
+            'is_optimal': success,               # True wenn aktiv und enabled
             'timestamp': datetime.now().isoformat()
         })
         
@@ -189,3 +194,40 @@ def restart_service() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Fehler beim Neustarten des Services: {e}")
         return handle_api_exception(e, endpoint='/api/service/restart')
+
+@api_backend_service.route('/api/service/compare_status', methods=['GET'])
+@token_required
+def compare_service_status() -> Dict[str, Any]:
+    """
+    Vergleicht den aktuellen Service-Status mit einem angegebenen Status
+    
+    Query Parameters:
+        status: Status zum Vergleichen (active, inactive, failed, unknown, enabled, disabled)
+        
+    Returns:
+        Dict mit Vergleichsergebnis
+    """
+    try:
+        # Status aus Query-Parameter lesen
+        comparison_status = request.args.get('status')
+        
+        if not comparison_status:
+            return ApiResponse.error(
+                message="Kein Vergleichsstatus angegeben",
+                details="Parameter 'status' muss angegeben werden",
+                status_code=400
+            )
+            
+        # Status vergleichen
+        match, combined_status = backend_service.get_status_with_comparison(comparison_status)
+        
+        return ApiResponse.success(data={
+            'matches': match,
+            'requested_status': comparison_status,
+            'current_status': combined_status,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Fehler beim Vergleichen des Service-Status: {e}")
+        return handle_api_exception(e, endpoint='/api/service/compare_status')
