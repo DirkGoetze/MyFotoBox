@@ -302,6 +302,107 @@ show_spinner() {
     return $exit_code
 }
 
+# get_config_file
+get_config_file_debug_0001="INFO: Suche Wert für Schlüssel '%s'"
+get_config_file_debug_0002="ERROR: Konfigurationsdatei konnte nicht ermittelt werden"
+get_config_file_debug_0003="INFO: Konfigurationsdatei '%s' gefunden"
+get_config_file_debug_0004="SUCCESS: Wert für Schlüssel '%s' ist '%s'"
+
+get_config_value() {
+    # -------------------------------------------------------------------------
+    # get_config_value
+    # -------------------------------------------------------------------------
+    # Funktion.: Liest einen Konfigurationswert aus der Fotobox-Konfiguration
+    # Parameter: $1 = Konfigurationsschlüssel
+    # Rückgabe.: Wert des Konfigurationsschlüssels oder leerer String
+    # -------------------------------------------------------------------------    
+    local key="$1"
+    local value=""
+    local config_file
+
+    debug "$(printf "$get_config_file_debug_0001" "$key")"
+
+    # Konfigurationsdatei ermitteln
+    config_file="$(get_config_file)"
+    if [ $? -ne 0 ]; then
+        debug "$get_config_file_debug_0002"
+        return 1
+    fi
+    debug "$(printf "$get_config_file_debug_0003" "$config_file")"
+
+    # Prüfe, ob die Konfigurationsdatei existiert
+    if [ -f "$config_file" ]; then
+        # Extrahiere Wert (einfache Version, kann durch komplexere ersetzt werden)
+        value=$(grep -E "^$key\s*=" "$config_file" | cut -d '=' -f 2 | tr -d '[:space:]')
+    fi
+
+    debug "$(printf "$get_config_file_debug_0004" "$key" "$value")"
+    echo "$value"
+    return 0
+}
+
+# set_config_value
+set_config_value_debug_0001="INFO: Setze Wert für Schlüssel '%s' auf '%s'"
+set_config_value_debug_0002="ERROR: Konfigurationsdatei konnte nicht ermittelt werden"
+set_config_value_debug_0003="INFO: Konfigurationsdatei '%s' gefunden"
+set_config_value_debug_0004="INFO: Schlüssel '%s' existiert bereits, aktualisiere Wert"
+set_config_value_debug_0005="INFO: Schlüssel '%s' existiert nicht, füge neuen Eintrag hinzu"
+set_config_value_debug_0006="ERROR: Fehler beim Schreiben der Konfiguration"
+set_config_value_debug_0007="SUCCESS: Wert für Schlüssel '%s' auf '%s' gesetzt"
+
+set_config_value() {
+    # -------------------------------------------------------------------------
+    # set_config_value
+    # -------------------------------------------------------------------------
+    # Funktion.: Schreibt einen Konfigurationswert in die Fotobox-Konfiguration
+    # Parameter: $1 = Konfigurationsschlüssel
+    # .........  $2 = Zu setzender Wert
+    # Rückgabe.: 0 bei Erfolg, 1 bei Fehler
+    # -------------------------------------------------------------------------    
+    local key="$1"
+    local value="$2"
+    local config_file
+    local temp_file
+    
+    # Parameter prüfen
+    if ! check_param "$key" "key"; then return 1; fi
+    if ! check_param "$value" "value"; then return 1; fi
+
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$set_config_value_debug_0001" "$key" "$value")"
+
+    # Konfigurationsdatei ermitteln
+    config_file="$(get_config_file)"
+    if [ $? -ne 0 ]; then
+        debug "$set_config_value_debug_0002"
+        return 1
+    fi
+    debug "$(printf "$set_config_value_debug_0003" "$config_file")"
+
+    # Prüfen, ob der Schlüssel bereits existiert
+    if grep -q -E "^${key}\s*=" "$config_file"; then
+        debug "$(printf "$set_config_value_debug_0004" "$key")"
+        # Schlüssel existiert, Wert aktualisieren
+        sed -E "s|^(${key}\s*=).*|\1${value}|" "$config_file" > "$temp_file"
+    else
+        debug "$(printf "$set_config_value_debug_0005" "$key")"
+        # Schlüssel existiert nicht, neuen Eintrag hinzufügen
+        cat "$config_file" > "$temp_file"
+        echo "${key}=${value}" >> "$temp_file"
+    fi
+    
+    # Überprüfe, ob die Datei erfolgreich geschrieben wurde
+    if [ $? -ne 0 ]; then
+        debug "$set_config_value_debug_0006"
+        rm -f "$temp_file"
+        return 1
+    fi
+
+    debug "$(printf "$set_config_value_debug_0007" "$key" "$value")"
+    return 0
+}
+
+
 # ===========================================================================
 # Hilfsfunktionen zur Einbindung externer Skript-Ressourcen
 # ===========================================================================

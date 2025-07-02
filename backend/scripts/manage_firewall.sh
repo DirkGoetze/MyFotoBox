@@ -37,7 +37,6 @@ MANAGE_FIREWALL_LOADED=0
 # Lokale Aliase für bessere Lesbarkeit
 : "${HTTP_PORT:=$DEFAULT_HTTP_PORT}"
 : "${HTTPS_PORT:=$DEFAULT_HTTPS_PORT}"
-: "${CONFIG_FILE:=$DEFAULT_CONFIG_FILE}"
 
 # ===========================================================================
 # Lokale Konstanten (Vorgaben und Defaults nur für die Installation)
@@ -91,40 +90,6 @@ _detect_firewall() {
     fi
 }
 
-check_root() {
-    # -------------------------------------------------------------------------
-    # check_root
-    # -------------------------------------------------------------------------
-    # Funktion: Prüft, ob das Skript mit Root-Rechten ausgeführt wird
-    # Rückgabe: 0=Root-Rechte vorhanden, 1=Keine Root-Rechte
-    
-    if [ "$(id -u)" -ne 0 ]; then
-        print_error "Dieses Skript muss mit Root-Rechten ausgeführt werden (sudo)."
-        return 1
-    fi
-    return 0
-}
-
-read_config() {
-    # -------------------------------------------------------------------------
-    # read_config
-    # -------------------------------------------------------------------------
-    # Funktion: Liest Konfigurationswerte aus der Fotobox-Konfiguration
-    # Parameter: $1 = Konfigurationsschlüssel
-    # Rückgabe: Wert des Konfigurationsschlüssels oder leerer String
-    
-    local key="$1"
-    local value=""
-    
-    # Prüfe, ob die Konfigurationsdatei existiert
-    if [ -f "$CONFIG_FILE" ]; then
-        # Extrahiere Wert (einfache Version, kann durch komplexere ersetzt werden)
-        value=$(grep -E "^$key\s*=" "$CONFIG_FILE" | cut -d '=' -f 2 | tr -d '[:space:]')
-    fi
-    
-    echo "$value"
-}
-
 get_required_ports() {
     # -------------------------------------------------------------------------
     # get_required_ports
@@ -138,11 +103,11 @@ get_required_ports() {
     
     # Wenn keine Umgebungsvariablen gesetzt sind, aus Config lesen
     if [ -z "$http_port" ]; then
-        http_port=$(read_config "http_port")
+        http_port=$(get_config_value "http_port")
     fi
     
     if [ -z "$https_port" ]; then
-        https_port=$(read_config "https_port")
+        https_port=$(get_config_value "https_port")
     fi
     
     # Fallback auf Standardports, falls weder Umgebungsvariablen noch Konfiguration definiert
