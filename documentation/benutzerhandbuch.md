@@ -16,16 +16,17 @@ Alle Dokumentationsdateien sind im Markdown-Format geschrieben und werden regelm
 4. [Fotos aufnehmen](#fotos-aufnehmen)
 5. [Galerie anzeigen](#galerie-anzeigen)
 6. [Einstellungen anpassen](#einstellungen-anpassen)
-7. [Datenverwaltung](#datenverwaltung)
-8. [Kontaktinformationen](#kontaktinformationen)
-9. [Netzwerkkonfiguration](#netzwerkkonfiguration)
-10. [Fehlerbehebung](#fehlerbehebung)
+7. [Authentifizierung und Sicherheit](#authentifizierung-und-sicherheit)
+8. [Datenverwaltung](#datenverwaltung)
+9. [Kontaktinformationen](#kontaktinformationen)
+10. [Netzwerkkonfiguration](#netzwerkkonfiguration)
+11. [Fehlerbehebung](#fehlerbehebung)
     - [Häufige Probleme](#häufige-probleme)
     - [Updates und Systemverwaltung](#updates-und-systemverwaltung)
     - [Installationsprobleme](#installationsprobleme)
     - [System-Logs](#system-logs)
     - [Datenbank-Fehlerbehebung](#datenbank-fehlerbehebung)
-11. [Deinstallation](#deinstallation)
+12. [Deinstallation](#deinstallation)
 
 ## Übersicht
 
@@ -50,43 +51,63 @@ Vor der Nutzung muss die Fotobox auf einem Linux-System (Debian/Ubuntu) installi
    sudo chmod +x install.sh
    ```
 
-3. Führen Sie die Installation aus:
+3. Führen Sie das Installationsskript aus:
 
    ```bash
    sudo ./install.sh
    ```
 
-> **Hinweis (Aktualisierung vom 14. Juni 2025)**: Das Installationsskript wurde grundlegend überarbeitet, um die Zuverlässigkeit und Robustheit zu verbessern. Es führt nun umfassendere Prüfungen der Systemumgebung durch und bietet bessere Fehlermeldungen bei Problemen. Bei älteren Systemen kann es zu Kompatibilitätsproblemen kommen, insbesondere mit Python-Paketen, die native Erweiterungen kompilieren. In solchen Fällen sollten Sie die entsprechenden Systempakete manuell installieren. Für Intel RealSense-Kameras müssen die spezifischen Pakete manuell aus den Intel-Repositories installiert werden.
+4. Die Installation richtet alle erforderlichen Dienste ein und startet den Fotobox-Backend-Service automatisch.
 
-#### Headless-/Unattended-Installation
+5. Nachdem die Installation abgeschlossen ist, können Sie die Weboberfläche unter `http://localhost` oder der IP-Adresse des Servers aufrufen.
 
-Für eine unbeaufsichtigte Installation ohne Benutzerinteraktion können Sie den Unattended-Modus verwenden:
+### Erste Konfiguration
 
-```bash
-sudo ./install.sh --unattended
-```
+Bei der ersten Verwendung müssen Sie ein Administratorpasswort festlegen:
 
-In diesem Modus werden alle Rückfragen automatisch mit Standardwerten beantwortet:
+1. Öffnen Sie die Weboberfläche und klicken Sie auf "Einstellungen"
+2. Legen Sie ein sicheres Passwort fest
+3. Nach der ersten Anmeldung erhalten Sie ein Authentifizierungstoken, das für alle weiteren Aktionen verwendet wird
 
-- Standardport 80 wird verwendet (sofern frei)
-- NGINX-Integration wird automatisch gewählt
-- Bei Konflikten (z.B. Port belegt) erfolgt ein Abbruch mit Log-Eintrag
+## Authentifizierung und Sicherheit
 
-Die Ausgaben werden nur ins Log geschrieben und am Ende erhalten Sie einen Hinweis auf die Logdatei und die Weboberfläche.
+> **HINWEIS (Juli 2025)**: Die Fotobox verwendet jetzt ein token-basiertes Authentifizierungssystem anstelle von Session-basierter Authentifizierung.
 
-### Erststart und Zugriff
+### Anmeldung und Authentifizierung
 
-Nach erfolgreicher Installation können Sie die Weboberfläche über einen Browser aufrufen:
+Die Fotobox2 verwendet JWT (JSON Web Tokens) für die Authentifizierung. Bei jeder Anmeldung erhalten Sie einen Token, der für 24 Stunden gültig ist. Das System erneuert den Token automatisch, wenn Sie aktiv sind.
 
-- Bei lokaler Installation: `http://localhost:8080` (oder den von Ihnen konfigurierten Port)
-- Bei Netzwerkinstallation: Die IP-Adresse oder den Hostnamen des Geräts, auf dem die Fotobox läuft
+#### Anmeldung
 
-Beim ersten Start werden Sie durch die Ersteinrichtung geführt, bei der Sie grundlegende Einstellungen vornehmen können:
+1. Navigieren Sie zur Einstellungsseite
+2. Geben Sie Ihr Passwort ein
+3. Nach erfolgreicher Anmeldung werden Sie automatisch zu den Einstellungen weitergeleitet
 
-- Event-Name festlegen
-- Admin-Passwort setzen
-- Kamera-Einstellungen anpassen
-- Speicherort für Fotos wählen
+#### Abmeldung
+
+- Klicken Sie oben rechts auf "Abmelden"
+- Dadurch wird Ihr Token ungültig und Sie werden zur Startseite weitergeleitet
+
+### Sicherheitshinweise
+
+- Ändern Sie das Standardpasswort sofort nach der Installation
+- Der Zugriff auf Einstellungen und Verwaltungsfunktionen erfordert Authentifizierung
+- Alle API-Aufrufe werden durch Token-Authentifizierung geschützt
+- Passwörter werden sicher mit bcrypt-Hash gespeichert
+- Aktivieren Sie die Backup-Funktion, um Ihre Daten regelmäßig zu sichern
+
+### Token-Verwaltung
+
+Die Tokens werden automatisch verwaltet. Im Falle von Problemen können Sie:
+
+1. Sich abmelden und erneut anmelden, um einen neuen Token zu erhalten
+2. Das Kommandozeilenwerkzeug `auth_cli.py` verwenden, um Token-Status zu überprüfen:
+
+   ```bash
+   cd /opt/fotobox/backend
+   python3 auth_cli.py status
+   python3 auth_cli.py check-token "IHR_TOKEN"
+   ```
 
 ## Die Benutzeroberfläche
 
@@ -223,13 +244,13 @@ Für den Betrieb mit Zugriff über das Internet:
 
 ### Übersichtstabelle
 
-| Einstellung        | Standalone | Lokales Netzwerk | Internet/Cloud |
-|--------------------|------------|------------------|---------------|
+| Einstellung        | Standalone | Lokales Netzwerk    | Internet/Cloud        |
+|--------------------|------------|---------------------|-----------------------|
 | Bind-Adresse       | 127.0.0.1  | 0.0.0.0 / lokale IP | 0.0.0.0 / öffentl. IP |
-| Port               | beliebig   | anpassbar        | 443 (HTTPS)   |
-| Servername         | optional   | sinnvoll         | erforderlich  |
-| URL-Pfad           | optional   | optional         | optional      |
-| HTTPS/SSL          | unwichtig  | empfohlen        | erforderlich  |
+| Port               | beliebig   | anpassbar           | 443 (HTTPS)           |
+| Servername         | optional   | sinnvoll            | erforderlich          |
+| URL-Pfad           | optional   | optional            | optional              |
+| HTTPS/SSL          | unwichtig  | empfohlen           | erforderlich          |
 
 > **Hinweis zur Sicherheit**: Bei externem Zugriff sollten Sie immer HTTPS/SSL verwenden und die empfohlenen Sicherheitseinstellungen beachten. Denken Sie auch an die Konfiguration von Firewall und Portfreigaben in Ihrem Router.
 
@@ -386,29 +407,75 @@ Bei weiteren Problemen konsultieren Sie bitte die [Projektwebseite](https://gith
 
 ### Deinstallation
 
-Wenn Sie die Fotobox von Ihrem System entfernen möchten, stellt die Software eine einfache Deinstallationsfunktion bereit:
+> **AKTUALISIERUNG (Juli 2025)**: Das Deinstallationsverfahren wurde vollständig überarbeitet und bietet nun automatisches Backup kritischer Daten.
 
-#### Deinstallation starten
+Wenn Sie die Fotobox2-Software vollständig entfernen möchten, stehen Ihnen zwei Methoden zur Verfügung:
 
-Die Deinstallation erfolgt ausschließlich über die Weboberfläche:
+### Methode 1: Über die Weboberfläche
 
-1. Öffnen Sie die Einstellungsseite (`settings.html`)
-2. Melden Sie sich als Administrator an
-3. Navigieren Sie zum Bereich "System"
-4. Klicken Sie auf "Fotobox deinstallieren" und folgen Sie den Anweisungen
+1. Melden Sie sich als Administrator an
+2. Navigieren Sie zu "Einstellungen > System > Deinstallation"
+3. Folgen Sie den Anweisungen auf dem Bildschirm
+4. Wählen Sie, ob Backups behalten werden sollen
 
-#### Deinstallationsprozess
+### Methode 2: Über die Kommandozeile
 
-Der Deinstallationsprozess führt folgende Aufgaben aus:
+Für eine vollständige Deinstallation führen Sie folgende Schritte aus:
 
-1. **Backup erstellen**: Vor der Deinstallation wird ein Sicherungsarchiv Ihrer Daten und Einstellungen erstellt.
-2. **Dienste stoppen**: Der Fotobox-Backend-Dienst und NGINX werden gestoppt.
-3. **Systemdienste entfernen**: Die systemd-Unit für das Backend wird entfernt.
-4. **NGINX-Konfiguration entfernen**: Die Fotobox-Konfiguration wird aus NGINX entfernt.
-5. **Projektdateien löschen**: Das gesamte Projektverzeichnis wird entfernt (nach Bestätigung).
-6. **Benutzer und Gruppe entfernen**: Der Systembenutzer und die Gruppe "fotobox" werden gelöscht (optional).
-7. **Abschlussbestätigung**: Sie erhalten eine Bestätigung über die erfolgreiche Deinstallation.
+1. Wechseln Sie in das Backend-Verzeichnis:
 
-> **Wichtig**: Die Deinstallation ist ein endgültiger Vorgang! Alle lokalen Fotos und Uploads werden während des Deinstallationsprozesses gelöscht, sofern Sie diese nicht vorher manuell sichern. Ein Backup aller wichtigen Daten wird jedoch automatisch erstellt und kann bei Bedarf heruntergeladen werden.
+   ```bash
+   cd /opt/fotobox/backend
+   ```
 
-**Stand:** 16. Juni 2025
+2. Führen Sie das Deinstallationsskript aus:
+
+   ```bash
+   sudo python3 manage_uninstall.py
+   ```
+
+3. Folgen Sie den Anweisungen auf der Konsole
+4. Bestätigen Sie, ob das Backup-Verzeichnis gelöscht werden soll
+
+### Was wird bei der Deinstallation entfernt?
+
+- Alle Dateien im Installationsverzeichnis `/opt/fotobox`
+- Der systemd-Service `fotobox-backend`
+- Die NGINX-Konfiguration
+- Alle temporären Dateien
+
+### Was wird gesichert?
+
+Vor der Deinstallation werden folgende Elemente automatisch gesichert:
+
+- Alle Fotos und Uploads
+- Die Datenbanken mit Einstellungen und Metadaten
+- Benutzerdefinierte Konfigurationen
+
+Die Backups werden im Verzeichnis `/opt/fotobox/backup` mit einem Zeitstempel versehen abgelegt. Sie können wählen, ob diese Backups nach der Deinstallation behalten oder gelöscht werden sollen.
+
+### Nacharbeit
+
+Nach der Deinstallation sollten Sie:
+
+1. Die NGINX-Konfiguration überprüfen:
+
+   ```bash
+   sudo nginx -t
+   ```
+
+2. Den Webserver neu starten:
+
+   ```bash
+   sudo systemctl restart nginx
+   ```
+
+3. Eventuell verbleibende temporäre Dateien entfernen:
+
+   ```bash
+   sudo rm -rf /tmp/fotobox*
+   ```
+
+---
+
+Letzte Aktualisierung: Juli 2025
