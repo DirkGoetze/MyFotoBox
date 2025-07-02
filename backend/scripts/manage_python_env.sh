@@ -343,7 +343,7 @@ setup_python_env() {
         # Erstellt ein Python Virtual Environment, Spinner anzeigen
         echo -n "[/] Erstelle Python Virtual Environment ..."
         # Erstellt ein Python Virtual Environment
-        (create_python_env) &> /dev/null 2>&1
+        (create_python_env) &> /dev/null 2>&1 &
         service_pid=$!
         show_spinner "$service_pid" "dots"
         # Überprüfe, ob die Installation erfolgreich war

@@ -327,6 +327,95 @@ disable_backend_service() {
     return 0
 }
 
+# get_backend_service_status
+get_backend_service_status_debug_0001="INFO: Überprüfe Backend-Service-Status..."
+get_backend_service_status_debug_0002="INFO: Service-Status ist: %s, Autostart: %s"
+get_backend_service_status_debug_0003="ERROR: Ungültiger Vergleichsstatus: %s. Zulässige Werte: active, inactive, failed, unknown, enabled, disabled"
+get_backend_service_status_debug_0004="INFO: Vergleiche aktuellen Status '%s' mit erwartetem Status '%s'"
+get_backend_service_status_debug_0005="INFO: Status stimmt überein"
+get_backend_service_status_debug_0006="INFO: Status weicht ab"
+
+get_backend_service_status() {
+    # -----------------------------------------------------------------------
+    # get_backend_service_status
+    # -----------------------------------------------------------------------
+    # Funktion.: Gibt den Status des Backend-Services zurück
+    # Parameter: $1 - (Optional) Vergleichsstatus für den Service
+    # .........       Gültige Werte: active, inactive, failed, unknown, 
+    # .........       enabled, disabled
+    # Rückgabe.: Ohne Parameter:
+    # .........  - Echo: "Status Autostart" (z.B. "active enabled")
+    # .........  - 0 wenn aktiv und läuft und Autostart aktiviert
+    # .........  - 1 für jeden anderen Status
+    # ......... Mit Parameter:
+    # .........  - Echo: "Status Autostart" (z.B. "active enabled")
+    # .........  - 0 wenn der aktuelle Status mit dem Parameter übereinstimmt
+    # .........  - 1 wenn der aktuelle Status vom Parameter abweicht
+    # -----------------------------------------------------------------------
+    local comparison_status="$1"
+    local current_status
+    local autostart_status
+    local combined_status
+    
+    # Liste der gültigen Status-Werte
+    local valid_statuses=("active" "inactive" "failed" "unknown" "enabled" "disabled")
+    
+    debug "$get_backend_service_status_debug_0001"
+
+    # Prüfe den aktuellen Status des Services
+    current_status=$(systemctl is-active fotobox-backend 2>/dev/null)
+    # Prüfe den Autostart-Status des Services
+    autostart_status=$(systemctl is-enabled fotobox-backend 2>/dev/null)
+    
+    # Für die Ausgabe und Verarbeitung kombinieren wir die beiden Status
+    combined_status="${current_status} ${autostart_status}"
+    
+    # Debug-Ausgabe des ermittelten Status
+    debug "$(printf "$get_backend_service_status_debug_0002" "$current_status" "$autostart_status")"
+    
+    # Vergleich mit Parameter, falls angegeben
+    if [ -n "$comparison_status" ]; then
+        # Prüfe, ob der angegebene Status gültig ist
+        local is_valid=0
+        for status in "${valid_statuses[@]}"; do
+            if [ "$status" = "$comparison_status" ]; then
+                is_valid=1
+                break
+            fi
+        done
+        
+        # Wenn der Status nicht gültig ist, gib Fehlermeldung aus
+        if [ $is_valid -eq 0 ]; then
+            error_msg="$(printf "$get_backend_service_status_debug_0003" "$comparison_status")"
+            debug "$error_msg"
+            log "$error_msg" "get_backend_service_status"
+            echo "$combined_status"
+            return 1
+        fi
+        
+        debug "$(printf "$get_backend_service_status_debug_0004" "$combined_status" "$comparison_status")"
+        
+        # Vergleiche den aktuellen Status mit dem gewünschten Status
+        if echo "$combined_status" | grep -w "$comparison_status" > /dev/null; then
+            debug "$get_backend_service_status_debug_0005"
+            echo "$combined_status"
+            return 0
+        else
+            debug "$get_backend_service_status_debug_0006"
+            echo "$combined_status"
+            return 1
+        fi
+    else
+        # Ohne Parameter: Erfolgreich, wenn Service aktiv läuft und Autostart aktiviert ist
+        echo "$combined_status"
+        if [ "$current_status" = "active" ] && [ "$autostart_status" = "enabled" ]; then
+            return 0
+        else
+            return 1
+        fi
+    fi
+}
+
 # start_backend_service
 start_backend_service_debug_0001="INFO: Starte Backend-Service..."
 start_backend_service_debug_0002="ERROR: Starten des Backend-Services fehlgeschlagen."
@@ -420,45 +509,6 @@ restart_backend_service() {
         debug "$restart_backend_service_debug_0004"
         debug "$restart_backend_service_debug_0005"
         return 1
-    fi
-}
-
-# get_backend_service_status
-get_backend_service_status_debug_0001="INFO: Überprüfe Backend-Service-Status..."
-get_backend_service_status_debug_0002="SUCCESS: Backend-Service ist aktiv und läuft."
-get_backend_service_status_debug_0003="WARN: Backend-Service ist inaktiv (gestoppt)."
-get_backend_service_status_debug_0004="ERROR: Backend-Service-Status: %s"
-
-get_backend_service_status() {
-    # -----------------------------------------------------------------------
-    # get_backend_service_status
-    # -----------------------------------------------------------------------
-    # Funktion.: Gibt den Status des Backend-Services zurück
-    # Parameter: keine
-    # Rückgabe.: 0 wenn aktiv und läuft
-    # .........  1 wenn inaktiv
-    # .........  2 bei Fehler oder Failed
-    # -----------------------------------------------------------------------
-    debug "$get_backend_service_status_debug_0001"
-
-    # Prüfe erst den Status
-    status=$(systemctl is-active fotobox-backend)
-    
-    # Prüfe dann die Unit für Fehler
-    failed=$(systemctl show -p ActiveState fotobox-backend | cut -d= -f2)
-
-    if [ "$status" = "active" ] && [ "$failed" = "active" ]; then
-        # Service läuft wirklich
-        debug "$get_backend_service_status_debug_0002"
-        return 0
-    elif [ "$status" = "inactive" ]; then
-        # Service ist gestoppt
-        debug "$get_backend_service_status_debug_0003" 
-        return 1
-    else
-        # Service hat Fehler oder unbekannter Status
-        debug "$(printf "$get_backend_service_status_debug_0004" "$status ($failed)")"
-        return 2
     fi
 }
 
