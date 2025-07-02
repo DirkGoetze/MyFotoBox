@@ -410,7 +410,7 @@ Das System verwendet folgende Log-Levels:
 
 ## 13. Backend-Service-Verwaltung
 
-Die Fotobox2 verwendet systemd für die Backend-Service-Verwaltung, wodurch eine zuverlässige Ausführung und Überwachung gewährleistet wird.
+Die Fotobox2 verwendet systemd für die Backend-Service-Verwaltung, wodurch eine zuverlässige Ausführung und Überwachung gewährleistet wird. Die Service-Verwaltung ist in zwei komplementären Implementierungen verfügbar: einer Shell-Skript-Version für systemnahe Operationen und einer Python-Implementierung für die programmatische Nutzung und API-Integration.
 
 ### 13.1 Service-Konfiguration
 
@@ -437,24 +437,177 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
-### 13.2 Service-Management
+Diese Konfiguration definiert Abhängigkeiten (Netzwerk), Berechtigungen (Benutzer/Gruppe), Umgebungsvariablen und Neustartverhalten. Die Datei wird während der Installation in das systemd-Verzeichnis (`/etc/systemd/system/`) kopiert.
 
-Die Klasse `BackendService` in `manage_backend_service.py` stellt Funktionen für die Service-Verwaltung bereit:
+### 13.2 Bash-Implementierung (Shell-Skript)
 
-```python
-def start_service(self) -> Tuple[bool, str]:
-    """Startet den Fotobox-Backend-Service"""
-    try:
-        exit_code, stdout, stderr = self._execute_systemctl("start fotobox-backend")
-        success = exit_code == 0
-        message = stdout if success else stderr
-        return success, message
-    except Exception as e:
-        logger.error(f"Fehler beim Starten des Services: {str(e)}")
-        return False, f"Service-Start fehlgeschlagen: {str(e)}"
+Die Shell-Skript-Implementierung in `scripts/manage_backend_service.sh` bietet eine robuste Schnittstelle für systemnahe Operationen. Sie wird hauptsächlich für die Installation und Systeminteraktionen verwendet.
+
+#### 13.2.1 Hauptfunktionen
+
+| Funktion                     | Beschreibung              | Parameter | Rückgabe |
+|------------------------------|---------------------------|-----------|----------|
+| `install_backend_service`    | Installiert den Service   | keine     | 0: Erfolg, 1: Fehler |
+| `enable_backend_service`     | Aktiviert den Autostart   | keine     | 0: Erfolg, 1: Fehler |
+| `disable_backend_service`    | Deaktiviert den Autostart | keine     | 0: Erfolg, 1: Fehler |
+| `start_backend_service`      | Startet den Service       | keine     | 0: Erfolg, 1: Fehler |
+| `stop_backend_service`       | Stoppt den Service        | keine     | 0: Erfolg, 1: Fehler |
+| `restart_backend_service`    | Startet den Service neu   | keine     | 0: Erfolg, 1: Fehler |
+| `get_backend_service_status` | Prüft den Service-Status  | [$1]: Optional - Vergleichsstatus | 0: Aktiv/Übereinstimmung, 1: Inaktiv/Abweichung |
+| `uninstall_backend_service`  | Deinstalliert den Service | keine     | 0: Erfolg, 1: Fehler |
+
+#### 13.2.2 Hilfsfunktionen
+
+```bash
+_backup_backend_service() {
+    # Erstellt ein Backup der systemd-Service-Datei
+    # $1: Pfad zur Service-Datei
+    # $2: (Optional) Löschen nach Backup (0/1)
+    # Rückgabe: 0 bei Erfolg, 1 bei Fehler
+    
+    local systemd_file="$1"  
+    local delete_file="${2:-0}"
+    # ...Implementation...
+}
 ```
 
-### 13.3 Service-Installation
+#### 13.2.3 Status-Abfrage und -Vergleich
+
+Die `get_backend_service_status`-Funktion ist besonders flexibel und unterstützt:
+
+1. **Statusabfrage ohne Parameter**: Gibt den kombinierten Status zurück und 0, wenn der Service aktiv und aktiviert ist
+2. **Statusvergleich mit Parameter**: Vergleicht mit einem spezifischen Status (active, inactive, failed, unknown, enabled, disabled)
+
+```bash
+# Beispiel für Statusvergleich
+if get_backend_service_status "active"; then
+    echo "Service läuft"
+else
+    echo "Service läuft nicht"
+fi
+
+# Beispiel für Statusabfrage
+status=$(get_backend_service_status)
+echo "Aktueller Status: $status"
+```
+
+### 13.3 Python-Implementierung
+
+Die Python-Implementierung in `manage_backend_service.py` stellt eine objektorientierte Schnittstelle für die programmatische Verwendung und API-Integration bereit.
+
+#### 13.3.1 Klassenstruktur
+
+```python
+class ServiceError(Exception): pass
+class ServiceConfigError(ServiceError): pass
+class ServiceOperationError(ServiceError): pass
+
+class BackendService:
+    """Verwaltung des Fotobox Backend-Services"""
+    
+    def __init__(self):
+        self.folder_manager = FolderManager()
+        self.config_dir = get_config_dir()
+        self.service_file = os.path.join(self.config_dir, 'fotobox-backend.service')
+        self.systemd_path = '/etc/systemd/system/fotobox-backend.service'
+        self.service_name = 'fotobox-backend'
+```
+
+#### 13.3.2 Hauptmethoden
+
+| Methode | Beschreibung | Rückgabe |
+|---------|--------------|----------|
+| `install()` | Installiert den Service | `bool` |
+| `enable()` | Aktiviert den Autostart | `bool` |
+| `disable()` | Deaktiviert den Autostart | `bool` |
+| `start()` | Startet den Service | `bool` |
+| `stop()` | Stoppt den Service | `bool` |
+| `restart()` | Startet den Service neu | `bool` |
+| `status()` | Gibt den Service-Status zurück | `Dict[str, Any]` |
+| `get_status_with_comparison()` | Bash-kompatible Statusabfrage | `Tuple[bool, str]` |
+| `uninstall()` | Deinstalliert den Service | `bool` |
+| `validate_service_file()` | Validiert die Service-Datei | `Tuple[bool, Optional[str]]` |
+| `check_dependencies()` | Prüft alle Service-Abhängigkeiten | `Dict[str, bool]` |
+
+#### 13.3.3 Status-Methoden
+
+Die `status()`-Methode gibt ein reiches Python-Dictionary zurück:
+
+```python
+{
+    'active': True,                # Läuft der Service?
+    'running': True,               # Läuft der Service im "running" Zustand?
+    'enabled': True,               # Ist Autostart aktiviert?
+    'state': 'active',             # Aktivitätszustand
+    'substate': 'running'          # Unterzustand
+}
+```
+
+Die `get_status_with_comparison()`-Methode bietet eine Bash-kompatible Schnittstelle:
+
+```python
+# Statusabfrage
+success, combined_status = service.get_status_with_comparison()
+print(f"Status: {combined_status}, Optimal: {success}")
+
+# Statusvergleich
+matches, status = service.get_status_with_comparison("active")
+if matches:
+    print(f"Service ist aktiv, Status: {status}")
+```
+
+### 13.4 API-Integration
+
+Die Service-Verwaltung wird über die API in `api_backend_service.py` zugänglich gemacht.
+
+#### 13.4.1 Verfügbare Endpunkte
+
+| Endpunkt | Methode | Beschreibung |
+|----------|---------|--------------|
+| `/api/service/status` | GET | Gibt den aktuellen Status des Services zurück |
+| `/api/service/details` | GET | Gibt detaillierte Service-Informationen zurück |
+| `/api/service/start` | POST | Startet den Service |
+| `/api/service/stop` | POST | Stoppt den Service |
+| `/api/service/restart` | POST | Startet den Service neu |
+| `/api/service/compare_status` | GET | Vergleicht den Service-Status mit einem Parameter |
+
+#### 13.4.2 Status-API-Antworten
+
+```json
+{
+  "success": true,
+  "data": {
+    "status": "active",
+    "is_active": true,
+    "uptime": "2d 4h 12m",
+    "last_start": "2025-06-30T08:15:30",
+    "pid": 1234,
+    "combined_status": "active enabled",
+    "is_optimal": true,
+    "timestamp": "2025-07-02T10:45:22"
+  }
+}
+```
+
+#### 13.4.3 Statusvergleich-API
+
+```python
+GET /api/service/compare_status?status=active
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "matches": true,
+    "requested_status": "active",
+    "current_status": "active enabled",
+    "timestamp": "2025-07-02T10:45:22"
+  }
+}
+```
+
+### 13.5 Service-Installation
 
 Der Service wird während der Installation registriert und aktiviert:
 
@@ -476,6 +629,95 @@ def install_service(self) -> Tuple[bool, str]:
     except Exception as e:
         return False, f"Installation fehlgeschlagen: {str(e)}"
 ```
+
+### 13.6 Integration von Bash und Python
+
+Die Bash- und Python-Implementierungen sind komplementär und für unterschiedliche Anwendungsfälle optimiert:
+
+1. **Shell-Skript**: Für die Installation, systemnahe Operationen und direkte Kommandozeilennutzung
+2. **Python-Klasse**: Für programmatische Verwendung, API-Integration und erweiterte Fehlerbehandlung
+
+> **AKTUALISIERUNG (Juli 2025)**: Die Python-Implementierung wurde um die `get_status_with_comparison()`-Methode erweitert, um vollständige Kompatibilität mit der Bash-Implementierung zu gewährleisten.
+
+#### 13.6.1 Status-Werte und deren Bedeutung
+
+| Status | Beschreibung | Mögliche Kombinationen |
+|--------|--------------|------------------------|
+| `active` | Service läuft normal | active enabled, active disabled |
+| `inactive` | Service ist gestoppt | inactive enabled, inactive disabled |
+| `failed` | Service ist fehlgeschlagen | failed enabled, failed disabled |
+| `unknown` | Status konnte nicht ermittelt werden | unknown enabled, unknown disabled |
+| `enabled` | Autostart ist aktiviert | active enabled, inactive enabled, failed enabled |
+| `disabled` | Autostart ist deaktiviert | active disabled, inactive disabled, failed disabled |
+
+#### 13.6.2 Best Practices für die Service-Verwaltung
+
+1. **Statusprüfung vor Aktionen**:
+
+```python
+# Vor dem Neustart prüfen, ob der Service installiert ist
+status = service.status()
+if status['state'] == 'unknown':
+    logger.error("Service ist nicht installiert")
+    return False
+```
+
+2.**Robuste Fehlerbehandlung**:
+
+```python
+try:
+    service.restart()
+    logger.info("Service neu gestartet")
+except ServiceOperationError as e:
+    logger.error(f"Fehler beim Neustart: {e}")
+    # Fallback-Strategie
+    try:
+        service.stop()
+        time.sleep(2)
+        service.start()
+    except Exception:
+        logger.critical("Auch Fallback fehlgeschlagen")
+```
+
+3.**Optimale CLI-Integration**:
+
+```bash
+# Status abfragen und handeln
+status=$(get_backend_service_status)
+if [[ "$status" == "active enabled" ]]; then
+    echo "Service läuft optimal"
+elif echo "$status" | grep -q "active"; then
+    echo "Service läuft, aber Autostart nicht aktiviert"
+    enable_backend_service
+else
+    echo "Service läuft nicht, wird gestartet"
+    start_backend_service
+fi
+```
+
+### 13.7 Überwachung und Fehleranalyse
+
+#### 13.7.1 Log-Analyse
+
+Zur Fehleranalyse können die Service-Logs analysiert werden:
+
+```bash
+# Aktuelle Logs anzeigen
+journalctl -u fotobox-backend.service -f
+
+# Logs seit dem letzten Neustart
+journalctl -u fotobox-backend.service -b
+```
+
+#### 13.7.2 Häufige Probleme und Lösungen
+
+| Problem | Mögliche Ursache | Lösung |
+|---------|------------------|--------|
+| Service startet nicht | Falsche Berechtigungen | Berechtigungen der Programmdateien prüfen |
+| Service schlägt fehl | Python-Abhängigkeiten fehlen | `pip install -r requirements_python.inf` ausführen |
+| Berechtigungsprobleme | Falsche Benutzereinstellungen | User/Group in der Service-Datei anpassen |
+| Service nicht gefunden | Fehlende Installation | `install_backend_service` ausführen |
+| Plötzliche Abstürze | Ressourcenprobleme | Systemressourcen und Limits prüfen |
 
 ## 14. Deinstallationssystem
 
