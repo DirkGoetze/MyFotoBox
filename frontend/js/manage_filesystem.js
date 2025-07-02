@@ -4,125 +4,116 @@
  * @module manage_filesystem
  */
 
-import { apiGet, apiPost } from './manage_api.js';
-import { log, error, debug } from './manage_logging.js';
+import { apiGet, apiPost, apiDelete } from './manage_api.js';
+import { log, error, debug, warn } from './manage_logging.js';
+import { Result } from './utils.js';
+
+// API-Endpunkte
+const API = {
+    LIST: '/api/filesystem/list',
+    INFO: '/api/filesystem/info',
+    SPACE: '/api/filesystem/space',
+    CREATE: '/api/filesystem/create',
+    DELETE: '/api/filesystem/delete',
+    MOVE: '/api/filesystem/move',
+    COPY: '/api/filesystem/copy',
+    UPLOAD: '/api/filesystem/upload',
+    DOWNLOAD: '/api/filesystem/download'
+};
 
 /**
- * @typedef {Object} ImageList
- * @property {Array<string>} photos - Liste von Bilddateipfaden
- */
-
-/**
- * @typedef {Object} SaveResult
- * @property {boolean} success - Gibt an, ob das Speichern erfolgreich war
- * @property {string} [path] - Pfad der gespeicherten Datei
- * @property {string} [error] - Fehlermeldung bei nicht erfolgreicher Operation
+ * @typedef {Object} FileSystemResult
+ * @property {boolean} success - Operationserfolg
+ * @property {any} [data] - Rückgabedaten
+ * @property {string} [error] - Fehlermeldung
  */
 
 /**
  * @typedef {Object} FileInfo
- * @property {string} name - Name der Datei
- * @property {string} path - Pfad zur Datei
- * @property {number} size - Dateigröße in Bytes
- * @property {string} type - MIME-Typ der Datei
- * @property {Date} created - Erstellungszeitpunkt
- * @property {Date} modified - Letzter Änderungszeitpunkt
+ * @property {string} name - Dateiname
+ * @property {string} path - Pfad
+ * @property {number} size - Größe in Bytes
+ * @property {string} type - MIME-Typ
+ * @property {string} created - Erstellungsdatum
+ * @property {string} modified - Änderungsdatum
+ * @property {string} [checksum] - Optional: MD5-Prüfsumme
  */
 
 /**
  * @typedef {Object} SpaceInfo
- * @property {number} total - Gesamtspeicherplatz in Bytes
- * @property {number} free - Freier Speicherplatz in Bytes
- * @property {number} used - Genutzter Speicherplatz in Bytes
- * @property {number} percentUsed - Prozentualer Anteil des genutzten Speichers
+ * @property {number} total - Gesamtgröße in Bytes
+ * @property {number} free - Freier Speicher in Bytes
+ * @property {number} used - Belegter Speicher in Bytes
+ * @property {number} percentUsed - Prozentuale Auslastung
  */
 
 /**
- * Standard-Bildverzeichnis für die Galerie
- * @const {string}
+ * Ruft Dateiliste eines Verzeichnisses ab
+ * @param {string} path - Verzeichnispfad
+ * @param {Object} [options] - Zusätzliche Optionen
+ * @param {boolean} [options.recursive=false] - Rekursive Listung
+ * @param {string} [options.filter] - Dateifilter (z.B. "*.jpg")
+ * @returns {Promise<Result<FileInfo[]>>} Liste der Dateien
  */
-const GALLERY_DIR = 'gallery';
-
-/**
- * Ruft eine Liste aller Bilder von der API ab
- * @param {string} [directory=GALLERY_DIR] - Das Verzeichnis, aus dem die Bilder abgerufen werden sollen
- * @returns {Promise<ImageList>} - Liste der Bilder
- */
-export async function getImageList(directory = GALLERY_DIR) {
+export async function listFiles(path, options = {}) {
     try {
-        debug('Bilderliste abrufen', { directory });
-        const response = await apiGet(`/api/filesystem/images?directory=${directory}`);
+        const response = await apiGet(API.LIST, { path, ...options });
         
-        if (response && response.success) {
-            log(`${response.photos.length} Bilder erfolgreich aus ${directory} abgerufen`);
-            return response;
+        if (response.success) {
+            debug('Dateiliste erfolgreich abgerufen', { path, count: response.data.length });
+            return Result.ok(response.data);
         } else {
-            error('Fehler beim Abrufen der Bilderliste', response.error);
-            return { success: false, photos: [], error: response.error || 'Unbekannter Fehler' };
+            warn('Fehler beim Abrufen der Dateiliste', response.error);
+            return Result.fail(response.error);
         }
     } catch (err) {
-        error('Fehler beim Abrufen der Bilderliste', err.message);
-        return { success: false, photos: [], error: err.message };
+        error('Fehler bei Dateisystem-Operation:', err);
+        return Result.fail(err.message);
     }
 }
 
 /**
- * Speichert ein Bild auf dem Server
- * @param {Blob|File|string} image - Das zu speichernde Bild (als Blob, File oder Base64-String)
- * @param {Object} options - Optionen für das Speichern
- * @param {string} [options.filename] - Name der Datei
- * @param {string} [options.directory=GALLERY_DIR] - Zielverzeichnis
- * @param {string} [options.type='image/jpeg'] - MIME-Typ des Bildes
- * @returns {Promise<SaveResult>} - Ergebnis des Speicherns
+ * Ruft Detailinformationen einer Datei ab
+ * @param {string} path - Dateipfad
+ * @returns {Promise<Result<FileInfo>>} Dateiinformationen
  */
-export async function saveImage(image, options = {}) {
-    const { filename = `photo_${Date.now()}.jpg`, directory = GALLERY_DIR, type = 'image/jpeg' } = options;
-    
+export async function getFileInfo(path) {
     try {
-        debug('Bild speichern', { filename, directory });
+        const response = await apiGet(API.INFO, { path });
         
-        // FormData für das Hochladen vorbereiten
-        const formData = new FormData();
-        
-        // Wenn das Bild ein Blob oder File ist, direkt verwenden
-        if (image instanceof Blob || image instanceof File) {
-            formData.append('image', image, filename);
-        } 
-        // Wenn das Bild ein Base64-String ist
-        else if (typeof image === 'string' && image.startsWith('data:')) {
-            // Base64 in Blob umwandeln
-            const response = await fetch(image);
-            const blob = await response.blob();
-            formData.append('image', blob, filename);
-        }
-        // Ungültiges Format
-        else {
-            error('Ungültiges Bildformat beim Speichern');
-            return { success: false, error: 'Ungültiges Bildformat' };
-        }
-        
-        formData.append('directory', directory);
-        formData.append('type', type);
-        
-        // API-Aufruf mit FormData
-        const response = await fetch('/api/filesystem/save', {
-            method: 'POST',
-            body: formData
-            // Keine Content-Type Header, wird automatisch gesetzt bei FormData
-        });
-        
-        if (response.ok) {
-            const result = await response.json();
-            log('Bild erfolgreich gespeichert', { path: result.path });
-            return { success: true, path: result.path };
+        if (response.success) {
+            debug('Dateiinfo erfolgreich abgerufen', { path });
+            return Result.ok(response.data);
         } else {
-            const errorData = await response.json();
-            error('Fehler beim Speichern des Bildes', errorData);
-            return { success: false, error: errorData.error || 'Unbekannter Fehler beim Speichern' };
+            warn('Fehler beim Abrufen der Dateiinfo', response.error);
+            return Result.fail(response.error);
         }
     } catch (err) {
-        error('Fehler beim Speichern des Bildes', err.message);
-        return { success: false, error: err.message };
+        error('Fehler bei Dateisystem-Operation:', err);
+        return Result.fail(err.message);
+    }
+}
+
+/**
+ * Erstellt ein Verzeichnis
+ * @param {string} path - Zu erstellendes Verzeichnis
+ * @returns {Promise<boolean>} - True bei erfolgreicher Erstellung
+ */
+export async function createDirectory(path) {
+    try {
+        debug('Verzeichnis erstellen', { path });
+        const response = await apiPost('/api/filesystem/mkdir', { path });
+        
+        if (response && response.success) {
+            log('Verzeichnis erfolgreich erstellt', { path });
+            return true;
+        } else {
+            error('Fehler beim Erstellen des Verzeichnisses', response.error);
+            return false;
+        }
+    } catch (err) {
+        error('Fehler beim Erstellen des Verzeichnisses', err.message);
+        return false;
     }
 }
 
@@ -149,58 +140,6 @@ export async function deleteImage(filename, directory = GALLERY_DIR) {
         }
     } catch (err) {
         error('Fehler beim Löschen des Bildes', err.message);
-        return false;
-    }
-}
-
-/**
- * Ruft Metadaten einer Datei ab
- * @param {string} filename - Name der Datei
- * @param {string} [directory=GALLERY_DIR] - Verzeichnis der Datei
- * @returns {Promise<FileInfo|null>} - Metadaten der Datei oder null bei Fehler
- */
-export async function getFileInfo(filename, directory = GALLERY_DIR) {
-    try {
-        debug('Dateimetadaten abrufen', { filename, directory });
-        const response = await apiGet(`/api/filesystem/info?filename=${filename}&directory=${directory}`);
-        
-        if (response && response.success) {
-            // Datum-Strings in Date-Objekte umwandeln
-            if (response.data) {
-                response.data.created = new Date(response.data.created);
-                response.data.modified = new Date(response.data.modified);
-            }
-            
-            return response.data;
-        } else {
-            error('Fehler beim Abrufen der Dateimetadaten', response.error);
-            return null;
-        }
-    } catch (err) {
-        error('Fehler beim Abrufen der Dateimetadaten', err.message);
-        return null;
-    }
-}
-
-/**
- * Erstellt ein Verzeichnis
- * @param {string} path - Zu erstellendes Verzeichnis
- * @returns {Promise<boolean>} - True bei erfolgreicher Erstellung
- */
-export async function createDirectory(path) {
-    try {
-        debug('Verzeichnis erstellen', { path });
-        const response = await apiPost('/api/filesystem/mkdir', { path });
-        
-        if (response && response.success) {
-            log('Verzeichnis erfolgreich erstellt', { path });
-            return true;
-        } else {
-            error('Fehler beim Erstellen des Verzeichnisses', response.error);
-            return false;
-        }
-    } catch (err) {
-        error('Fehler beim Erstellen des Verzeichnisses', err.message);
         return false;
     }
 }

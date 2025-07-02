@@ -4,132 +4,143 @@
  * @module manage_auth
  */
 
-// Abhängigkeiten
-import { apiGet, apiPost } from './manage_api.js';
-import { log, error } from './manage_logging.js';
+import { apiGet, apiPost, setAuthToken } from './manage_api.js';
+import { log, error, warn } from './manage_logging.js';
+
+// Konstanten
+const AUTH_TOKEN_KEY = 'fotobox_auth_token';
+const TOKEN_REFRESH_INTERVAL = 15 * 60 * 1000; // 15 Minuten
+
+// Timer für Token-Refresh
+let _refreshTimer = null;
 
 /**
- * @typedef {Object} LoginStatus
- * @property {boolean} authenticated - Gibt an, ob der Benutzer authentifiziert ist
+ * Initialisiert die Authentifizierung
+ * Lädt gespeicherten Token und startet Token-Refresh
  */
-
-/**
- * @typedef {Object} PasswordStatus
- * @property {boolean} passwordSet - Gibt an, ob ein Passwort gesetzt ist
- */
-
-/**
- * Prüft, ob ein Passwort gesetzt ist
- * @returns {Promise<boolean>} True wenn ein Passwort gesetzt ist, sonst False
- */
-export async function isPasswordSet() {
-    try {
-        const res = await apiGet('/api/check_password_set');
-        return res.password_set;
-    } catch (err) {
-        error('Fehler bei der Passwort-Statusprüfung:', err);
-        return false;
+export function initAuth() {
+    const savedToken = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (savedToken) {
+        setAuthToken(savedToken);
+        verifyAndRefreshToken();
     }
 }
 
 /**
- * Validiert eingegebenes Passwort
- * @param {string} password - Das zu validierende Passwort
- * @returns {Promise<boolean>} True wenn das Passwort korrekt ist, sonst False
- */
-export async function validatePassword(password) {
-    try {
-        const res = await apiPost('/api/login', { password });
-        return res.success;
-    } catch (err) {
-        error('Fehler bei der Passwortvalidierung:', err);
-        return false;
-    }
-}
-
-/**
- * Setzt neues Passwort (bei Erstinstallation)
- * @param {string} password - Das zu setzende Passwort
- * @returns {Promise<boolean>} True wenn das Passwort erfolgreich gesetzt wurde, sonst False
- */
-export async function setPassword(password) {
-    if (password.length < 4) {
-        return false;
-    }
-    
-    try {
-        const res = await apiPost('/api/settings', { admin_password: password });
-        return res.status === 'ok';
-    } catch (err) {
-        error('Fehler beim Setzen des Passworts:', err);
-        return false;
-    }
-}
-
-/**
- * Ändert bestehendes Passwort
- * @param {string} newPassword - Das neue Passwort
- * @returns {Promise<boolean>} True wenn das Passwort erfolgreich geändert wurde, sonst False
- */
-export async function changePassword(newPassword) {
-    if (newPassword.length < 4) {
-        return false;
-    }
-    
-    try {
-        const res = await apiPost('/api/settings', { new_password: newPassword });
-        return res.status === 'ok';
-    } catch (err) {
-        error('Fehler beim Ändern des Passworts:', err);
-        return false;
-    }
-}
-
-/**
- * Gibt aktuellen Login-Status zurück
- * @returns {Promise<LoginStatus>} Loginstatusinformation
- */
-export async function getLoginStatus() {
-    try {
-        return await apiGet('/api/session-check');
-    } catch (err) {
-        error('Fehler beim Abrufen des Login-Status:', err);
-        return { authenticated: false };
-    }
-}
-
-/**
- * Führt Login durch
+ * Führt Login durch und speichert Token
  * @param {string} password - Das eingegebene Passwort
- * @returns {Promise<boolean>} True wenn die Anmeldung erfolgreich war, sonst False
+ * @returns {Promise<boolean>} True wenn Login erfolgreich
  */
 export async function login(password) {
     try {
-        const res = await apiPost('/api/login', { password });
-        if (res.success) {
+        const res = await apiPost('/api/auth/login', { password });
+        if (res.success && res.data.token) {
+            localStorage.setItem(AUTH_TOKEN_KEY, res.data.token);
+            setAuthToken(res.data.token);
+            startTokenRefresh();
             log('Login erfolgreich');
             return true;
         }
+        warn('Login fehlgeschlagen:', res.error);
         return false;
     } catch (err) {
-        error('Fehler beim Login:', err);
+        error('Login-Fehler:', err);
         return false;
     }
 }
 
 /**
- * Meldet Benutzer ab
- * @returns {Promise<boolean>} True wenn die Abmeldung erfolgreich war
+ * Führt Logout durch und entfernt Token
  */
 export async function logout() {
     try {
-        await apiGet('/logout');
-        return true;
+        await apiPost('/api/auth/logout');
     } catch (err) {
-        error('Fehler beim Logout:', err);
+        warn('Logout-API-Fehler:', err);
+    } finally {
+        clearAuth();
+    }
+}
+
+/**
+ * Entfernt alle Auth-Daten
+ */
+function clearAuth() {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    setAuthToken(null);
+    stopTokenRefresh();
+    log('Auth-Daten entfernt');
+}
+
+/**
+ * Startet periodischen Token-Refresh
+ */
+function startTokenRefresh() {
+    stopTokenRefresh();
+    _refreshTimer = setInterval(verifyAndRefreshToken, TOKEN_REFRESH_INTERVAL);
+}
+
+/**
+ * Stoppt Token-Refresh
+ */
+function stopTokenRefresh() {
+    if (_refreshTimer) {
+        clearInterval(_refreshTimer);
+        _refreshTimer = null;
+    }
+}
+
+/**
+ * Prüft und aktualisiert Token wenn nötig
+ */
+async function verifyAndRefreshToken() {
+    try {
+        const res = await apiGet('/api/auth/verify');
+        if (!res.success || !res.data.valid) {
+            warn('Token ungültig - Logout erforderlich');
+            clearAuth();
+        }
+    } catch (err) {
+        error('Token-Verifikation fehlgeschlagen:', err);
+        clearAuth();
+    }
+}
+
+/**
+ * Prüft ob Benutzer authentifiziert ist
+ * @returns {boolean} True wenn authentifiziert
+ */
+export function isAuthenticated() {
+    return !!localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+/**
+ * Ändert das Passwort
+ * @param {string} currentPassword - Aktuelles Passwort
+ * @param {string} newPassword - Neues Passwort
+ * @returns {Promise<boolean>} True wenn erfolgreich
+ */
+export async function changePassword(currentPassword, newPassword) {
+    try {
+        const res = await apiPost('/api/auth/password', {
+            current_password: currentPassword,
+            new_password: newPassword
+        });
+        
+        if (res.success && res.data.token) {
+            localStorage.setItem(AUTH_TOKEN_KEY, res.data.token);
+            setAuthToken(res.data.token);
+            log('Passwort erfolgreich geändert');
+            return true;
+        }
+        
+        warn('Passwort-Änderung fehlgeschlagen:', res.error);
+        return false;
+    } catch (err) {
+        error('Fehler bei Passwort-Änderung:', err);
         return false;
     }
 }
 
-// Initialisierungscode (falls benötigt)
-log('Authentifizierungsmodul geladen');
+// Automatische Initialisierung
+initAuth();

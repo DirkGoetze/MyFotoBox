@@ -4,54 +4,102 @@
  * @module manage_logging
  */
 
-import { apiPost } from './manage_api.js';
+import { apiPost, apiGet } from './manage_api.js';
+import { Result } from './utils.js';
 
-// Konfiguration
-const LOG_LEVEL = {
-    DEBUG: 0,
-    INFO: 1,
-    WARN: 2,
-    ERROR: 3
+// API-Endpunkte
+const API = {
+    LOG: '/api/logging/log',
+    CONFIG: '/api/logging/config',
+    STATUS: '/api/logging/status',
+    HISTORY: '/api/logging/history'
 };
 
-let currentLogLevel = LOG_LEVEL.INFO; // Standard-Loglevel
-let enableServerLogging = true; // Ob Logs auch an den Server gesendet werden sollen
-let enableConsoleLogging = true; // Ob Logs auch in der Konsole angezeigt werden sollen
-let logQueue = []; // Queue für Logs, wenn Server nicht erreichbar
-const MAX_QUEUE_SIZE = 100;
+/**
+ * @typedef {'debug'|'info'|'warn'|'error'} LogLevel
+ */
 
 /**
- * Sendet ein Log an den Backend-Server
- * @param {string} level - Log-Level (INFO, WARN, ERROR, DEBUG)
- * @param {string} message - Die zu loggende Nachricht
- * @param {Object} [context] - Optionaler Kontext für die Nachricht
- * @returns {Promise<boolean>} - Ob der Log erfolgreich gesendet wurde
+ * @typedef {Object} LogEntry
+ * @property {LogLevel} level - Log-Level
+ * @property {string} message - Nachricht
+ * @property {Object} [context] - Zusätzlicher Kontext
+ * @property {string} timestamp - Zeitstempel
+ * @property {'frontend'|'backend'} source - Quelle des Logs
+ * @property {string} [component] - Betroffene Komponente
  */
-async function sendLogToServer(level, message, context = null) {
-    if (!enableServerLogging) return false;
+
+/**
+ * @typedef {Object} LogConfig
+ * @property {LogLevel} minLevel - Minimales Log-Level
+ * @property {boolean} enableConsole - Konsolen-Logging aktiv
+ * @property {boolean} enableServer - Server-Logging aktiv
+ * @property {number} maxQueueSize - Maximale Queue-Größe
+ * @property {boolean} logStackTraces - Stack-Traces loggen
+ */
+
+// Konfiguration
+const LOG_LEVELS = {
+    debug: 0,
+    info: 1,
+    warn: 2,
+    error: 3
+};
+
+// Standard-Konfiguration
+let config = {
+    minLevel: 'info',
+    enableConsole: true,
+    enableServer: true,
+    maxQueueSize: 100,
+    logStackTraces: true
+};
+
+// Queue für offline/fehlerhafte Logs
+let logQueue = [];
+
+/**
+ * Aktualisiert die Logging-Konfiguration
+ * @param {Partial<LogConfig>} newConfig - Neue Konfigurationsoptionen
+ */
+export async function configure(newConfig) {
+    try {
+        const response = await apiPost(API.CONFIG, newConfig);
+        if (response.success) {
+            config = { ...config, ...newConfig };
+            debug('Logging-Konfiguration aktualisiert');
+            return Result.ok(config);
+        }
+        return Result.fail(response.error);
+    } catch (err) {
+        console.error('Fehler bei Logging-Konfiguration:', err);
+        return Result.fail(err.message);
+    }
+}
+
+/**
+ * Sendet einen Log an den Server
+ * @param {LogEntry} entry - Der zu sendende Log-Eintrag
+ * @returns {Promise<Result>} Erfolg oder Fehler
+ */
+async function sendLogToServer(entry) {
+    if (!config.enableServer) return Result.ok(null);
     
     try {
-        const logData = {
-            level,
-            message,
-            context,
-            timestamp: new Date().toISOString(),
-            source: 'frontend'
-        };
-        
-        await apiPost('/api/log', logData);
-        return true;
-    } catch (err) {
-        // Wenn der Server nicht erreichbar ist, fügen wir den Log zur Queue hinzu
-        if (logQueue.length < MAX_QUEUE_SIZE) {
-            logQueue.push({
-                level,
-                message,
-                context,
-                timestamp: new Date().toISOString()
-            });
+        const response = await apiPost(API.LOG, entry);
+        if (response.success) {
+            return Result.ok(null);
         }
-        return false;
+        // Bei Fehler in Queue speichern
+        if (logQueue.length < config.maxQueueSize) {
+            logQueue.push(entry);
+        }
+        return Result.fail(response.error);
+    } catch (err) {
+        if (logQueue.length < config.maxQueueSize) {
+            logQueue.push(entry);
+        }
+        return Result.fail('Server nicht erreichbar');
     }
 }
 
@@ -77,23 +125,22 @@ export async function processLogQueue() {
 }
 
 /**
- * Konfiguriert das Logging-Modul
- * @param {Object} options - Konfigurationsoptionen
- * @param {string} [options.logLevel] - Das Log-Level (DEBUG, INFO, WARN, ERROR)
- * @param {boolean} [options.enableServerLogging] - Ob Logs an den Server gesendet werden sollen
- * @param {boolean} [options.enableConsoleLogging] - Ob Logs in der Konsole angezeigt werden sollen
+ * Loggt eine Nachricht
+ * @param {LogLevel} level - Das Log-Level
+ * @param {string} message - Die zu loggende Nachricht
+ * @param {Object} [context] - Optionaler Kontext für die Nachricht
  */
-export function configureLogging(options = {}) {
-    if (options.logLevel && LOG_LEVEL[options.logLevel.toUpperCase()] !== undefined) {
-        currentLogLevel = LOG_LEVEL[options.logLevel.toUpperCase()];
+export function log(level, message, context = null) {
+    if (LOG_LEVELS[level] === undefined) {
+        console.warn(`Unbekanntes Log-Level: ${level}`);
+        return;
     }
     
-    if (options.enableServerLogging !== undefined) {
-        enableServerLogging = Boolean(options.enableServerLogging);
-    }
-    
-    if (options.enableConsoleLogging !== undefined) {
-        enableConsoleLogging = Boolean(options.enableConsoleLogging);
+    if (LOG_LEVELS[level] >= LOG_LEVELS[config.minLevel]) {
+        if (config.enableConsole) {
+            console.log(`[${level.toUpperCase()}] ${message}`, context ? context : '');
+        }
+        sendLogToServer({ level, message, context, timestamp: new Date().toISOString(), source: 'frontend' });
     }
 }
 
@@ -102,13 +149,8 @@ export function configureLogging(options = {}) {
  * @param {string} message - Die zu loggende Nachricht
  * @param {Object} [context] - Optionaler Kontext für die Nachricht
  */
-export function log(message, context = null) {
-    if (currentLogLevel <= LOG_LEVEL.INFO) {
-        if (enableConsoleLogging) {
-            console.log(`[INFO] ${message}`, context ? context : '');
-        }
-        sendLogToServer('INFO', message, context);
-    }
+export function info(message, context = null) {
+    log('info', message, context);
 }
 
 /**
@@ -117,8 +159,8 @@ export function log(message, context = null) {
  * @param {Error|Object} [err] - Der Fehler oder zusätzlicher Kontext
  */
 export function error(message, err = null) {
-    if (currentLogLevel <= LOG_LEVEL.ERROR) {
-        if (enableConsoleLogging) {
+    if (LOG_LEVELS.error >= LOG_LEVELS[config.minLevel]) {
+        if (config.enableConsole) {
             console.error(`[ERROR] ${message}`, err ? err : '');
         }
         
@@ -133,7 +175,7 @@ export function error(message, err = null) {
             context = err;
         }
         
-        sendLogToServer('ERROR', message, context);
+        sendLogToServer({ level: 'error', message, context, timestamp: new Date().toISOString(), source: 'frontend' });
     }
 }
 
@@ -143,12 +185,7 @@ export function error(message, err = null) {
  * @param {Object} [context] - Optionaler Kontext für die Nachricht
  */
 export function warn(message, context = null) {
-    if (currentLogLevel <= LOG_LEVEL.WARN) {
-        if (enableConsoleLogging) {
-            console.warn(`[WARN] ${message}`, context ? context : '');
-        }
-        sendLogToServer('WARNING', message, context);
-    }
+    log('warn', message, context);
 }
 
 /**
@@ -157,12 +194,7 @@ export function warn(message, context = null) {
  * @param {Object} [context] - Optionaler Kontext für die Nachricht
  */
 export function debug(message, context = null) {
-    if (currentLogLevel <= LOG_LEVEL.DEBUG) {
-        if (enableConsoleLogging) {
-            console.debug(`[DEBUG] ${message}`, context ? context : '');
-        }
-        sendLogToServer('DEBUG', message, context);
-    }
+    log('debug', message, context);
 }
 
 /**
@@ -205,4 +237,4 @@ export async function clearLogs(options = {}) {
 setTimeout(processLogQueue, 5000);
 
 // Initialisierung des Logging-Moduls
-log('Logging-Modul initialisiert');
+log('info', 'Logging-Modul initialisiert');

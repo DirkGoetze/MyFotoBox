@@ -10,9 +10,32 @@
  * - Kamera-Vorschau im Frontend
  */
 
-// Import der benötigten Hilfsfunktionen
-import * as utils from './utils.js';
-import * as logging from './manage_logging.js';
+import { apiGet, apiPost } from './manage_api.js';
+import { log, error, warn, debug } from './manage_logging.js';
+import { Result } from './utils.js';
+
+// API-Endpunkte
+const API = {
+    LIST: '/api/camera/list',
+    CONNECT: '/api/camera/connect',
+    DISCONNECT: '/api/camera/disconnect',
+    CAPTURE: '/api/camera/capture',
+    PREVIEW: '/api/camera/preview',
+    CONFIG: '/api/camera/config',
+    STATUS: '/api/camera/status'
+};
+
+/**
+ * Kamera-Status Enum
+ * @readonly
+ * @enum {string}
+ */
+export const CameraStatus = {
+    DISCONNECTED: 'disconnected',
+    CONNECTING: 'connecting',
+    CONNECTED: 'connected',
+    ERROR: 'error'
+};
 
 /**
  * Kamera-Objekte und Status
@@ -28,24 +51,23 @@ let _activeConfig = null;   // Aktuell aktive Kamera-Konfiguration
 
 /**
  * Ruft die Liste der verfügbaren Kameras vom Backend ab
- * @returns {Promise<Array>} - Liste der verfügbaren Kameras
+ * @returns {Promise<Result>} - Liste der verfügbaren Kameras
  */
 export async function listCameras() {
     try {
-        const response = await fetch('/api/camera/list');
-        const data = await response.json();
+        const response = await apiGet(API.LIST);
         
-        if (data.success) {
-            _cameras = data.data;
-            logging.log('Kameraliste erfolgreich abgerufen', 'manage_camera');
-            return _cameras;
+        if (response.success) {
+            _cameras = response.data;
+            log('Kameraliste erfolgreich abgerufen');
+            return Result.ok(_cameras);
         } else {
-            logging.error(`Fehler beim Abrufen der Kameraliste: ${data.message}`, 'manage_camera');
-            return [];
+            warn('Keine Kameras gefunden oder Fehler beim Abruf');
+            return Result.fail(response.error || 'Keine Kameras gefunden');
         }
-    } catch (error) {
-        logging.error(`Netzwerkfehler beim Abrufen der Kameraliste: ${error.message}`, 'manage_camera');
-        return [];
+    } catch (err) {
+        error('Netzwerkfehler beim Abrufen der Kameraliste:', err);
+        return Result.fail(err.message);
     }
 }
 
@@ -56,26 +78,18 @@ export async function listCameras() {
  */
 export async function connectCamera(cameraId) {
     try {
-        const response = await fetch('/api/camera/connect', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ camera_id: cameraId })
-        });
+        const response = await apiPost(API.CONNECT, { camera_id: cameraId });
         
-        const data = await response.json();
-        
-        if (data.success) {
-            _activeCamera = data.data;
-            logging.log(`Kamera verbunden: ${_activeCamera.name}`, 'manage_camera');
+        if (response.success) {
+            _activeCamera = response.data;
+            log(`Kamera verbunden: ${_activeCamera.name}`);
             return _activeCamera;
         } else {
-            logging.error(`Fehler beim Verbinden der Kamera: ${data.message}`, 'manage_camera');
+            error(`Fehler beim Verbinden der Kamera: ${response.message}`);
             return null;
         }
     } catch (error) {
-        logging.error(`Netzwerkfehler beim Verbinden der Kamera: ${error.message}`, 'manage_camera');
+        error(`Netzwerkfehler beim Verbinden der Kamera: ${error.message}`);
         return null;
     }
 }
@@ -91,25 +105,18 @@ export async function disconnectCamera() {
     }
     
     try {
-        const response = await fetch('/api/camera/disconnect', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
+        const response = await apiPost(API.DISCONNECT);
         
-        const data = await response.json();
-        
-        if (data.success) {
+        if (response.success) {
             _activeCamera = null;
-            logging.log('Kamera getrennt', 'manage_camera');
+            log('Kamera getrennt');
             return true;
         } else {
-            logging.error(`Fehler beim Trennen der Kamera: ${data.message}`, 'manage_camera');
+            error(`Fehler beim Trennen der Kamera: ${response.message}`);
             return false;
         }
     } catch (error) {
-        logging.error(`Netzwerkfehler beim Trennen der Kamera: ${error.message}`, 'manage_camera');
+        error(`Netzwerkfehler beim Trennen der Kamera: ${error.message}`);
         return false;
     }
 }
@@ -121,35 +128,27 @@ export async function disconnectCamera() {
  */
 export async function captureImage(options = {}) {
     try {
-        const response = await fetch('/api/camera/capture', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(options)
-        });
+        const response = await apiPost(API.CAPTURE, options);
         
-        const data = await response.json();
-        
-        if (data.success) {
-            logging.log(`Bild aufgenommen: ${data.data.filename}`, 'manage_camera');
+        if (response.success) {
+            log(`Bild aufgenommen: ${response.data.filename}`);
             
             // Event-Callbacks aufrufen
             _captureCallbacks.forEach(callback => {
                 try {
-                    callback(data.data);
+                    callback(response.data);
                 } catch (err) {
-                    logging.error(`Fehler in Capture-Callback: ${err.message}`, 'manage_camera');
+                    error(`Fehler in Capture-Callback: ${err.message}`);
                 }
             });
             
-            return data.data;
+            return response.data;
         } else {
-            logging.error(`Fehler bei Bildaufnahme: ${data.message}`, 'manage_camera');
-            return { success: false, error: data.message };
+            error(`Fehler bei Bildaufnahme: ${response.message}`);
+            return { success: false, error: response.message };
         }
     } catch (error) {
-        logging.error(`Netzwerkfehler bei Bildaufnahme: ${error.message}`, 'manage_camera');
+        error(`Netzwerkfehler bei Bildaufnahme: ${error.message}`);
         return { success: false, error: error.message };
     }
 }
@@ -160,18 +159,17 @@ export async function captureImage(options = {}) {
  */
 export async function getCameraSettings() {
     try {
-        const response = await fetch('/api/camera/settings');
-        const data = await response.json();
+        const response = await apiGet('/api/camera/settings');
         
-        if (data.success) {
-            logging.log('Kameraeinstellungen erfolgreich abgerufen', 'manage_camera');
-            return data.data;
+        if (response.success) {
+            log('Kameraeinstellungen erfolgreich abgerufen');
+            return response.data;
         } else {
-            logging.error(`Fehler beim Abrufen der Kameraeinstellungen: ${data.message}`, 'manage_camera');
+            error(`Fehler beim Abrufen der Kameraeinstellungen: ${response.message}`);
             return {};
         }
     } catch (error) {
-        logging.error(`Netzwerkfehler beim Abrufen der Kameraeinstellungen: ${error.message}`, 'manage_camera');
+        error(`Netzwerkfehler beim Abrufen der Kameraeinstellungen: ${error.message}`);
         return {};
     }
 }
@@ -183,25 +181,17 @@ export async function getCameraSettings() {
  */
 export async function updateCameraSettings(settings) {
     try {
-        const response = await fetch('/api/camera/settings', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(settings)
-        });
+        const response = await apiPost('/api/camera/settings', settings);
         
-        const data = await response.json();
-        
-        if (data.success) {
-            logging.log('Kameraeinstellungen erfolgreich aktualisiert', 'manage_camera');
+        if (response.success) {
+            log('Kameraeinstellungen erfolgreich aktualisiert');
             return true;
         } else {
-            logging.error(`Fehler beim Aktualisieren der Kameraeinstellungen: ${data.message}`, 'manage_camera');
+            error(`Fehler beim Aktualisieren der Kameraeinstellungen: ${response.message}`);
             return false;
         }
     } catch (error) {
-        logging.error(`Netzwerkfehler beim Aktualisieren der Kameraeinstellungen: ${error.message}`, 'manage_camera');
+        error(`Netzwerkfehler beim Aktualisieren der Kameraeinstellungen: ${error.message}`);
         return false;
     }
 }
@@ -215,7 +205,7 @@ export async function updateCameraSettings(settings) {
 export function startLivePreview(containerId, options = {}) {
     const container = document.getElementById(containerId);
     if (!container) {
-        logging.error(`Vorschau-Container mit ID "${containerId}" nicht gefunden`, 'manage_camera');
+        error(`Vorschau-Container mit ID "${containerId}" nicht gefunden`);
         return false;
     }
     
@@ -243,10 +233,10 @@ export function startLivePreview(containerId, options = {}) {
         imgElement.src = '/api/camera/preview/stream';
         
         _previewRunning = true;
-        logging.log('Kameravorschau gestartet', 'manage_camera');
+        log('Kameravorschau gestartet');
         return true;
     } catch (error) {
-        logging.error(`Fehler beim Starten der Kameravorschau: ${error.message}`, 'manage_camera');
+        error(`Fehler beim Starten der Kameravorschau: ${error.message}`);
         return false;
     }
 }
@@ -277,10 +267,10 @@ export function stopLivePreview() {
         
         _previewRunning = false;
         // Setze _previewTarget nicht zurück, damit wir die Vorschau später wiederherstellen können
-        logging.log('Kameravorschau gestoppt', 'manage_camera');
+        log('Kameravorschau gestoppt');
         return true;
     } catch (error) {
-        logging.error(`Fehler beim Stoppen der Kameravorschau: ${error.message}`, 'manage_camera');
+        error(`Fehler beim Stoppen der Kameravorschau: ${error.message}`);
         return false;
     }
 }
@@ -291,17 +281,16 @@ export function stopLivePreview() {
  */
 export async function getCameraStatus() {
     try {
-        const response = await fetch('/api/camera/status');
-        const data = await response.json();
+        const response = await apiGet(API.STATUS);
         
-        if (data.success) {
-            return data.data;
+        if (response.success) {
+            return response.data;
         } else {
-            logging.error(`Fehler beim Abrufen des Kamerastatus: ${data.message}`, 'manage_camera');
+            error(`Fehler beim Abrufen des Kamerastatus: ${response.message}`);
             return { active_camera: null, status: 'error' };
         }
     } catch (error) {
-        logging.error(`Netzwerkfehler beim Abrufen des Kamerastatus: ${error.message}`, 'manage_camera');
+        error(`Netzwerkfehler beim Abrufen des Kamerastatus: ${error.message}`);
         return { active_camera: null, status: 'network_error' };
     }
 }
@@ -333,19 +322,18 @@ export function removeCaptureEventListener(callback) {
  */
 export async function listCameraConfigs() {
     try {
-        const response = await fetch('/api/camera/configs');
-        const data = await response.json();
+        const response = await apiGet('/api/camera/configs');
         
-        if (data.success) {
-            _cameraConfigs = data.data;
-            logging.log('Kamera-Konfigurationen erfolgreich abgerufen', 'manage_camera');
+        if (response.success) {
+            _cameraConfigs = response.data;
+            log('Kamera-Konfigurationen erfolgreich abgerufen');
             return _cameraConfigs;
         } else {
-            logging.error(`Fehler beim Abrufen der Kamera-Konfigurationen: ${data.message}`, 'manage_camera');
+            error(`Fehler beim Abrufen der Kamera-Konfigurationen: ${response.message}`);
             return [];
         }
     } catch (error) {
-        logging.error(`Netzwerkfehler beim Abrufen der Kamera-Konfigurationen: ${error.message}`, 'manage_camera');
+        error(`Netzwerkfehler beim Abrufen der Kamera-Konfigurationen: ${error.message}`);
         return [];
     }
 }
@@ -357,18 +345,17 @@ export async function listCameraConfigs() {
  */
 export async function getCameraConfig(configId) {
     try {
-        const response = await fetch(`/api/camera/config/${configId}`);
-        const data = await response.json();
+        const response = await apiGet(`/api/camera/config/${configId}`);
         
-        if (data.success) {
-            logging.log(`Kamera-Konfiguration ${configId} abgerufen`, 'manage_camera');
-            return data.data;
+        if (response.success) {
+            log(`Kamera-Konfiguration ${configId} abgerufen`);
+            return response.data;
         } else {
-            logging.error(`Fehler beim Abrufen der Kamera-Konfiguration: ${data.message}`, 'manage_camera');
+            error(`Fehler beim Abrufen der Kamera-Konfiguration: ${response.message}`);
             return null;
         }
     } catch (error) {
-        logging.error(`Netzwerkfehler beim Abrufen der Kamera-Konfiguration: ${error.message}`, 'manage_camera');
+        error(`Netzwerkfehler beim Abrufen der Kamera-Konfiguration: ${error.message}`);
         return null;
     }
 }
@@ -379,19 +366,18 @@ export async function getCameraConfig(configId) {
  */
 export async function getActiveConfig() {
     try {
-        const response = await fetch('/api/camera/config');
-        const data = await response.json();
+        const response = await apiGet('/api/camera/config');
         
-        if (data.success && data.data) {
-            _activeConfig = data.data;
-            logging.log('Aktive Kamera-Konfiguration abgerufen', 'manage_camera');
+        if (response.success && response.data) {
+            _activeConfig = response.data;
+            log('Aktive Kamera-Konfiguration abgerufen');
             return _activeConfig;
         } else {
-            logging.error(`Fehler beim Abrufen der aktiven Konfiguration: ${data.message}`, 'manage_camera');
+            error(`Fehler beim Abrufen der aktiven Konfiguration: ${response.message}`);
             return null;
         }
     } catch (error) {
-        logging.error(`Netzwerkfehler beim Abrufen der aktiven Konfiguration: ${error.message}`, 'manage_camera');
+        error(`Netzwerkfehler beim Abrufen der aktiven Konfiguration: ${error.message}`);
         return null;
     }
 }
@@ -403,18 +389,10 @@ export async function getActiveConfig() {
  */
 export async function setActiveConfig(configId) {
     try {
-        const response = await fetch('/api/camera/config', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ config_id: configId })
-        });
+        const response = await apiPost('/api/camera/config', { config_id: configId });
         
-        const data = await response.json();
-        
-        if (data.success) {
-            logging.log(`Kamera-Konfiguration gesetzt: ${configId}`, 'manage_camera');
+        if (response.success) {
+            log(`Kamera-Konfiguration gesetzt: ${configId}`);
             
             // Konfiguration aktualisieren
             const activeConfig = await getActiveConfig();
@@ -438,11 +416,11 @@ export async function setActiveConfig(configId) {
             
             return true;
         } else {
-            logging.error(`Fehler beim Setzen der Kamera-Konfiguration: ${data.message}`, 'manage_camera');
+            error(`Fehler beim Setzen der Kamera-Konfiguration: ${response.message}`);
             return false;
         }
     } catch (error) {
-        logging.error(`Netzwerkfehler beim Setzen der Kamera-Konfiguration: ${error.message}`, 'manage_camera');
+        error(`Netzwerkfehler beim Setzen der Kamera-Konfiguration: ${error.message}`);
         return false;
     }
 }
@@ -454,25 +432,17 @@ export async function setActiveConfig(configId) {
  */
 export async function createCameraConfig(config) {
     try {
-        const response = await fetch('/api/camera/config/create', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(config)
-        });
+        const response = await apiPost('/api/camera/config/create', config);
         
-        const data = await response.json();
-        
-        if (data.success) {
-            logging.log(`Neue Kamera-Konfiguration erstellt: ${config.name}`, 'manage_camera');
-            return data.data.id;
+        if (response.success) {
+            log(`Neue Kamera-Konfiguration erstellt: ${config.name}`);
+            return response.data.id;
         } else {
-            logging.error(`Fehler beim Erstellen der Kamera-Konfiguration: ${data.message}`, 'manage_camera');
+            error(`Fehler beim Erstellen der Kamera-Konfiguration: ${response.message}`);
             return null;
         }
     } catch (error) {
-        logging.error(`Netzwerkfehler beim Erstellen der Konfiguration: ${error.message}`, 'manage_camera');
+        error(`Netzwerkfehler beim Erstellen der Konfiguration: ${error.message}`);
         return null;
     }
 }
@@ -485,25 +455,17 @@ export async function createCameraConfig(config) {
  */
 export async function updateCameraConfig(configId, config) {
     try {
-        const response = await fetch(`/api/camera/config/${configId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(config)
-        });
+        const response = await apiPost(`/api/camera/config/${configId}`, config);
         
-        const data = await response.json();
-        
-        if (data.success) {
-            logging.log(`Kamera-Konfiguration ${configId} aktualisiert`, 'manage_camera');
+        if (response.success) {
+            log(`Kamera-Konfiguration ${configId} aktualisiert`);
             return true;
         } else {
-            logging.error(`Fehler beim Aktualisieren der Kamera-Konfiguration: ${data.message}`, 'manage_camera');
+            error(`Fehler beim Aktualisieren der Kamera-Konfiguration: ${response.message}`);
             return false;
         }
     } catch (error) {
-        logging.error(`Netzwerkfehler beim Aktualisieren der Konfiguration: ${error.message}`, 'manage_camera');
+        error(`Netzwerkfehler beim Aktualisieren der Konfiguration: ${error.message}`);
         return false;
     }
 }
@@ -515,21 +477,17 @@ export async function updateCameraConfig(configId, config) {
  */
 export async function deleteCameraConfig(configId) {
     try {
-        const response = await fetch(`/api/camera/config/${configId}`, {
-            method: 'DELETE'
-        });
+        const response = await apiPost(`/api/camera/config/${configId}`, { _method: 'delete' });
         
-        const data = await response.json();
-        
-        if (data.success) {
-            logging.log(`Kamera-Konfiguration ${configId} gelöscht`, 'manage_camera');
+        if (response.success) {
+            log(`Kamera-Konfiguration ${configId} gelöscht`);
             return true;
         } else {
-            logging.error(`Fehler beim Löschen der Kamera-Konfiguration: ${data.message}`, 'manage_camera');
+            error(`Fehler beim Löschen der Kamera-Konfiguration: ${response.message}`);
             return false;
         }
     } catch (error) {
-        logging.error(`Netzwerkfehler beim Löschen der Konfiguration: ${error.message}`, 'manage_camera');
+        error(`Netzwerkfehler beim Löschen der Konfiguration: ${error.message}`);
         return false;
     }
 }
@@ -539,14 +497,14 @@ export async function deleteCameraConfig(configId) {
  * Wird automatisch beim Import dieses Moduls aufgerufen
  */
 export async function initialize() {
-    logging.log('Kamera-Modul wird initialisiert', 'manage_camera');
+    log('Kamera-Modul wird initialisiert');
     
     try {
         // Liste der verfügbaren Kameras abrufen
         await listCameras();
         return true;
     } catch (error) {
-        logging.error(`Fehler bei Kamera-Modul-Initialisierung: ${error.message}`, 'manage_camera');
+        error(`Fehler bei Kamera-Modul-Initialisierung: ${error.message}`);
         return false;
     }
 }

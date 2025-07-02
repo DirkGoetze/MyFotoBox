@@ -4,400 +4,206 @@
  * @module manage_update
  */
 
-// Abhängigkeiten
 import { apiGet, apiPost } from './manage_api.js';
-import { log, error } from './manage_logging.js';
+import { log, error, warn, debug } from './manage_logging.js';
+import { Result } from './utils.js';
+
+// API-Endpunkte
+const API = {
+    CHECK: '/api/update/check',
+    INFO: '/api/update/info',
+    START: '/api/update/start',
+    STATUS: '/api/update/status',
+    CANCEL: '/api/update/cancel',
+    DEPENDENCIES: '/api/update/dependencies',
+    BACKUP: '/api/update/backup'
+};
+
+/**
+ * Update-Status Enum
+ * @readonly
+ * @enum {string}
+ */
+export const UpdateStatus = {
+    IDLE: 'idle',
+    CHECKING: 'checking',
+    DOWNLOADING: 'downloading',
+    INSTALLING: 'installing',
+    BACKING_UP: 'backing_up',
+    VALIDATING: 'validating',
+    ERROR: 'error',
+    COMPLETE: 'complete'
+};
+
+/**
+ * @typedef {Object} UpdateProgress
+ * @property {UpdateStatus} status - Aktueller Status
+ * @property {number} percent - Fortschritt in Prozent
+ * @property {string} message - Statusmeldung
+ * @property {Error} [error] - Optional: Aufgetretener Fehler
+ */
 
 /**
  * @typedef {Object} UpdateInfo
- * @property {string} version - Verfügbare Version
- * @property {string} releaseDate - Veröffentlichungsdatum
+ * @property {string} currentVersion - Aktuelle Version
+ * @property {string} latestVersion - Neueste verfügbare Version
  * @property {string[]} changes - Liste der Änderungen
- * @property {number} size - Größe des Updates in Bytes
- * @property {boolean} critical - Gibt an, ob es sich um ein kritisches Update handelt
+ * @property {boolean} updateAvailable - Update verfügbar
+ * @property {boolean} critical - Kritisches Update
+ * @property {string} releaseDate - Veröffentlichungsdatum
+ * @property {number} size - Update-Größe in Bytes
  */
 
-/**
- * @typedef {Object} VersionInfo
- * @property {string} current - Aktuelle Version
- * @property {string} lastCheck - Zeitpunkt der letzten Prüfung
- * @property {boolean} updateAvailable - Gibt an, ob ein Update verfügbar ist
- * @property {string} remoteVersion - Die neueste verfügbare Version (falls vorhanden)
- */
-
-/**
- * @typedef {Object} StatusObject
- * @property {string} status - Aktueller Status ("idle", "checking", "downloading", "installing", "error")
- * @property {number} progress - Fortschritt in Prozent (0-100)
- * @property {string} message - Statusmeldung
- */
-
-/**
- * @typedef {Object} DependenciesStatus
- * @property {boolean} all_ok - Gibt an, ob alle Abhängigkeiten in Ordnung sind
- * @property {Object} system - Status der Systemabhängigkeiten
- * @property {string[]} system.missing - Fehlende Systempakete
- * @property {string[]} system.outdated - Veraltete Systempakete
- * @property {boolean} system.ok - Gibt an, ob alle Systemabhängigkeiten in Ordnung sind
- * @property {Object} python - Status der Python-Abhängigkeiten
- * @property {string[]} python.missing - Fehlende Python-Pakete
- * @property {string[]} python.outdated - Veraltete Python-Pakete
- * @property {boolean} python.ok - Gibt an, ob alle Python-Abhängigkeiten in Ordnung sind
- */
-
-// Rate Limiting für Update-Checks
-const UPDATE_CHECK_THROTTLE_MS = 60000; // Mindestens 1 Minute zwischen den Updateprüfungen
-let lastUpdateCheck = 0;
-
-// Lokale Variablen
-let _updateStatus = {
-    status: 'idle',
-    progress: 0,
-    message: 'Bereit'
-};
-
-let _versionInfo = {
-    current: '0.0.0',
-    lastCheck: null,
-    updateAvailable: false,
-    remoteVersion: null
-};
-
-// Neue Variable für den Abhängigkeitsstatus
-let _dependenciesStatus = null;
-let _updateInfo = null;
-let _updateCheckDebounceTimer = null;
-
-/**
- * Prüft auf verfügbare Updates mit Ratenbegrenzung
- * @returns {Promise<UpdateInfo>} Updateinformationen oder null
- */
-export async function throttledCheckForUpdates() {
-    const now = Date.now();
-    
-    // Prüfe, ob seit der letzten Prüfung genug Zeit vergangen ist
-    if (now - lastUpdateCheck < UPDATE_CHECK_THROTTLE_MS) {
-        log('Update-Prüfung übersprungen (Ratenbegrenzung)');
-        return null;
-    }
-    
-    // Debounce (bei mehreren schnell aufeinanderfolgenden Aufrufen nur den letzten ausführen)
-    if (_updateCheckDebounceTimer) {
-        clearTimeout(_updateCheckDebounceTimer);
-    }
-    
-    return new Promise((resolve) => {
-        _updateCheckDebounceTimer = setTimeout(async () => {
-            try {
-                const result = await checkForUpdates();
-                _updateCheckDebounceTimer = null;
-                lastUpdateCheck = Date.now();
-                resolve(result);
-            } catch (err) {
-                _updateCheckDebounceTimer = null;
-                resolve(null);
-            }
-        }, 500);
-    });
-}
+// Update-Statusüberwachung
+let _updateInterval = null;
+let _statusCallbacks = new Set();
+const UPDATE_CHECK_INTERVAL = 60000; // 1 Minute
+const STATUS_CHECK_INTERVAL = 2000; // 2 Sekunden
 
 /**
  * Prüft auf verfügbare Updates
- * @returns {Promise<UpdateInfo>} Informationen über das verfügbare Update oder null, wenn kein Update verfügbar ist
+ * @returns {Promise<Result<UpdateInfo>>} Update-Informationen
  */
 export async function checkForUpdates() {
     try {
-        _updateStatus = { status: 'checking', progress: 0, message: 'Prüfe auf Updates...' };
+        const response = await apiPost(API.CHECK);
         
-        // API-Aufruf zum Backend
-        // Anpassung an die vorhandene API-Struktur
-        const response = await apiGet('/api/update');
-        
-        if (response.update_available) {
-            _updateInfo = {
-                version: response.remote_version,
-                releaseDate: response.release_date || new Date().toISOString(),
-                changes: response.changes || [],
-                size: response.size || 0,
-                critical: response.critical || false
-            };
-            
-            _versionInfo.updateAvailable = true;
-            _versionInfo.lastCheck = new Date().toISOString();
-            _versionInfo.remoteVersion = response.remote_version;
-            _versionInfo.current = response.local_version;
-            
-            log('Update verfügbar: ' + _updateInfo.version);
-            
-            _updateStatus = { 
-                status: 'idle', 
-                progress: 0, 
-                message: `Update auf Version ${_updateInfo.version} verfügbar` 
-            };
-            
-            return _updateInfo;
+        if (response.success) {
+            const updateInfo = response.data;
+            if (updateInfo.updateAvailable) {
+                log('Update verfügbar:', updateInfo.latestVersion);
+            } else {
+                debug('System ist aktuell');
+            }
+            return Result.ok(updateInfo);
         } else {
-            _versionInfo.updateAvailable = false;
-            _versionInfo.lastCheck = new Date().toISOString();
-            _versionInfo.current = response.local_version;
-            
-            log('Kein Update verfügbar');
-            
-            _updateStatus = { 
-                status: 'idle', 
-                progress: 0, 
-                message: 'System ist aktuell' 
-            };
-            
-            return null;
+            warn('Update-Prüfung fehlgeschlagen:', response.error);
+            return Result.fail(response.error);
         }
     } catch (err) {
-        error('Fehler bei der Update-Prüfung', err);
-        _updateStatus = { 
-            status: 'error', 
-            progress: 0, 
-            message: 'Fehler bei der Update-Prüfung: ' + (err.message || 'Unbekannter Fehler')
-        };
-        throw err;
+        error('Fehler bei Update-Prüfung:', err);
+        return Result.fail(err.message);
     }
 }
 
 /**
- * Liefert aktuellen Update-Status
- * @returns {Promise<StatusObject>} Status-Objekt
+ * Startet das Update
+ * @returns {Promise<Result<boolean>>} Ergebnis des Update-Starts
+ */
+export async function startUpdate() {
+    try {
+        const response = await apiPost(API.START);
+        
+        if (response.success) {
+            log('Update-Installation gestartet');
+            return Result.ok(true);
+        } else {
+            error('Fehler beim Starten des Updates:', response.error);
+            return Result.fail(response.error);
+        }
+    } catch (err) {
+        error('Fehler beim Starten des Updates:', err);
+        return Result.fail(err.message);
+    }
+}
+
+/**
+ * Liefert den aktuellen Update-Status
+ * @returns {Promise<Result<UpdateProgress>>} Aktueller Update-Fortschritt
  */
 export async function getUpdateStatus() {
     try {
-        // Bei Bedarf aktualisierten Status vom Backend abrufen
-        if (_updateStatus.status === 'downloading' || _updateStatus.status === 'installing') {
-            const response = await apiGet('/api/update/status');
-            if (response && response.status) {
-                _updateStatus = {
-                    status: response.status,
-                    progress: response.progress || 0,
-                    message: response.message || 'Update wird installiert...'
-                };
-            }
+        const response = await apiGet(API.STATUS);
+        
+        if (response.success) {
+            return Result.ok(response.data);
+        } else {
+            return Result.fail(response.error);
         }
-        
-        return _updateStatus;
     } catch (err) {
-        error('Fehler beim Abrufen des Update-Status', err);
-        return _updateStatus;
+        error('Fehler beim Abrufen des Update-Status:', err);
+        return Result.fail(err.message);
     }
 }
 
 /**
- * Installiert verfügbares Update
- * @returns {Promise<boolean>} true, wenn Update erfolgreich installiert wurde
+ * Setzt das Update zurück
+ * @returns {Promise<Result<boolean>>} Ergebnis der Zurücksetzung
  */
-export async function installUpdate() {
-    if (!_versionInfo.updateAvailable || !_versionInfo.remoteVersion) {
-        throw new Error('Kein Update verfügbar');
-    }
-    
+export async function cancelUpdate() {
     try {
-        _updateStatus = { 
-            status: 'downloading', 
-            progress: 0, 
-            message: 'Lade Update herunter...' 
-        };
+        const response = await apiPost(API.CANCEL);
         
-        // API-Aufruf zum Backend, um Update zu starten
-        // Anpassung an die vorhandene API-Struktur
-        const response = await apiPost('/api/update', {
-            from_version: _versionInfo.current,
-            to_version: _versionInfo.remoteVersion
-        });
-        
-        _updateStatus = { 
-            status: 'installing', 
-            progress: 30, 
-            message: 'Installiere Update...' 
-        };
-        
-        log('Update-Installation gestartet');
-        
-        return true;
-    } catch (err) {
-        error('Fehler bei der Update-Installation', err);
-        _updateStatus = { 
-            status: 'error', 
-            progress: 0, 
-            message: 'Fehler bei der Update-Installation: ' + (err.message || 'Unbekannter Fehler')
-        };
-        throw err;
-    }
-}
-
-/**
- * Setzt fehlgeschlagenes Update zurück
- * @returns {Promise<boolean>} true, wenn Zurücksetzung erfolgreich
- */
-export async function rollbackUpdate() {
-    try {
-        _updateStatus = { 
-            status: 'installing', 
-            progress: 0, 
-            message: 'Setze Update zurück...' 
-        };
-        
-        const response = await apiPost('/api/update/rollback');
-        
-        if (response && !response.error) {
-            _updateStatus = { 
-                status: 'idle', 
-                progress: 0, 
-                message: 'Update wurde zurückgesetzt' 
-            };
-            
+        if (response.success) {
             log('Update zurückgesetzt');
-            return true;
+            return Result.ok(true);
         } else {
-            throw new Error(response.error || 'Unbekannter Fehler');
+            error('Fehler beim Zurücksetzen des Updates:', response.error);
+            return Result.fail(response.error);
         }
     } catch (err) {
-        error('Fehler beim Zurücksetzen des Updates', err);
-        _updateStatus = { 
-            status: 'error', 
-            progress: 0, 
-            message: 'Fehler beim Zurücksetzen: ' + (err.message || 'Unbekannter Fehler')
-        };
-        throw err;
-    }
-}
-
-/**
- * Liefert Informationen zur aktuellen Version
- * @returns {VersionInfo} Versionsinformationen
- */
-export function getVersionInfo() {
-    return { ..._versionInfo };
-}
-
-/**
- * Plant automatisches Update
- * @param {Date} scheduledTime - Zeitpunkt für das geplante Update
- * @returns {Promise<boolean>} true, wenn Update erfolgreich geplant wurde
- */
-export async function scheduleUpdate(scheduledTime) {
-    if (!_versionInfo.updateAvailable || !_versionInfo.remoteVersion) {
-        throw new Error('Kein Update verfügbar für Planung');
-    }
-    
-    try {
-        const response = await apiPost('/api/update/schedule', {
-            version: _versionInfo.remoteVersion,
-            scheduled_time: scheduledTime.toISOString()
-        });
-        
-        if (response && !response.error) {
-            log(`Update geplant für ${scheduledTime.toLocaleString()}`);
-            return true;
-        } else {
-            throw new Error(response.error || 'Unbekannter Fehler');
-        }
-    } catch (err) {
-        error('Fehler bei der Update-Planung', err);
-        throw err;
+        error('Fehler beim Zurücksetzen des Updates:', err);
+        return Result.fail(err.message);
     }
 }
 
 /**
  * Prüft die System- und Python-Abhängigkeiten
- * @returns {Promise<DependenciesStatus>} Status der Abhängigkeiten
+ * @returns {Promise<Result<boolean>>} Ergebnis der Abhängigkeitsprüfung
  */
 export async function checkDependencies() {
     try {
-        const response = await apiGet('/api/update/dependencies');
+        const response = await apiGet(API.DEPENDENCIES);
         
-        if (response && response.success) {
-            _dependenciesStatus = response.dependencies;
+        if (response.success) {
+            const { system, python } = response.data;
             
-            // Logge die Ergebnisse
-            if (!_dependenciesStatus.all_ok) {
-                log('Probleme mit Abhängigkeiten gefunden:');
-                
-                if (_dependenciesStatus.system.missing.length > 0) {
-                    log(`Fehlende Systempakete: ${_dependenciesStatus.system.missing.join(', ')}`);
-                }
-                
-                if (_dependenciesStatus.system.outdated.length > 0) {
-                    log(`Veraltete Systempakete: ${_dependenciesStatus.system.outdated.join(', ')}`);
-                }
-                
-                if (_dependenciesStatus.python.missing.length > 0) {
-                    log(`Fehlende Python-Pakete: ${_dependenciesStatus.python.missing.join(', ')}`);
-                }
-                
-                if (_dependenciesStatus.python.outdated.length > 0) {
-                    log(`Veraltete Python-Pakete: ${_dependenciesStatus.python.outdated.join(', ')}`);
-                }
-            } else {
-                log('Alle Abhängigkeiten sind in Ordnung');
+            // Logik zur Überprüfung der Systemabhängigkeiten
+            if (system.missing.length > 0) {
+                log('Fehlende Systempakete:', system.missing.join(', '));
             }
             
-            return _dependenciesStatus;
+            if (system.outdated.length > 0) {
+                log('Veraltete Systempakete:', system.outdated.join(', '));
+            }
+            
+            // Logik zur Überprüfung der Python-Abhängigkeiten
+            if (python.missing.length > 0) {
+                log('Fehlende Python-Pakete:', python.missing.join(', '));
+            }
+            
+            if (python.outdated.length > 0) {
+                log('Veraltete Python-Pakete:', python.outdated.join(', '));
+            }
+            
+            return Result.ok(true);
         } else {
-            throw new Error(response.error || 'Fehler bei der Abhängigkeitsprüfung');
+            return Result.fail(response.error);
         }
     } catch (err) {
-        error('Fehler bei der Abhängigkeitsprüfung', err);
-        throw err;
+        error('Fehler bei der Abhängigkeitsprüfung:', err);
+        return Result.fail(err.message);
     }
 }
 
 /**
- * Gibt den Status der Abhängigkeiten zurück
- * @returns {DependenciesStatus} Status der Abhängigkeiten oder null, wenn noch nicht geprüft
+ * Erstellt ein Backup vor dem Update
+ * @returns {Promise<Result<boolean>>} Ergebnis des Backup-Vorgangs
  */
-export function getDependenciesStatus() {
-    return _dependenciesStatus;
-}
-
-/**
- * Installiert fehlende Abhängigkeiten 
- * @returns {Promise<boolean>} true, wenn die Installation erfolgreich war
- */
-export async function installDependencies() {
+export async function createBackup() {
     try {
-        _updateStatus = {
-            status: 'installing',
-            progress: 0,
-            message: 'Installiere fehlende Abhängigkeiten...'
-        };
+        const response = await apiPost(API.BACKUP);
         
-        // API-Aufruf zum Installieren der Abhängigkeiten
-        const response = await apiPost('/api/update', {
-            fix_dependencies: true
-        });
-        
-        if (response && response.success) {
-            _updateStatus = {
-                status: 'idle',
-                progress: 100,
-                message: 'Abhängigkeiten wurden installiert'
-            };
-            
-            log('Abhängigkeiten wurden installiert');
-            return true;
+        if (response.success) {
+            log('Backup erfolgreich erstellt');
+            return Result.ok(true);
         } else {
-            _updateStatus = {
-                status: 'error',
-                progress: 0,
-                message: 'Fehler bei der Installation der Abhängigkeiten: ' + (response.error || 'Unbekannter Fehler')
-            };
-            
-            throw new Error(response.error || 'Fehler bei der Installation der Abhängigkeiten');
+            error('Fehler beim Erstellen des Backups:', response.error);
+            return Result.fail(response.error);
         }
     } catch (err) {
-        error('Fehler bei der Installation der Abhängigkeiten', err);
-        _updateStatus = {
-            status: 'error',
-            progress: 0,
-            message: 'Fehler bei der Installation der Abhängigkeiten: ' + err.message
-        };
-        throw err;
+        error('Fehler beim Erstellen des Backups:', err);
+        return Result.fail(err.message);
     }
 }
 

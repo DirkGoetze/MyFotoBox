@@ -5,120 +5,88 @@
  */
 
 import { apiGet, apiPost } from './manage_api.js';
-import { logInfo, logError, logDebug } from './manage_logging.js';
+import { log, error, warn, debug } from './manage_logging.js';
+import { Result } from './utils.js';
+
+// API-Endpunkte
+const API = {
+    QUERY: '/api/database/query',
+    BACKUP: '/api/database/backup',
+    OPTIMIZE: '/api/database/optimize',
+    SETTINGS: '/api/database/settings'
+};
 
 /**
- * Standard-Endpoint für Datenbank-Operationen
- * @const {string}
- */
-const DB_ENDPOINT = '/api/database';
-
-/**
- * @typedef {Object} DbResponse
+ * @typedef {Object} DbResult
  * @property {boolean} success - Gibt an, ob die Operation erfolgreich war
- * @property {Array|Object} [data] - Die Ergebnisdaten bei erfolgreicher Operation
- * @property {string} [error] - Fehlermeldung bei nicht erfolgreicher Operation
- * @property {number} [affected_rows] - Anzahl der betroffenen Zeilen bei UPDATE/DELETE
- * @property {number} [id] - ID des neuen Datensatzes bei INSERT
+ * @property {Array|Object} [data] - Die Ergebnisdaten
+ * @property {string} [error] - Fehlermeldung
+ * @property {number} [affected_rows] - Betroffene Zeilen
+ * @property {number} [id] - ID des neuen Datensatzes
  */
 
 /**
  * Führt eine Datenbankabfrage aus
  * @param {string} sql - SQL-Abfrage
  * @param {Array} [params] - Parameter für die Abfrage
- * @returns {Promise<DbResponse>} - Ergebnis der Abfrage
+ * @returns {Promise<Result<DbResult>>} - Ergebnis der Abfrage
  */
 export async function query(sql, params = null) {
     try {
-        logDebug('DB Query ausführen', { sql, params });
-        const response = await apiPost(`${DB_ENDPOINT}/query`, { sql, params });
+        debug('DB Query ausführen', { sql, params });
+        const response = await apiPost(API.QUERY, { sql, params });
         
-        if (response && response.success) {
-            return response;
+        if (response.success) {
+            return Result.ok(response.data);
         } else {
-            logError('DB Query fehlgeschlagen', response.error);
-            return { success: false, error: response.error || 'Unbekannter Datenbankfehler' };
+            error('DB Query fehlgeschlagen:', response.error);
+            return Result.fail(response.error || 'Datenbankfehler');
         }
-    } catch (error) {
-        logError('Fehler bei DB Query', error.message);
-        return { success: false, error: error.message };
+    } catch (err) {
+        error('Fehler bei DB Query:', err);
+        return Result.fail(err.message);
     }
 }
 
 /**
- * Fügt Daten in eine Tabelle ein
- * @param {string} table - Tabellenname
- * @param {Object} data - Einzufügende Daten als Key-Value Objekt
- * @returns {Promise<DbResponse>} - Ergebnis der Operation
+ * Führt ein Datenbank-Backup durch
+ * @returns {Promise<Result<string>>} - Pfad zur Backup-Datei
  */
-export async function insert(table, data) {
+export async function backup() {
     try {
-        logDebug('DB Insert ausführen', { table, data });
-        const response = await apiPost(`${DB_ENDPOINT}/insert`, { table, data });
+        const response = await apiPost(API.BACKUP);
         
-        if (response && response.success) {
-            return response;
+        if (response.success) {
+            log('Datenbank-Backup erfolgreich erstellt');
+            return Result.ok(response.data.backup_path);
         } else {
-            logError('DB Insert fehlgeschlagen', response.error);
-            return { success: false, error: response.error || 'Unbekannter Datenbankfehler' };
+            error('Datenbank-Backup fehlgeschlagen:', response.error);
+            return Result.fail(response.error);
         }
-    } catch (error) {
-        logError('Fehler bei DB Insert', error.message);
-        return { success: false, error: error.message };
+    } catch (err) {
+        error('Fehler beim Datenbank-Backup:', err);
+        return Result.fail(err.message);
     }
 }
 
 /**
- * Aktualisiert Daten in einer Tabelle
- * @param {string} table - Tabellenname
- * @param {Object} data - Zu aktualisierende Daten als Key-Value Objekt
- * @param {string} condition - WHERE-Bedingung
- * @param {Array} [params] - Parameter für die WHERE-Bedingung
- * @returns {Promise<DbResponse>} - Ergebnis der Operation
+ * Optimiert die Datenbank
+ * @returns {Promise<Result<boolean>>} - Erfolg der Operation
  */
-export async function update(table, data, condition, params = null) {
+export async function optimize() {
     try {
-        logDebug('DB Update ausführen', { table, data, condition, params });
-        const response = await apiPost(`${DB_ENDPOINT}/update`, { 
-            table, data, condition, params 
-        });
+        const response = await apiPost(API.OPTIMIZE);
         
-        if (response && response.success) {
-            return response;
+        if (response.success) {
+            log('Datenbank-Optimierung erfolgreich');
+            return Result.ok(true);
         } else {
-            logError('DB Update fehlgeschlagen', response.error);
-            return { success: false, error: response.error || 'Unbekannter Datenbankfehler' };
+            warn('Datenbank-Optimierung fehlgeschlagen:', response.error);
+            return Result.fail(response.error);
         }
-    } catch (error) {
-        logError('Fehler bei DB Update', error.message);
-        return { success: false, error: error.message };
-    }
-}
-
-/**
- * Löscht Daten aus einer Tabelle
- * @param {string} table - Tabellenname
- * @param {string} condition - WHERE-Bedingung
- * @param {Array} [params] - Parameter für die WHERE-Bedingung
- * @returns {Promise<DbResponse>} - Ergebnis der Operation
- */
-export async function remove(table, condition, params = null) {
-    try {
-        logDebug('DB Delete ausführen', { table, condition, params });
-        // Verwende 'remove' als Funktion, da 'delete' ein reserviertes Wort ist
-        const response = await apiPost(`${DB_ENDPOINT}/delete`, { 
-            table, condition, params 
-        });
-        
-        if (response && response.success) {
-            return response;
-        } else {
-            logError('DB Delete fehlgeschlagen', response.error);
-            return { success: false, error: response.error || 'Unbekannter Datenbankfehler' };
-        }
-    } catch (error) {
-        logError('Fehler bei DB Delete', error.message);
-        return { success: false, error: error.message };
+    } catch (err) {
+        error('Fehler bei Datenbank-Optimierung:', err);
+        return Result.fail(err.message);
     }
 }
 
@@ -130,17 +98,17 @@ export async function remove(table, condition, params = null) {
  */
 export async function getSetting(key, defaultValue = null) {
     try {
-        logDebug('DB Einstellung abrufen', { key });
-        const response = await apiGet(`${DB_ENDPOINT}/settings/${encodeURIComponent(key)}`);
+        debug('DB Einstellung abrufen', { key });
+        const response = await apiGet(`${API.SETTINGS}/${encodeURIComponent(key)}`);
         
         if (response && response.success && response.data) {
             return response.data;
         } else {
-            logDebug(`Einstellung ${key} nicht gefunden, verwende Standard`);
+            debug(`Einstellung ${key} nicht gefunden, verwende Standard`);
             return defaultValue;
         }
     } catch (error) {
-        logError('Fehler beim Abrufen der Einstellung', error.message);
+        error('Fehler beim Abrufen der Einstellung', error.message);
         return defaultValue;
     }
 }
@@ -153,17 +121,17 @@ export async function getSetting(key, defaultValue = null) {
  */
 export async function setSetting(key, value) {
     try {
-        logDebug('DB Einstellung speichern', { key, value });
-        const response = await apiPost(`${DB_ENDPOINT}/settings`, { key, value });
+        debug('DB Einstellung speichern', { key, value });
+        const response = await apiPost(API.SETTINGS, { key, value });
         
         if (response && response.success) {
             return response;
         } else {
-            logError('Fehler beim Speichern der Einstellung', response.error);
+            error('Fehler beim Speichern der Einstellung', response.error);
             return { success: false, error: response.error || 'Unbekannter Datenbankfehler' };
         }
     } catch (error) {
-        logError('Fehler beim Speichern der Einstellung', error.message);
+        error('Fehler beim Speichern der Einstellung', error.message);
         return { success: false, error: error.message };
     }
 }
@@ -174,17 +142,17 @@ export async function setSetting(key, value) {
  */
 export async function checkIntegrity() {
     try {
-        logDebug('DB Integritätsprüfung starten');
+        debug('DB Integritätsprüfung starten');
         const response = await apiGet(`${DB_ENDPOINT}/check-integrity`);
         
         if (response && response.success) {
             return response;
         } else {
-            logError('DB Integritätsprüfung fehlgeschlagen', response.error);
+            error('DB Integritätsprüfung fehlgeschlagen', response.error);
             return { success: false, error: response.error || 'Unbekannter Datenbankfehler' };
         }
     } catch (error) {
-        logError('Fehler bei DB Integritätsprüfung', error.message);
+        error('Fehler bei DB Integritätsprüfung', error.message);
         return { success: false, error: error.message };
     }
 }
@@ -195,17 +163,17 @@ export async function checkIntegrity() {
  */
 export async function getStats() {
     try {
-        logDebug('DB Statistiken abrufen');
+        debug('DB Statistiken abrufen');
         const response = await apiGet(`${DB_ENDPOINT}/stats`);
         
         if (response && response.success) {
             return response;
         } else {
-            logError('Fehler beim Abrufen der DB Statistiken', response.error);
+            error('Fehler beim Abrufen der DB Statistiken', response.error);
             return { success: false, error: response.error || 'Unbekannter Datenbankfehler' };
         }
     } catch (error) {
-        logError('Fehler beim Abrufen der DB Statistiken', error.message);
+        error('Fehler beim Abrufen der DB Statistiken', error.message);
         return { success: false, error: error.message };
     }
 }

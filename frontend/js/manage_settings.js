@@ -6,24 +6,25 @@
 
 import { apiGet, apiPost } from './manage_api.js';
 import { log, error, debug } from './manage_logging.js';
-import { getSetting, setSetting } from './manage_database.js';
+import { Result } from './utils.js';
+
+// API-Endpunkte
+const API = {
+    SETTINGS: '/api/settings',
+    DEFAULTS: '/api/settings/defaults',
+    VALIDATE: '/api/settings/validate'
+};
 
 /**
  * @typedef {Object} SettingsObject
  * @property {string} [event_name] - Name des Events
  * @property {string} [event_date] - Datum des Events
- * @property {string} [color_mode] - Anzeigemodus der Anwendung (light, dark, system)
- * @property {number} [screensaver_timeout] - Timeout für den Bildschirmschoner in Sekunden
- * @property {number} [gallery_timeout] - Timeout für die Galerie-Ansicht in Sekunden
- * @property {number} [countdown_duration] - Dauer des Countdowns in Sekunden
+ * @property {string} [color_mode] - Anzeigemodus (light, dark, system)
+ * @property {number} [screensaver_timeout] - Timeout für den Bildschirmschoner
+ * @property {number} [gallery_timeout] - Timeout für die Galerie-Ansicht
+ * @property {number} [countdown_duration] - Dauer des Countdowns
  * @property {string} [camera_id] - ID der zu verwendenden Kamera
  * @property {string} [flash_mode] - Blitzmodus für die Kamera
- */
-
-/**
- * @typedef {Object} ValidationResult
- * @property {boolean} valid - Gibt an, ob die Einstellungen gültig sind
- * @property {Object} [errors] - Fehlerinformationen, wenn nicht gültig
  */
 
 /**
@@ -42,150 +43,52 @@ const DEFAULT_SETTINGS = {
 };
 
 /**
- * Validierungsregeln für Einstellungen
- * @type {Object}
- */
-const VALIDATION_RULES = {
-    event_name: {
-        required: true,
-        maxLength: 50
-    },
-    screensaver_timeout: {
-        required: true,
-        type: 'number',
-        min: 30,
-        max: 600
-    },
-    gallery_timeout: {
-        required: true,
-        type: 'number',
-        min: 30,
-        max: 300
-    },
-    countdown_duration: {
-        required: true,
-        type: 'number',
-        min: 1,
-        max: 10
-    }
-};
-
-/**
- * Lädt alle Einstellungen
- * @returns {Promise<SettingsObject>} Alle Einstellungen
+ * Lädt alle Einstellungen vom Server
+ * @returns {Promise<Result<SettingsObject>>} Einstellungen oder Fehler
  */
 export async function loadSettings() {
     try {
-        debug('Lade alle Einstellungen');
-        const response = await apiGet('/api/settings');
+        const response = await apiGet(API.SETTINGS);
         
-        if (response && Object.keys(response).length > 0) {
+        if (response.success) {
+            const settings = { ...DEFAULT_SETTINGS, ...response.data };
             log('Einstellungen erfolgreich geladen');
-            return response;
+            return Result.ok(settings);
         } else {
-            warn('Keine Einstellungen gefunden, verwende Standardeinstellungen');
-            return { ...DEFAULT_SETTINGS };
+            warn('Fehler beim Laden der Einstellungen, verwende Standardwerte');
+            return Result.ok(DEFAULT_SETTINGS);
         }
     } catch (err) {
-        error('Fehler beim Laden der Einstellungen', err);
-        throw new Error(`Einstellungen konnten nicht geladen werden: ${err.message}`);
+        error('Fehler beim Laden der Einstellungen:', err);
+        return Result.fail(err.message);
     }
 }
 
 /**
- * Lädt eine einzelne Einstellung
- * @param {string} key - Schlüssel der Einstellung
- * @param {*} [defaultValue=null] - Standardwert, falls die Einstellung nicht existiert
- * @returns {Promise<*>} Wert der Einstellung
+ * Speichert Einstellungen auf dem Server
+ * @param {SettingsObject} settings - Zu speichernde Einstellungen
+ * @returns {Promise<Result<boolean>>} Erfolg oder Fehler
  */
-export async function loadSingleSetting(key, defaultValue = null) {
+export async function saveSettings(settings) {
     try {
-        debug(`Lade Einstellung: ${key}`);
-        // Wir verwenden hier getSetting aus dem Database-Modul
-        const value = await getSetting(key, defaultValue);
-        
-        // Wenn kein Wert gefunden wurde und ein Standardwert in DEFAULT_SETTINGS existiert
-        if (value === null && DEFAULT_SETTINGS.hasOwnProperty(key)) {
-            return DEFAULT_SETTINGS[key];
-        }
-        
-        return value;
-    } catch (err) {
-        error(`Fehler beim Laden der Einstellung ${key}`, err);
-        
-        // Fallback auf Standard-Einstellungen, wenn verfügbar
-        if (DEFAULT_SETTINGS.hasOwnProperty(key)) {
-            return DEFAULT_SETTINGS[key];
-        }
-        
-        return defaultValue;
-    }
-}
-
-/**
- * Aktualisiert mehrere Einstellungen
- * @param {SettingsObject} settings - Zu aktualisierende Einstellungen
- * @returns {Promise<boolean>} True wenn alle Einstellungen erfolgreich aktualisiert wurden
- */
-export async function updateSettings(settings) {
-    try {
-        debug('Aktualisiere mehrere Einstellungen', settings);
-        
         // Validiere Einstellungen vor dem Speichern
-        const validationResult = validateSettings(settings);
-        if (!validationResult.valid) {
-            error('Einstellungsvalidierung fehlgeschlagen', validationResult.errors);
-            return false;
+        const validationResult = await validateSettings(settings);
+        if (!validationResult.success) {
+            return validationResult;
         }
         
-        const response = await apiPost('/api/settings', settings);
+        const response = await apiPost(API.SETTINGS, settings);
         
-        if (response && response.status === 'ok') {
-            log('Einstellungen erfolgreich aktualisiert');
-            return true;
+        if (response.success) {
+            log('Einstellungen erfolgreich gespeichert');
+            return Result.ok(true);
         } else {
-            error('Fehler beim Aktualisieren von Einstellungen', response);
-            return false;
+            error('Fehler beim Speichern der Einstellungen:', response.error);
+            return Result.fail(response.error);
         }
     } catch (err) {
-        error('Fehler beim Aktualisieren von Einstellungen', err);
-        return false;
-    }
-}
-
-/**
- * Aktualisiert eine einzelne Einstellung
- * @param {string} key - Schlüssel der Einstellung
- * @param {*} value - Neuer Wert
- * @returns {Promise<boolean>} True wenn die Einstellung erfolgreich aktualisiert wurde
- */
-export async function updateSingleSetting(key, value) {
-    try {
-        debug(`Aktualisiere Einstellung: ${key}`, value);
-        
-        // Einzelne Einstellung validieren
-        const settingObj = {};
-        settingObj[key] = value;
-        const validationResult = validateSettings(settingObj, [key]);
-        
-        if (!validationResult.valid) {
-            error(`Validierung für ${key} fehlgeschlagen`, validationResult.errors);
-            return false;
-        }
-        
-        // Verwenden setSetting aus manage_database.js für die direkte Datenbankinteraktion
-        const response = await setSetting(key, value);
-        
-        if (response && response.success) {
-            log(`Einstellung ${key} erfolgreich aktualisiert`);
-            return true;
-        } else {
-            error(`Fehler beim Aktualisieren der Einstellung ${key}`, response.error || 'Unbekannter Fehler');
-            return false;
-        }
-    } catch (err) {
-        error(`Fehler beim Aktualisieren der Einstellung ${key}`, err);
-        return false;
+        error('Fehler beim Speichern der Einstellungen:', err);
+        return Result.fail(err.message);
     }
 }
 
