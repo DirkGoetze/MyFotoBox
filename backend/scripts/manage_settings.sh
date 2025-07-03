@@ -280,7 +280,7 @@ _ensure_table_db_backups () {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         backup_name TEXT NOT NULL UNIQUE, -- Name des Backups
         backup_file TEXT NOT NULL,       -- Dateipfad zum Backup
-        created_at DATETIME DEFAULT (datetime('now','localtime')) -- Erstellungszeitpunkt
+        created_at DATETIME DEFAULT (datetime('now','localtime')), -- Erstellungszeitpunkt
         backup_type TEXT NOT NULL,       -- Typ des Backups (manuell, automatisch, vor Migration)
         backup_reason TEXT,              -- Grund für das Backup
         checksum TEXT                    -- SHA256-Prüfsumme zur Integritätsvalidierung
