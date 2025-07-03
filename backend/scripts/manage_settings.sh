@@ -495,7 +495,7 @@ _ensure_table_change_groups () {
     # Prüfen, ob die Tabelle erfolgreich erstellt wurde
     if [ $? -ne 0 ]; then return 1; else return 0; fi
 }
-c
+
 # _ensure_table_settings_change_groups
 _ensure_table_settings_change_groups_debug_0001="INFO: Sicherstellen, dass die Tabelle 'settings_change_groups' existiert."
 
