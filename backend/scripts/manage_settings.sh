@@ -592,9 +592,13 @@ ensure_database() {
 
 # setup_database
 setup_database_debug_0001="INFO: Starte Datenbank-Setup..."
-setup_database_debug_0002="[/] Installiere Datenbank ..."
+setup_database_debug_0002="INFO: Starte Installation Datenbank ..."
 setup_database_debug_0003="ERROR: Datenbank-Installation fehlgeschlagen."
 setup_database_debug_0004="SUCCESS: Datenbank-Installation erfolgreich abgeschlossen."
+
+setup_database_txt_0001="[/] Installiere Datenbank ..."
+setup_database_txt_0002="Datenbank-Installation fehlgeschlagen."
+setup_database_txt_0003="Datenbank-Installation erfolgreich abgeschlossen."
 
 setup_database() {
     # -----------------------------------------------------------------------
