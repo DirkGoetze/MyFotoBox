@@ -175,8 +175,6 @@ _ensure_table_schema_versions () {
     # Rückgabe.: 0 - Erfolg
     # .........  1 - Fehler
     # -----------------------------------------------------------------------
-DEBUG_MOD_GLOBAL=1  # Setze globale Debug-Variable, damit Debug-Ausgaben aktiviert sind
-
     local db_file=$(get_data_file)
     local table_name="schema_versions"
 
@@ -216,7 +214,6 @@ DEBUG_MOD_GLOBAL=1  # Setze globale Debug-Variable, damit Debug-Ausgaben aktivie
     debug "$(printf "$_ensure_table_schema_versions_debug_0007" "$table_structure")"
 
     debug "$(printf "$_ensure_table_schema_versions_debug_0005" "$table_name")"
-DEBUG_MOD_GLOBAL=0  # Löschen globale Debug-Variable, damit Debug-Ausgaben deaktiviert sind
     return 0
 }
 
@@ -264,6 +261,8 @@ ensure_database() {
 # Prüfung, ob die SQLite-Datenbankdatei existiert und ob die gefundene Datei
 # eine gültige SQLite-Datenbank ist. Falls nicht, wird sie neu initialisiert.
 # ---------------------------------------------------------------------------
+# Setze globale Debug-Variable, damit Debug-Ausgaben aktiviert sind
+DEBUG_MOD_GLOBAL=1
 
 # Prüfe zuerst, ob SQLite installiert ist
 if ! _is_sqlite_installed; then
@@ -275,3 +274,6 @@ else
         return 1
     fi
 fi
+
+# Löschen globale Debug-Variable, damit Debug-Ausgaben deaktiviert sind
+DEBUG_MOD_GLOBAL=0  
