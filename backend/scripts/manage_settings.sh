@@ -459,7 +459,6 @@ _ensure_table_setting_dependencies () {
 
 # _ensure_table_change_groups
 
-
 # ===========================================================================
 # Funktionen zur Datenbank-Verwaltung
 # ===========================================================================
@@ -518,7 +517,7 @@ ensure_database() {
         debug "$ensure_database_debug_0004"
         return 1
     fi
-    
+
     # Alle Tabellen erfolgreich erstellt, Datenbank ist bereit
     debug "$ensure_database_debug_0002"
     return 0
