@@ -630,7 +630,10 @@ setup_backend_service() {
         # Überprüfung des Backend-Services im Hintergrund ausführen
         # und Spinner anzeigen
         debug "$setup_backend_service_debug_0011"
-        if ! get_backend_service_status; then
+        (get_backend_service_status) &> /dev/null 2>&1 &
+        service_pid=$!
+        show_spinner "$service_pid" "dots"
+        if [ $? -ne 0 ]; then
             debug "$setup_backend_service_debug_0012"
             print_error "$setup_backend_service_txt_0011"
             return 1
