@@ -319,7 +319,7 @@ _ensure_table_config_hierarchies () {
         description TEXT,                    -- Beschreibung der Hierarchie
         responsible TEXT,                    -- Verantwortliches Modul/Person
         created_at DATETIME DEFAULT (datetime('now','localtime')), -- Erstellungszeitpunkt
-        updated_at DATETIME DEFAULT (datetime('now','localtime'))  -- Aktualisierungszeitpunkt
+        updated_at DATETIME DEFAULT (datetime('now','localtime')), -- Aktualisierungszeitpunkt
         enabled BOOLEAN DEFAULT 1            -- Hierarchie aktiv/inaktiv
     );
 
@@ -360,7 +360,7 @@ _ensure_table_settings () {
         value_type TEXT NOT NULL,            -- Datentyp (string, int, bool, float, json)
         description TEXT,                    -- Beschreibung des Konfigurationsschlüssels
         created_at DATETIME DEFAULT (datetime('now','localtime')), -- Erstellungszeitpunkt
-        updated_at DATETIME DEFAULT (datetime('now','localtime'))  -- Aktualisierungszeitpunkt
+        updated_at DATETIME DEFAULT (datetime('now','localtime')), -- Aktualisierungszeitpunkt
         is_active BOOLEAN DEFAULT 1,         -- Aktive/Inaktive Einstellung
         weight INTEGER DEFAULT 0,            -- Gewichtung für Anwendungsreihenfolge
         change_group TEXT,                   -- Gruppierung für zusammengehörige Änderungen
