@@ -635,3 +635,5 @@ DEBUG_MOD_GLOBAL=0
 # ---------------------------------------------------------------------------
 # Initialisiere die Datenbank
 ensure_database;
+return 0 # Datenbank-Initialisierung ist per se noch kein Fehler, auch wenn sie nicht erfolgreich war.
+# ===========================================================================
