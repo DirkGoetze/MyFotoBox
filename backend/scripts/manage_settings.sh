@@ -86,6 +86,26 @@ _is_sqlite_installed() {
     return 1
 }
 
+_escape_sql_statement() {
+    # -----------------------------------------------------------------------
+    # escape_sql_statement
+    # -----------------------------------------------------------------------
+    # Funktion.: Entschärft einen SQL-Statement-String für die sichere 
+    # .........  Verwendung in SQLite
+    # Parameter: $1 - Zu escapender SQL-Statement-String
+    # Rückgabe.: SQLite-sicherer String
+    # -----------------------------------------------------------------------
+    local sql_statement="$1"
+    
+    # Überprüfen, ob das SQL-Statement angegeben ist
+    if ! check_param "$sql_statement" "sql_statement"; then return 1; fi
+
+    # Einfache Anführungszeichen verdoppeln (SQLite-Standard-Escaping)
+    local escaped="${sql_statement//\'/'\'\'}"
+    
+    echo "$escaped"
+}
+
 # _ensure_database_file
 _ensure_database_file_debug_0001="INFO: Bestehende SQLite-Datenbank ist gültig: '%s'"
 _ensure_database_file_debug_0002="WARN: Datei '%s' existiert, ist aber keine gültige SQLite-Datenbank. Wird neu initialisiert."
@@ -175,12 +195,16 @@ _create_table() {
     # Rückgabe.: 0 - Erfolg
     # .........  1 - Fehler
     # -----------------------------------------------------------------------
-    local create_table_sql="$1"
+    local sql_statement="$1"
+
+    # Überprüfen, ob das SQL-Statement angegeben ist
+    if ! check_param "$sql_statement" "sql_statement"; then return 1; fi
+    sql_statement=$(_escape_sql_statement "$sql_statement")
 
     # Tabellenname aus dem SQL-Statement extrahieren
     # Nach dem ersten "CREATE TABLE" suchen und den nächsten "Wort"-Token nehmen
     local table_name
-    table_name=$(echo "$create_table_sql" | grep -i -o "CREATE\s\+TABLE\s\+\(IF\s\+NOT\s\+EXISTS\s\+\)\?\w\+" | \
+    table_name=$(echo "$sql_statement" | grep -i -o "CREATE\s\+TABLE\s\+\(IF\s\+NOT\s\+EXISTS\s\+\)\?\w\+" | \
                 awk '{print $NF}')
 
     # Wenn kein Tabellenname gefunden wurde, Fehler ausgeben
@@ -190,7 +214,7 @@ _create_table() {
     fi        
 
     # Debug-Ausgabe eröffnen
-    debug "$(printf "$_create_table_debug_0003" "$create_table_sql")"
+    debug "$(printf "$_create_table_debug_0003" "$sql_statement")"
 
     # Prüfen, ob die Tabelle bereits existiert
     local db_file=$(get_data_file)
@@ -206,7 +230,7 @@ _create_table() {
 
     # Tabelle existiert nicht, also erstellen
     debug "$(printf "$_create_table_debug_0006" "$table_name")"
-    if ! sqlite3 "$db_file" "$create_table_sql"; then
+    if ! sqlite3 "$db_file" "$sql_statement"; then
         debug "$(printf "$_create_table_debug_0007" "$table_name")"
         return 1
     fi
