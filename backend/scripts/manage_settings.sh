@@ -473,7 +473,7 @@ ensure_database() {
         debug "$ensure_database_debug_0004"
         return 1
     fi
-    
+
     # Alle Tabellen erfolgreich erstellt, Datenbank ist bereit
     debug "$ensure_database_debug_0002"
     return 0
