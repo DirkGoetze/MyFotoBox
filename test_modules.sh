@@ -132,6 +132,8 @@ fi
 echo "---------------------------------------------------------------------------"
 echo
 
+exit
+
 # Zeige alle verfügbaren Funktionen in manage_folders.sh
 echo "+-----------------------------------------------------------------------+"
 echo "| Alle verfügbaren Funktionen                                           |" 
@@ -140,7 +142,6 @@ declare -F | grep -E '(get_|set_|bind_|check_|log_)'
 echo "-------------------------------------------------------------------------"
 echo
 
-exit
 
 # -------------------------------
 # Test der manage_folders.sh Funktionen
