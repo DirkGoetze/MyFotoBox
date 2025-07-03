@@ -458,6 +458,79 @@ _ensure_table_setting_dependencies () {
 }
 
 # _ensure_table_change_groups
+_ensure_table_change_groups_debug_0001="INFO: Sicherstellen, dass die Tabelle 'change_groups' existiert."
+
+_ensure_table_change_groups () {
+    # -----------------------------------------------------------------------
+    # _ensure_table_change_groups
+    # -----------------------------------------------------------------------
+    # Funktion.: Stellt sicher, dass die Tabelle 'change_groups' existiert.
+    # .........  Diese Tabelle wird für die Gruppierung von Änderungen an 
+    # .........  Konfigurationseinstellungen verwendet.
+    # Parameter: Keine
+    # Rückgabe.: 0 - Erfolg
+    # .........  1 - Fehler
+    # -----------------------------------------------------------------------
+
+    # Debug-Ausgabe eröffnen
+    debug "$_ensure_table_change_groups_debug_0001"
+
+    # SQL-Statement für die Tabellenerstellung definieren
+    local create_table_sql="CREATE TABLE IF NOT EXISTS change_groups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        group_name TEXT NOT NULL UNIQUE,     -- Name der Änderungsgruppe
+        description TEXT,                    -- Beschreibung der Gruppe
+        status TEXT DEFAULT 'pending',       -- Status (pending, complete, error)
+        created_at DATETIME DEFAULT (datetime('now','localtime')), -- Erstellungszeitpunkt
+        updated_at DATETIME DEFAULT (datetime('now','localtime')), -- Aktualisierungszeitpunkt
+        priority INTEGER DEFAULT 0           -- Priorität für die Anwendungsreihenfolge
+    );
+
+    CREATE INDEX idx_change_groups_name ON change_groups(group_name);
+    "
+
+    # Tabelle erstellen
+    _create_table "$create_table_sql"
+
+    # Prüfen, ob die Tabelle erfolgreich erstellt wurde
+    if [ $? -ne 0 ]; then return 1; else return 0; fi
+}
+c
+# _ensure_table_settings_change_groups
+_ensure_table_settings_change_groups_debug_0001="INFO: Sicherstellen, dass die Tabelle 'settings_change_groups' existiert."
+
+_ensure_table_settings_change_groups () {
+    # -----------------------------------------------------------------------
+    # _ensure_table_settings_change_groups
+    # -----------------------------------------------------------------------
+    # Funktion.: Stellt sicher, dass die Tabelle 'settings_change_groups' existiert.
+    # .........  Diese Tabelle wird für die Zuordnung von Einstellungen zu 
+    # .........  Änderungsgruppen verwendet.
+    # Parameter: Keine
+    # Rückgabe.: 0 - Erfolg
+    # .........  1 - Fehler
+    # -----------------------------------------------------------------------
+
+    # Debug-Ausgabe eröffnen
+    debug "$_ensure_table_settings_change_groups_debug_0001"
+
+    # SQL-Statement für die Tabellenerstellung definieren
+    local create_table_sql="CREATE TABLE IF NOT EXISTS settings_change_groups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        setting_id INTEGER NOT NULL,         -- Verweis auf die Einstellung
+        change_group_id INTEGER NOT NULL,    -- Verweis auf die Änderungsgruppe
+        FOREIGN KEY (setting_id) REFERENCES settings(id) ON DELETE CASCADE,
+        FOREIGN KEY (change_group_id) REFERENCES change_groups(id) ON DELETE CASCADE,
+        PRIMARY KEY (setting_id, change_group_id),  -- Primärschlüssel für eindeutige Zuordnung
+        UNIQUE(setting_id, change_group_id)  -- Verhindert doppelte Zuordnungen
+    );"
+
+    # Tabelle erstellen
+    _create_table "$create_table_sql"
+
+    # Prüfen, ob die Tabelle erfolgreich erstellt wurde
+    if [ $? -ne 0 ]; then return 1; else return 0; fi
+}
 
 # ===========================================================================
 # Funktionen zur Datenbank-Verwaltung
@@ -468,6 +541,13 @@ ensure_database_debug_0001="INFO: Sicherstellen, dass die Datenbank initialisier
 ensure_database_debug_0002="SUCCESS: Datenbank ist initialisiert und bereit zur Nutzung."
 ensure_database_debug_0003="ERROR: Datenbank-Initialisierung fehlgeschlagen."
 ensure_database_debug_0004="ERROR: Tabelle 'schema_versions' konnte nicht erstellt werden."
+ensure_database_debug_0005="ERROR: Tabelle 'settings_change_groups' konnte nicht erstellt werden."
+ensure_database_debug_0006="ERROR: Tabelle 'config_hierarchies' konnte nicht erstellt werden."
+ensure_database_debug_0007="ERROR: Tabelle 'settings' konnte nicht erstellt werden."
+ensure_database_debug_0008="ERROR: Tabelle 'settings_history' konnte nicht erstellt werden."
+ensure_database_debug_0009="ERROR: Tabelle 'setting_dependencies' konnte nicht erstellt werden."
+ensure_database_debug_0010="ERROR: Tabelle 'change_groups' konnte nicht erstellt werden."
+ensure_database_debug_0011="ERROR: Tabelle 'settings_change_groups' konnte nicht erstellt werden."
 
 ensure_database() {
     # -----------------------------------------------------------------------
@@ -480,41 +560,51 @@ ensure_database() {
     # Rückgabe.: 0 - Erfolg
     # .........  1 - Fehler
     # -----------------------------------------------------------------------
-    
+
     debug "$ensure_database_debug_0001"
-    
+
     if ! _ensure_database_file; then
         debug "$ensure_database_debug_0003"
         return 1
     fi
-    
+
     if ! _ensure_table_db_backups; then
         debug "$ensure_database_debug_0004"
         return 1
     fi
 
     if ! _ensure_table_schema_versions; then
-        debug "$ensure_database_debug_0004"
+        debug "$ensure_database_debug_0005"
         return 1
     fi
 
     if ! _ensure_table_config_hierarchies; then
-        debug "$ensure_database_debug_0004"
+        debug "$ensure_database_debug_0006"
         return 1
     fi
 
     if ! _ensure_table_settings; then
-        debug "$ensure_database_debug_0004"
+        debug "$ensure_database_debug_0007"
         return 1
     fi
 
     if ! _ensure_table_settings_history; then
-        debug "$ensure_database_debug_0004"
+        debug "$ensure_database_debug_0008"
         return 1
     fi
 
     if ! _ensure_table_setting_dependencies; then
-        debug "$ensure_database_debug_0004"
+        debug "$ensure_database_debug_0009"
+        return 1
+    fi
+
+    if ! _ensure_table_change_groups; then
+        debug "$ensure_database_debug_0010"
+        return 1
+    fi
+
+    if ! _ensure_table_settings_change_groups; then
+        debug "$ensure_database_debug_0011"
         return 1
     fi
 
