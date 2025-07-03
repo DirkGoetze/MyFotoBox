@@ -45,7 +45,7 @@ test_function() {
         echo "❌ ERROR: Modul $module_path_var_upper nicht verfügbar oder Pfad ungültig!" &>2
         return 1
     fi
-    
+
     # Prüfe, ob die Funktion existiert (bereits geladen)
     if ! declare -f "$function_name" > /dev/null 2>&1; then
         debug "$(printf "$test_function_debug_0004" "$function_name")"
@@ -58,7 +58,7 @@ test_function() {
     # Führe die Funktion aus und erfasse Rückgabewert und Ausgabe
     local output
     local result
-    
+
     # Führe die Funktion DIREKT mit den übergebenen Parametern aus
     set +e  # Deaktiviere Fehlerabbruch
     if [ ${#params[@]} -gt 0 ]; then
@@ -71,7 +71,7 @@ test_function() {
         result=$?
     fi
     set -e  # Reaktiviere Fehlerabbruch
-    
+
     # Rest der Funktion bleibt gleich...
     if [ -n "$output" ]; then
         debug "$(printf "$test_function_debug_0008" "$output")"
@@ -88,7 +88,7 @@ test_function() {
             echo
         fi
     fi
-        
+
     # Gib den originalen Rückgabewert der getesteten Funktion zurück
     return $result
 }
@@ -139,6 +139,8 @@ echo "+-----------------------------------------------------------------------+"
 declare -F | grep -E '(get_|set_|bind_|check_|log_)'
 echo "-------------------------------------------------------------------------"
 echo
+
+exit
 
 # -------------------------------
 # Test der manage_folders.sh Funktionen
