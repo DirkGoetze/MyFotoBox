@@ -656,7 +656,7 @@ dlg_prepare_structure() {
     esac
 
     # Datenbank einrichten
-    if ! ensure_database; then
+    if ! setup_database; then
         print_error "Fehler beim Einrichten der Datenbank. Bitte überprüfen Sie die Konfiguration."
         exit 1
     fi

@@ -560,69 +560,78 @@ ensure_database() {
     # Rückgabe.: 0 - Erfolg
     # .........  1 - Fehler
     # -----------------------------------------------------------------------
-# Setze globale Debug-Variable, damit Debug-Ausgaben aktiviert sind
-DEBUG_MOD_GLOBAL=1
 
     # Prüfe zuerst, ob SQLite installiert ist
     if _is_sqlite_installed; then
+
         # SQLite ist verfügbar, initialisiere die Datenbank
         debug "$ensure_database_debug_0001"
 
-        if ! _ensure_database_file; then
-            debug "$ensure_database_debug_0004"
-            return 1
-        fi
+        # Prüfe, ob die Datenbankdatei existiert und gültig ist
+        if ! _ensure_database_file; then debug "$ensure_database_debug_0004"; return 1; fi
 
-        if ! _ensure_table_db_backups; then
-            debug "$ensure_database_debug_0005"
-            return 1
-        fi
-
-        if ! _ensure_table_schema_versions; then
-            debug "$ensure_database_debug_0006"
-            return 1
-        fi
-
-        if ! _ensure_table_config_hierarchies; then
-            debug "$ensure_database_debug_0007"
-            return 1
-        fi
-
-        if ! _ensure_table_settings; then
-            debug "$ensure_database_debug_0008"
-            return 1
-        fi
-
-        if ! _ensure_table_settings_history; then
-            debug "$ensure_database_debug_0009"
-            return 1
-        fi
-
-        if ! _ensure_table_setting_dependencies; then
-            debug "$ensure_database_debug_0010"
-            return 1
-        fi
-
-        if ! _ensure_table_change_groups; then
-            debug "$ensure_database_debug_0011"
-            return 1
-        fi
-
-        if ! _ensure_table_settings_change_groups; then
-            debug "$ensure_database_debug_0012"
-            return 1
-        fi
+        # Tabellen erstellen, falls sie nicht existieren
+        if ! _ensure_table_db_backups; then debug "$ensure_database_debug_0005"; return 1; fi
+        if ! _ensure_table_schema_versions; then debug "$ensure_database_debug_0006"; return 1; fi
+        if ! _ensure_table_config_hierarchies; then debug "$ensure_database_debug_0007"; return 1; fi
+        if ! _ensure_table_settings; then debug "$ensure_database_debug_0008"; return 1; fi
+        if ! _ensure_table_settings_history; then debug "$ensure_database_debug_0009"; return 1; fi
+        if ! _ensure_table_setting_dependencies; then debug "$ensure_database_debug_0010"; return 1; fi
+        if ! _ensure_table_change_groups; then debug "$ensure_database_debug_0011"; return 1; fi
+        if ! _ensure_table_settings_change_groups; then debug "$ensure_database_debug_0012"; return 1; fi
 
         # Alle Tabellen erfolgreich erstellt, Datenbank ist bereit
         debug "$ensure_database_debug_0002"
-# Löschen globale Debug-Variable, damit Debug-Ausgaben deaktiviert sind
-DEBUG_MOD_GLOBAL=0  
         return 0
     else
         # SQLite ist nicht installiert, Datenbank-Initialisierung wurde übersprungen
         debug "$ensure_database_debug_0003"
-# Löschen globale Debug-Variable, damit Debug-Ausgaben deaktiviert sind
-DEBUG_MOD_GLOBAL=0  
         return 1
     fi    
 }   
+
+# setup_database
+setup_database_debug_0001="INFO: Starte Datenbank-Setup..."
+setup_database_debug_0002="[/] Installiere Datenbank ..."
+setup_database_debug_0003="ERROR: Datenbank-Installation fehlgeschlagen."
+setup_database_debug_0004="SUCCESS: Datenbank-Installation erfolgreich abgeschlossen."
+
+setup_database() {
+    # -----------------------------------------------------------------------
+    # setup_database
+    # -----------------------------------------------------------------------
+    # Funktion: Führt die komplette Installation der Datenbank durch
+    # Parameter: $1 - Optional: CLI oder JSON-Ausgabe. Wenn nicht angegeben,
+    # .........       wird die Standardausgabe verwendet (CLI-Ausgabe)
+    # Rückgabe: 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    local output_mode="${1:-cli}"  # Standardmäßig CLI-Ausgabe
+    local service_pid
+
+    # Eröffnungsmeldung im Debug Modus
+    debug "$setup_database_debug_0001"
+
+    # Installiere die Datenbank
+    if [ "$output_mode" = "json" ]; then
+        ensure_database || return 1
+    else
+        # Ausgabe im CLI-Modus, Spinner anzeigen
+        echo -n "$setup_database_txt_0001"
+        # Installation der Datenbank im Hintergrund ausführen
+        # und Spinner anzeigen
+        debug "$setup_database_debug_0002"
+        (ensure_database) &> /dev/null 2>&1 &
+        service_pid=$!
+        show_spinner "$service_pid" "dots"
+        # Überprüfe, ob die Installation erfolgreich war
+        if [ $? -ne 0 ]; then
+            debug "$setup_database_debug_0003"
+            print_error "$setup_database_txt_0002"
+            return 1
+        fi
+        debug "$setup_database_debug_0004"
+        print_success "$setup_database_txt_0003"
+    fi
+
+    return 0
+}
