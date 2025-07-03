@@ -538,15 +538,16 @@ _ensure_table_settings_change_groups () {
 # ensure_database
 ensure_database_debug_0001="INFO: Sicherstellen, dass die Datenbank initialisiert ist."
 ensure_database_debug_0002="SUCCESS: Datenbank ist initialisiert und bereit zur Nutzung."
-ensure_database_debug_0003="ERROR: Datenbank-Initialisierung fehlgeschlagen."
-ensure_database_debug_0004="ERROR: Tabelle 'schema_versions' konnte nicht erstellt werden."
-ensure_database_debug_0005="ERROR: Tabelle 'settings_change_groups' konnte nicht erstellt werden."
-ensure_database_debug_0006="ERROR: Tabelle 'config_hierarchies' konnte nicht erstellt werden."
-ensure_database_debug_0007="ERROR: Tabelle 'settings' konnte nicht erstellt werden."
-ensure_database_debug_0008="ERROR: Tabelle 'settings_history' konnte nicht erstellt werden."
-ensure_database_debug_0009="ERROR: Tabelle 'setting_dependencies' konnte nicht erstellt werden."
-ensure_database_debug_0010="ERROR: Tabelle 'change_groups' konnte nicht erstellt werden."
-ensure_database_debug_0011="ERROR: Tabelle 'settings_change_groups' konnte nicht erstellt werden."
+ensure_database_debug_0003="WARN: SQLite ist nicht installiert. Datenbank-Initialisierung wurde übersprungen."
+ensure_database_debug_0004="ERROR: Datenbank-Initialisierung fehlgeschlagen."
+ensure_database_debug_0005="ERROR: Tabelle 'schema_versions' konnte nicht erstellt werden."
+ensure_database_debug_0006="ERROR: Tabelle 'settings_change_groups' konnte nicht erstellt werden."
+ensure_database_debug_0007="ERROR: Tabelle 'config_hierarchies' konnte nicht erstellt werden."
+ensure_database_debug_0008="ERROR: Tabelle 'settings' konnte nicht erstellt werden."
+ensure_database_debug_0009="ERROR: Tabelle 'settings_history' konnte nicht erstellt werden."
+ensure_database_debug_0010="ERROR: Tabelle 'setting_dependencies' konnte nicht erstellt werden."
+ensure_database_debug_0011="ERROR: Tabelle 'change_groups' konnte nicht erstellt werden."
+ensure_database_debug_0012="ERROR: Tabelle 'settings_change_groups' konnte nicht erstellt werden."
 
 ensure_database() {
     # -----------------------------------------------------------------------
@@ -559,57 +560,71 @@ ensure_database() {
     # Rückgabe.: 0 - Erfolg
     # .........  1 - Fehler
     # -----------------------------------------------------------------------
+# Setze globale Debug-Variable, damit Debug-Ausgaben aktiviert sind
+DEBUG_MOD_GLOBAL=1
 
-    debug "$ensure_database_debug_0001"
+    # Prüfe zuerst, ob SQLite installiert ist
+    if _is_sqlite_installed; then
+        # SQLite ist verfügbar, initialisiere die Datenbank
+        debug "$ensure_database_debug_0001"
 
-    if ! _ensure_database_file; then
+        if ! _ensure_database_file; then
+            debug "$ensure_database_debug_0004"
+            return 1
+        fi
+
+        if ! _ensure_table_db_backups; then
+            debug "$ensure_database_debug_0005"
+            return 1
+        fi
+
+        if ! _ensure_table_schema_versions; then
+            debug "$ensure_database_debug_0006"
+            return 1
+        fi
+
+        if ! _ensure_table_config_hierarchies; then
+            debug "$ensure_database_debug_0007"
+            return 1
+        fi
+
+        if ! _ensure_table_settings; then
+            debug "$ensure_database_debug_0008"
+            return 1
+        fi
+
+        if ! _ensure_table_settings_history; then
+            debug "$ensure_database_debug_0009"
+            return 1
+        fi
+
+        if ! _ensure_table_setting_dependencies; then
+            debug "$ensure_database_debug_0010"
+            return 1
+        fi
+
+        if ! _ensure_table_change_groups; then
+            debug "$ensure_database_debug_0011"
+            return 1
+        fi
+
+        if ! _ensure_table_settings_change_groups; then
+            debug "$ensure_database_debug_0012"
+            return 1
+        fi
+
+        # Alle Tabellen erfolgreich erstellt, Datenbank ist bereit
+        debug "$ensure_database_debug_0002"
+# Löschen globale Debug-Variable, damit Debug-Ausgaben deaktiviert sind
+DEBUG_MOD_GLOBAL=0  
+        return 0
+    else
+        # SQLite ist nicht installiert, Datenbank-Initialisierung wurde übersprungen
         debug "$ensure_database_debug_0003"
+# Löschen globale Debug-Variable, damit Debug-Ausgaben deaktiviert sind
+DEBUG_MOD_GLOBAL=0  
         return 1
-    fi
-
-    if ! _ensure_table_db_backups; then
-        debug "$ensure_database_debug_0004"
-        return 1
-    fi
-
-    if ! _ensure_table_schema_versions; then
-        debug "$ensure_database_debug_0005"
-        return 1
-    fi
-
-    if ! _ensure_table_config_hierarchies; then
-        debug "$ensure_database_debug_0006"
-        return 1
-    fi
-
-    if ! _ensure_table_settings; then
-        debug "$ensure_database_debug_0007"
-        return 1
-    fi
-
-    if ! _ensure_table_settings_history; then
-        debug "$ensure_database_debug_0008"
-        return 1
-    fi
-
-    if ! _ensure_table_setting_dependencies; then
-        debug "$ensure_database_debug_0009"
-        return 1
-    fi
-
-    if ! _ensure_table_change_groups; then
-        debug "$ensure_database_debug_0010"
-        return 1
-    fi
-
-    if ! _ensure_table_settings_change_groups; then
-        debug "$ensure_database_debug_0011"
-        return 1
-    fi
-
-    # Alle Tabellen erfolgreich erstellt, Datenbank ist bereit
-    debug "$ensure_database_debug_0002"
-    return 0
+    fi    
 }   
 
 # ===========================================================================
@@ -621,15 +636,10 @@ ensure_database() {
 # Setze globale Debug-Variable, damit Debug-Ausgaben aktiviert sind
 DEBUG_MOD_GLOBAL=1
 
-# Prüfe zuerst, ob SQLite installiert ist
-if ! _is_sqlite_installed; then
-    debug "WARN: SQLite ist nicht installiert. Datenbank-Initialisierung wird übersprungen."
-else
-    # SQLite ist verfügbar, initialisiere die Datenbank
-    if ! ensure_database; then
-        debug "ERROR: Datenbank-Initialisierung fehlgeschlagen."
-        return 1
-    fi
+# Initialisiere die Datenbank
+if ! ensure_database; then
+    debug "ERROR: Datenbank-Initialisierung fehlgeschlagen."
+    return 1
 fi
 
 # Löschen globale Debug-Variable, damit Debug-Ausgaben deaktiviert sind
