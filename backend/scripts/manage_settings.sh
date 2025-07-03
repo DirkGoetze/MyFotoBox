@@ -192,7 +192,7 @@ _ensure_table_schema_versions () {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             table_name TEXT NOT NULL,        -- Name der Tabelle
             version INTEGER NOT NULL,        -- Aktuelle Schemaversion
-            migration_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, -- Zeitpunkt der letzten Migration
+            migration_timestamp DATETIME DEFAULT (datetime('now','localtime')), -- Zeitpunkt der letzten Migration
             description TEXT                 -- Beschreibung der letzten Änderung
         );"; then
         debug "$(printf "$_ensure_table_schema_versions_debug_0004" "$table_name")"
