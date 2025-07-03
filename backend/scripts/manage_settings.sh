@@ -211,6 +211,7 @@ _ensure_table_schema_versions () {
 ensure_database_debug_0001="INFO: Sicherstellen, dass die Datenbank initialisiert ist."
 ensure_database_debug_0002="SUCCESS: Datenbank ist initialisiert und bereit zur Nutzung."
 ensure_database_debug_0003="ERROR: Datenbank-Initialisierung fehlgeschlagen."
+ensure_database_debug_0004="ERROR: Tabelle 'schema_versions' konnte nicht erstellt werden."
 
 ensure_database() {
     # -----------------------------------------------------------------------
@@ -232,7 +233,7 @@ ensure_database() {
     fi
     
     if ! _ensure_table_schema_versions; then
-        debug "$ensure_database_debug_3"
+        debug "$ensure_database_debug_0004"
         return 1
     fi
     
