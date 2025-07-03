@@ -155,9 +155,90 @@ _ensure_database_file() {
     return 0
 }
 
+# _ensure_table_schema_versions
+_ensure_table_schema_versions_debug_0001="INFO: Sicherstellen, dass die Tabelle '%s' existiert."
+_ensure_table_schema_versions_debug_0002="SUCCESS: Tabelle '%s' existiert."
+_ensure_table_schema_versions_debug_0003="INFO: Erstelle Tabelle '%s', falls sie nicht existiert."
+_ensure_table_schema_versions_debug_0004="ERROR: Fehler beim Erstellen der Tabelle '%s'."
+_ensure_table_schema_versions_debug_0005="SUCCESS: Tabelle '%s' erfolgreich erstellt."
+
+_ensure_table_schema_versions () {
+    # -----------------------------------------------------------------------
+    # _ensure_table_schema_versions
+    # -----------------------------------------------------------------------
+    # Funktion.: Stellt sicher, dass die Tabelle 'schema_versions' existiert.
+    # .........  Diese Tabelle wird für die Verwaltung der Datenbank-Schema-
+    # .........  Versionen verwendet.
+    # Parameter: Keine
+    # Rückgabe.: 0 - Erfolg
+    # .........  1 - Fehler
+    # -----------------------------------------------------------------------
+    local db_file=$(get_data_file)
+    local table_name="schema_versions"
+
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$_ensure_table_schema_versions_debug_0001" "$table_name")"
+
+    # Prüfen, ob die Tabelle bereits existiert
+    if sqlite3 "$db_file" "SELECT name FROM sqlite_master WHERE type='table' AND name='$table_name';" | grep -q "$table_name"; then
+        # Tabelle existiert bereits
+        debug "$(printf "$_ensure_table_schema_versions_debug_0002" "$table_name")"
+        return 0
+    fi
+    # Tabelle existiert nicht, also erstellen
+    debug "$(printf "$_ensure_table_schema_versions_debug_0003" "$table_name")"
+    if ! sqlite3 "$db_file" "
+        CREATE TABLE IF NOT EXISTS schema_versions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            table_name TEXT NOT NULL,        -- Name der Tabelle
+            version INTEGER NOT NULL,        -- Aktuelle Schemaversion
+            migration_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- Zeitpunkt der letzten Migration
+            description TEXT                 -- Beschreibung der letzten Änderung
+        );"; then
+        debug "$(printf "$_ensure_table_schema_versions_debug_0004" "$table_name")"
+        return 1
+    fi
+
+    debug "$(printf "$_ensure_table_schema_versions_debug_0005" "$table_name")"
+    return 0
+}
+
 # ===========================================================================
 # Funktionen zur Datenbank-Verwaltung
 # ===========================================================================
+
+# ensure_database
+ensure_database_debug_0001="INFO: Sicherstellen, dass die Datenbank initialisiert ist."
+ensure_database_debug_0002="SUCCESS: Datenbank ist initialisiert und bereit zur Nutzung."
+ensure_database_debug_0003="ERROR: Datenbank-Initialisierung fehlgeschlagen."
+
+ensure_database() {
+    # -----------------------------------------------------------------------
+    # ensure_database
+    # -----------------------------------------------------------------------
+    # Funktion.: Stellt sicher, dass die SQLite-Datenbank initialisiert ist.
+    # .........  Diese Funktion prüft, ob die Datenbankdatei existiert und 
+    # .........  gültig ist. Falls nicht, wird sie neu initialisiert.
+    # Parameter: Keine
+    # Rückgabe.: 0 - Erfolg
+    # .........  1 - Fehler
+    # -----------------------------------------------------------------------
+    
+    debug "$ensure_database_debug_0001"
+    
+    if ! _ensure_database_file; then
+        debug "$ensure_database_debug_0003"
+        return 1
+    fi
+    
+    if ! _ensure_table_schema_versions; then
+        debug "$ensure_database_debug_3"
+        return 1
+    fi
+    
+    debug "$ensure_database_debug_0002"
+    return 0
+}   
 
 # ===========================================================================
 # Prüfungen bei der Datenbank-Initialisierung
@@ -172,7 +253,7 @@ if ! _is_sqlite_installed; then
     debug "WARN: SQLite ist nicht installiert. Datenbank-Initialisierung wird übersprungen."
 else
     # SQLite ist verfügbar, initialisiere die Datenbank
-    if ! _ensure_database_file; then
+    if ! ensure_database; then
         debug "ERROR: Datenbank-Initialisierung fehlgeschlagen."
         return 1
     fi
