@@ -777,8 +777,16 @@ load_resources() {
         result=0 # kein Fehler, da Fallback-Funktion vorhanden
         debug_output "$(printf "$load_resources_debug_0004" "manage_logging.sh")"
     fi
-    
-    # 4. manage_nginx.sh einbinden
+
+    # 4. manage_settings.sh einbinden
+    debug_output "$(printf "$load_resources_debug_0002" "manage_settings.sh")"
+    bind_resource "manage_settings.sh"
+    if [ $? -ne 0 ]; then
+        debug_output "$(printf "$load_resources_debug_0003" "manage_settings.sh")"
+        result=1
+    fi
+
+    # 5. manage_nginx.sh einbinden
     debug_output "$(printf "$load_resources_debug_0002" "manage_nginx.sh")"
     bind_resource "manage_nginx.sh"
     if [ $? -ne 0 ]; then
@@ -786,7 +794,7 @@ load_resources() {
         result=1
     fi
 
-    # 5. manage_https.sh einbinden
+    # 6. manage_https.sh einbinden
     debug_output "$(printf "$load_resources_debug_0002" "manage_https.sh")"
     bind_resource "manage_https.sh"
     if [ $? -ne 0 ]; then
@@ -794,7 +802,7 @@ load_resources() {
         result=1
     fi
 
-    # 6. manage_firewall.sh einbinden
+    # 7. manage_firewall.sh einbinden
     debug_output "$(printf "$load_resources_debug_0002" "manage_firewall.sh")"
     bind_resource "manage_firewall.sh"
     if [ $? -ne 0 ]; then
@@ -802,7 +810,7 @@ load_resources() {
         result=1
     fi
 
-    # 7. manage_python_env.sh einbinden
+    # 8. manage_python_env.sh einbinden
     debug_output "$(printf "$load_resources_debug_0002" "manage_python_env.sh")"
     bind_resource "manage_python_env.sh"
     if [ $? -ne 0 ]; then
@@ -810,7 +818,7 @@ load_resources() {
         result=1
     fi
 
-    # 8. manage_backend_service.sh einbinden
+    # 9. manage_backend_service.sh einbinden
     debug_output "$(printf "$load_resources_debug_0002" "manage_backend_service.sh")"
     bind_resource "manage_backend_service.sh"
     if [ $? -ne 0 ]; then
