@@ -239,14 +239,13 @@ _ensure_table_schema_versions () {
     debug "$($_ensure_table_schema_versions_debug_0001)"
 
     # SQL-Statement für die Tabellenerstellung definieren
-    local create_table_sql="
-        CREATE TABLE IF NOT EXISTS schema_versions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            table_name TEXT NOT NULL,        -- Name der Tabelle
-            version INTEGER NOT NULL,        -- Aktuelle Schemaversion
-            migration_timestamp DATETIME DEFAULT (datetime('now','localtime')), -- Zeitpunkt der letzten Migration
-            description TEXT                 -- Beschreibung der letzten Änderung
-        );"
+    local create_table_sql="CREATE TABLE IF NOT EXISTS schema_versions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        table_name TEXT NOT NULL,        -- Name der Tabelle
+        version INTEGER NOT NULL,        -- Aktuelle Schemaversion
+        migration_timestamp DATETIME DEFAULT (datetime('now','localtime')), -- Zeitpunkt der letzten Migration
+        description TEXT                 -- Beschreibung der letzten Änderung
+    );"
 
     # Tabelle erstellen
     _create_table "$create_table_sql" 
