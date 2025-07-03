@@ -236,7 +236,7 @@ _ensure_table_schema_versions () {
     # -----------------------------------------------------------------------
 
     # Debug-Ausgabe eröffnen
-    debug "$($_ensure_table_schema_versions_debug_0001)"
+    debug "$_ensure_table_schema_versions_debug_0001"
 
     # SQL-Statement für die Tabellenerstellung definieren
     local create_table_sql="CREATE TABLE IF NOT EXISTS schema_versions (
