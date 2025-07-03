@@ -49,6 +49,15 @@ DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 # Hilfsfunktionen
 # ===========================================================================
 
+# _ensure_database_file
+_ensure_database_file_debug_0001="INFO: Bestehende SQLite-Datenbank ist gültig: '%s'"
+_ensure_database_file_debug_0002="WARN: Datei '%s' existiert, ist aber keine gültige SQLite-Datenbank. Wird neu initialisiert."
+_ensure_database_file_debug_0003="INFO: Initialisiere SQLite-Datenbank: '%s'"
+_ensure_database_file_debug_0004="SUCCESS: SQLite-Datenbank erfolgreich initialisiert: '%s'"
+_ensure_database_file_debug_0005="ERROR: Fehler beim Initialisieren der SQLite-Datenbank: '%s'"
+_ensure_database_file_debug_0006="ERROR: SQLite-Datenbank konnte nicht korrekt initialisiert werden: '%s'"
+_ensure_database_file_debug_0007="SUCCESS: SQLite-Datenbank existiert und ist gültig: '%s'"
+
 _ensure_database_file() {
     # -----------------------------------------------------------------------
     # _ensure_database_file
@@ -67,13 +76,13 @@ _ensure_database_file() {
     # Prüfen, ob die Datei existiert und eine gültige SQLite-DB ist
     if [ -s "$db_file" ]; then
         # Datei existiert und hat Inhalt, prüfen ob es eine gültige SQLite-DB ist
-        if sqlite3 "$db_file" "PRAGMA integrity_check;" &>/dev/null; then
+        if sqlite3 "$db_file" "PRAGMA quick_check;" &>/dev/null; then
             # Gültige SQLite-Datenbank
             is_valid_sqlite=1
-            debug "Bestehende SQLite-Datenbank ist gültig: $db_file"
+            debug "$(printf "$_ensure_database_file_debug_0001" "$db_file")"
         else
             # Datei existiert, ist aber keine gültige SQLite-DB
-            debug "Datei '$db_file' existiert, ist aber keine gültige SQLite-Datenbank. Wird neu initialisiert."
+            debug "$(printf "$_ensure_database_file_debug_0002" "$db_file")"
             # Sicherheitshalber Backup erstellen, falls es wichtige Daten sind
             # Extrahiere Dateinamen ohne Endung und Extension
             local db_basename=$(basename "$db_file")
@@ -89,49 +98,24 @@ _ensure_database_file() {
     # SQLite-Datenbank initialisieren, wenn nötig
     if [ "$is_valid_sqlite" -eq 0 ]; then
         # SQLite-DB initialisieren
-        debug "Initialisiere SQLite-Datenbank: $db_file"
+        debug "$(printf "$_ensure_database_file_debug_0003" "$db_file")"
         if ! sqlite3 "$db_file" "PRAGMA foreign_keys = ON; VACUUM;"; then
-            error "Fehler beim Initialisieren der SQLite-Datenbank: $db_file"
+            debug "$(printf "$_ensure_database_file_debug_0005" "$db_file")"
             return 1
         fi
         
         # Erneut prüfen, ob die Initialisierung erfolgreich war
         if ! sqlite3 "$db_file" "PRAGMA integrity_check;" &>/dev/null; then
-            error "SQLite-Datenbank konnte nicht korrekt initialisiert werden: $db_file"
+            debug "$(printf "$_ensure_database_file_debug_0006" "$db_file")"
             return 1
         fi
-        
-        debug "SQLite-Datenbank erfolgreich initialisiert: $db_file"
-    else
-        debug "Bestehende SQLite-Datenbank ist gültig: $db_file"
+
+        debug "$(printf "$_ensure_database_file_debug_0004" "$db_file")"
+        return 0
     fi
     
+    debug "$(printf "$_ensure_database_file_debug_0007" "$db_file")"
     return 0
-}
-
-_ensure_settings_table() {
-    local db_file="$1"
-    
-    sqlite3 "$db_file" "
-    CREATE TABLE IF NOT EXISTS settings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        key TEXT NOT NULL,
-        value TEXT,
-        previous_value TEXT,
-        group_id TEXT,
-        weight INTEGER DEFAULT 1,
-        changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        changed_by TEXT,
-        description TEXT,
-        version TEXT DEFAULT 'current',
-        is_sensitive BOOLEAN DEFAULT 0,
-        UNIQUE(key, version)
-    );
-    
-    CREATE INDEX IF NOT EXISTS idx_settings_key ON settings(key);
-    CREATE INDEX IF NOT EXISTS idx_settings_group ON settings(group_id);
-    CREATE INDEX IF NOT EXISTS idx_settings_version ON settings(version);
-    "
 }
 
 # ===========================================================================
