@@ -516,7 +516,6 @@ _ensure_table_settings_change_groups () {
 
     # SQL-Statement für die Tabellenerstellung definieren
     local create_table_sql="CREATE TABLE IF NOT EXISTS settings_change_groups (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
         setting_id INTEGER NOT NULL,         -- Verweis auf die Einstellung
         change_group_id INTEGER NOT NULL,    -- Verweis auf die Änderungsgruppe
         FOREIGN KEY (setting_id) REFERENCES settings(id) ON DELETE CASCADE,
