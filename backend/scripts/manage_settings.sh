@@ -49,6 +49,43 @@ DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 # Hilfsfunktionen
 # ===========================================================================
 
+# _is_sqlite_installed
+_is_sqlite_installed_debug_0001="INFO: Prüfe, ob SQLite installiert ist"
+_is_sqlite_installed_debug_0002="SUCCESS: SQLite ist installiert (Version: %s)"
+_is_sqlite_installed_debug_0003="ERROR: SQLite ist nicht installiert oder nicht im PATH"
+_is_sqlite_installed_debug_0004="INFO: SQLite CLI wurde gefunden unter: %s"
+
+_is_sqlite_installed() {
+    # -----------------------------------------------------------------------
+    # _is_sqlite_installed
+    # -----------------------------------------------------------------------
+    # Funktion.: Prüft, ob SQLite auf dem System installiert ist und 
+    # .........  die sqlite3-Kommandozeile im PATH verfügbar ist
+    # Parameter: Keine
+    # Rückgabe.: 0 - SQLite ist installiert
+    # .........  1 - SQLite ist nicht installiert
+    # -----------------------------------------------------------------------
+    debug "$_is_sqlite_installed_debug_0001"
+    
+    # Prüfe, ob der sqlite3-Befehl existiert und ausführbar ist
+    if command -v sqlite3 >/dev/null 2>&1; then
+        # SQLite gefunden, hole den Pfad
+        local sqlite_path=$(command -v sqlite3)
+        debug "$(printf "$_is_sqlite_installed_debug_0004" "$sqlite_path")"
+        
+        # Prüfe die Version und ob der Befehl tatsächlich ausführbar ist
+        local sqlite_version=$(sqlite3 --version 2>/dev/null | awk '{print $1}')
+        if [ -n "$sqlite_version" ]; then
+            debug "$(printf "$_is_sqlite_installed_debug_0002" "$sqlite_version")"
+            return 0
+        fi
+    fi
+    
+    # SQLite nicht gefunden oder nicht ausführbar
+    debug "$_is_sqlite_installed_debug_0003"
+    return 1
+}
+
 # _ensure_database_file
 _ensure_database_file_debug_0001="INFO: Bestehende SQLite-Datenbank ist gültig: '%s'"
 _ensure_database_file_debug_0002="WARN: Datei '%s' existiert, ist aber keine gültige SQLite-Datenbank. Wird neu initialisiert."
@@ -130,9 +167,15 @@ _ensure_database_file() {
 # ---------------------------------------------------------------------------
 DEBUG_MOD_GLOBAL=1  # Setze globale Debug-Variable, damit Debug-Ausgaben aktiviert sind
 
-if ! _ensure_database_file; then
-    debug "ERROR: Datenbank-Initialisierung fehlgeschlagen."
-    return 1
+# Prüfe zuerst, ob SQLite installiert ist
+if ! _is_sqlite_installed; then
+    debug "WARN: SQLite ist nicht installiert. Datenbank-Initialisierung wird übersprungen."
+else
+    # SQLite ist verfügbar, initialisiere die Datenbank
+    if ! _ensure_database_file; then
+        debug "ERROR: Datenbank-Initialisierung fehlgeschlagen."
+        return 1
+    fi
 fi
 
 DEBUG_MOD_GLOBAL=0  # Löschen globale Debug-Variable, damit Debug-Ausgaben deaktiviert sind
