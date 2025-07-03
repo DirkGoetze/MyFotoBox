@@ -626,14 +626,3 @@ DEBUG_MOD_GLOBAL=0
         return 1
     fi    
 }   
-
-# ===========================================================================
-# Prüfungen bei der Datenbank-Initialisierung
-# ===========================================================================
-# Prüfung, ob die SQLite-Datenbankdatei existiert und ob die gefundene Datei
-# eine gültige SQLite-Datenbank ist. Falls nicht, wird sie neu initialisiert.
-# ---------------------------------------------------------------------------
-# Initialisiere die Datenbank
-ensure_database;
-return 0 # Datenbank-Initialisierung ist per se noch kein Fehler, auch wenn sie nicht erfolgreich war.
-# ===========================================================================
