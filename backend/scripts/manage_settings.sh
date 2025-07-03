@@ -257,6 +257,107 @@ _ensure_table_schema_versions () {
     if [ $? -ne 0 ]; then return 1; else return 0; fi
 }
 
+# _ensure_table_config_hierarchies
+_ensure_table_config_hierarchies_debug_0001="INFO: Sicherstellen, dass die Tabelle 'config_hierarchies' existiert."
+
+_ensure_table_config_hierarchies () {
+    # -----------------------------------------------------------------------
+    # _ensure_table_config_hierarchies
+    # -----------------------------------------------------------------------
+    # Funktion.: Stellt sicher, dass die Tabelle 'config_hierarchies' existiert.
+    # .........  Diese Tabelle wird für die Verwaltung der Hierarchien in der 
+    # .........  Konfiguration verwendet.
+    # Parameter: Keine
+    # Rückgabe.: 0 - Erfolg
+    # .........  1 - Fehler
+    # -----------------------------------------------------------------------
+
+    # Debug-Ausgabe eröffnen
+    debug "$_ensure_table_config_hierarchies_debug_0001"
+
+    # SQL-Statement für die Tabellenerstellung definieren
+    local create_table_sql="CREATE TABLE IF NOT EXISTS config_hierarchies (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        hierarchy_name TEXT NOT NULL UNIQUE, -- Name der Hierarchie
+        hierarchy_data TEXT NOT NULL,         -- JSON-Daten der Hierarchie
+        created_at DATETIME DEFAULT (datetime('now','localtime')), -- Erstellungszeitpunkt
+        updated_at DATETIME DEFAULT (datetime('now','localtime'))  -- Aktualisierungszeitpunkt
+    );"
+
+    # Tabelle erstellen
+    _create_table "$create_table_sql" 
+
+    # Prüfen, ob die Tabelle erfolgreich erstellt wurde
+    if [ $? -ne 0 ]; then return 1; else return 0; fi
+}
+
+# _ensure_table_settings
+_ensure_table_settings_debug_0001="INFO: Sicherstellen, dass die Tabelle 'settings' existiert."
+
+_ensure_table_settings () {
+    # -----------------------------------------------------------------------
+    # _ensure_table_settings
+    # -----------------------------------------------------------------------
+    # Funktion.: Stellt sicher, dass die Tabelle 'settings' existiert.
+    # .........  Diese Tabelle wird für die Speicherung von Konfigurationseinstellungen 
+    # .........  verwendet.
+    # Parameter: Keine
+    # Rückgabe.: 0 - Erfolg
+    # .........  1 - Fehler
+    # -----------------------------------------------------------------------
+
+    # Debug-Ausgabe eröffnen
+    debug "$_ensure_table_settings_debug_0001"
+
+    # SQL-Statement für die Tabellenerstellung definieren
+    local create_table_sql="CREATE TABLE IF NOT EXISTS settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        setting_name TEXT NOT NULL UNIQUE, -- Name der Einstellung
+        setting_value TEXT NOT NULL,        -- Wert der Einstellung
+        created_at DATETIME DEFAULT (datetime('now','localtime')), -- Erstellungszeitpunkt
+        updated_at DATETIME DEFAULT (datetime('now','localtime'))  -- Aktualisierungszeitpunkt
+    );"
+
+    # Tabelle erstellen
+    _create_table "$create_table_sql" 
+
+    # Prüfen, ob die Tabelle erfolgreich erstellt wurde
+    if [ $? -ne 0 ]; then return 1; else return 0; fi
+}
+
+# _ensure_table_db_backups
+_ensure_table_db_backups_debug_0001="INFO: Sicherstellen, dass die Tabelle 'db_backups' existiert."
+
+_ensure_table_db_backups () {
+    # -----------------------------------------------------------------------
+    # _ensure_table_db_backups
+    # -----------------------------------------------------------------------
+    # Funktion.: Stellt sicher, dass die Tabelle 'db_backups' existiert.
+    # .........  Diese Tabelle wird für die Verwaltung von Datenbank-Backups 
+    # .........  verwendet.
+    # Parameter: Keine
+    # Rückgabe.: 0 - Erfolg
+    # .........  1 - Fehler
+    # -----------------------------------------------------------------------
+
+    # Debug-Ausgabe eröffnen
+    debug "$_ensure_table_db_backups_debug_0001"
+
+    # SQL-Statement für die Tabellenerstellung definieren
+    local create_table_sql="CREATE TABLE IF NOT EXISTS db_backups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        backup_name TEXT NOT NULL UNIQUE, -- Name des Backups
+        backup_file TEXT NOT NULL,         -- Pfad zur Backup-Datei
+        created_at DATETIME DEFAULT (datetime('now','localtime')) -- Erstellungszeitpunkt
+    );"
+
+    # Tabelle erstellen
+    _create_table "$create_table_sql" 
+
+    # Prüfen, ob die Tabelle erfolgreich erstellt wurde
+    if [ $? -ne 0 ]; then return 1; else return 0; fi
+}   
+
 # ===========================================================================
 # Funktionen zur Datenbank-Verwaltung
 # ===========================================================================
@@ -290,7 +391,23 @@ ensure_database() {
         debug "$ensure_database_debug_0004"
         return 1
     fi
-    
+
+    if ! _ensure_table_config_hierarchies; then
+        debug "$ensure_database_debug_0004"
+        return 1
+    fi
+
+    if ! _ensure_table_db_backups; then
+        debug "$ensure_database_debug_0004"
+        return 1
+    fi
+
+    if ! _ensure_table_settings; then
+        debug "$ensure_database_debug_0004"
+        return 1
+    fi
+
+    # Alle Tabellen erfolgreich erstellt, Datenbank ist bereit
     debug "$ensure_database_debug_0002"
     return 0
 }   
