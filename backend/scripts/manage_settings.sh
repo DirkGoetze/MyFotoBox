@@ -221,7 +221,7 @@ _create_table() {
 }
 
 # _ensure_table_schema_versions
-_ensure_table_schema_versions_debug_0001="INFO: Sicherstellen, dass die Tabelle '%s' existiert."
+_ensure_table_schema_versions_debug_0001="INFO: Sicherstellen, dass die Tabelle 'schema_versions' existiert."
 
 _ensure_table_schema_versions () {
     # -----------------------------------------------------------------------
@@ -234,10 +234,9 @@ _ensure_table_schema_versions () {
     # Rückgabe.: 0 - Erfolg
     # .........  1 - Fehler
     # -----------------------------------------------------------------------
-    local table_name="schema_versions"
 
     # Debug-Ausgabe eröffnen
-    debug "$(printf "$_ensure_table_schema_versions_debug_0001" "$table_name")"
+    debug "$($_ensure_table_schema_versions_debug_0001)"
 
     # SQL-Statement für die Tabellenerstellung definieren
     local create_table_sql="
