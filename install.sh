@@ -608,7 +608,7 @@ dlg_prepare_structure() {
     # Funktion: Prüft die Projektstruktur und richtet über manage_folders.sh die Verzeichnisstruktur ein
     local rc
     ((STEP_COUNTER++))
-    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfe Verzeichnistruktur und lege Benutzer/Gruppe an ..."
+    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Anlegen der Benutzer/Gruppen, Prüfung der Verzeichnistruktur, Datenbank Einrichtung ..."
     
     set_user_group
     rc=$?
