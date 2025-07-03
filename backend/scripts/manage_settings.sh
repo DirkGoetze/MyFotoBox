@@ -155,14 +155,73 @@ _ensure_database_file() {
     return 0
 }
 
+# _create_table
+_create_table_debug_0001="INFO: Erstelle Tabelle aus SQL-Statement..."
+_create_table_debug_0002="ERROR: Kein Tabellenname im SQL-Statement gefunden."
+_create_table_debug_0003="INFO: SQL-Statement für Tabellenerstellung: \n%s"
+_create_table_debug_0004="SUCCESS: Tabelle '%s' existiert."
+_create_table_debug_0005="INFO: Tabellenstruktur in der Datenbank: \n%s"
+_create_table_debug_0006="INFO: Erstelle Tabelle '%s', da sie nicht existiert."
+_create_table_debug_0007="ERROR: Fehler beim Erstellen der Tabelle '%s'."
+_create_table_debug_0008="SUCCESS: Tabelle '%s' erfolgreich erstellt."
+
+_create_table() {
+    # -----------------------------------------------------------------------
+    # _create_table
+    # -----------------------------------------------------------------------
+    # Funktion.: Stellt sicher, dass die als SQL-Statement übergebene Tabelle 
+    # .........  existiert. Falls nicht, wird sie erstellt.
+    # Parameter: $1 - SQL-Statement zum Erstellen der Tabelle
+    # Rückgabe.: 0 - Erfolg
+    # .........  1 - Fehler
+    # -----------------------------------------------------------------------
+    local create_table_sql="$1"
+
+    # Tabellenname aus dem SQL-Statement extrahieren
+    # Nach dem ersten "CREATE TABLE" suchen und den nächsten "Wort"-Token nehmen
+    local table_name
+    table_name=$(echo "$create_table_sql" | grep -i -o "CREATE\s\+TABLE\s\+\(IF\s\+NOT\s\+EXISTS\s\+\)\?\w\+" | \
+                awk '{print $NF}')
+
+    # Wenn kein Tabellenname gefunden wurde, Fehler ausgeben
+    if [ -z "$table_name" ]; then
+        debug "$_create_table_debug_0002"
+        return 1
+    fi        
+
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$_create_table_debug_0003" "$create_table_sql")"
+
+    # Prüfen, ob die Tabelle bereits existiert
+    local db_file=$(get_data_file)
+    if sqlite3 "$db_file" "SELECT name FROM sqlite_master WHERE type='table' AND name='$table_name';" | grep -q "$table_name"; then
+        # Tabelle existiert bereits
+        debug "$(printf "$_create_table_debug_0004" "$table_name")"
+
+        # Tabellenstruktur aus der Datenbank auslesen und ausgeben
+        local table_structure=$(sqlite3 "$db_file" ".schema $table_name")
+        debug "$(printf "$_create_table_debug_0005" "$table_structure")"
+        return 0
+    fi
+
+    # Tabelle existiert nicht, also erstellen
+    debug "$(printf "$_create_table_debug_0006" "$table_name")"
+    if ! sqlite3 "$db_file" "$create_table_sql"; then
+        debug "$(printf "$_create_table_debug_0007" "$table_name")"
+        return 1
+    fi
+
+    # Erfolgreiche Erstellung, Struktur der neu erstellten Tabelle auslesen
+    local table_structure=$(sqlite3 "$db_file" ".schema $table_name")
+    debug "$(printf "$_create_table_debug_0005" "$table_structure")"
+
+    # Erfolgreich erstellt
+    debug "$(printf "$_create_table_debug_0008" "$table_name")"
+    return 0
+}
+
 # _ensure_table_schema_versions
 _ensure_table_schema_versions_debug_0001="INFO: Sicherstellen, dass die Tabelle '%s' existiert."
-_ensure_table_schema_versions_debug_0002="SUCCESS: Tabelle '%s' existiert."
-_ensure_table_schema_versions_debug_0003="INFO: Erstelle Tabelle '%s', falls sie nicht existiert."
-_ensure_table_schema_versions_debug_0004="ERROR: Fehler beim Erstellen der Tabelle '%s'."
-_ensure_table_schema_versions_debug_0005="SUCCESS: Tabelle '%s' erfolgreich erstellt."
-_ensure_table_schema_versions_debug_0006="DEBUG: SQL-Statement für Tabellenerstellung: \n%s"
-_ensure_table_schema_versions_debug_0007="DEBUG: Tatsächliche Tabellenstruktur in der Datenbank: \n%s"
 
 _ensure_table_schema_versions () {
     # -----------------------------------------------------------------------
@@ -175,7 +234,6 @@ _ensure_table_schema_versions () {
     # Rückgabe.: 0 - Erfolg
     # .........  1 - Fehler
     # -----------------------------------------------------------------------
-    local db_file=$(get_data_file)
     local table_name="schema_versions"
 
     # Debug-Ausgabe eröffnen
@@ -191,30 +249,11 @@ _ensure_table_schema_versions () {
             description TEXT                 -- Beschreibung der letzten Änderung
         );"
 
-    # Prüfen, ob die Tabelle bereits existiert
-    if sqlite3 "$db_file" "SELECT name FROM sqlite_master WHERE type='table' AND name='$table_name';" | grep -q "$table_name"; then
-        # Tabelle existiert bereits
-        debug "$(printf "$_ensure_table_schema_versions_debug_0002" "$table_name")"
+    # Tabelle erstellen
+    _create_table "$create_table_sql" 
 
-        # Tabellenstruktur aus der Datenbank auslesen und ausgeben
-        local table_structure=$(sqlite3 "$db_file" ".schema $table_name")
-        debug "$(printf "$_ensure_table_schema_versions_debug_0007" "$table_structure")"
-
-        return 0
-    fi
-    # Tabelle existiert nicht, also erstellen
-    debug "$(printf "$_ensure_table_schema_versions_debug_0003" "$table_name")"
-    if ! sqlite3 "$db_file" "$create_table_sql"; then
-        debug "$(printf "$_ensure_table_schema_versions_debug_0004" "$table_name")"
-        return 1
-    fi
-
-    # Erfolgreiche Erstellung, Struktur der neu erstellten Tabelle auslesen
-    local table_structure=$(sqlite3 "$db_file" ".schema $table_name")
-    debug "$(printf "$_ensure_table_schema_versions_debug_0007" "$table_structure")"
-
-    debug "$(printf "$_ensure_table_schema_versions_debug_0005" "$table_name")"
-    return 0
+    # Prüfen, ob die Tabelle erfolgreich erstellt wurde
+    if [ $? -ne 0 ]; then return 1; else return 0; fi
 }
 
 # ===========================================================================
