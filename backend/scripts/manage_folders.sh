@@ -617,6 +617,58 @@ get_backup_dir() {
     return 1
 }
 
+# get_data_backup_dir
+get_data_backup_dir_debug_0001="INFO: Ermittle Daten-Backup-Verzeichnis"
+get_data_backup_dir_debug_0002="SUCCESS: Verwende für Daten-Backup-Verzeichnis \$BACKUP_DIR_DATA: %s"
+get_data_backup_dir_debug_0003="SUCCESS: Verwendeter Pfad für Daten-Backup-Verzeichnis: %s"
+get_data_backup_dir_debug_0004="ERROR: Alle Pfade für Daten-Backup-Verzeichnis fehlgeschlagen"
+get_data_backup_dir() {
+    # -----------------------------------------------------------------------
+    # get_data_backup_dir
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zum Daten-Backup-Verzeichnis zurück
+    # Parameter: keine
+    # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
+    # -----------------------------------------------------------------------
+    # Sicherstellen, dass BACKUP_DIR gesetzt ist
+    : "${BACKUP_DIR:=$(get_backup_dir)}"
+    # Pfade für Daten-Backup-Verzeichnis
+    local dir
+    local path_system="$BACKUP_DIR/data"
+    local path_default="$BACKUP_DIR/data"
+    local path_fallback="$BACKUP_DIR/data"
+
+    # Eröffnungsmeldung im Debug Modus
+    debug "$get_data_backup_dir_debug_0001"
+
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${BACKUP_DIR_DATA+x}" ] && [ -n "$BACKUP_DIR_DATA" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_data_backup_dir_debug_0002" "$BACKUP_DIR_DATA")"
+        echo "$BACKUP_DIR_DATA"
+        return 0
+    fi
+
+    # Verwende die für diesen Ordner definierten Pfade
+    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)
+    if [ -n "$dir" ]; then
+        debug "$(printf "$get_data_backup_dir_debug_0003" "$dir")"
+        # System-Variable aktualisieren, wenn nötig
+        if [ -z "${BACKUP_DIR_DATA+x}" ] || [ -z "$BACKUP_DIR_DATA" ] || [ "$dir" != "$BACKUP_DIR_DATA" ]; then
+            BACKUP_DIR_DATA="$dir"
+            export BACKUP_DIR_DATA
+        fi
+        echo "$dir"
+        return 0
+    fi
+
+    debug "$get_data_backup_dir_debug_0004"
+    echo ""
+    return 1
+}
+
+
 # get_nginx_backup_dir
 get_nginx_backup_dir_debug_0001="INFO: Ermittle NGINX-Backup-Verzeichnis"
 get_nginx_backup_dir_debug_0002="SUCCESS: Verwende für NGINX-Backup-Verzeichnis \$BACKUP_DIR_NGINX: %s"
@@ -1138,8 +1190,8 @@ get_data_dir() {
     fi
 
     # Verwende die für diesen Ordner definierten Pfade
-    # Aktiviere Fallback Order(1) und Erzeugen von Symlink (1)
-    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 1)    
+    # Aktiviere Fallback Order(1) und deaktiviere Erzeugen von Symlink (0)
+    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 0)    
     if [ -n "$dir" ]; then
         debug "$(printf "$get_data_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig

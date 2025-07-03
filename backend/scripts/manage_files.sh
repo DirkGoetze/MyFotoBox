@@ -56,6 +56,7 @@ CONFIG_FILE_EXT_FIREWALL=".rules"
 CONFIG_FILE_EXT_SSH=".ssh"
 LOG_FILE_EXT_DEFAULT=".log"
 TMP_FILE_EXT_DEFAULT=".tmp"
+DB_FILE_EXT_DEFAULT=".db"
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
@@ -165,6 +166,58 @@ _get_file_name() {
 # ===========================================================================
 # Hauptfunktionen für die Ermittlung von Dateinamen im Projekt
 # ===========================================================================
+
+# get_data_file
+get_data_file_debug_0001="INFO: Ermittle SQLite-Datenbankdatei"
+get_data_file_debug_0002="SUCCESS: Verwende für DB-Datei \$DB_FILENAME: '%s'"
+get_data_file_debug_0003="INFO: Genutzter Verzeichnispfad zur SQLite-Datenbankdatei: '%s'"
+get_data_file_debug_0004="SUCCESS: Vollständiger Pfad zur SQLite-Datenbankdatei: '%s'"
+get_data_file_debug_0005="ERROR: SQLite-Datenbankdatei nicht gefunden oder nicht lesbar/beschreibbar"
+
+get_data_file() {
+    # -----------------------------------------------------------------------
+    # get_data_file
+    # -----------------------------------------------------------------------
+    # Funktion.: Gibt den Pfad zu einer SQLite-Datenbankdatei zurück
+    # Parameter: keine
+    # Rückgabe.: Der vollständige Name, inklusive Pfad zur Datei
+    # .........  Exit-Code-> 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    local folder_path                         # Pfad zum Konfigurationsordner
+    local file_name                           # Name der Konfigurationsdatei
+    local file_ext                            # Standard-Dateiendung
+    local full_filename
+
+    # Eröffnungsmeldung für die Debug-Ausgabe
+    debug "$get_data_file_debug_0001"
+
+    # Prüfen, ob Systemvariable bereits gesetzt ist
+    if [ "${DB_FILENAME+x}" ] && [ -n "$DB_FILENAME" ]; then
+        # Systemvariable wurde bereits ermittelt, diese zurückgeben
+        debug "$(printf "$get_data_file_debug_0002" "$DB_FILENAME")"
+        echo "$DB_FILENAME"
+        return 0
+    fi
+
+    # Festlegen der Bestandteile für den Dateinamen
+    file_name="fotobox"
+    file_ext="$DB_FILE_EXT_DEFAULT"
+    folder_path="$(get_data_dir_config_dir)"
+    debug "$(printf "$get_data_file_debug_0003" "$folder_path")"
+
+    # Zusammensetzen des vollständigen Dateinamens erfolgreich
+    full_filename="$(_get_file_name "$file_name" "$file_ext" "$folder_path")"
+    if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
+        # Erfolg: Datei existiert und ist les-/schreibbar
+        debug "$(printf "$get_data_file_debug_0004" "$full_filename")"
+        echo "$full_filename"
+        return 0
+    else
+        # Fehlerfall
+        debug "$get_data_file_debug_0005"
+        return 1
+    fi
+}
 
 # get_config_file
 get_config_file_debug_0001="INFO: Ermittle Name der Projekt Konfigurationsdatei"
@@ -551,13 +604,39 @@ get_backup_file() {
     local extension="${2:-.zip}"  # Default: .zip
     local backup_dir
 
-    debug "$(printf "$get_backup_file_debug_0001" "$component")" "CLI" "get_backup_file"
+    debug "$(printf "$get_backup_file_debug_0001" "$component")"
 
     # Überprüfen, ob die erforderlichen Parameter angegeben sind
     if ! check_param "$component" "component"; then return 1; fi
     
     # Backup-Verzeichnis abrufen und Dateinamen generieren
-    backup_dir="$("$MANAGE_FOLDERS_SH" get_backup_dir)"
+    backup_dir="$(get_backup_dir)"
+    echo "${backup_dir}/$(date +%Y-%m-%d)_${component}${extension}"
+}
+
+# get_backup_data_file
+get_backup_data_file_debug_0001="Ermittle Backup-Daten-Datei für Komponente: %s"
+
+get_backup_data_file() {
+    # -----------------------------------------------------------------------
+    # get_backup_data_file
+    # -----------------------------------------------------------------------
+    # Funktion: Gibt den Pfad zu einer Backup-Datenbank-Datei zurück
+    # Parameter: $1 - Komponente die eine Backup-Datenbank-Datei anlegt 
+    #            $2 - Suffix für die Dateierweiterung (optional)
+    # Rückgabewert: Der vollständige Pfad zur Datei
+    # -----------------------------------------------------------------------
+    local component="$1"
+    local extension="${2:-.zip}"  # Default: .zip
+    local backup_dir
+
+    debug "$(printf "$get_backup_data_file_debug_0001" "$component")"
+
+    # Überprüfen, ob die erforderlichen Parameter angegeben sind
+    if ! check_param "$component" "component"; then return 1; fi
+    
+    # Backup-Verzeichnis abrufen und Dateinamen generieren
+    backup_dir="$(get_data_backup_dir)"
     echo "${backup_dir}/$(date +%Y-%m-%d)_${component}${extension}"
 }
 
