@@ -633,13 +633,5 @@ DEBUG_MOD_GLOBAL=0
 # Prüfung, ob die SQLite-Datenbankdatei existiert und ob die gefundene Datei
 # eine gültige SQLite-Datenbank ist. Falls nicht, wird sie neu initialisiert.
 # ---------------------------------------------------------------------------
-# Setze globale Debug-Variable, damit Debug-Ausgaben aktiviert sind
-DEBUG_MOD_GLOBAL=1
-
 # Initialisiere die Datenbank
-if ! ensure_database; then
-    debug "ERROR: Datenbank-Initialisierung fehlgeschlagen."
-fi
-
-# Löschen globale Debug-Variable, damit Debug-Ausgaben deaktiviert sind
-DEBUG_MOD_GLOBAL=0  
+ensure_database;
