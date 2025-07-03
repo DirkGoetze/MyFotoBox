@@ -639,7 +639,6 @@ DEBUG_MOD_GLOBAL=1
 # Initialisiere die Datenbank
 if ! ensure_database; then
     debug "ERROR: Datenbank-Initialisierung fehlgeschlagen."
-    return 1
 fi
 
 # Löschen globale Debug-Variable, damit Debug-Ausgaben deaktiviert sind
