@@ -420,6 +420,46 @@ _ensure_table_settings_history () {
     if [ $? -ne 0 ]; then return 1; else return 0; fi
 }
 
+# _ensure_table_setting_dependencies
+_ensure_table_setting_dependencies_debug_0001="INFO: Sicherstellen, dass die Tabelle 'setting_dependencies' existiert."
+
+_ensure_table_setting_dependencies () {
+    # -----------------------------------------------------------------------
+    # _ensure_table_setting_dependencies
+    # -----------------------------------------------------------------------
+    # Funktion.: Stellt sicher, dass die Tabelle 'setting_dependencies' existiert.
+    # .........  Diese Tabelle wird für die Verwaltung von Abhängigkeiten 
+    # .........  zwischen Konfigurationseinstellungen verwendet.
+    # Parameter: Keine
+    # Rückgabe.: 0 - Erfolg
+    # .........  1 - Fehler
+    # -----------------------------------------------------------------------
+
+    # Debug-Ausgabe eröffnen
+    debug "$_ensure_table_setting_dependencies_debug_0001"
+
+    # SQL-Statement für die Tabellenerstellung definieren
+    local create_table_sql="CREATE TABLE IF NOT EXISTS setting_dependencies (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        setting_id INTEGER NOT NULL,         -- Verweis auf die Einstellung
+        dependent_setting_id INTEGER NOT NULL, -- Abhängige Einstellung
+        dependency_type TEXT NOT NULL,       -- Typ der Abhängigkeit (z.B. 'requires', 'conflicts')
+        condition TEXT,                      -- Bedingung für die Abhängigkeit
+        FOREIGN KEY (setting_id) REFERENCES settings(id) ON DELETE CASCADE,
+        FOREIGN KEY (dependent_setting_id) REFERENCES settings(id) ON DELETE CASCADE,
+        UNIQUE(setting_id, dependent_setting_id, dependency_type) -- Verhindert doppelte Abhängigkeiten
+    );"
+
+    # Tabelle erstellen
+    _create_table "$create_table_sql"
+
+    # Prüfen, ob die Tabelle erfolgreich erstellt wurde
+    if [ $? -ne 0 ]; then return 1; else return 0; fi
+}
+
+# _ensure_table_change_groups
+
+
 # ===========================================================================
 # Funktionen zur Datenbank-Verwaltung
 # ===========================================================================
@@ -474,6 +514,11 @@ ensure_database() {
         return 1
     fi
 
+    if ! _ensure_table_setting_dependencies; then
+        debug "$ensure_database_debug_0004"
+        return 1
+    fi
+    
     # Alle Tabellen erfolgreich erstellt, Datenbank ist bereit
     debug "$ensure_database_debug_0002"
     return 0
