@@ -654,6 +654,12 @@ dlg_prepare_structure() {
             exit 1
             ;;
     esac
+
+    # Datenbank einrichten
+    if ! ensure_database; then
+        print_error "Fehler beim Einrichten der Datenbank. Bitte überprüfen Sie die Konfiguration."
+        exit 1
+    fi
 }
 
 dlg_backend_integration() {
