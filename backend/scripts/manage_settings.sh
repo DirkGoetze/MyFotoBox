@@ -86,26 +86,6 @@ _is_sqlite_installed() {
     return 1
 }
 
-_escape_sql_statement() {
-    # -----------------------------------------------------------------------
-    # escape_sql_statement
-    # -----------------------------------------------------------------------
-    # Funktion.: Entschärft einen SQL-Statement-String für die sichere 
-    # .........  Verwendung in SQLite
-    # Parameter: $1 - Zu escapender SQL-Statement-String
-    # Rückgabe.: SQLite-sicherer String
-    # -----------------------------------------------------------------------
-    local sql_statement="$1"
-    
-    # Überprüfen, ob das SQL-Statement angegeben ist
-    if ! check_param "$sql_statement" "sql_statement"; then return 1; fi
-
-    # Einfache Anführungszeichen verdoppeln (SQLite-Standard-Escaping)
-    local escaped="${sql_statement//\'/'\'\'}"
-    
-    echo "$escaped"
-}
-
 # _ensure_database_file
 _ensure_database_file_debug_0001="INFO: Bestehende SQLite-Datenbank ist gültig: '%s'"
 _ensure_database_file_debug_0002="WARN: Datei '%s' existiert, ist aber keine gültige SQLite-Datenbank. Wird neu initialisiert."
@@ -199,7 +179,6 @@ _create_table() {
 
     # Überprüfen, ob das SQL-Statement angegeben ist
     if ! check_param "$sql_statement" "sql_statement"; then return 1; fi
-    sql_statement=$(_escape_sql_statement "$sql_statement")
 
     # Tabellenname aus dem SQL-Statement extrahieren
     # Nach dem ersten "CREATE TABLE" suchen und den nächsten "Wort"-Token nehmen
