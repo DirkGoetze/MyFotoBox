@@ -779,8 +779,6 @@ load_resources() {
         debug_output "$(printf "$load_resources_debug_0004" "manage_logging.sh")"
     fi
 
-    export DEBUG_MOD_GLOBAL=1  # Setze globale Debug-Variable, damit Debug-Ausgaben aktiviert sind
-
     # 4. manage_settings.sh einbinden
     debug_output "$(printf "$load_resources_debug_0002" "manage_settings.sh")"
     bind_resource "manage_settings.sh"
@@ -788,8 +786,6 @@ load_resources() {
         debug_output "$(printf "$load_resources_debug_0003" "manage_settings.sh")"
         result=1
     fi
-
-    export DEBUG_MOD_GLOBAL=0  # Löschen globale Debug-Variable, damit Debug-Ausgaben deaktiviert sind
 
     # 5. manage_nginx.sh einbinden
     debug_output "$(printf "$load_resources_debug_0002" "manage_nginx.sh")"

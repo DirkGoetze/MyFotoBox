@@ -128,7 +128,11 @@ _ensure_database_file() {
 # Prüfung, ob die SQLite-Datenbankdatei existiert und ob die gefundene Datei
 # eine gültige SQLite-Datenbank ist. Falls nicht, wird sie neu initialisiert.
 # ---------------------------------------------------------------------------
+DEBUG_MOD_GLOBAL=1  # Setze globale Debug-Variable, damit Debug-Ausgaben aktiviert sind
+
 if ! _ensure_database_file; then
     debug "ERROR: Datenbank-Initialisierung fehlgeschlagen."
     return 1
 fi
+
+DEBUG_MOD_GLOBAL=0  # Löschen globale Debug-Variable, damit Debug-Ausgaben deaktiviert sind
