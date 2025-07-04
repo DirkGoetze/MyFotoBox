@@ -682,7 +682,7 @@ _validate_table() {
 # ---------------------------------------------------------------------------
 # Hilfsfunktionen zu Datenbank-Tabellen-Struktur
 # ---------------------------------------------------------------------------
-
+## --- 1. Tabelle: schema_versions ------------------------------------------
 # _ensure_table_schema_versions
 _ensure_table_schema_versions_debug_0001="INFO: Sicherstellen, dass die Tabelle 'schema_versions' existiert."
 
@@ -721,6 +721,32 @@ _ensure_table_schema_versions () {
     if [ $? -ne 0 ]; then return 1; else return 0; fi
 }
 
+# _validate_table_schema_versions
+_validate_table_schema_versions_debug_0001="INFO: Validiere die Integrität der 'schema_versions'-Tabelle."
+
+_validate_table_schema_versions() {
+    # -----------------------------------------------------------------------
+    # _validate_table_schema_versions
+    # -----------------------------------------------------------------------
+    # Funktion.: Überprüft die Integrität und Konsistenz der 'schema_versions'-Tabelle
+    # Parameter: keine
+    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
+    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
+    # -----------------------------------------------------------------------
+
+    # Debug-Ausgabe eröffnen
+    debug "$_validate_table_schema_versions_debug_0001"
+
+    _validate_table "schema_versions" \
+        _chk_empty_values \
+        _chk_invalid_types \
+        _chk_duplicate_keys \
+        _chk_invalid_key_chars
+
+    return $?
+}
+
+## --- 2. Tabelle: db_backups -----------------------------------------------
 # _ensure_table_db_backups
 _ensure_table_db_backups_debug_0001="INFO: Sicherstellen, dass die Tabelle 'db_backups' existiert."
 
@@ -762,6 +788,32 @@ _ensure_table_db_backups () {
     if [ $? -ne 0 ]; then return 1; else return 0; fi
 }   
 
+# _validate_table_db_backups
+_validate_table_db_backups_debug_0001="INFO: Validiere die Integrität der 'db_backups'-Tabelle."
+
+_validate_table_db_backups() {
+    # -----------------------------------------------------------------------
+    # _validate_table_db_backups
+    # -----------------------------------------------------------------------
+    # Funktion.: Überprüft die Integrität und Konsistenz der 'db_backups'-Tabelle
+    # Parameter: keine
+    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
+    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
+    # -----------------------------------------------------------------------
+
+    # Debug-Ausgabe eröffnen
+    debug "$_validate_table_db_backups_debug_0001"
+
+    _validate_table "db_backups" \
+        _chk_empty_values \
+        _chk_invalid_types \
+        _chk_duplicate_keys \
+        _chk_invalid_key_chars
+
+    return $?
+}
+
+## --- 3. Tabelle: config_hierarchies ---------------------------------------
 # _ensure_table_config_hierarchies
 _ensure_table_config_hierarchies_debug_0001="INFO: Sicherstellen, dass die Tabelle 'config_hierarchies' existiert."
 
@@ -810,6 +862,16 @@ _ensure_table_config_hierarchies () {
 _validate_table_config_hierarchies_debug_0001="INFO: Validiere die Integrität der 'config_hierarchies'-Tabelle."
 
 _validate_table_config_hierarchies() {
+    # -----------------------------------------------------------------------
+    # _validate_table_config_hierarchies
+    # -----------------------------------------------------------------------
+    # Funktion.: Überprüft die Integrität und Konsistenz der 'config_hierarchies'-Tabelle
+    # Parameter: keine
+    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
+    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
+    # -----------------------------------------------------------------------
+
+    # Debug-Ausgabe eröffnen
     debug "$_validate_table_config_hierarchies_debug_0001"
 
     _validate_table "config_hierarchies" \
@@ -819,6 +881,7 @@ _validate_table_config_hierarchies() {
     return $?
 }
 
+## --- 4. Tabelle: settings -------------------------------------------------
 # _ensure_table_settings
 _ensure_table_settings_debug_0001="INFO: Sicherstellen, dass die Tabelle 'settings' existiert."
 
@@ -882,6 +945,8 @@ _validate_table_settings() {
     # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
     # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
     # -----------------------------------------------------------------------
+
+    # Debug-Ausgabe eröffnen
     debug "$_validate_table_settings_debug_0001"
 
     # Aufruf der generischen Validierungsfunktion mit den spezifischen Prüfungen für settings
@@ -896,6 +961,7 @@ _validate_table_settings() {
     return $?
 }
 
+## --- 5. Tabelle: settings_history -----------------------------------------
 # _ensure_table_settings_history
 _ensure_table_settings_history_debug_0001="INFO: Sicherstellen, dass die Tabelle 'settings_history' existiert."
 
@@ -964,6 +1030,7 @@ _validate_table_settings_history() {
     return $?
 }
 
+## --- 6. Tabelle: setting_dependencies -------------------------------------
 # _ensure_table_setting_dependencies
 _ensure_table_setting_dependencies_debug_0001="INFO: Sicherstellen, dass die Tabelle 'setting_dependencies' existiert."
 
@@ -1005,6 +1072,32 @@ _ensure_table_setting_dependencies () {
     if [ $? -ne 0 ]; then return 1; else return 0; fi
 }
 
+# _validate_table_setting_dependencies
+_validate_table_setting_dependencies_debug_0001="INFO: Validiere die Integrität der 'setting_dependencies'-Tabelle."
+
+_validate_table_setting_dependencies() {
+    # -----------------------------------------------------------------------
+    # _validate_table_setting_dependencies
+    # -----------------------------------------------------------------------
+    # Funktion.: Überprüft die Integrität und Konsistenz der 'setting_dependencies'-Tabelle
+    # Parameter: keine
+    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
+    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
+    # -----------------------------------------------------------------------
+
+    # Debug-Ausgabe eröffnen
+    debug "$_validate_table_setting_dependencies_debug_0001"
+
+    _validate_table "setting_dependencies" \
+        _chk_empty_values \
+        _chk_invalid_types \
+        _chk_duplicate_keys \
+        _chk_invalid_key_chars
+
+    return $?
+}
+
+## --- 7. Tabelle: change_groups --------------------------------------------
 # _ensure_table_change_groups
 _ensure_table_change_groups_debug_0001="INFO: Sicherstellen, dass die Tabelle 'change_groups' existiert."
 
@@ -1048,6 +1141,32 @@ _ensure_table_change_groups () {
     if [ $? -ne 0 ]; then return 1; else return 0; fi
 }
 
+# _validate_table_change_groups
+_validate_table_change_groups_debug_0001="INFO: Validiere die Integrität der 'change_groups'-Tabelle."
+
+_validate_table_change_groups() {
+    # -----------------------------------------------------------------------
+    # _validate_table_change_groups
+    # -----------------------------------------------------------------------
+    # Funktion.: Überprüft die Integrität und Konsistenz der 'change_groups'-Tabelle
+    # Parameter: keine
+    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
+    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
+    # -----------------------------------------------------------------------
+
+    # Debug-Ausgabe eröffnen
+    debug "$_validate_table_change_groups_debug_0001"
+
+    _validate_table "change_groups" \
+        _chk_empty_values \
+        _chk_invalid_types \
+        _chk_duplicate_keys \
+        _chk_invalid_key_chars
+
+    return $?
+}
+
+## --- 8. Tabelle: settings_change_groups -----------------------------------
 # _ensure_table_settings_change_groups
 _ensure_table_settings_change_groups_debug_0001="INFO: Sicherstellen, dass die Tabelle 'settings_change_groups' existiert."
 
@@ -1085,6 +1204,31 @@ _ensure_table_settings_change_groups () {
 
     # Prüfen, ob die Tabelle erfolgreich erstellt wurde
     if [ $? -ne 0 ]; then return 1; else return 0; fi
+}
+
+# _validate_table_settings_change_groups
+_validate_table_settings_change_groups_debug_0001="INFO: Validiere die Integrität der 'settings_change_groups'-Tabelle."
+
+_validate_table_settings_change_groups() {
+    # -----------------------------------------------------------------------
+    # _validate_table_settings_change_groups
+    # -----------------------------------------------------------------------
+    # Funktion.: Überprüft die Integrität und Konsistenz der 'settings_change_groups'-Tabelle
+    # Parameter: keine
+    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
+    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
+    # -----------------------------------------------------------------------
+
+    # Debug-Ausgabe eröffnen
+    debug "$_validate_table_settings_change_groups_debug_0001"
+
+    _validate_table "settings_change_groups" \
+        _chk_empty_values \
+        _chk_invalid_types \
+        _chk_duplicate_keys \
+        _chk_invalid_key_chars
+
+    return $?
 }
 
 # ===========================================================================
@@ -1169,9 +1313,14 @@ validate_database() {
     debug "$validate_database_debug_0001"
 
     # Alle Tabellen validieren
-    _validate_table_settings || validation_errors=$((validation_errors + 1))
+    _validate_table_schema_versions || validation_errors=$((validation_errors + 1))
+    _validate_table_db_backups || validation_errors=$((validation_errors + 1))
     _validate_table_config_hierarchies || validation_errors=$((validation_errors + 1))
+    _validate_table_settings || validation_errors=$((validation_errors + 1))
     _validate_table_settings_history || validation_errors=$((validation_errors + 1))
+    _validate_table_setting_dependencies || validation_errors=$((validation_errors + 1))
+    _validate_table_change_groups || validation_errors=$((validation_errors + 1))
+    _validate_table_settings_change_groups || validation_errors=$((validation_errors + 1))
 
     if [ $validation_errors -eq 0 ]; then
         debug "$validate_database_debug_0002"
