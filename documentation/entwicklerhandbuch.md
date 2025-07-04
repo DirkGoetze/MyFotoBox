@@ -78,6 +78,23 @@ Das Backend basiert auf einer modularen Architektur mit klaren Verantwortlichkei
 | Shell-Module | `scripts/manage_` | OS-Interaktion, systemd, NGINX, Dateisystem |
 | Frontend-Module | `js/manage_` | UI-Logik, API-Kommunikation, Datenvalidierung |
 
+> **AKTUALISIERUNG (Juli 2025)**: Neue Shell-Module für die zentrale Konfigurationsverwaltung wurden hinzugefügt:
+>
+> - `manage_database.sh`: Datenbankstruktur und Tabellenverwaltung
+> - `manage_settings.sh`: Settings-API und Hierarchie-Management
+
+### 2.3 Wichtige Shell-Module und ihre Aufgaben
+
+| Modul | Hauptaufgaben |
+|-------|---------------|
+| `manage_folders.sh` | Verzeichnisstruktur, Pfadverwaltung |
+| `manage_files.sh` | Dateisystemoperationen, Pfad-Getter |
+| `manage_database.sh` | Datenbankstruktur, Tabellenerstellung, Schema-Migrationen |
+| `manage_settings.sh` | Konfigurationsoperationen, Hierarchie-Management, Settings-API |
+| `manage_logging.sh` | Logging-Funktionalität für alle Module |
+| `manage_auth.sh` | Authentifizierung, Benutzer- und Tokenverwaltung |
+| `manage_nginx.sh` | NGINX-Konfiguration und -Verwaltung |
+
 ## 3. Frontend-Entwicklung
 
 ## 4. Backend-Entwicklung
@@ -142,6 +159,113 @@ function setAuthToken(token) {
 - **Error-Handling**: Keine sensiblen Informationen in Fehlermeldungen
 
 ## 6. Datenbankverwaltung
+
+> **AKTUALISIERUNG (Juli 2025)**: Die Konfigurationsverwaltung wurde vollständig überarbeitet und nutzt jetzt eine zentrale SQLite-Datenbank mit hierarchischen Schlüsseln, Änderungsverfolgung und Migrationsfunktionen.
+
+### 6.1 Zentrale Konfigurationsdatenbank
+
+Die Konfigurationsverwaltung wurde von INI-Dateien auf eine zentrale SQLite-Datenbank umgestellt, was folgende Vorteile bietet:
+
+- Konsistente Konfiguration für Bash- und Python-Module
+- Hierarchische Schlüsselstruktur (z.B. `nginx.ssl.enabled`)
+- Vollständige Änderungshistorie für alle Konfigurationswerte
+- Rollback-Funktionen für fehlerhafte Konfigurationsänderungen
+- Typsicherheit durch explizite Datentyp-Angaben
+- Gruppierung zusammengehöriger Änderungen
+
+### 6.2 Neue Module für die Konfigurationsverwaltung
+
+Die Konfigurationsverwaltung wurde auf zwei spezialisierte Module aufgeteilt:
+
+1. **manage_database.sh**: Verantwortlich für Datenbankstruktur und Tabellenverwaltung
+   - Erstellung und Validierung der Datenbankstruktur
+   - Migrations- und Backup-Funktionen
+   - Prüfung der Integrität und Konsistenz
+
+2. **manage_settings.sh**: Verantwortlich für die Settings-API
+   - CRUD-Operationen für Konfigurationswerte
+   - Hierarchie-Management und -Validierung
+   - Änderungs-Tracking und Rollback-Funktionen
+
+### 6.3 Datenbankstruktur
+
+Die Konfigurationsdatenbank verwendet folgende Tabellen:
+
+```sql
+-- Hierarchie-Verwaltungstabelle
+CREATE TABLE config_hierarchies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    hierarchy_name TEXT NOT NULL UNIQUE,
+    hierarchy_data TEXT NOT NULL,
+    description TEXT,
+    responsible TEXT,
+    created_at DATETIME DEFAULT (datetime('now','localtime')),
+    updated_at DATETIME DEFAULT (datetime('now','localtime')),
+    enabled BOOLEAN DEFAULT 1
+);
+
+-- Konfigurationstabelle
+CREATE TABLE settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    hierarchy_id INTEGER,
+    key TEXT NOT NULL,
+    value TEXT,
+    value_type TEXT NOT NULL,
+    description TEXT,
+    created_at DATETIME DEFAULT (datetime('now','localtime')),
+    updated_at DATETIME DEFAULT (datetime('now','localtime')),
+    is_active BOOLEAN DEFAULT 1,
+    weight INTEGER DEFAULT 0,
+    change_group TEXT,
+    FOREIGN KEY (hierarchy_id) REFERENCES config_hierarchies(id) ON DELETE SET NULL,
+    UNIQUE(hierarchy_id, key)
+);
+
+-- Änderungshistorientabelle
+CREATE TABLE settings_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    setting_id INTEGER NOT NULL,
+    old_value TEXT,
+    new_value TEXT,
+    changed_at DATETIME DEFAULT (datetime('now','localtime')),
+    changed_by TEXT,
+    change_reason TEXT,
+    FOREIGN KEY (setting_id) REFERENCES settings(id) ON DELETE CASCADE
+);
+
+-- Weitere unterstützende Tabellen für Änderungsgruppen, Migrationen, etc.
+```
+
+### 6.4 Settings-API
+
+Die Settings-API bietet eine einheitliche Schnittstelle für alle Konfigurationsoperationen:
+
+```bash
+# Grundlegende CRUD-Operationen
+get_config_value "nginx.port"              # Konfigurationswert lesen
+set_config_value "nginx.port" "8080"       # Konfigurationswert setzen
+has_config_value "nginx.port"              # Prüfen, ob Wert existiert
+del_config_value "nginx.port"              # Konfigurationswert löschen
+lst_config_values "nginx"                  # Alle Werte einer Hierarchie auflisten
+
+# Hierarchie-Verwaltung
+register_config_hierarchy "nginx" "NGINX-Webserver Konfiguration" "webserver"
+
+# Änderungsverfolgung und Rollback
+apply_config_changes "change_group_123"    # Änderungsgruppe anwenden
+rollback_config_changes "change_group_123" # Änderungen zurückrollen
+```
+
+### 6.5 Migration von INI-Dateien
+
+Die Migration von INI-basierten Konfigurationen zur SQLite-Datenbank erfolgt schrittweise:
+
+1. Initialisierung der Datenbankstruktur mit `setup_database`
+2. Migration bestehender Konfigurationswerte aus INI-Dateien
+3. Umstellung aller Module auf die neue Settings-API
+4. Validierung und Tests für alle migrierten Module
+
+> **WICHTIG**: Module, die bisher `get_config_file` verwenden, müssen auf `get_config_value` umgestellt werden.
 
 ## 7. Fehlerbehandlung und Logging
 
@@ -282,6 +406,49 @@ async function handleResponse(response) {
 ```
 
 ## 8. Migration von Legacy-Code
+
+> **AKTUALISIERUNG (Juli 2025)**: Die Migration von INI-basierten Konfigurationen zur SQLite-Datenbank ist in vollem Gange.
+
+### 8.1 Migration der Konfiguration
+
+Die Umstellung von INI-Dateien auf die zentrale SQLite-Datenbank erfolgt in mehreren Phasen:
+
+#### 8.1.1 Phase 1: Infrastruktur (abgeschlossen)
+
+- Implementierung der Datenbankstruktur (`manage_database.sh`)
+- Entwicklung der Settings-API (`manage_settings.sh`)
+- Hierarchische Schlüsselverwaltung und Validierung
+
+#### 8.1.2 Phase 2: Datenmigration (in Arbeit)
+
+- Extraktion vorhandener Konfigurationswerte aus INI-Dateien
+- Überführung in die hierarchische Datenbankstruktur
+- Validierung der migrierten Werte
+
+#### 8.1.3 Phase 3: Codeumstellung (geplant)
+
+- Ersetzen von `get_config_file` durch `get_config_value`
+- Aktualisierung aller Module zur Verwendung der Settings-API
+- Einführung von Fallback-Mechanismen für Backward-Kompatibilität
+
+### 8.2 Migrationsprozess für Module
+
+Für die Umstellung von Modulen auf die neue Settings-API ist folgender Prozess einzuhalten:
+
+1. **Identifizierung**: Alle direkten INI-Datei-Zugriffe im Modul identifizieren
+2. **Hierarchie-Registrierung**: Hierarchische Schlüsselstruktur für das Modul definieren
+3. **Migration**: Konfigurationswerte in die Datenbank migrieren
+4. **Code-Anpassung**: Code auf Verwendung der Settings-API umstellen
+5. **Validierung**: Tests zur Überprüfung der korrekten Funktionalität
+
+```bash
+# Beispiel für die Umstellung eines Moduls
+# Vor der Migration (alte Methode)
+NGINX_PORT=$(grep "^port=" $(get_config_file_nginx) | cut -d= -f2)
+
+# Nach der Migration (neue Settings-API)
+NGINX_PORT=$(get_config_value "nginx.port")
+```
 
 ## 9. Testen und Qualitätssicherung
 
