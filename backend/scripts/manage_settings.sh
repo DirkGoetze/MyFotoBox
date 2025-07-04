@@ -245,7 +245,7 @@ _is_column_exists_debug_0003="ERROR: Spalte '%s' in Tabelle '%s' nicht gefunden.
 
 _is_column_exists() {
     # -----------------------------------------------------------------------
-    # _chk_invalid_types
+    # _is_column_exists
     # -----------------------------------------------------------------------
     # Funktion.: Prüft ob eine Spalte in einer Tabelle vorkommt
     # Parameter: $1 - Name der zu prüfenden Spalte
@@ -316,7 +316,6 @@ _chk_invalid_types() {
         *)
             # Prüfen, ob die Tabelle die benötigten Spalten hat
             if ! _is_column_exists "$field" "$table_name" "$db_file"; then
-            # if ! sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$field"; then
                 debug "$(printf "$_chk_invalid_types_debug_0002" "$table_name" "$field")"
                 return 0
             fi
@@ -373,7 +372,6 @@ _chk_empty_values() {
         *)
             # Prüfen, ob die Tabelle die benötigten Spalten hat
             if ! _is_column_exists "$value_column" "$table_name" "$db_file"; then
-            # if ! sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$value_column"; then
                 debug "$(printf "$_chk_empty_values_debug_0002" "$table_name" "$value_column")"
                 return 0
             fi
@@ -423,7 +421,6 @@ _chk_inactive_settings() {
 
     # Nur für Tabellen mit is_active-Spalte
     if ! _is_column_exists "$active_column" "$table_name" "$db_file"; then
-    # if ! sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$active_column"; then
         debug "$(printf "$_chk_inactive_settings_debug_0002" "$table_name" "$active_column")"
         return 0
     fi
@@ -493,7 +490,6 @@ _chk_foreign_key_integrity() {
     
     # Prüfen, ob die Tabelle die benötigte FK-Spalte hat
     if ! _is_column_exists "$fk_column" "$table_name" "$db_file"; then
-    # if ! sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$fk_column"; then
         debug "$(printf "$_chk_foreign_key_integrity_debug_0002" "$table_name" "$fk_column")"
         return 0
     fi
@@ -551,7 +547,6 @@ _chk_duplicate_keys() {
         *)
             # Wenn keine spezifischen Schlüsselspalten definiert sind, überspringen
             if ! _is_column_exists "$key_column" "$table_name" "$db_file"; then
-            # if ! sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$key_column"; then
                 debug "$(printf "$_chk_duplicate_keys_debug_0002" "$table_name" "$key_column")"
                 return 0
             fi
@@ -561,7 +556,6 @@ _chk_duplicate_keys() {
     # SQL-Abfrage für Duplikate vorbereiten    
     local sql_query
     if [ -n "$extra_column" ] && _is_column_exists "$extra_column" "$table_name" "$db_file"; then
-    # if [ -n "$extra_column" ] && sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$extra_column"; then
         sql_query="SELECT $key_column, $extra_column, COUNT(*) as count FROM $table_name 
                   GROUP BY $key_column, $extra_column HAVING count > 1;"
     else
@@ -612,7 +606,6 @@ _chk_invalid_key_chars() {
 
     # Prüfen, ob die Tabelle die benötigte Schlüsselspalte hat
     if ! _is_column_exists "$key_column" "$table_name" "$db_file"; then
-    # if ! sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$key_column"; then
         debug "$(printf "$_chk_invalid_key_chars_debug_0002" "$table_name" "$key_column")"
         return 0
     fi
@@ -664,7 +657,7 @@ _validate_table() {
     
     # Prüfen, ob die Tabelle überhaupt existiert
     if ! sqlite3 "$db_file" "SELECT name FROM sqlite_master WHERE type='table' AND name='$table_name';" | grep -q "$table_name"; then
-        debug "$_validate_table_debug_0002" "$table_name"
+        debug "$(printf "$_validate_table_debug_0002" "$table_name")"
         return 1
     fi
     
