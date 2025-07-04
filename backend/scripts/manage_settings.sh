@@ -990,3 +990,47 @@ rollback_config_changes() {
     log "$(printf "$rollback_config_changes_log_0003" "$change_group")"
     return 0
 }
+
+# ===========================================================================
+# TODO: Noch zu implementierende Funktionen
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# TODO: Implementiere get_config_group
+# ---------------------------------------------------------------------------
+# Funktion: Gibt alle Schlüssel-Wert-Paare einer Änderungsgruppe zurück
+# Parameter:
+#   $1 - Gruppen-ID
+#   $2 - (Optional) Pfad zur Datenbank
+# Rückgabe: Liste aller Schlüssel-Wert-Paare dieser Gruppe
+# Returncode: 0 wenn erfolgreich, 1 bei Fehler
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# TODO: Implementiere list_registered_hierarchies
+# ---------------------------------------------------------------------------
+# Funktion: Listet alle registrierten Konfigurationshierarchien auf
+# Parameter:
+#   $1 - (Optional) Pfad zur Datenbank
+# Ausgabe: Liste aller registrierten Hierarchien im Format "name|beschreibung|verantwortlicher"
+# Returncode: 0 wenn erfolgreich, 1 bei Fehler
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# TODO: Implementiere validate_hierarchy_path
+# ---------------------------------------------------------------------------
+# Funktion: Validiert einen Hierarchiepfad gegen registrierte Hierarchien
+# Parameter:
+#   $1 - Hierarchiepfad (z.B. "nginx.ssl")
+#   $2 - (Optional) Pfad zur Datenbank
+# Returncode: 0 wenn gültig, 1 wenn ungültig
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# TODO: Implementiere initialize_default_hierarchies
+# ---------------------------------------------------------------------------
+# Funktion: Registriert die Standard-Hierarchien für das System
+# Parameter:
+#   $1 - (Optional) Pfad zur Datenbank
+# Returncode: 0 wenn erfolgreich, 1 bei Fehler
+# ---------------------------------------------------------------------------

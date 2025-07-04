@@ -226,6 +226,8 @@ get_config_file_debug_0003="INFO: Genutzter Verzeichnispfad zur Konfigurationsda
 get_config_file_debug_0004="SUCCESS: Vollständiger Pfad zur Konfigurationsdatei: '%s'"
 get_config_file_debug_0005="ERROR: Konfigurationsdatei nicht gefunden oder nicht lesbar/beschreibbar"
 
+# TODO: Diese Funktion kann nach vollständiger Migration der Konfiguration zur SQLite-Datenbank entfernt werden.
+# Die Funktion wird durch die Funktionen in manage_settings.sh (get_config_value) ersetzt.
 get_config_file() {
     # -----------------------------------------------------------------------
     # get_config_file
