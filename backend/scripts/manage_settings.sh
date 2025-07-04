@@ -238,6 +238,44 @@ _create_table() {
     return 0
 }
 
+# _is_column_exists
+_is_column_exists_debug_0001="INFO: Prüfe, ob Spalte '%s' in Tabelle '%s' existiert."
+_is_column_exists_debug_0002="INFO: Spalte '%s' in Tabelle '%s' gefunden."
+_is_column_exists_debug_0003="ERROR: Spalte '%s' in Tabelle '%s' nicht gefunden."
+
+_is_column_exists() {
+    # -----------------------------------------------------------------------
+    # _chk_invalid_types
+    # -----------------------------------------------------------------------
+    # Funktion.: Prüft ob eine Spalte in einer Tabelle vorkommt
+    # Parameter: $1 - Name der zu prüfenden Spalte
+    # .........  $2 - Name der Tabelle
+    # .........  $3 - Pfad zur Datenbankdatei
+    # Rückgabe.: 0 - Spalte existiert
+    # .........  1 - Spalte existiert nicht
+    # -----------------------------------------------------------------------
+    local column_name="$1"
+    local table_name="$2"
+    local db_file="$3"
+
+    # Überprüfen, ob der Spaltenname, Tabellenname und der Datenbankpfad angegeben sind
+    if ! check_param "$column_name" "column_name"; then return 1; fi
+    if ! check_param "$table_name" "table_name"; then return 1; fi
+    if ! check_param "$db_file" "db_file"; then return 1; fi
+
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$_is_column_exists_debug_0001" "$column_name" "$table_name")"
+
+    # Überprüfen, ob die Spalte in der Tabelle existiert
+    if sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$column_name"; then
+        debug "$(printf "$_is_column_exists_debug_0002" "$column_name" "$table_name")"
+        return 0
+    else
+        debug "$(printf "$_is_column_exists_debug_0003" "$column_name" "$table_name")"
+        return 1
+    fi
+}
+
 # _chk_invalid_types
 _chk_invalid_types_debug_0001="INFO: Prüfe auf ungültige Datentypen in Tabelle '%s'."
 _chk_invalid_types_debug_0002="INFO: Tabelle '%s' hat keine '%s'-Spalte, Typvalidierung wird übersprungen."
@@ -277,7 +315,8 @@ _chk_invalid_types() {
         # Weitere Tabellen können hier hinzugefügt werden
         *)
             # Prüfen, ob die Tabelle die benötigten Spalten hat
-            if ! sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$field"; then
+            if ! _is_column_exists "$field" "$table_name" "$db_file"; then
+            # if ! sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$field"; then
                 debug "$(printf "$_chk_invalid_types_debug_0002" "$table_name" "$field")"
                 return 0
             fi
@@ -333,7 +372,8 @@ _chk_empty_values() {
         # Weitere Tabellen können hier hinzugefügt werden
         *)
             # Prüfen, ob die Tabelle die benötigten Spalten hat
-            if ! sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$value_column"; then
+            if ! _is_column_exists "$value_column" "$table_name" "$db_file"; then
+            # if ! sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$value_column"; then
                 debug "$(printf "$_chk_empty_values_debug_0002" "$table_name" "$value_column")"
                 return 0
             fi
@@ -382,7 +422,8 @@ _chk_inactive_settings() {
     debug "$(printf "$_chk_inactive_settings_debug_0001" "$table_name")"
 
     # Nur für Tabellen mit is_active-Spalte
-    if ! sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$active_column"; then
+    if ! _is_column_exists "$active_column" "$table_name" "$db_file"; then
+    # if ! sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$active_column"; then
         debug "$(printf "$_chk_inactive_settings_debug_0002" "$table_name" "$active_column")"
         return 0
     fi
@@ -451,7 +492,8 @@ _chk_foreign_key_integrity() {
     esac
     
     # Prüfen, ob die Tabelle die benötigte FK-Spalte hat
-    if ! sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$fk_column"; then
+    if ! _is_column_exists "$fk_column" "$table_name" "$db_file"; then
+    # if ! sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$fk_column"; then
         debug "$(printf "$_chk_foreign_key_integrity_debug_0002" "$table_name" "$fk_column")"
         return 0
     fi
@@ -508,7 +550,8 @@ _chk_duplicate_keys() {
         # Weitere Tabellen können hier hinzugefügt werden
         *)
             # Wenn keine spezifischen Schlüsselspalten definiert sind, überspringen
-            if ! sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$key_column"; then
+            if ! _is_column_exists "$key_column" "$table_name" "$db_file"; then
+            # if ! sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$key_column"; then
                 debug "$(printf "$_chk_duplicate_keys_debug_0002" "$table_name" "$key_column")"
                 return 0
             fi
@@ -517,7 +560,8 @@ _chk_duplicate_keys() {
 
     # SQL-Abfrage für Duplikate vorbereiten    
     local sql_query
-    if [ -n "$extra_column" ] && sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$extra_column"; then
+    if [ -n "$extra_column" ] && _is_column_exists "$extra_column" "$table_name" "$db_file"; then
+    # if [ -n "$extra_column" ] && sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$extra_column"; then
         sql_query="SELECT $key_column, $extra_column, COUNT(*) as count FROM $table_name 
                   GROUP BY $key_column, $extra_column HAVING count > 1;"
     else
@@ -567,7 +611,8 @@ _chk_invalid_key_chars() {
     debug "$(printf "$_chk_invalid_key_chars_debug_0001" "$table_name")"
 
     # Prüfen, ob die Tabelle die benötigte Schlüsselspalte hat
-    if ! sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$key_column"; then
+    if ! _is_column_exists "$key_column" "$table_name" "$db_file"; then
+    # if ! sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$key_column"; then
         debug "$(printf "$_chk_invalid_key_chars_debug_0002" "$table_name" "$key_column")"
         return 0
     fi
@@ -1131,10 +1176,10 @@ validate_database() {
     debug "$validate_database_debug_0001"
 
     # Alle Tabellen validieren
-    _validate_settings_table || validation_errors=$((validation_errors + 1))
-    _validate_config_hierarchies_table || validation_errors=$((validation_errors + 1))
-    _validate_settings_history_table || validation_errors=$((validation_errors + 1))
-    
+    _validate_table_settings || validation_errors=$((validation_errors + 1))
+    _validate_table_config_hierarchies || validation_errors=$((validation_errors + 1))
+    _validate_table_settings_history || validation_errors=$((validation_errors + 1))
+
     if [ $validation_errors -eq 0 ]; then
         debug "$validate_database_debug_0002"
         return 0
