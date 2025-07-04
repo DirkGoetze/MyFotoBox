@@ -528,7 +528,7 @@ _chk_duplicate_keys() {
     # Parameter: $1 - Name der zu prüfenden Tabelle
     # .........  $2 - Pfad zur Datenbankdatei
     # Rückgabe.: 0 - Keine Duplikate gefunden
-    # .........  1 - Ungültige Datentypen gefunden
+    # .........  1 - Duplikate gefunden
     # -----------------------------------------------------------------------
     local table_name="$1"      # Name der zu prüfenden Tabelle
     local db_file="$2"         # Pfad zur Datenbankdatei
@@ -540,7 +540,7 @@ _chk_duplicate_keys() {
     if ! check_param "$db_file" "db_file"; then return 1; fi
 
     # Debug-Ausgabe eröffnen
-    debug "$(printf "$_chk_invalid_types_debug_0001" "$table_name")"
+    debug "$(printf "$_chk_duplicate_keys_debug_0001" "$table_name")"
 
     # Tabellen-spezifische Anpassungen
     case "$table_name" in
@@ -1103,8 +1103,8 @@ ensure_database_debug_0001="INFO: Sicherstellen, dass die Datenbank initialisier
 ensure_database_debug_0002="SUCCESS: Datenbank ist initialisiert und bereit zur Nutzung."
 ensure_database_debug_0003="WARN: SQLite ist nicht installiert. Datenbank-Initialisierung wurde übersprungen."
 ensure_database_debug_0004="ERROR: Datenbank-Initialisierung fehlgeschlagen."
-ensure_database_debug_0005="ERROR: Tabelle 'schema_versions' konnte nicht erstellt werden."
-ensure_database_debug_0006="ERROR: Tabelle 'settings_change_groups' konnte nicht erstellt werden."
+ensure_database_debug_0005="ERROR: Tabelle 'db_backups' konnte nicht erstellt werden."
+ensure_database_debug_0006="ERROR: Tabelle 'schema_versions' konnte nicht erstellt werden."
 ensure_database_debug_0007="ERROR: Tabelle 'config_hierarchies' konnte nicht erstellt werden."
 ensure_database_debug_0008="ERROR: Tabelle 'settings' konnte nicht erstellt werden."
 ensure_database_debug_0009="ERROR: Tabelle 'settings_history' konnte nicht erstellt werden."
