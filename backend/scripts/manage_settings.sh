@@ -2,9 +2,9 @@
 # ------------------------------------------------------------------------------
 # manage_settings.sh
 # ------------------------------------------------------------------------------
-# Funktion: Verwaltung, Initialisierung und Update der SQLite Datenbank und  
-# ......... Bereitstellung einer einheitlichen Schnittstelle für die Lese- und
+# Funktion: Bereitstellung einer einheitlichen Schnittstelle für die Lese- und
 # ......... Schreiboperationen auf die Datenbank.
+# ......... 
 # ......... 
 # ......... 
 # ------------------------------------------------------------------------------
@@ -50,1333 +50,943 @@ DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 # ===========================================================================
 
 # ---------------------------------------------------------------------------
-# Hilfsfunktionen zur Datenbank-Verwaltung
+# Hilfsfunktionen zur Werte- und Schlüssel-Verwaltung
 # ---------------------------------------------------------------------------
 
-# _is_sqlite_installed
-_is_sqlite_installed_debug_0001="INFO: Prüfe, ob SQLite installiert ist"
-_is_sqlite_installed_debug_0002="SUCCESS: SQLite ist installiert (Version: %s)"
-_is_sqlite_installed_debug_0003="ERROR: SQLite ist nicht installiert oder nicht im PATH"
-_is_sqlite_installed_debug_0004="INFO: SQLite CLI wurde gefunden unter: %s"
+# _parse_hierarchical_key
+_parse_hierarchical_key_debug_0001="INFO: Extrahiere Hierarchie-Namen und Schlüsselname aus: '%s'"
+_parse_hierarchical_key_debug_0002="SUCCESS: Hierarchie-Namen: '%s', Schlüsselname: '%s'"
 
-_is_sqlite_installed() {
+_parse_hierarchical_key() {
     # -----------------------------------------------------------------------
-    # _is_sqlite_installed
+    # _parse_hierarchical_key
     # -----------------------------------------------------------------------
-    # Funktion.: Prüft, ob SQLite auf dem System installiert ist und 
-    # .........  die sqlite3-Kommandozeile im PATH verfügbar ist
-    # Parameter: Keine
-    # Rückgabe.: 0 - SQLite ist installiert
-    # .........  1 - SQLite ist nicht installiert
+    # Funktion.: Extrahiert den Hierarchie-Namen und den eigentlichen 
+    # .........  Schlüsselnamen aus einem hierarchischen Schlüssel.
+    # Parameter: $1 - Hierarchischer Schlüssel (z.B. "nginx.ssl.enabled")
+    # Rückgabe.: hierarchisches Array mit Hierarchie-Namen 
+    # .........  Schlüsselnamen
     # -----------------------------------------------------------------------
-    debug "$_is_sqlite_installed_debug_0001"
+    local key="$1"
+
+    # Überprüfen, ob der Schlüssel angegeben ist
+    if ! check_param "$key" "key"; then return 1; fi
+
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$_parse_hierarchical_key_debug_0001" "$key")"
+
+    # Ersten Punkt finden und den String aufteilen
+    local hierarchy_name="${key%%.*}"
+    local key_name="${key#*.}"
     
-    # Prüfe, ob der sqlite3-Befehl existiert und ausführbar ist
-    if command -v sqlite3 >/dev/null 2>&1; then
-        # SQLite gefunden, hole den Pfad
-        local sqlite_path=$(command -v sqlite3)
-        debug "$(printf "$_is_sqlite_installed_debug_0004" "$sqlite_path")"
-        
-        # Prüfe die Version und ob der Befehl tatsächlich ausführbar ist
-        local sqlite_version=$(sqlite3 --version 2>/dev/null | awk '{print $1}')
-        if [ -n "$sqlite_version" ]; then
-            debug "$(printf "$_is_sqlite_installed_debug_0002" "$sqlite_version")"
-            return 0
-        fi
+    # Sonderfall: Kein Punkt im Schlüssel
+    if [ "$key" = "$key_name" ]; then
+        key_name=""
     fi
     
-    # SQLite nicht gefunden oder nicht ausführbar
-    debug "$_is_sqlite_installed_debug_0003"
-    return 1
+    # Ergebnis ausgeben
+    debug "$(printf "$_parse_hierarchical_key_debug_0002" "$hierarchy_name" "$key_name")"
+    echo "$hierarchy_name" "$key_name"
 }
 
-# _ensure_database_file
-_ensure_database_file_debug_0001="INFO: Bestehende SQLite-Datenbank ist gültig: '%s'"
-_ensure_database_file_debug_0002="WARN: Datei '%s' existiert, ist aber keine gültige SQLite-Datenbank. Wird neu initialisiert."
-_ensure_database_file_debug_0003="INFO: Initialisiere SQLite-Datenbank: '%s'"
-_ensure_database_file_debug_0004="SUCCESS: SQLite-Datenbank erfolgreich initialisiert: '%s'"
-_ensure_database_file_debug_0005="ERROR: Fehler beim Initialisieren der SQLite-Datenbank: '%s'"
-_ensure_database_file_debug_0006="ERROR: SQLite-Datenbank konnte nicht korrekt initialisiert werden: '%s'"
-_ensure_database_file_debug_0007="SUCCESS: SQLite-Datenbank existiert und ist gültig: '%s'"
+# _clean_key
+_clean_key_debug_0001="INFO: Bereinige Schlüsselname: '%s'"
+_clean_key_debug_0002="SUCCESS: Bereinigter Schlüsselname: '%s'"
 
-_ensure_database_file() {
+_clean_key() {
     # -----------------------------------------------------------------------
-    # _ensure_database_file
+    # _clean_key
     # -----------------------------------------------------------------------
-    # Funktion.: Stellt sicher, dass die SQLite-Datenbankdatei existiert.
-    # .........  Erstellt die Datei, falls sie nicht vorhanden ist, und setzt
-    # .........  die richtigen Berechtigungen. Prüft zusätzlich, ob eine 
-    # .........  gefundene/vorhandene Datei eine gültige SQLite-DB ist.
-    # Parameter: Keine
-    # Rückgabe.: 0 - Erfolg
-    # .........  1 - Fehler
-    # .........  Vollständiger Pfad zur Datenbankdatei für weitere Operationen
+    # Funktion.: Bereinigt einen Schlüsselnamen, um sicherzustellen, dass er 
+    # .........  nur gültige Zeichen enthält.
+    # Parameter: $1 - Schlüsselname
+    # .........  $2 - (Optional) Standard-Schlüsselname
+    # Rückgabe.: Bereinigter Schlüsselname
     # -----------------------------------------------------------------------
-    local db_file=$(get_data_file)
-    local is_valid_sqlite=0
-    
-    # Prüfen, ob die Datei existiert und eine gültige SQLite-DB ist
-    if [ -s "$db_file" ]; then
-        # Datei existiert und hat Inhalt, prüfen ob es eine gültige SQLite-DB ist
-        if sqlite3 "$db_file" "PRAGMA quick_check;" &>/dev/null; then
-            # Gültige SQLite-Datenbank
-            is_valid_sqlite=1
-            debug "$(printf "$_ensure_database_file_debug_0001" "$db_file")"
-        else
-            # Datei existiert, ist aber keine gültige SQLite-DB
-            debug "$(printf "$_ensure_database_file_debug_0002" "$db_file")"
-            # Sicherheitshalber Backup erstellen, falls es wichtige Daten sind
-            # Extrahiere Dateinamen ohne Endung und Extension
-            local db_basename=$(basename "$db_file")
-            local db_name="${db_basename%.*}"
-            local db_ext="${db_basename##*.}"
-            local db_file_backup=$(get_backup_data_file "$db_name" "$db_ext")
-            cp "$db_file" "$db_file_backup" 2>/dev/null
-            # Datei leeren, um sie neu zu initialisieren
-            true > "$db_file"
-        fi
-    fi
-    
-    # SQLite-Datenbank initialisieren, wenn nötig
-    if [ "$is_valid_sqlite" -eq 0 ]; then
-        # SQLite-DB initialisieren
-        debug "$(printf "$_ensure_database_file_debug_0003" "$db_file")"
-        if ! sqlite3 "$db_file" "PRAGMA foreign_keys = ON; VACUUM;"; then
-            debug "$(printf "$_ensure_database_file_debug_0005" "$db_file")"
-            echo ""
-            return 1
-        fi
-        
-        # Erneut prüfen, ob die Initialisierung erfolgreich war
-        if ! sqlite3 "$db_file" "PRAGMA integrity_check;" &>/dev/null; then
-            debug "$(printf "$_ensure_database_file_debug_0006" "$db_file")"
-            echo ""
-            return 1
-        fi
+    local key="$1"
+    local default="${2:-}"
 
-        debug "$(printf "$_ensure_database_file_debug_0004" "$db_file")"
-        echo "$db_file"
-        return 0
-    fi
+    # Überprüfen, ob der Schlüssel angegeben ist
+    if ! check_param "$key" "key"; then return 1; fi
+
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$_clean_key_debug_0001" "$key")"
+
+    # Ungültige Zeichen entfernen (nur a-z, A-Z, 0-9, ., _ und - sind erlaubt)
+    key=$(echo "$key" | sed 's/[^a-zA-Z0-9._-]//g')
+
+    # Führende und nachfolgende Punkte/Unterstriche entfernen
+    key=$(echo "$key" | sed 's/^[._]*//' | sed 's/[._]*$//')
     
-    debug "$(printf "$_ensure_database_file_debug_0007" "$db_file")"
-    echo "$db_file"
+    # Mehrfache Punkte auf einen reduzieren
+    key=$(echo "$key" | sed 's/\.\.*/\./g')
+
+    # Wenn der bereinigte Schlüssel leer ist, den Standard verwenden
+    if [ -z "$key" ] && [ -n "$default" ]; then
+        key="$default"
+    fi
+
+    # Ergebnis ausgeben
+    debug "$(printf "$_clean_key_debug_0002" "$key")"
+    echo "$key"
+}
+
+# _validate_key
+_validate_key_debug_0001="INFO: Validierung des Schlüssels: '%s'"
+_validate_key_debug_0002="ERROR: Ungültiger Schlüsselname: Schlüssel ist leer."
+_validate_key_debug_0003="ERROR: Ungültiger Schlüsselname: '%s' enthält ungültige Zeichen. Erlaubt sind: a-z, A-Z, 0-9, ., _ und -."
+_validate_key_debug_0004="ERROR: Ungültiger Schlüsselname: '%s' darf nicht mit einem Punkt oder Unterstrich beginnen oder enden."
+_validate_key_debug_0005="ERROR: Ungültiger Schlüsselname: '%s' darf keine aufeinanderfolgenden Punkte oder Unterstriche enthalten."
+_validate_key_debug_0006="SUCCESS: Schlüssel '%s' ist gültig."
+
+_validate_key() {
+    # -----------------------------------------------------------------------
+    # _validate_key
+    # -----------------------------------------------------------------------
+    # Funktion.: Validiert einen Schlüsselnamen auf korrekte Zeichen und Format.
+    # .........  Der Schlüsselname darf nur alphanumerische Zeichen, Punkte,
+    # .........  Unterstriche und Bindestriche enthalten. Er darf nicht mit 
+    # .........  einem Punkt oder Unterstrich beginnen oder enden und keine 
+    # .........  aufeinanderfolgenden Punkte oder Unterstriche haben.
+    # Parameter: $1 - Schlüsselname
+    # Rückgabe.: 0 - Schlüssel ist gültig
+    # .........  1 - Schlüssel ist ungültig
+    # -----------------------------------------------------------------------
+    local key="$1"
+
+    # Überprüfen, ob der Schlüssel angegeben ist
+    if ! check_param "$key" "key"; then return 1; fi
+
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$_validate_key_debug_0001" "$key")"
+
+    # Leerer Schlüssel ist ungültig
+    if [ -z "$key" ]; then
+        debug "$_validate_key_debug_0002"
+        return 1
+    fi
+
+    # Ungültige Zeichen prüfen (nur a-z, A-Z, 0-9, ., _ und - sind erlaubt)
+    if ! [[ "$key" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+        debug "$(printf "$_validate_key_debug_0003" "$key")"
+        return 1
+    fi
+
+    # Prüfen, ob der Schlüssel mit einem Punkt oder Unterstrich beginnt oder endet
+    if [[ "$key" =~ ^[._] || "$key" =~ [._]$ ]]; then
+        debug "$(printf "$_validate_key_debug_0004" "$key")"
+        return 1
+    fi
+
+    # Prüfen auf aufeinanderfolgende Punkte oder Unterstriche
+    if [[ "$key" =~ \.\. || "$key" =~ __ || "$key" =~ \._ || "$key" =~ _\. ]]; then
+        debug "$(printf "$_validate_key_debug_0005" "$key")"
+        return 1
+    fi
+
+    debug "$(printf "$_validate_key_debug_0006" "$key")"
     return 0
 }
 
-# ---------------------------------------------------------------------------
-# Hilfsfunktionen zur Tabellen-Verwaltung
-# ---------------------------------------------------------------------------
+# _generate_group_id
+_generate_group_id_debug_0001="INFO: Generiere Gruppen-ID mit Präfix '%s', Zeitstempel '%s' und Zufallsstring '%s'"
+_generate_group_id_debug_0002="SUCCESS: Generierte Gruppen-ID: '%s'"
 
-# _create_table
-_create_table_debug_0001="INFO: Erstelle Tabelle aus SQL-Statement..."
-_create_table_debug_0002="ERROR: Kein Tabellenname im SQL-Statement gefunden."
-_create_table_debug_0003="INFO: SQL-Statement für Tabellenerstellung: \n%s"
-_create_table_debug_0004="SUCCESS: Tabelle '%s' existiert."
-_create_table_debug_0005="INFO: Tabellenstruktur in der Datenbank: \n%s"
-_create_table_debug_0006="INFO: Erstelle Tabelle '%s', da sie nicht existiert."
-_create_table_debug_0007="ERROR: Fehler beim Erstellen der Tabelle '%s'."
-_create_table_debug_0008="SUCCESS: Tabelle '%s' erfolgreich erstellt."
-
-_create_table() {
+_generate_group_id() {
     # -----------------------------------------------------------------------
-    # _create_table
+    # generate_group_id
     # -----------------------------------------------------------------------
-    # Funktion.: Stellt sicher, dass die als SQL-Statement übergebene Tabelle 
-    # .........  existiert. Falls nicht, wird sie erstellt.
-    # Parameter: $1 - SQL-Statement zum Erstellen der Tabelle
-    # .........  $2 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Erfolg
-    # .........  1 - Fehler
+    # Funktion.: Diese Funktion erzeugt eine eindeutige ID für eine 
+    # .........  Änderungsgruppe.
+    # Parameter: $1 - (Optional) Präfix für die Gruppen-ID
+    # Rückgabe.: Eindeutige Gruppen-ID
     # -----------------------------------------------------------------------
-    local sql_statement="$1"
-    local db_file="$2"
-
-    # Überprüfen, ob das SQL-Statement und der Datenbankpfad angegeben sind
-    if ! check_param "$sql_statement" "sql_statement"; then return 1; fi
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Tabellenname aus dem SQL-Statement extrahieren
-    # Nach dem ersten "CREATE TABLE" suchen und den nächsten "Wort"-Token nehmen
-    local table_name
-    table_name=$(echo "$sql_statement" | grep -i -o "CREATE\s\+TABLE\s\+\(IF\s\+NOT\s\+EXISTS\s\+\)\?\w\+" | \
-                awk '{print $NF}')
-
-    # Wenn kein Tabellenname gefunden wurde, Fehler ausgeben
-    if [ -z "$table_name" ]; then
-        debug "$_create_table_debug_0002"
-        return 1
-    fi        
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$_create_table_debug_0003" "$sql_statement")"
-
-    # Prüfen, ob die Tabelle bereits existiert
-    if sqlite3 "$db_file" "SELECT name FROM sqlite_master WHERE type='table' AND name='$table_name';" | grep -q "$table_name"; then
-        # Tabelle existiert bereits
-        debug "$(printf "$_create_table_debug_0004" "$table_name")"
-
-        # Tabellenstruktur aus der Datenbank auslesen und ausgeben
-        local table_structure=$(sqlite3 "$db_file" ".schema $table_name")
-        debug "$(printf "$_create_table_debug_0005" "$table_structure")"
-        return 0
-    fi
-
-    # Tabelle existiert nicht, also erstellen
-    debug "$(printf "$_create_table_debug_0006" "$table_name")"
-    if ! sqlite3 "$db_file" "$sql_statement"; then
-        debug "$(printf "$_create_table_debug_0007" "$table_name")"
-        return 1
-    fi
-
-    # Erfolgreiche Erstellung, Struktur der neu erstellten Tabelle auslesen
-    local table_structure=$(sqlite3 "$db_file" ".schema $table_name")
-    debug "$(printf "$_create_table_debug_0005" "$table_structure")"
-
-    # Erfolgreich erstellt
-    debug "$(printf "$_create_table_debug_0008" "$table_name")"
-    return 0
-}
-
-# _is_column_exists
-_is_column_exists_debug_0001="INFO: Prüfe, ob Spalte '%s' in Tabelle '%s' existiert."
-_is_column_exists_debug_0002="INFO: Spalte '%s' in Tabelle '%s' gefunden."
-_is_column_exists_debug_0003="ERROR: Spalte '%s' in Tabelle '%s' nicht gefunden."
-
-_is_column_exists() {
-    # -----------------------------------------------------------------------
-    # _is_column_exists
-    # -----------------------------------------------------------------------
-    # Funktion.: Prüft ob eine Spalte in einer Tabelle vorkommt
-    # Parameter: $1 - Name der zu prüfenden Spalte
-    # .........  $2 - Name der Tabelle
-    # .........  $3 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Spalte existiert
-    # .........  1 - Spalte existiert nicht
-    # -----------------------------------------------------------------------
-    local column_name="$1"
-    local table_name="$2"
-    local db_file="$3"
-
-    # Überprüfen, ob der Spaltenname, Tabellenname und der Datenbankpfad angegeben sind
-    if ! check_param "$column_name" "column_name"; then return 1; fi
-    if ! check_param "$table_name" "table_name"; then return 1; fi
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$_is_column_exists_debug_0001" "$column_name" "$table_name")"
-
-    # Überprüfen, ob die Spalte in der Tabelle existiert
-    if sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$column_name"; then
-        debug "$(printf "$_is_column_exists_debug_0002" "$column_name" "$table_name")"
-        return 0
-    else
-        debug "$(printf "$_is_column_exists_debug_0003" "$column_name" "$table_name")"
-        return 1
-    fi
-}
-
-# _chk_invalid_types
-_chk_invalid_types_debug_0001="INFO: Prüfe auf ungültige Datentypen in Tabelle '%s'."
-_chk_invalid_types_debug_0002="INFO: Tabelle '%s' hat keine '%s'-Spalte, Typvalidierung wird übersprungen."
-_chk_invalid_types_debug_0003="ERROR: Ungültige Datentypen in Tabelle '%s' gefunden: %s"
-_chk_invalid_types_debug_0004="INFO: Keine ungültigen Datentypen in Tabelle '%s' gefunden."
-
-_chk_invalid_types() {
-    # -----------------------------------------------------------------------
-    # _chk_invalid_types
-    # -----------------------------------------------------------------------
-    # Funktion.: Prüft eine Tabelle auf ungültige Datentypen
-    # Parameter: $1 - Name der zu prüfenden Tabelle
-    # .........  $2 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Keine ungültigen Datentypen gefunden
-    # .........  1 - Ungültige Datentypen gefunden
-    # -----------------------------------------------------------------------
-    local table_name="$1"                # Name der zu prüfenden Tabelle
-    local db_file="$2"                   # Pfad zur Datenbankdatei
-    local column="key"                   # Standard-Spalte für Einstellungen
-    local field="value_type"             # Spalte mit dem Datentyp
-    local valid_types="'string','int','bool','float','json'"  
-
-    # Überprüfen, ob der Tabellenname und der Datenbankpfad angegeben sind
-    if ! check_param "$table_name" "table_name"; then return 1; fi
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$_chk_invalid_types_debug_0001" "$table_name")"
-
-    # Tabellen-spezifische Anpassungen
-    case "$table_name" in
-        settings)
-            column="key"
-            field="value_type"
-            valid_types="'string','int','bool','float','json'"
-            ;;
-        # Weitere Tabellen können hier hinzugefügt werden
-        *)
-            # Prüfen, ob die Tabelle die benötigten Spalten hat
-            if ! _is_column_exists "$field" "$table_name" "$db_file"; then
-                debug "$(printf "$_chk_invalid_types_debug_0002" "$table_name" "$field")"
-                return 0
-            fi
-            ;;
-    esac
-    
-    # SQL-Abfrage für ungültige Typen vorbereiten
-    local invalid_values=$(sqlite3 "$db_file" "SELECT $column FROM $table_name WHERE $field NOT IN ($valid_types);")
-    
-    # Auswertung des Ergebnisses
-    if [ -n "$invalid_values" ]; then
-        debug "$(printf "$_chk_invalid_types_debug_0003" "$table_name" "$invalid_values")"
-        return 1
-    else
-        debug "$(printf "$_chk_invalid_types_debug_0004" "$table_name")"
-        return 0
-    fi
-}
-
-# _chk_empty_values
-_chk_empty_values_debug_0001="INFO: Prüfe auf leere Werte in Tabelle '%s'."
-_chk_empty_values_debug_0002="INFO: Tabelle '%s' hat keine '%s'-Spalte, Leerwerteprüfung wird übersprungen."
-_chk_empty_values_debug_0003="ERROR: Leere Werte in Tabelle '%s' gefunden: %s"
-_chk_empty_values_debug_0004="INFO: Keine leeren Werte in Tabelle '%s' gefunden."
-
-_chk_empty_values() {
-    # -----------------------------------------------------------------------
-    # _chk_empty_values
-    # -----------------------------------------------------------------------
-    # Funktion.: Prüft eine Tabelle auf leere Werte
-    # Parameter: $1 - Name der zu prüfenden Tabelle
-    # .........  $2 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Keine leeren Werte gefunden
-    # .........  1 - Leere Werte gefunden
-    # -----------------------------------------------------------------------
-    local table_name="$1"                # Name der zu prüfenden Tabelle
-    local db_file="$2"                   # Pfad zur Datenbankdatei
-    local key_column="key"               # Standard-Spalte für Schlüssel
-    local value_column="value"           # Spalte mit dem Wert
-    
-    # Überprüfen, ob der Tabellenname und der Datenbankpfad angegeben sind
-    if ! check_param "$table_name" "table_name"; then return 1; fi
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$_chk_empty_values_debug_0001" "$table_name")"
-
-    # Tabellen-spezifische Anpassungen
-    case "$table_name" in
-        settings|config_hierarchies)
-            # Spezifische Spalten für diese Tabellen
-            ;;
-        # Weitere Tabellen können hier hinzugefügt werden
-        *)
-            # Prüfen, ob die Tabelle die benötigten Spalten hat
-            if ! _is_column_exists "$value_column" "$table_name" "$db_file"; then
-                debug "$(printf "$_chk_empty_values_debug_0002" "$table_name" "$value_column")"
-                return 0
-            fi
-            ;;
-    esac
-    
-    # SQL-Abfrage für leere Werte vorbereiten
-    local empty_values=$(sqlite3 "$db_file" "SELECT $key_column FROM $table_name WHERE $value_column IS NULL OR $value_column = '';")
-
-    # Auswertung des Ergebnisses
-    if [ -n "$empty_values" ]; then
-        debug "$(printf "$_chk_empty_values_debug_0003" "$table_name" "$empty_values")"
-        return 1
-    else
-        debug "$(printf "$_chk_empty_values_debug_0004" "$table_name")"
-        return 0
-    fi
-}
-
-# _chk_inactive_settings
-_chk_inactive_settings_debug_0001="INFO: Prüfe auf inaktive Einstellungen in Tabelle '%s'."
-_chk_inactive_settings_debug_0002="INFO: Tabelle '%s' hat keine '%s'-Spalte, Aktivitätsprüfung wird übersprungen."
-_chk_inactive_settings_debug_0003="WARN: Inaktive Einstellungen in Tabelle '%s' gefunden: %s"
-_chk_inactive_settings_debug_0004="INFO: Keine inaktiven Einstellungen in Tabelle '%s' gefunden."
-
-_chk_inactive_settings() {
-    # -----------------------------------------------------------------------
-    # _chk_inactive_settings
-    # -----------------------------------------------------------------------
-    # Funktion.: Prüft eine Tabelle auf inaktive Einstellungen
-    # Parameter: $1 - Name der zu prüfenden Tabelle
-    # .........  $2 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Keine inaktiven Einstellungen gefunden
-    # .........  1 - Inaktive Einstellungen gefunden
-    # -----------------------------------------------------------------------
-    local table_name="$1"           # Name der zu prüfenden Tabelle
-    local db_file="$2"              # Pfad zur Datenbankdatei
-    local key_column="key"          # Standard-Spalte für Schlüssel
-    local active_column="is_active" # Spalte, die den Aktivitätsstatus angibt
-    
-    # Überprüfen, ob der Tabellenname und der Datenbankpfad angegeben sind
-    if ! check_param "$table_name" "table_name"; then return 1; fi
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$_chk_inactive_settings_debug_0001" "$table_name")"
-
-    # Nur für Tabellen mit is_active-Spalte
-    if ! _is_column_exists "$active_column" "$table_name" "$db_file"; then
-        debug "$(printf "$_chk_inactive_settings_debug_0002" "$table_name" "$active_column")"
-        return 0
-    fi
-
-    # SQL-Abfrage für inaktive Einstellungen vorbereiten    
-    local inactive_settings=$(sqlite3 "$db_file" "SELECT $key_column FROM $table_name WHERE $active_column = 0;")
-    
-    # Bei inaktiven Einstellungen nur warnen, nicht als Fehler werten
-    if [ -n "$inactive_settings" ]; then
-        debug "$(printf "$_chk_inactive_settings_debug_0003" "$table_name" "$inactive_settings")"
-    else
-        debug "$(printf "$_chk_inactive_settings_debug_0004" "$table_name")"
-    fi
-    
-    # Immer erfolgreich, da inaktive Einstellungen kein Fehler sind
-    return 0
-}
-
-# _chk_foreign_key_integrity
-_chk_foreign_key_integrity_debug_0001="INFO: Prüfe Fremdschlüsselintegrität in Tabelle '%s'."
-_chk_foreign_key_integrity_debug_0002="INFO: Tabelle '%s' hat keine '%s'-Spalte, FK-Prüfung wird übersprungen."
-_chk_foreign_key_integrity_debug_0003="ERROR: Ungültige Fremdschlüsselreferenzen in Tabelle '%s' gefunden: %s"
-_chk_foreign_key_integrity_debug_0004="INFO: Keine ungültigen Fremdschlüsselreferenzen in Tabelle '%s' gefunden."
-
-_chk_foreign_key_integrity() {
-    # -----------------------------------------------------------------------
-    # _chk_foreign_key_integrity
-    # -----------------------------------------------------------------------
-    # Funktion.: Prüft eine Tabelle auf ungültige Fremdschlüsselreferenzen
-    # Parameter: $1 - Name der zu prüfenden Tabelle
-    # .........  $2 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Keine ungültigen Fremdschlüsselreferenzen gefunden
-    # .........  1 - Ungültige Fremdschlüsselreferenzen gefunden
-    # -----------------------------------------------------------------------
-    local table_name="$1"            # Name der zu prüfenden Tabelle
-    local db_file="$2"               # Pfad zur Datenbankdatei
-    local fk_column=""               # Standard-Spalte für Fremdschlüssel
-    local ref_table=""               # Referenztabelle für den Fremdschlüssel
-    local ref_column=""              # Referenzspalte in der Referenztabelle
-    
-    # Überprüfen, ob der Tabellenname und der Datenbankpfad angegeben sind
-    if ! check_param "$table_name" "table_name"; then return 1; fi
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$_chk_foreign_key_integrity_debug_0001" "$table_name")"
-
-    # Tabellen-spezifische Fremdschlüsselbeziehungen definieren
-    case "$table_name" in
-        settings)
-            fk_column="hierarchy_id"
-            ref_table="config_hierarchies"
-            ref_column="id"
-            ;;
-        settings_history)
-            fk_column="setting_id"
-            ref_table="settings"
-            ref_column="id"
-            ;;
-        # Weitere Tabellen können hier hinzugefügt werden
-        *)
-            # Wenn keine spezifischen FK-Beziehungen definiert sind, überspringen
-            debug "$(printf "$_chk_foreign_key_integrity_debug_0002" "$table_name" "$fk_column")"
-            return 0
-            ;;
-    esac
-    
-    # Prüfen, ob die Tabelle die benötigte FK-Spalte hat
-    if ! _is_column_exists "$fk_column" "$table_name" "$db_file"; then
-        debug "$(printf "$_chk_foreign_key_integrity_debug_0002" "$table_name" "$fk_column")"
-        return 0
-    fi
-    
-    # SQL-Abfrage für ungültige Fremdschlüsselreferenzen vorbereiten
-    local invalid_refs=$(sqlite3 "$db_file" "
-        SELECT s.$fk_column FROM $table_name s 
-        LEFT JOIN $ref_table r ON s.$fk_column = r.$ref_column 
-        WHERE s.$fk_column IS NOT NULL AND r.$ref_column IS NULL;")
-
-    # Auswertung des Ergebnisses
-    if [ -n "$invalid_refs" ]; then
-        debug "$(printf "$_chk_foreign_key_integrity_debug_0003" "$table_name" "$invalid_refs")"
-        return 1
-    else
-        debug "$(printf "$_chk_foreign_key_integrity_debug_0004" "$table_name")"
-        return 0
-    fi
-}
-
-# _chk_duplicate_keys
-_chk_duplicate_keys_debug_0001="INFO: Prüfe auf Duplikate in Tabelle '%s'."
-_chk_duplicate_keys_debug_0002="INFO: Tabelle '%s' hat keine '%s'-Spalte, Duplikatprüfung wird übersprungen."
-_chk_duplicate_keys_debug_0003="ERROR: Duplikate in Tabelle '%s' gefunden: %s"
-_chk_duplicate_keys_debug_0004="INFO: Keine Duplikate in Tabelle '%s' gefunden."
-
-_chk_duplicate_keys() {
-    # -----------------------------------------------------------------------
-    # _chk_duplicate_keys
-    # -----------------------------------------------------------------------
-    # Funktion.: Prüft eine Tabelle auf Duplikate in Schlüsseln
-    # Parameter: $1 - Name der zu prüfenden Tabelle
-    # .........  $2 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Keine Duplikate gefunden
-    # .........  1 - Duplikate gefunden
-    # -----------------------------------------------------------------------
-    local table_name="$1"      # Name der zu prüfenden Tabelle
-    local db_file="$2"         # Pfad zur Datenbankdatei
-    local key_column="key"     # Standard-Spalte für Schlüssel
-    local extra_column=""      # Zusätzliche Spalte für spezifische Tabellen
-    
-    # Überprüfen, ob der Tabellenname und der Datenbankpfad angegeben sind
-    if ! check_param "$table_name" "table_name"; then return 1; fi
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$_chk_duplicate_keys_debug_0001" "$table_name")"
-
-    # Tabellen-spezifische Anpassungen
-    case "$table_name" in
-        settings)
-            extra_column="hierarchy_id"
-            ;;
-        # Weitere Tabellen können hier hinzugefügt werden
-        *)
-            # Wenn keine spezifischen Schlüsselspalten definiert sind, überspringen
-            if ! _is_column_exists "$key_column" "$table_name" "$db_file"; then
-                debug "$(printf "$_chk_duplicate_keys_debug_0002" "$table_name" "$key_column")"
-                return 0
-            fi
-            ;;
-    esac
-
-    # SQL-Abfrage für Duplikate vorbereiten    
-    local sql_query
-    if [ -n "$extra_column" ] && _is_column_exists "$extra_column" "$table_name" "$db_file"; then
-        sql_query="SELECT $key_column, $extra_column, COUNT(*) as count FROM $table_name 
-                  GROUP BY $key_column, $extra_column HAVING count > 1;"
-    else
-        sql_query="SELECT $key_column, COUNT(*) as count FROM $table_name 
-                  GROUP BY $key_column HAVING count > 1;"
-    fi
-
-    # Führe die SQL-Abfrage aus und prüfe auf Duplikate    
-    local duplicates=$(sqlite3 "$db_file" "$sql_query")
-    
-    # Auswertung des Ergebnisses
-    if [ -n "$duplicates" ]; then
-        debug "$(printf "$_chk_duplicate_keys_debug_0003" "$table_name" "$duplicates")"
-        return 1
-    else
-        debug "$(printf "$_chk_duplicate_keys_debug_0004" "$table_name")"
-        return 0
-    fi
-}
-
-# _chk_invalid_key_chars
-_chk_invalid_key_chars_debug_0001="INFO: Prüfe auf ungültige Zeichen in Schlüsselnamen in Tabelle '%s'."
-_chk_invalid_key_chars_debug_0002="INFO: Tabelle '%s' hat keine '%s'-Spalte, Zeichenprüfung wird übersprungen."
-_chk_invalid_key_chars_debug_0003="ERROR: Ungültige Zeichen in Schlüsselnamen in Tabelle '%s' gefunden: %s"
-_chk_invalid_key_chars_debug_0004="INFO: Keine ungültigen Zeichen in Schlüsselnamen in Tabelle '%s' gefunden."
-
-_chk_invalid_key_chars() {
-    # -----------------------------------------------------------------------
-    # _chk_invalid_key_chars
-    # -----------------------------------------------------------------------
-    # Funktion.: Prüft eine Tabelle auf ungültige Zeichen in Schlüsselnamen
-    # Parameter: $1 - Name der zu prüfenden Tabelle
-    # .........  $2 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Keine ungültigen Zeichen gefunden
-    # .........  1 - Ungültige Zeichen gefunden
-    # -----------------------------------------------------------------------
-    local table_name="$1"                     # Name der zu prüfenden Tabelle
-    local db_file="$2"                        # Pfad zur Datenbankdatei
-    local key_column="key"                    # Standard-Spalte für Schlüssel
-    local allowed_pattern="[a-zA-Z0-9._-]"    # Erlaubte Zeichen im Schlüssel
-    
-    # Überprüfen, ob der Tabellenname und der Datenbankpfad angegeben sind
-    if ! check_param "$table_name" "table_name"; then return 1; fi
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$_chk_invalid_key_chars_debug_0001" "$table_name")"
-
-    # Prüfen, ob die Tabelle die benötigte Schlüsselspalte hat
-    if ! _is_column_exists "$key_column" "$table_name" "$db_file"; then
-        debug "$(printf "$_chk_invalid_key_chars_debug_0002" "$table_name" "$key_column")"
-        return 0
-    fi
-
-    # SQL-Abfrage für ungültige Schlüsselzeichen vorbereiten
-    local invalid_keys=$(sqlite3 "$db_file" "SELECT $key_column FROM $table_name 
-                                           WHERE $key_column GLOB '*[^$allowed_pattern]*';")
-    
-    # Auswertung des Ergebnisses
-    if [ -n "$invalid_keys" ]; then
-        debug "$(printf "$_chk_invalid_key_chars_debug_0003" "$table_name" "$invalid_keys")"
-        return 1
-    else
-        debug "$(printf "$_chk_invalid_key_chars_debug_0004" "$table_name")"
-        return 0
-    fi
-}
-
-# _validate_table
-_validate_table_debug_0001="INFO: Validiere Tabelle '%s' mit %d Prüfungen."
-_validate_table_debug_0002="ERROR: Tabelle '%s' existiert nicht in der Datenbank."
-_validate_table_debug_0003="SUCCESS: Tabelle '%s' hat alle Validierungsprüfungen bestanden."
-_validate_table_debug_0004="ERROR: Tabelle '%s' hat %d Validierungsprüfungen nicht bestanden."
-
-_validate_table() {
-    # -----------------------------------------------------------------------
-    # _validate_table
-    # -----------------------------------------------------------------------
-    # Funktion.: Führt verschiedene Validierungsprüfungen für eine Tabelle
-    # .........  durch, sie ist die Zentrale Validierungsfunktion für eine
-    # .........  beliebige Tabellen
-    # Parameter: $1 - Name der zu validierenden Tabelle
-    # .........  $2 - Liste von Validierungsprüfungen, 
-    # .........       die durchgeführt werden sollen
-    # Rückgabe.: 0 - Validierung erfolgreich
-    # .........  1 - Validierung fehlgeschlagen
-    # -----------------------------------------------------------------------
-    local table_name="$1"
-    shift  # Entferne den ersten Parameter, übrig bleiben die Validierungsprüfungen
-    
-    # Prüfen, ob Tabellenname angegeben wurde
-    if ! check_param "$table_name" "table_name"; then return 1; fi
+    local prefix="${1:-}"
+    local timestamp=$(date +"%Y%m%d%H%M%S")
+    local random=$(tr -dc 'a-z0-9' < /dev/urandom | head -c 6)
     
     # Debug-Ausgabe eröffnen
-    debug "$(printf "$_validate_table_debug_0001" "$table_name" "$#")"
+    debug "$(printf "$_generate_group_id_debug_0001" "$prefix" "$timestamp" "$random")"
 
-    local db_file=$(get_data_file)
-    local validation_errors=0
-    
-    # Prüfen, ob die Tabelle überhaupt existiert
-    if ! sqlite3 "$db_file" "SELECT name FROM sqlite_master WHERE type='table' AND name='$table_name';" | grep -q "$table_name"; then
-        debug "$(printf "$_validate_table_debug_0002" "$table_name")"
-        return 1
-    fi
-    
-    # Durchführen aller übergebenen Validierungsprüfungen
-    for validation in "$@"; do
-        # Prüfung durchführen und Fehler zählen
-        if ! "$validation" "$table_name" "$db_file"; then
-            validation_errors=$((validation_errors + 1))
-        fi
-    done
-    
-    # Rückgabe je nach Validierungsergebnis
-    if [ $validation_errors -eq 0 ]; then
-        debug "$(printf "$_validate_table_debug_0003" "$table_name")"
-        return 0
+    # Generiere die Gruppen-ID
+    if [ -n "$prefix" ]; then
+        debug "$(printf "$_generate_group_id_debug_0002" "${prefix}_${timestamp}_${random}")"
+        echo "${prefix}_${timestamp}_${random}"
     else
-        debug "$(printf "$_validate_table_debug_0004" "$table_name" "$validation_errors")"
-        return 1
+        debug "$(printf "$_generate_group_id_debug_0002" "grp_${timestamp}_${random}")"
+        echo "grp_${timestamp}_${random}"
     fi
 }
 
 # ---------------------------------------------------------------------------
-# Hilfsfunktionen zu Datenbank-Tabellen-Struktur
+# Hilfsfunktionen zur Hierarchie-Verwaltung
 # ---------------------------------------------------------------------------
-## --- 1. Tabelle: schema_versions ------------------------------------------
-# _ensure_table_schema_versions
-_ensure_table_schema_versions_debug_0001="INFO: Sicherstellen, dass die Tabelle 'schema_versions' existiert."
 
-_ensure_table_schema_versions () {
-    # -----------------------------------------------------------------------
-    # _ensure_table_schema_versions
-    # -----------------------------------------------------------------------
-    # Funktion.: Stellt sicher, dass die Tabelle 'schema_versions' existiert.
-    # .........  Diese Tabelle wird für die Verwaltung der Datenbank-Schema-
-    # .........  Versionen verwendet.
-    # Parameter: $1 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Erfolg
-    # .........  1 - Fehler
-    # -----------------------------------------------------------------------
-    local db_file="$1"
+# _hierarchy_exists
+_hierarchy_exists_debug_0001="INFO: Prüfe, ob Hierarchie '%s' in der Datenbank existiert."
+_hierarchy_exists_debug_0002="SUCCESS: Hierarchie '%s' existiert in der Datenbank."
+_hierarchy_exists_debug_0003="ERROR: Hierarchie '%s' existiert nicht in der Datenbank."
 
-    # Debug-Ausgabe eröffnen
-    debug "$_ensure_table_schema_versions_debug_0001"
+_hierarchy_exists() {
+    # -----------------------------------------------------------------------
+    # _hierarchy_exists
+    # -----------------------------------------------------------------------
+    # Funktion.: Diese Funktion prüft, ob eine Hierarchie bereits in der 
+    # .........  Datenbank registriert ist.
+    # Parameter: $1 - Name der Hierarchie
+    # .........  $2 - (Optional) Pfad zur Datenbank
+    # Rückgabe: 0, wenn die Hierarchie existiert, sonst 1
+    # -----------------------------------------------------------------------
+    local hierarchy_name="$1"
+    local db_file="${2:-$(get_data_file)}"
 
-    # Überprüfen, ob der Datenbankpfad angegeben ist
+    # Überprüfen, ob der Hierarchiename und der Datenbankpfad angegeben sind
+    if ! check_param "$hierarchy_name" "hierarchy_name"; then return 1; fi
     if ! check_param "$db_file" "db_file"; then return 1; fi
 
-    # SQL-Statement für die Tabellenerstellung definieren
-    local create_table_sql="CREATE TABLE IF NOT EXISTS schema_versions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        table_name TEXT NOT NULL,        -- Name der Tabelle
-        version INTEGER NOT NULL,        -- Aktuelle Schemaversion
-        migration_timestamp DATETIME DEFAULT (datetime('now','localtime')), -- Zeitpunkt der letzten Migration
-        description TEXT                 -- Beschreibung der letzten Änderung
-    );"
-
-    # Tabelle erstellen
-    _create_table "$create_table_sql" "$db_file"
-
-    # Prüfen, ob die Tabelle erfolgreich erstellt wurde
-    if [ $? -ne 0 ]; then return 1; else return 0; fi
-}
-
-# _validate_table_schema_versions
-_validate_table_schema_versions_debug_0001="INFO: Validiere die Integrität der 'schema_versions'-Tabelle."
-
-_validate_table_schema_versions() {
-    # -----------------------------------------------------------------------
-    # _validate_table_schema_versions
-    # -----------------------------------------------------------------------
-    # Funktion.: Überprüft die Integrität und Konsistenz der 'schema_versions'-Tabelle
-    # Parameter: keine
-    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
-    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
-    # -----------------------------------------------------------------------
-
     # Debug-Ausgabe eröffnen
-    debug "$_validate_table_schema_versions_debug_0001"
+    debug "$(printf "$_hierarchy_exists_debug_0001" "$hierarchy_name")"
 
-    _validate_table "schema_versions" \
-        _chk_empty_values \
-        _chk_invalid_types \
-        _chk_duplicate_keys \
-        _chk_invalid_key_chars
-
-    return $?
-}
-
-## --- 2. Tabelle: db_backups -----------------------------------------------
-# _ensure_table_db_backups
-_ensure_table_db_backups_debug_0001="INFO: Sicherstellen, dass die Tabelle 'db_backups' existiert."
-
-_ensure_table_db_backups () {
-    # -----------------------------------------------------------------------
-    # _ensure_table_db_backups
-    # -----------------------------------------------------------------------
-    # Funktion.: Stellt sicher, dass die Tabelle 'db_backups' existiert.
-    # .........  Diese Tabelle wird für die Verwaltung von Datenbank-Backups 
-    # .........  verwendet.
-    # Parameter: $1 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Erfolg
-    # .........  1 - Fehler
-    # -----------------------------------------------------------------------
-    local db_file="$1"
-
-    # Debug-Ausgabe eröffnen
-    debug "$_ensure_table_db_backups_debug_0001"
-
-    # Überprüfen, ob der Datenbankpfad angegeben ist
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # SQL-Statement für die Tabellenerstellung definieren
-    local create_table_sql="CREATE TABLE IF NOT EXISTS db_backups (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        backup_name TEXT NOT NULL UNIQUE, -- Name des Backups
-        backup_file TEXT NOT NULL,       -- Dateipfad zum Backup
-        created_at DATETIME DEFAULT (datetime('now','localtime')), -- Erstellungszeitpunkt
-        backup_type TEXT NOT NULL,       -- Typ des Backups (manuell, automatisch, vor Migration)
-        backup_reason TEXT,              -- Grund für das Backup
-        checksum TEXT                    -- SHA256-Prüfsumme zur Integritätsvalidierung
-    );"
-
-    # Tabelle erstellen
-    _create_table "$create_table_sql" "$db_file"
-
-
-    # Prüfen, ob die Tabelle erfolgreich erstellt wurde
-    if [ $? -ne 0 ]; then return 1; else return 0; fi
-}   
-
-# _validate_table_db_backups
-_validate_table_db_backups_debug_0001="INFO: Validiere die Integrität der 'db_backups'-Tabelle."
-
-_validate_table_db_backups() {
-    # -----------------------------------------------------------------------
-    # _validate_table_db_backups
-    # -----------------------------------------------------------------------
-    # Funktion.: Überprüft die Integrität und Konsistenz der 'db_backups'-Tabelle
-    # Parameter: keine
-    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
-    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
-    # -----------------------------------------------------------------------
-
-    # Debug-Ausgabe eröffnen
-    debug "$_validate_table_db_backups_debug_0001"
-
-    _validate_table "db_backups" \
-        _chk_empty_values \
-        _chk_invalid_types \
-        _chk_duplicate_keys \
-        _chk_invalid_key_chars
-
-    return $?
-}
-
-## --- 3. Tabelle: config_hierarchies ---------------------------------------
-# _ensure_table_config_hierarchies
-_ensure_table_config_hierarchies_debug_0001="INFO: Sicherstellen, dass die Tabelle 'config_hierarchies' existiert."
-
-_ensure_table_config_hierarchies () {
-    # -----------------------------------------------------------------------
-    # _ensure_table_config_hierarchies
-    # -----------------------------------------------------------------------
-    # Funktion.: Stellt sicher, dass die Tabelle 'config_hierarchies' existiert.
-    # .........  Diese Tabelle wird für die Verwaltung der Hierarchien in der 
-    # .........  Konfiguration verwendet.
-    # Parameter: $1 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Erfolg
-    # .........  1 - Fehler
-    # -----------------------------------------------------------------------
-    local db_file="$1"
-
-    # Debug-Ausgabe eröffnen
-    debug "$_ensure_table_config_hierarchies_debug_0001"
-
-    # Überprüfen, ob der Datenbankpfad angegeben ist
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # SQL-Statement für die Tabellenerstellung definieren
-    local create_table_sql="CREATE TABLE IF NOT EXISTS config_hierarchies (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        hierarchy_name TEXT NOT NULL UNIQUE, -- Name der Hierarchie (z.B. "nginx", "camera")
-        hierarchy_data TEXT NOT NULL,         -- JSON-Daten der Hierarchie
-        description TEXT,                    -- Beschreibung der Hierarchie
-        responsible TEXT,                    -- Verantwortliches Modul/Person
-        created_at DATETIME DEFAULT (datetime('now','localtime')), -- Erstellungszeitpunkt
-        updated_at DATETIME DEFAULT (datetime('now','localtime')), -- Aktualisierungszeitpunkt
-        enabled BOOLEAN DEFAULT 1            -- Hierarchie aktiv/inaktiv
-    );
-
-    CREATE INDEX idx_config_hierarchies_name ON config_hierarchies(hierarchy_name);
-    "
-
-    # Tabelle erstellen
-    _create_table "$create_table_sql" "$db_file"
-
-    # Prüfen, ob die Tabelle erfolgreich erstellt wurde
-    if [ $? -ne 0 ]; then return 1; else return 0; fi
-}
-
-# _validate_table_config_hierarchies
-_validate_table_config_hierarchies_debug_0001="INFO: Validiere die Integrität der 'config_hierarchies'-Tabelle."
-
-_validate_table_config_hierarchies() {
-    # -----------------------------------------------------------------------
-    # _validate_table_config_hierarchies
-    # -----------------------------------------------------------------------
-    # Funktion.: Überprüft die Integrität und Konsistenz der 'config_hierarchies'-Tabelle
-    # Parameter: keine
-    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
-    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
-    # -----------------------------------------------------------------------
-
-    # Debug-Ausgabe eröffnen
-    debug "$_validate_table_config_hierarchies_debug_0001"
-
-    _validate_table "config_hierarchies" \
-        _chk_empty_values \
-        _chk_duplicate_keys
-        
-    return $?
-}
-
-## --- 4. Tabelle: settings -------------------------------------------------
-# _ensure_table_settings
-_ensure_table_settings_debug_0001="INFO: Sicherstellen, dass die Tabelle 'settings' existiert."
-
-_ensure_table_settings () {
-    # -----------------------------------------------------------------------
-    # _ensure_table_settings
-    # -----------------------------------------------------------------------
-    # Funktion.: Stellt sicher, dass die Tabelle 'settings' existiert.
-    # .........  Diese Tabelle wird für die Speicherung von Konfigurationseinstellungen 
-    # .........  verwendet.
-    # Parameter: $1 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Erfolg
-    # .........  1 - Fehler
-    # -----------------------------------------------------------------------
-    local db_file="$1"
-
-    # Debug-Ausgabe eröffnen
-    debug "$_ensure_table_settings_debug_0001"
-
-    # Überprüfen, ob der Datenbankpfad angegeben ist
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # SQL-Statement für die Tabellenerstellung definieren
-    local create_table_sql="CREATE TABLE IF NOT EXISTS settings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        hierarchy_id INTEGER,                -- Verweis auf die Hierarchie
-        key TEXT NOT NULL,                   -- Konfigurationsschlüssel (z.B. "port", "ssl.enabled")
-        value TEXT,                          -- Konfigurationswert
-        value_type TEXT NOT NULL,            -- Datentyp (string, int, bool, float, json)
-        description TEXT,                    -- Beschreibung des Konfigurationsschlüssels
-        created_at DATETIME DEFAULT (datetime('now','localtime')), -- Erstellungszeitpunkt
-        updated_at DATETIME DEFAULT (datetime('now','localtime')), -- Aktualisierungszeitpunkt
-        is_active BOOLEAN DEFAULT 1,         -- Aktive/Inaktive Einstellung
-        weight INTEGER DEFAULT 0,            -- Gewichtung für Anwendungsreihenfolge
-        change_group TEXT,                   -- Gruppierung für zusammengehörige Änderungen
-        FOREIGN KEY (hierarchy_id) REFERENCES config_hierarchies(id) ON DELETE SET NULL,
-        UNIQUE(hierarchy_id, key)            -- Verhindert doppelte Schlüssel in einer Hierarchie
-    );
+    # Hierarchienamen bereinigen und validieren
+    hierarchy_name=$(clean_key "$hierarchy_name")
+    if ! validate_key "$hierarchy_name"; then
+        return 1
+    fi
     
-    CREATE INDEX idx_settings_key ON settings(key);
-    CREATE INDEX idx_settings_active ON settings(is_active);
-    CREATE INDEX idx_settings_hierarchy ON settings(hierarchy_id);
-    "
-
-    # Tabelle erstellen
-    _create_table "$create_table_sql" "$db_file"
-
-    # Prüfen, ob die Tabelle erfolgreich erstellt wurde
-    if [ $? -ne 0 ]; then return 1; else return 0; fi
+    # Prüfen, ob die Hierarchie in der Datenbank existiert
+    local exists=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM config_hierarchies WHERE hierarchy_name='$hierarchy_name';")
+    
+    # Ergebnis prüfen und zurückgeben
+    if [ "$exists" -gt 0 ]; then
+        debug "$(printf "$_hierarchy_exists_debug_0002" "$hierarchy_name")"
+        return 0  # Hierarchie existiert
+    else
+        debug "$(printf "$_hierarchy_exists_debug_0003" "$hierarchy_name")"
+        return 1  # Hierarchie existiert nicht
+    fi
 }
 
-# _validate_table_settings
-_validate_table_settings_debug_0001="INFO: Validiere die Integrität der 'settings'-Tabelle."
+# _get_hierarchy_id
+_get_hierarchy_id_debug_0001="INFO: Abrufen der Hierarchie-ID für '%s' aus der Datenbank '%s'."
+_get_hierarchy_id_debug_0002="ERROR: Hierarchie '%s' existiert nicht in der Datenbank."
+_get_hierarchy_id_debug_0003="SUCCESS: Hierarchie-ID für '%s': %s"
+_get_hierarchy_id_log_0001="ERROR: Hierarchie '%s' existiert nicht in der Datenbank."
+_get_hierarchy_id_log_0002="SUCCESS: Hierarchie-ID für '%s': %s"
 
-_validate_table_settings() {
+_get_hierarchy_id() {
     # -----------------------------------------------------------------------
-    # _validate_table_settings
+    # _get_hierarchy_id
     # -----------------------------------------------------------------------
-    # Funktion.: Überprüft die Integrität und Konsistenz der 'settings'-Tabelle
-    # Parameter: keine
-    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
-    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
+    # Funktion.: Gibt die Datenbank-ID einer Hierarchie zurück.
+    # Parameter: $1 - Name der Hierarchie
+    # .........  $2 - (Optional) Pfad zur Datenbank
+    # Rückgabe.: ID der Hierarchie oder leer, wenn die Hierarchie nicht
+    # .........  existiert 0 bei Erfolg, 1 bei Fehler
     # -----------------------------------------------------------------------
-
-    # Debug-Ausgabe eröffnen
-    debug "$_validate_table_settings_debug_0001"
-
-    # Aufruf der generischen Validierungsfunktion mit den spezifischen Prüfungen für settings
-    _validate_table "settings" \
-        _chk_invalid_types \
-        _chk_empty_values \
-        _chk_inactive_settings \
-        _chk_foreign_key_integrity \
-        _chk_duplicate_keys \
-        _chk_invalid_key_chars
-        
-    return $?
-}
-
-## --- 5. Tabelle: settings_history -----------------------------------------
-# _ensure_table_settings_history
-_ensure_table_settings_history_debug_0001="INFO: Sicherstellen, dass die Tabelle 'settings_history' existiert."
-
-_ensure_table_settings_history () {
-    # -----------------------------------------------------------------------
-    # _ensure_table_settings_history
-    # -----------------------------------------------------------------------
-    # Funktion.: Stellt sicher, dass die Tabelle 'settings_history' existiert.
-    # .........  Diese Tabelle wird für die Speicherung von Änderungen an
-    # .........  Konfigurationseinstellungen verwendet.
-    # Parameter: $1 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Erfolg
-    # .........  1 - Fehler
-    # -----------------------------------------------------------------------
-    local db_file="$1"
-
-    # Debug-Ausgabe eröffnen
-    debug "$_ensure_table_settings_history_debug_0001"
-
-    # Überprüfen, ob der Datenbankpfad angegeben ist
+    local hierarchy_name="$1"
+    local db_file="${2:-$(get_data_file)}"
+    
+    # Überprüfen, ob alle erforderlichen Parameter angegeben sind
+    if ! check_param "$hierarchy_name" "hierarchy_name"; then return 1; fi
     if ! check_param "$db_file" "db_file"; then return 1; fi
 
-    # SQL-Statement für die Tabellenerstellung definieren
-    local create_table_sql="CREATE TABLE IF NOT EXISTS settings_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        setting_id INTEGER NOT NULL,         -- Verweis auf die Einstellung
-        old_value TEXT,                      -- Vorheriger Wert
-        new_value TEXT,                      -- Neuer Wert
-        changed_at DATETIME DEFAULT (datetime('now','localtime')), -- Änderungszeitpunkt
-        changed_by TEXT,                     -- Benutzer oder Prozess, der die Änderung vornahm
-        change_reason TEXT,                  -- Grund für die Änderung
-        FOREIGN KEY (setting_id) REFERENCES settings(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX idx_settings_history_setting ON settings_history(setting_id);
-    "
-
-    # Tabelle erstellen
-    _create_table "$create_table_sql" "$db_file"
-
-    # Prüfen, ob die Tabelle erfolgreich erstellt wurde
-    if [ $? -ne 0 ]; then return 1; else return 0; fi
-}
-
-# _validate_table_settings_history
-_validate_table_settings_history_debug_0001="INFO: Validiere die Integrität der 'settings_history'-Tabelle."
-
-_validate_table_settings_history() {
-    # -----------------------------------------------------------------------
-    # _validate_table_settings_history
-    # -----------------------------------------------------------------------
-    # Funktion.: Überprüft die Integrität und Konsistenz der 'settings_history'-Tabelle
-    # Parameter: keine
-    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
-    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
-    # -----------------------------------------------------------------------
-    debug "$_validate_table_settings_history_debug_0001"
-
-    # Aufruf der generischen Validierungsfunktion mit den spezifischen Prüfungen für settings_history
-    _validate_table "settings_history" \
-        _chk_invalid_types \
-        _chk_empty_values \
-        _chk_foreign_key_integrity \
-        _chk_duplicate_keys
-        
-    return $?
-}
-
-## --- 6. Tabelle: setting_dependencies -------------------------------------
-# _ensure_table_setting_dependencies
-_ensure_table_setting_dependencies_debug_0001="INFO: Sicherstellen, dass die Tabelle 'setting_dependencies' existiert."
-
-_ensure_table_setting_dependencies () {
-    # -----------------------------------------------------------------------
-    # _ensure_table_setting_dependencies
-    # -----------------------------------------------------------------------
-    # Funktion.: Stellt sicher, dass die Tabelle 'setting_dependencies' existiert.
-    # .........  Diese Tabelle wird für die Verwaltung von Abhängigkeiten 
-    # .........  zwischen Konfigurationseinstellungen verwendet.
-    # Parameter: $1 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Erfolg
-    # .........  1 - Fehler
-    # -----------------------------------------------------------------------
-    local db_file="$1"
-
     # Debug-Ausgabe eröffnen
-    debug "$_ensure_table_setting_dependencies_debug_0001"
+    debug "$(printf "$register_config_hierarchy_debug_0001" "$hierarchy_name" "$description" "$responsible")"
 
-    # Überprüfen, ob der Datenbankpfad angegeben ist
-    if ! check_param "$db_file" "db_file"; then return 1; fi
+    # Hierarchienamen bereinigen
+    hierarchy_name=$(clean_key "$hierarchy_name")
+    
+    # ID aus der Datenbank abrufen
+    local hierarchy_id=$(sqlite3 "$db_file" "SELECT id FROM config_hierarchies WHERE hierarchy_name='$hierarchy_name';")
 
-    # SQL-Statement für die Tabellenerstellung definieren
-    local create_table_sql="CREATE TABLE IF NOT EXISTS setting_dependencies (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        setting_id INTEGER NOT NULL,         -- Verweis auf die Einstellung
-        dependent_setting_id INTEGER NOT NULL, -- Abhängige Einstellung
-        dependency_type TEXT NOT NULL,       -- Typ der Abhängigkeit (z.B. 'requires', 'conflicts')
-        condition TEXT,                      -- Bedingung für die Abhängigkeit
-        FOREIGN KEY (setting_id) REFERENCES settings(id) ON DELETE CASCADE,
-        FOREIGN KEY (dependent_setting_id) REFERENCES settings(id) ON DELETE CASCADE,
-        UNIQUE(setting_id, dependent_setting_id, dependency_type) -- Verhindert doppelte Abhängigkeiten
-    );"
+    # Prüfen, ob die Hierarchie-ID gefunden wurde
+    if [ -z "$hierarchy_id" ]; then
+        debug "$(printf "$_get_hierarchy_id_debug_0002" "$hierarchy_name")"
+        log "$(printf "$_get_hierarchy_id_log_0001" "$hierarchy_name")"
+        echo ""  # Leere Ausgabe, wenn die Hierarchie nicht existiert
+        return 1
+    fi
 
-    # Tabelle erstellen
-    _create_table "$create_table_sql" "$db_file"
-
-    # Prüfen, ob die Tabelle erfolgreich erstellt wurde
-    if [ $? -ne 0 ]; then return 1; else return 0; fi
-}
-
-# _validate_table_setting_dependencies
-_validate_table_setting_dependencies_debug_0001="INFO: Validiere die Integrität der 'setting_dependencies'-Tabelle."
-
-_validate_table_setting_dependencies() {
-    # -----------------------------------------------------------------------
-    # _validate_table_setting_dependencies
-    # -----------------------------------------------------------------------
-    # Funktion.: Überprüft die Integrität und Konsistenz der 'setting_dependencies'-Tabelle
-    # Parameter: keine
-    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
-    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
-    # -----------------------------------------------------------------------
-
-    # Debug-Ausgabe eröffnen
-    debug "$_validate_table_setting_dependencies_debug_0001"
-
-    _validate_table "setting_dependencies" \
-        _chk_empty_values \
-        _chk_invalid_types \
-        _chk_duplicate_keys \
-        _chk_invalid_key_chars
-
-    return $?
-}
-
-## --- 7. Tabelle: change_groups --------------------------------------------
-# _ensure_table_change_groups
-_ensure_table_change_groups_debug_0001="INFO: Sicherstellen, dass die Tabelle 'change_groups' existiert."
-
-_ensure_table_change_groups () {
-    # -----------------------------------------------------------------------
-    # _ensure_table_change_groups
-    # -----------------------------------------------------------------------
-    # Funktion.: Stellt sicher, dass die Tabelle 'change_groups' existiert.
-    # .........  Diese Tabelle wird für die Gruppierung von Änderungen an 
-    # .........  Konfigurationseinstellungen verwendet.
-    # Parameter: $1 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Erfolg
-    # .........  1 - Fehler
-    # -----------------------------------------------------------------------
-    local db_file="$1"
-
-    # Debug-Ausgabe eröffnen
-    debug "$_ensure_table_change_groups_debug_0001"
-
-    # Überprüfen, ob der Datenbankpfad angegeben ist
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # SQL-Statement für die Tabellenerstellung definieren
-    local create_table_sql="CREATE TABLE IF NOT EXISTS change_groups (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        group_name TEXT NOT NULL UNIQUE,     -- Name der Änderungsgruppe
-        description TEXT,                    -- Beschreibung der Gruppe
-        status TEXT DEFAULT 'pending',       -- Status (pending, complete, error)
-        created_at DATETIME DEFAULT (datetime('now','localtime')), -- Erstellungszeitpunkt
-        updated_at DATETIME DEFAULT (datetime('now','localtime')), -- Aktualisierungszeitpunkt
-        priority INTEGER DEFAULT 0           -- Priorität für die Anwendungsreihenfolge
-    );
-
-    CREATE INDEX idx_change_groups_name ON change_groups(group_name);
-    "
-
-    # Tabelle erstellen
-    _create_table "$create_table_sql" "$db_file"
-
-    # Prüfen, ob die Tabelle erfolgreich erstellt wurde
-    if [ $? -ne 0 ]; then return 1; else return 0; fi
-}
-
-# _validate_table_change_groups
-_validate_table_change_groups_debug_0001="INFO: Validiere die Integrität der 'change_groups'-Tabelle."
-
-_validate_table_change_groups() {
-    # -----------------------------------------------------------------------
-    # _validate_table_change_groups
-    # -----------------------------------------------------------------------
-    # Funktion.: Überprüft die Integrität und Konsistenz der 'change_groups'-Tabelle
-    # Parameter: keine
-    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
-    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
-    # -----------------------------------------------------------------------
-
-    # Debug-Ausgabe eröffnen
-    debug "$_validate_table_change_groups_debug_0001"
-
-    _validate_table "change_groups" \
-        _chk_empty_values \
-        _chk_invalid_types \
-        _chk_duplicate_keys \
-        _chk_invalid_key_chars
-
-    return $?
-}
-
-## --- 8. Tabelle: settings_change_groups -----------------------------------
-# _ensure_table_settings_change_groups
-_ensure_table_settings_change_groups_debug_0001="INFO: Sicherstellen, dass die Tabelle 'settings_change_groups' existiert."
-
-_ensure_table_settings_change_groups () {
-    # -----------------------------------------------------------------------
-    # _ensure_table_settings_change_groups
-    # -----------------------------------------------------------------------
-    # Funktion.: Stellt sicher, dass die Tabelle 'settings_change_groups' existiert.
-    # .........  Diese Tabelle wird für die Zuordnung von Einstellungen zu 
-    # .........  Änderungsgruppen verwendet.
-    # Parameter: $1 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Erfolg
-    # .........  1 - Fehler
-    # -----------------------------------------------------------------------
-    local db_file="$1"
-
-    # Debug-Ausgabe eröffnen
-    debug "$_ensure_table_settings_change_groups_debug_0001"
-
-    # Überprüfen, ob der Datenbankpfad angegeben ist
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # SQL-Statement für die Tabellenerstellung definieren
-    local create_table_sql="CREATE TABLE IF NOT EXISTS settings_change_groups (
-        setting_id INTEGER NOT NULL,         -- Verweis auf die Einstellung
-        change_group_id INTEGER NOT NULL,    -- Verweis auf die Änderungsgruppe
-        FOREIGN KEY (setting_id) REFERENCES settings(id) ON DELETE CASCADE,
-        FOREIGN KEY (change_group_id) REFERENCES change_groups(id) ON DELETE CASCADE,
-        PRIMARY KEY (setting_id, change_group_id),  -- Primärschlüssel für eindeutige Zuordnung
-        UNIQUE(setting_id, change_group_id)  -- Verhindert doppelte Zuordnungen
-    );"
-
-    # Tabelle erstellen
-    _create_table "$create_table_sql" "$db_file"
-
-    # Prüfen, ob die Tabelle erfolgreich erstellt wurde
-    if [ $? -ne 0 ]; then return 1; else return 0; fi
-}
-
-# _validate_table_settings_change_groups
-_validate_table_settings_change_groups_debug_0001="INFO: Validiere die Integrität der 'settings_change_groups'-Tabelle."
-
-_validate_table_settings_change_groups() {
-    # -----------------------------------------------------------------------
-    # _validate_table_settings_change_groups
-    # -----------------------------------------------------------------------
-    # Funktion.: Überprüft die Integrität und Konsistenz der 'settings_change_groups'-Tabelle
-    # Parameter: keine
-    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
-    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
-    # -----------------------------------------------------------------------
-
-    # Debug-Ausgabe eröffnen
-    debug "$_validate_table_settings_change_groups_debug_0001"
-
-    _validate_table "settings_change_groups" \
-        _chk_empty_values \
-        _chk_invalid_types \
-        _chk_duplicate_keys \
-        _chk_invalid_key_chars
-
-    return $?
+    # Hierarchie-ID zurückgeben
+    debug "$(printf "$_get_hierarchy_id_debug_0003" "$hierarchy_name" "$hierarchy_id")"
+    log "$(printf "$_get_hierarchy_id_log_0002" "$hierarchy_name" "$hierarchy_id")"
+    echo "$hierarchy_id"
 }
 
 # ===========================================================================
-# Funktionen zur Datenbank-Verwaltung
+# Konfigurationsfunktionen
 # ===========================================================================
 
-# ensure_database
-ensure_database_debug_0001="INFO: Sicherstellen, dass die Datenbank initialisiert ist."
-ensure_database_debug_0002="SUCCESS: Datenbank ist initialisiert und bereit zur Nutzung."
-ensure_database_debug_0003="WARN: SQLite ist nicht installiert. Datenbank-Initialisierung wurde übersprungen."
-ensure_database_debug_0004="ERROR: Datenbank-Initialisierung fehlgeschlagen."
-ensure_database_debug_0005="ERROR: Tabelle 'db_backups' konnte nicht erstellt werden."
-ensure_database_debug_0006="ERROR: Tabelle 'schema_versions' konnte nicht erstellt werden."
-ensure_database_debug_0007="ERROR: Tabelle 'config_hierarchies' konnte nicht erstellt werden."
-ensure_database_debug_0008="ERROR: Tabelle 'settings' konnte nicht erstellt werden."
-ensure_database_debug_0009="ERROR: Tabelle 'settings_history' konnte nicht erstellt werden."
-ensure_database_debug_0010="ERROR: Tabelle 'setting_dependencies' konnte nicht erstellt werden."
-ensure_database_debug_0011="ERROR: Tabelle 'change_groups' konnte nicht erstellt werden."
-ensure_database_debug_0012="ERROR: Tabelle 'settings_change_groups' konnte nicht erstellt werden."
+# register_config_hierarchy
+register_config_hierarchy_debug_0001="INFO: Registriere Konfigurationshierarchie '%s' mit Beschreibung '%s', Verantwortlichem '%s'."
+register_config_hierarchy_debug_0002="ERROR: Ungültiger Hierarchiename: '%s'. Hierarchie konnte nicht registriert werden."
+register_config_hierarchy_debug_0003="ERROR: Hierarchie '%s' existiert bereits."
+register_config_hierarchy_debug_0004="ERROR: Fehler beim Einfügen der Hierarchie in die Datenbank: %s"
+register_config_hierarchy_debug_0005="SUCCESS: Konfigurationshierarchie '%s' erfolgreich registriert."
+register_config_hierarchy_log_0001="ERROR: Ungültiger Hierarchiename: '%s'. Hierarchie konnte nicht registriert werden."
+register_config_hierarchy_log_0002="ERROR: Hierarchie '%s' existiert bereits."
+register_config_hierarchy_log_0003="ERROR: Fehler beim Einfügen der Hierarchie in die Datenbank: %s"
+register_config_hierarchy_log_0004="SUCCESS: Konfigurationshierarchie '%s' erfolgreich registriert."
 
-ensure_database() {
+register_config_hierarchy() {
     # -----------------------------------------------------------------------
-    # ensure_database
+    # register_config_hierarchy
     # -----------------------------------------------------------------------
-    # Funktion.: Stellt sicher, dass die SQLite-Datenbank initialisiert ist.
-    # .........  Diese Funktion prüft, ob die Datenbankdatei existiert und 
-    # .........  gültig ist. Falls nicht, wird sie neu initialisiert.
-    # Parameter: keine
-    # Rückgabe.: 0 - Erfolg
-    # .........  1 - Fehler
-    # -----------------------------------------------------------------------
-    local db_file
-    
-    # Prüfe zuerst, ob SQLite installiert ist
-    if _is_sqlite_installed; then
-
-        # SQLite ist verfügbar, initialisiere die Datenbank
-        debug "$ensure_database_debug_0001"
-
-        # Prüfe, ob die Datenbankdatei existiert und gültig ist
-        db_file=$(_ensure_database_file)
-        if [ -z "$db_file" ]; then debug "$ensure_database_debug_0004"; return 1; fi
-
-        # Tabellen erstellen, falls sie nicht existieren
-        if ! _ensure_table_db_backups "$db_file"; then debug "$ensure_database_debug_0005"; return 1; fi
-        if ! _ensure_table_schema_versions "$db_file"; then debug "$ensure_database_debug_0006"; return 1; fi
-        if ! _ensure_table_config_hierarchies "$db_file"; then debug "$ensure_database_debug_0007"; return 1; fi
-        if ! _ensure_table_settings "$db_file"; then debug "$ensure_database_debug_0008"; return 1; fi
-        if ! _ensure_table_settings_history "$db_file"; then debug "$ensure_database_debug_0009"; return 1; fi
-        if ! _ensure_table_setting_dependencies "$db_file"; then debug "$ensure_database_debug_0010"; return 1; fi
-        if ! _ensure_table_change_groups "$db_file"; then debug "$ensure_database_debug_0011"; return 1; fi
-        if ! _ensure_table_settings_change_groups "$db_file"; then debug "$ensure_database_debug_0012"; return 1; fi
-
-        # Alle Tabellen erfolgreich erstellt, Datenbank ist bereit
-        debug "$ensure_database_debug_0002"
-        return 0
-    else
-        # SQLite ist nicht installiert, Datenbank-Initialisierung wurde übersprungen
-        debug "$ensure_database_debug_0003"
-        return 1
-    fi    
-}   
-
-# validate_database
-validate_database_debug_0001="INFO: Starte Datenbankvalidierung..."
-validate_database_debug_0002="SUCCESS: Datenbankvalidierung abgeschlossen, keine Fehler gefunden."
-validate_database_debug_0003="ERROR: Datenbankvalidierung abgeschlossen, %d Fehler gefunden."
-
-validate_database() {
-    # -----------------------------------------------------------------------
-    # validate_database
-    # -----------------------------------------------------------------------
-    # Funktion.: Stellt sicher, dass alle Tabellen in der SQLite-Datenbank 
-    # .........  konsistent sind und die Datenbank keine Fehler aufweist.
-    # Parameter: keine
-    # Rückgabe.: 0 - Erfolg
-    # .........  1 - Fehler
-    # -----------------------------------------------------------------------
-    local validation_errors=0
-
-    # Debug-Ausgabe eröffnen
-    debug "$validate_database_debug_0001"
-
-    # Alle Tabellen validieren
-    _validate_table_schema_versions || validation_errors=$((validation_errors + 1))
-    _validate_table_db_backups || validation_errors=$((validation_errors + 1))
-    _validate_table_config_hierarchies || validation_errors=$((validation_errors + 1))
-    _validate_table_settings || validation_errors=$((validation_errors + 1))
-    _validate_table_settings_history || validation_errors=$((validation_errors + 1))
-    _validate_table_setting_dependencies || validation_errors=$((validation_errors + 1))
-    _validate_table_change_groups || validation_errors=$((validation_errors + 1))
-    _validate_table_settings_change_groups || validation_errors=$((validation_errors + 1))
-
-    if [ $validation_errors -eq 0 ]; then
-        debug "$validate_database_debug_0002"
-        return 0
-    else
-        debug "$validate_database_debug_0003" "$validation_errors"
-        return 1
-    fi
-}
-
-# setup_database
-setup_database_debug_0001="INFO: Starte Datenbank-Setup..."
-setup_database_debug_0002="INFO: Starte Installation Datenbank ..."
-setup_database_debug_0003="ERROR: Datenbank-Installation fehlgeschlagen."
-setup_database_debug_0004="SUCCESS: Datenbank-Installation erfolgreich abgeschlossen."
-
-setup_database_txt_0001="[/] Installiere Datenbank ..."
-setup_database_txt_0002="Datenbank-Installation fehlgeschlagen."
-setup_database_txt_0003="Datenbank-Installation erfolgreich abgeschlossen."
-
-setup_database() {
-    # -----------------------------------------------------------------------
-    # setup_database
-    # -----------------------------------------------------------------------
-    # Funktion: Führt die komplette Installation der Datenbank durch
-    # Parameter: $1 - Optional: CLI oder JSON-Ausgabe. Wenn nicht angegeben,
-    # .........       wird die Standardausgabe verwendet (CLI-Ausgabe)
+    # Funktion.: Registriert eine neue Konfigurationshierarchie in der
+    # .........  Datenbank.
+    # Parameter: $1 - Name der Hierarchie
+    # .........  $2 - Beschreibung
+    # .........  $3 - Verantwortliche Person/Modul
+    # .........  $4 - (Optional) Hierarchie-Daten als JSON
+    # .........  $5 - (Optional) Pfad zur Datenbank
     # Rückgabe: 0 bei Erfolg, 1 bei Fehler
     # -----------------------------------------------------------------------
-    local output_mode="${1:-cli}"  # Standardmäßig CLI-Ausgabe
-    local service_pid
+    local hierarchy_name="$1"
+    local description="$2"
+    local responsible="$3"
+    local hierarchy_data="${4:-'{}'}"
+    local db_file="${5:-$(get_data_file)}"
 
-    # Eröffnungsmeldung im Debug Modus
-    debug "$setup_database_debug_0001"
+    # Überprüfen, ob alle erforderlichen Parameter angegeben sind
+    if ! check_param "$hierarchy_name" "hierarchy_name"; then return 1; fi
+    if ! check_param "$description" "description"; then return 1; fi
+    if ! check_param "$responsible" "responsible"; then return 1; fi
+    if ! check_param "$hierarchy_data" "hierarchy_data"; then return 1; fi
+    if ! check_param "$db_file" "db_file"; then return 1; fi
 
-    # Installiere die Datenbank
-    if [ "$output_mode" = "json" ]; then
-        ensure_database || return 1
-    else
-        # Ausgabe im CLI-Modus, Spinner anzeigen
-        echo -n "$setup_database_txt_0001"
-        # Installation der Datenbank im Hintergrund ausführen
-        # und Spinner anzeigen
-        debug "$setup_database_debug_0002"
-        (ensure_database) &> /dev/null 2>&1 &
-        service_pid=$!
-        show_spinner "$service_pid" "dots"
-        # Überprüfe, ob die Installation erfolgreich war
-        if [ $? -ne 0 ]; then
-            debug "$setup_database_debug_0003"
-            print_error "$setup_database_txt_0002"
-            return 1
-        fi
-        debug "$setup_database_debug_0004"
-        print_success "$setup_database_txt_0003"
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$register_config_hierarchy_debug_0001" "$hierarchy_name" "$description" "$responsible")"
+
+    # Hierarchienamen bereinigen und validieren
+    hierarchy_name=$(clean_key "$hierarchy_name")
+    if ! validate_key "$hierarchy_name"; then
+        debug "$(printf "$register_config_hierarchy_debug_0002" "$hierarchy_name")"
+        log "$(printf "$register_config_hierarchy_log_0001" "$hierarchy_name")"
+        return 1
+    fi
+    
+    # Prüfen, ob die Hierarchie bereits existiert
+    if hierarchy_exists "$hierarchy_name" "$db_file"; then
+        debug "$(printf "$register_config_hierarchy_debug_0003" "$hierarchy_name")"
+        log "$(printf "$register_config_hierarchy_log_0002" "$hierarchy_name")"
+        return 1
+    fi
+    
+    # Hierarchie in die Datenbank einfügen
+    sqlite3 "$db_file" "INSERT INTO config_hierarchies (hierarchy_name, description, responsible, hierarchy_data) 
+                        VALUES ('$hierarchy_name', '$description', '$responsible', '$hierarchy_data');"
+
+    # Prüfen, ob der Einfügevorgang erfolgreich war
+    if [ $? -ne 0 ]; then
+        debug "$(printf "$register_config_hierarchy_debug_0004" "$(sqlite3 "$db_file" "SELECT sqlite_error_msg();")")"
+        log "$(printf "$register_config_hierarchy_log_0003" "$(sqlite3 "$db_file" "SELECT sqlite_error_msg();")")"
+        return 1
+    fi    
+
+    # Erfolgsmeldung ausgeben
+    debug "$(printf "$register_config_hierarchy_debug_0005" "$hierarchy_name")"
+    log "$(printf "$register_config_hierarchy_log_0004" "$hierarchy_name")"
+    return 0
+}
+
+# has_config_value
+_has_config_value_debug_0001="INFO: Überprüfe, ob Konfigurationswert '%s' existiert."
+_has_config_value_debug_0002="ERROR: Ungültiger Schlüsselname: '%s'."
+_has_config_value_debug_0003="ERROR: Hierarchie '%s' existiert nicht in der Datenbank '%s'."
+_has_config_value_debug_0004="SUCCESS: Konfigurationswert für '%s' in der Hierarchie '%s' existiert."
+_has_config_value_debug_0005="ERROR: Konfigurationswert für '%s' in der Hierarchie '%s' existiert nicht."
+_has_config_value_log_0001="ERROR: Ungültiger Schlüsselname: '%s'."
+_has_config_value_log_0002="ERROR: Hierarchie '%s' existiert nicht in der Datenbank '%s'."
+_has_config_value_log_0003="SUCCESS: Konfigurationswert für '%s' in der Hierarchie '%s'' existiert."
+_has_config_value_log_0004="ERROR: Konfigurationswert für '%s' in der Hierarchie '%s' existiert nicht."
+
+has_config_value() {
+    # -----------------------------------------------------------------------
+    # has_config_value
+    # -----------------------------------------------------------------------
+    # Funktion.: Funktion prüft, ob ein Konfigurationswert existiert.
+    # Parameter: $1 - Schlüsselname (z.B. "nginx.port")
+    # .........  $2 - (Optional) Pfad zur Datenbank
+    # Rückgabe.: 0, wenn der Wert existiert, sonst 1
+    # -----------------------------------------------------------------------
+    local full_key="$1"
+    local db_file="${2:-$(get_data_file)}"
+
+    # Überprüfen, ob alle erforderlichen Parameter angegeben sind
+    if ! check_param "$full_key" "full_key"; then return 1; fi
+    if ! check_param "$db_file" "db_file"; then return 1; fi
+
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$_has_config_value_debug_0001" "$full_key")"
+
+    # Schlüssel validieren
+    if ! _validate_key "$full_key"; then
+        debug "$(printf "$_has_config_value_debug_0002" "$full_key")"
+        log "$(printf "$_has_config_value_log_0001" "$full_key")"
+        return 1
     fi
 
+    # Hierarchie und eigentlichen Schlüssel extrahieren
+    local parts=($(_parse_hierarchical_key "$full_key"))
+    local hierarchy_name="${parts[0]}"
+    local key_name="${parts[1]}"
+
+    # Wenn die Hierarchie nicht existiert, gibt es auch keinen Wert
+    if ! _hierarchy_exists "$hierarchy_name" "$db_file"; then
+        debug "$(printf "$_has_config_value_debug_0003" "$hierarchy_name" "$db_file")"
+        log "$(printf "$_has_config_value_log_0002" "$hierarchy_name" "$db_file")"
+        return 1
+    fi
+
+    # Hierarchie-ID abrufen
+    local hierarchy_id=$(_get_hierarchy_id "$hierarchy_name" "$db_file")
+
+    # Prüfen, ob der Schlüssel existiert
+    local exists=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM settings WHERE hierarchy_id=$hierarchy_id AND key='$key_name' AND is_active=1;")
+
+    # Ergebnis prüfen und zurückgeben  
+    if [ "$exists" -gt 0 ]; then
+        debug "$(printf "$_has_config_value_debug_0004" "$key_name" "$hierarchy_name")"
+        log "$(printf "$_has_config_value_log_0003" "$key_name" "$hierarchy_name")"
+        return 0  # Wert existiert
+    else
+        debug "$(printf "$_has_config_value_debug_0005" "$key_name" "$hierarchy_name")"
+        log "$(printf "$_has_config_value_log_0004" "$key_name" "$hierarchy_name")"
+        return 1  # Wert existiert nicht
+    fi
+}
+
+# get_config_value
+get_config_value_debug_0001="INFO: Abrufen des Konfigurationswerts für '%s' aus der Hierarchie '%s'."
+get_config_value_debug_0002="ERROR: Ungültiger Schlüsselname: '%s'."
+get_config_value_debug_0003="ERROR: Hierarchie '%s' existiert nicht in der Datenbank '%s'."
+get_config_value_debug_0004="SUCCESS: Konfigurationswert für '%s' in der Hierarchie '%s' abgerufen: '%s'."
+get_config_value_log_0001="ERROR: Ungültiger Schlüsselname: '%s'."
+get_config_value_log_0002="ERROR: Hierarchie '%s' existiert nicht in der Datenbank '%s'."
+get_config_value_log_0003="SUCCESS: Konfigurationswert für '%s' in der Hierarchie '%s' abgerufen: '%s'."
+
+get_config_value() {
+    # -----------------------------------------------------------------------
+    # get_config_value
+    # -----------------------------------------------------------------------
+    # Funktion.: Funktion liest einen Konfigurationswert aus der Datenbank.
+    # Parameter: $1 - Schlüsselname (z.B. "nginx.port")
+    # .........  $2 - (Optional) Pfad zur Datenbank
+    # Rückgabe.: Der Wert des Schlüssels oder leer, wenn der Schlüssel
+    # .........  nicht existiert Returncode 0, wenn der Wert existiert,
+    # .........  sonst 1
+    # -----------------------------------------------------------------------
+    local full_key="$1"
+    local db_file="${2:-$(get_data_file)}"
+    
+    # Überprüfen, ob alle erforderlichen Parameter angegeben sind
+    if ! check_param "$full_key" "full_key"; then return 1; fi
+    if ! check_param "$db_file" "db_file"; then return 1; fi
+
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$get_config_value_debug_0001" "$full_key")"
+
+    # Schlüssel validieren
+    if ! _validate_key "$full_key"; then
+        debug "$(printf "$get_config_value_debug_0002" "$full_key")"
+        log "$(printf "$get_config_value_log_0001" "$full_key")"
+        return 1
+    fi
+    
+    # Hierarchie und eigentlichen Schlüssel extrahieren
+    local parts=($(_parse_hierarchical_key "$full_key"))
+    local hierarchy_name="${parts[0]}"
+    local key_name="${parts[1]}"
+    
+    # Wenn die Hierarchie nicht existiert, gibt es auch keinen Wert
+    if ! _hierarchy_exists "$hierarchy_name" "$db_file"; then
+        debug "$(printf "$get_config_value_debug_0003" "$hierarchy_name" "$db_file")"
+        log "$(printf "$get_config_value_log_0002" "$hierarchy_name" "$db_file")"
+        return 1
+    fi
+    
+    # Hierarchie-ID abrufen
+    local hierarchy_id=$(_get_hierarchy_id "$hierarchy_name" "$db_file")
+    
+    # Wert aus der Datenbank abrufen
+    local value=$(sqlite3 "$db_file" "SELECT value FROM settings WHERE hierarchy_id=$hierarchy_id AND key='$key_name' AND is_active=1;")
+    
+    echo "$value"
+    
+    # Wenn der Wert leer ist, prüfen, ob der Schlüssel wirklich existiert
+    if [ -z "$value" ]; then
+        has_config_value "$full_key" "$db_file"
+        return $?
+    else
+        debug "$(printf "$get_config_value_debug_0004" "$key_name" "$hierarchy_name" "$value")"
+        log "$(printf "$get_config_value_log_0003" "$key_name" "$hierarchy_name" "$value")"
+        return 0
+    fi
+}
+
+# set_config_value
+set_config_value_debug_0001="INFO: Setze Konfigurationswert für '%s' auf '%s' (Typ: '%s', Beschreibung: '%s', Gewichtung: %d, Änderungsgruppe: '%s')."
+set_config_value_debug_0002="ERROR: Ungültiger Schlüsselname: '%s'."
+set_config_value_debug_0003="ERROR: Ungültiger Schlüssel: %s - keine Hierarchie angegeben."
+set_config_value_debug_0004="ERROR: Fehler beim Erstellen der Hierarchie '%s'"
+set_config_value_debug_0005="SUCCESS: Konfigurationswert für '%s' in der Hierarchie '%s' gesetzt: '%s'."
+set_config_value_debug_0006="ERROR: Konfigurationswert für '%s' in der Hierarchie '%s' konnte nicht gesetzt werden: %s"
+set_config_value_log_0001="ERROR: Ungültiger Schlüsselname: '%s'."
+set_config_value_log_0002="ERROR: Ungültiger Schlüssel: %s - keine Hierarchie angegeben."
+set_config_value_log_0003="ERROR: Fehler beim Erstellen der Hierarchie '%s'."
+set_config_value_log_0004="SUCCESS: Konfigurationswert für '%s' in der Hierarchie '%s' gesetzt: '%s'."
+set_config_value_log_0005="ERROR: Konfigurationswert für '%s' in der Hierarchie '%s' konnte nicht gesetzt werden: %s."
+
+set_config_value() {
+    # -----------------------------------------------------------------------
+    # set_config_value
+    # -----------------------------------------------------------------------
+    # Funktion.: Funktion schreibt einen Konfigurationswert in die Datenbank.
+    # Parameter: $1 - Schlüsselname (z.B. "nginx.port")
+    # .........  $2 - Zu setzender Wert
+    # .........  $3 - (Optional) Datentyp (string, int, bool, float, json)
+    # .........  $4 - (Optional) Beschreibung des Konfigurationsschlüssels
+    # .........  $5 - (Optional) Gewichtung
+    # .........  $6 - (Optional) Gruppen-ID für zusammengehörige Änderungen
+    # .........  $7 - (Optional) Pfad zur Datenbank
+    # Rückgabe.: 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    local full_key="$1"
+    local value="$2"
+    local value_type="${3:-string}"
+    local description="${4:-}"
+    local weight="${5:-0}"
+    local change_group="${6:-}"
+    local db_file="${7:-$(get_data_file)}"
+
+    # Überprüfen, ob alle erforderlichen Parameter angegeben sind
+    if ! check_param "$full_key" "full_key"; then return 1; fi
+    if ! check_param "$value" "value"; then return 1; fi
+    if ! check_param "$value_type" "value_type"; then return 1; fi
+    if ! check_param "$description" "description"; then return 1; fi
+    if ! check_param "$weight" "weight"; then return 1; fi
+    if ! check_param "$change_group" "change_group"; then return 1; fi
+    if ! check_param "$db_file" "db_file"; then return 1; fi
+
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$set_config_value_debug_0001" "$full_key")"
+
+    # Schlüssel validieren
+    if ! _validate_key "$full_key"; then
+        debug "$(printf "$set_config_value_debug_0002" "$full_key")"
+        return 1
+    fi
+
+    # Hierarchie und eigentlichen Schlüssel extrahieren
+    local parts=($(parse_hierarchical_key "$full_key"))
+    local hierarchy_name="${parts[0]}"
+    local key_name="${parts[1]}"
+
+    # Wenn kein Schlüsselname vorhanden ist (z.B. nur "nginx" ohne ".port"), abbrechen
+    if [ -z "$key_name" ]; then
+        debug "$(printf "$set_config_value_debug_0003" "$full_key")"
+        return 1
+    fi
+
+    # Wenn die Hierarchie nicht existiert, automatisch anlegen
+    if ! _hierarchy_exists "$hierarchy_name" "$db_file"; then
+        _register_config_hierarchy "$hierarchy_name" \
+                                 "Automatisch erstellte Hierarchie" \
+                                 "system" \
+                                 '{"auto_created":true}' \
+                                 "$db_file"
+        if [ $? -ne 0 ]; then
+            debug "$(printf "$set_config_value_debug_0004" "$hierarchy_name")"
+            return 1
+        fi
+    fi
+
+    # Hierarchie-ID abrufen
+    local hierarchy_id=$(_get_hierarchy_id "$hierarchy_name" "$db_file")
+
+    # Wenn keine Change Group angegeben wurde, eine generieren
+    if [ -z "$change_group" ]; then
+        change_group=$(_generate_group_id "$hierarchy_name")
+    fi
+
+    # Transaktion starten
+    sqlite3 "$db_file" "BEGIN TRANSACTION;"
+
+    # Prüfen, ob der Schlüssel bereits existiert
+    local old_value=""
+    local setting_id=""
+    local exists=$(sqlite3 "$db_file" "SELECT id, value FROM settings WHERE hierarchy_id=$hierarchy_id AND key='$key_name';")
+
+    if [ -n "$exists" ]; then
+        # Schlüssel existiert bereits, alten Wert speichern und aktualisieren
+        setting_id=$(echo "$exists" | cut -d'|' -f1)
+        old_value=$(echo "$exists" | cut -d'|' -f2)
+        
+        # Wert aktualisieren
+        sqlite3 "$db_file" "UPDATE settings SET 
+                           value='$value', 
+                           value_type='$value_type', 
+                           description=COALESCE('$description', description), 
+                           updated_at=datetime('now','localtime'), 
+                           weight=$weight, 
+                           change_group='$change_group'
+                           WHERE id=$setting_id;"
+        
+        # Änderungshistorie speichern
+        sqlite3 "$db_file" "INSERT INTO settings_history (setting_id, old_value, new_value, changed_at, changed_by, change_reason) 
+                           VALUES ($setting_id, '$old_value', '$value', datetime('now','localtime'), 'script', 'API call');"
+    else
+        # Schlüssel existiert noch nicht, neu anlegen
+        sqlite3 "$db_file" "INSERT INTO settings (hierarchy_id, key, value, value_type, description, weight, change_group, is_active) 
+                           VALUES ($hierarchy_id, '$key_name', '$value', '$value_type', '$description', $weight, '$change_group', 1);"
+        
+        # Setting-ID für weitere Operationen abrufen
+        setting_id=$(sqlite3 "$db_file" "SELECT last_insert_rowid();")
+    fi
+
+    # Änderungsgruppe in der Datenbank registrieren
+    local group_exists=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM change_groups WHERE group_name='$change_group';")
+    if [ "$group_exists" -eq 0 ]; then
+        # Neue Änderungsgruppe anlegen
+        sqlite3 "$db_file" "INSERT INTO change_groups (group_name, description, status, priority) 
+                           VALUES ('$change_group', 'Auto-generated change group', 'pending', 0);"
+    fi
+
+    # Verknüpfung zwischen Setting und Änderungsgruppe herstellen
+    local change_group_id=$(sqlite3 "$db_file" "SELECT id FROM change_groups WHERE group_name='$change_group';")
+    local link_exists=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM settings_change_groups WHERE setting_id=$setting_id AND change_group_id=$change_group_id;")
+    if [ "$link_exists" -eq 0 ]; then
+        sqlite3 "$db_file" "INSERT INTO settings_change_groups (setting_id, change_group_id) 
+                           VALUES ($setting_id, $change_group_id);"
+    fi
+
+    # Transaktion abschließen
+    sqlite3 "$db_file" "COMMIT;"
+
+    # Prüfen, ob der Einfügevorgang erfolgreich war
+    if [ $? -ne 0 ]; then
+        debug "$(printf "$set_config_value_debug_0006" "$key_name" "$hierarchy_name" "$(sqlite3 "$db_file" "SELECT sqlite_error_msg();")")"
+        log "$(printf "$set_config_value_log_0005" "$key_name" "$hierarchy_name" "$(sqlite3 "$db_file" "SELECT sqlite_error_msg();")")"
+        return 1
+    fi
+
+    # Erfolgsmeldung ausgeben
+    debug "$(printf "$set_config_value_debug_0005" "$key_name" "$hierarchy_name" "$value")"
+    log "$(printf "$set_config_value_log_0004" "$key_name" "$hierarchy_name" "$value")"
+    return 0
+}
+
+# del_config_value
+del_config_value_debug_0001="INFO: Lösche Konfigurationswert '%s'."
+del_config_value_debug_0002="ERROR: Ungültiger Schlüsselname: '%s'."
+del_config_value_debug_0003="ERROR: Hierarchie '%s' existiert nicht in der Datenbank '%s'."
+del_config_value_debug_0004="ERROR: Schlüssel '%s' existiert nicht in der Hierarchie '%s'."
+del_config_value_debug_0005="SUCCESS: Konfigurationswert '%s' gelöscht (physisch: %s)."
+del_config_value_log_0001="ERROR: Ungültiger Schlüsselname: '%s'."
+del_config_value_log_0002="ERROR: Hierarchie '%s' existiert nicht in der Datenbank '%s'."
+del_config_value_log_0003="ERROR: Schlüssel '%s' existiert nicht in der Hierarchie '%s'."
+del_config_value_log_0004="SUCCESS: Konfigurationswert '%s' gelöscht (physisch: %s)."
+
+del_config_value() {
+    # -----------------------------------------------------------------------
+    # del_config_value
+    # -----------------------------------------------------------------------
+    # Funktion.: Funktion löscht einen Konfigurationswert aus der Datenbank.
+    # Parameter: $1 - Schlüsselname (z.B. "nginx.port")
+    # .........  $2 - (Optional) Markierung für physisches Löschen (default: false)
+    # .........  $3 - (Optional) Pfad zur Datenbank
+    # Rückgabe.: 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    local full_key="$1"
+    local physical_delete="${2:-false}"
+    local db_file="${3:-$(get_data_file)}"
+    
+    # Überprüfen, ob alle erforderlichen Parameter angegeben sind
+    if ! check_param "$full_key" "full_key"; then return 1; fi
+    if ! check_param "$physical_delete" "physical_delete"; then return 1; fi
+    if ! check_param "$db_file" "db_file"; then return 1; fi
+
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$del_config_value_debug_0001" "$full_key")"
+
+    # Schlüssel validieren
+    if ! _validate_key "$full_key"; then
+        debug "$(printf "$del_config_value_debug_0002" "$full_key")"
+        log "$(printf "$del_config_value_log_0001" "$full_key")"
+        return 1
+    fi
+    
+    # Hierarchie und eigentlichen Schlüssel extrahieren
+    local parts=($(_parse_hierarchical_key "$full_key"))
+    local hierarchy_name="${parts[0]}"
+    local key_name="${parts[1]}"
+    
+    # Wenn die Hierarchie nicht existiert, gibt es nichts zu löschen
+    if ! _hierarchy_exists "$hierarchy_name" "$db_file"; then
+        debug "$(printf "$del_config_value_debug_0003" "$hierarchy_name" "$db_file")"
+        log "$(printf "$del_config_value_log_0002" "$hierarchy_name" "$db_file")"
+        return 1
+    fi
+    
+    # Hierarchie-ID abrufen
+    local hierarchy_id=$(_get_hierarchy_id "$hierarchy_name" "$db_file")
+    
+    # Prüfen, ob der Schlüssel existiert
+    local setting_id=$(sqlite3 "$db_file" "SELECT id FROM settings WHERE hierarchy_id=$hierarchy_id AND key='$key_name';")
+    if [ -z "$setting_id" ]; then
+        debug "$(printf "$del_config_value_debug_0004" "$key_name" "$hierarchy_name")"
+        log "$(printf "$del_config_value_log_0003" "$key_name" "$hierarchy_name")"
+        return 1  # Schlüssel existiert nicht
+    fi
+    
+    # Transaktion starten
+    sqlite3 "$db_file" "BEGIN TRANSACTION;"
+    
+    # Je nach Löschmodus (logisch oder physisch)
+    if [ "$physical_delete" = "true" ]; then
+        # Physisches Löschen: Eintrag komplett aus der Datenbank entfernen
+        sqlite3 "$db_file" "DELETE FROM settings WHERE id=$setting_id;"
+        sqlite3 "$db_file" "DELETE FROM settings_history WHERE setting_id=$setting_id;"
+        sqlite3 "$db_file" "DELETE FROM settings_change_groups WHERE setting_id=$setting_id;"
+    else
+        # Logisches Löschen: Eintrag nur als inaktiv markieren
+        sqlite3 "$db_file" "UPDATE settings SET is_active=0, updated_at=datetime('now','localtime') WHERE id=$setting_id;"
+        
+        # Änderungshistorie speichern
+        local old_value=$(sqlite3 "$db_file" "SELECT value FROM settings WHERE id=$setting_id;")
+        sqlite3 "$db_file" "INSERT INTO settings_history (setting_id, old_value, new_value, changed_at, changed_by, change_reason) 
+                           VALUES ($setting_id, '$old_value', 'DELETED', datetime('now','localtime'), 'script', 'Logical delete');"
+    fi
+    
+    # Transaktion abschließen
+    sqlite3 "$db_file" "COMMIT;"
+    
+    # Abschlussmeldung ausgeben
+    debug "$(printf "$del_config_value_debug_0005" "$full_key" "$physical_delete")"
+    log "$(printf "$del_config_value_log_0004" "$full_key" "$physical_delete")"
+    return 0
+}
+
+# lst_config_values
+lst_config_values_debug_0001="INFO: Liste der Konfigurationswerte mit Präfix '%s' im Format '%s' aus der Datenbank '%s'."
+
+lst_config_values() {
+    # -----------------------------------------------------------------------
+    # lst_config_values
+    # -----------------------------------------------------------------------
+    # Funktion.: Listet alle Konfigurationswerte auf, die zu einer bestimmten 
+    # .........  Hierarchie gehören.
+    # Parameter: $1 - (Optional) Präfix für hierarchische Filterung
+    # .........  $2 - (Optional) Format der Ausgabe (text, json)
+    # .........  $3 - (Optional) Pfad zur Datenbank
+    # Rückgabe.: Liste aller Schlüssel-Wert-Paare im angegebenen Format
+    # -----------------------------------------------------------------------
+    local prefix="${1:-}"
+    local format="${2:-text}"
+    local db_file="${3:-$(get_data_file)}"
+    
+    # Überprüfen, ob alle erforderlichen Parameter angegeben sind
+    if ! check_param "$prefix" "prefix"; then return 1; fi
+    if ! check_param "$format" "format"; then return 1; fi
+    if ! check_param "$db_file" "db_file"; then return 1; fi
+
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$lst_config_values_debug_0001" "$prefix" "$format" "$db_file")"
+
+    # Wenn ein Präfix angegeben ist, diesen bereinigen
+    local where_clause=""
+    local join_clause=""
+    if [ -n "$prefix" ]; then
+        # Hierarchie und eigentlichen Schlüssel extrahieren
+        local parts=($(_parse_hierarchical_key "$prefix"))
+        local hierarchy_name="${parts[0]}"
+        local key_prefix="${parts[1]}"
+        
+        # Wenn die Hierarchie nicht existiert, leere Liste zurückgeben
+        if ! _hierarchy_exists "$hierarchy_name" "$db_file"; then
+            if [ "$format" = "json" ]; then
+                echo "{}"
+            fi
+            return 0
+        fi
+        
+        # Hierarchie-ID abrufen
+        local hierarchy_id=$(_get_hierarchy_id "$hierarchy_name" "$db_file")
+
+        # Where-Klausel für die Abfrage erstellen
+        where_clause="WHERE h.id = $hierarchy_id AND s.is_active = 1"
+        if [ -n "$key_prefix" ]; then
+            where_clause="$where_clause AND s.key LIKE '$key_prefix%'"
+        fi
+    else
+        # Keine Filterung, alle aktiven Einstellungen zurückgeben
+        where_clause="WHERE s.is_active = 1"
+    fi
+    
+    # Join-Klausel für die Abfrage erstellen
+    join_clause="JOIN config_hierarchies h ON s.hierarchy_id = h.id"
+    
+    # Abfrage je nach Format ausführen
+    if [ "$format" = "json" ]; then
+        # JSON-Format
+        sqlite3 -json "$db_file" "SELECT h.hierarchy_name || '.' || s.key AS full_key, s.value, s.value_type 
+                                 FROM settings s $join_clause $where_clause;"
+    else
+        # Text-Format (key=value)
+        sqlite3 "$db_file" "SELECT h.hierarchy_name || '.' || s.key, s.value 
+                           FROM settings s $join_clause $where_clause;" | while read -r line; do
+            key=$(echo "$line" | cut -d'|' -f1)
+            value=$(echo "$line" | cut -d'|' -f2)
+            echo "$key=$value"
+        done
+    fi
+    
+    return 0
+}
+
+# ===========================================================================
+# Komplexere Operationen
+# ===========================================================================
+
+# apply_config_changes
+apply_config_changes_debug_0001="INFO: Wende Änderungen der Änderungsgruppe '%s' an der Datenbank '%s' an."
+apply_config_changes_debug_0002="ERROR: Änderungsgruppe '%s' existiert nicht."
+apply_config_changes_debug_0003="SUCCESS: Änderungen der Änderungsgruppe '%s' erfolgreich angewendet."
+apply_config_changes_log_0001="ERROR: Änderungsgruppe '%s' existiert nicht."
+apply_config_changes_log_0002="SUCCESS: Änderungen der Änderungsgruppe '%s' erfolgreich angewendet."
+
+apply_config_changes() {
+    # -----------------------------------------------------------------------
+    # apply_config_changes
+    # -----------------------------------------------------------------------
+    # Funktion.: Markiert alle Änderungen einer Gruppe als angewendet.
+    # Parameter: $1 - Gruppen-ID
+    # .........  $2 - (Optional) Pfad zur Datenbank
+    # Rückgabe.: 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    local change_group="$1"
+    local db_file="${2:-$(get_data_file)}"
+
+    # Überprüfen, ob alle erforderlichen Parameter angegeben sind
+    if ! check_param "$change_group" "change_group"; then return 1; fi
+    if ! check_param "$db_file" "db_file"; then return 1; fi
+
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$apply_config_changes_debug_0001" "$change_group" "$db_file")"
+
+    # Prüfen, ob die Änderungsgruppe existiert
+    local group_exists=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM change_groups WHERE group_name='$change_group';")
+    if [ "$group_exists" -eq 0 ]; then
+        echo "Änderungsgruppe '$change_group' existiert nicht." >&2
+        return 1
+    fi
+
+    # Transaktion starten
+    sqlite3 "$db_file" "BEGIN TRANSACTION;"
+
+    # Status der Änderungsgruppe auf 'complete' setzen
+    sqlite3 "$db_file" "UPDATE change_groups SET status='complete', updated_at=datetime('now','localtime') WHERE group_name='$change_group';"
+
+    # Transaktion abschließen
+    sqlite3 "$db_file" "COMMIT;"
+
+    # Prüfe ob erfolgreich
+    if [ $? -ne 0 ]; then
+        debug "$(printf "$apply_config_changes_debug_0002" "$change_group")"
+        log "$(printf "$apply_config_changes_log_0001" "$change_group")"
+        return 1
+    fi
+
+    debug "$(printf "$apply_config_changes_debug_0003" "$change_group")"
+    log "$(printf "$apply_config_changes_log_0002" "$change_group")"
+    return 0
+}
+
+# rollback_config_changes
+rollback_config_changes_debug_0001="INFO: Setzt alle Änderungen der Änderungsgruppe '%s' zurück, Datenbank '%s'."
+rollback_config_changes_debug_0002="ERROR: Änderungsgruppe '%s' existiert nicht."
+rollback_config_changes_debug_0003="ERROR: Fehler beim Zurücksetzen der Änderungen der Änderungsgruppe '%s'"
+rollback_config_changes_debug_0004="SUCCESS: Änderungen der Änderungsgruppe '%s' erfolgreich zurückgesetzt."
+rollback_config_changes_log_0001="ERROR: Änderungsgruppe '%s' existiert nicht."
+rollback_config_changes_log_0002="ERROR: Fehler beim Zurücksetzen der Änderungen der Änderungsgruppe '%s'"
+rollback_config_changes_log_0003="SUCCESS: Änderungen der Änderungsgruppe '%s' erfolgreich zurückgesetzt."
+
+rollback_config_changes() {
+    # -----------------------------------------------------------------------
+    # rollback_config_changes
+    # -----------------------------------------------------------------------
+    # Funktion.: Stellt die vorherigen Werte einer Änderungsgruppe wieder her
+    # Parameter: $1 - Gruppen-ID
+    # .........  $2 - (Optional) Pfad zur Datenbank
+    # Rückgabe.: 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    local change_group="$1"
+    local db_file="${2:-$(get_data_file)}"
+
+    # Überprüfen, ob alle erforderlichen Parameter angegeben sind
+    if ! check_param "$change_group" "change_group"; then return 1; fi
+    if ! check_param "$db_file" "db_file"; then return 1; fi
+
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$rollback_config_changes_debug_0001" "$change_group" "$db_file")"
+
+    # Prüfen, ob die Änderungsgruppe existiert
+    local group_exists=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM change_groups WHERE group_name='$change_group';")
+    if [ "$group_exists" -eq 0 ]; then
+        debug "$(printf "$rollback_config_changes_debug_0002" "$change_group")"
+        log "$(printf "$rollback_config_changes_log_0001" "$change_group")"
+        return 1
+    fi
+
+    # Transaktion starten
+    sqlite3 "$db_file" "BEGIN TRANSACTION;"
+
+    # Change-Group-ID abrufen
+    local change_group_id=$(sqlite3 "$db_file" "SELECT id FROM change_groups WHERE group_name='$change_group';")
+
+    # Alle betroffenen Einstellungen abrufen
+    local settings_result=$(sqlite3 "$db_file" "
+        SELECT s.id, h.hierarchy_name, s.key, sh.old_value 
+        FROM settings s
+        JOIN settings_change_groups scg ON s.id = scg.setting_id
+        JOIN settings_history sh ON s.id = sh.setting_id
+        JOIN config_hierarchies h ON s.hierarchy_id = h.id
+        WHERE scg.change_group_id = $change_group_id
+        AND sh.changed_at = (
+            SELECT MAX(changed_at)
+            FROM settings_history
+            WHERE setting_id = s.id
+        );"
+    )
+
+    # Für jede Einstellung den alten Wert wiederherstellen
+    echo "$settings_result" | while IFS='|' read -r setting_id hierarchy_name key old_value; do
+        # Aktuellen Wert abrufen und als Historie speichern
+        local current_value=$(sqlite3 "$db_file" "SELECT value FROM settings WHERE id=$setting_id;")
+        
+        # Alten Wert wiederherstellen
+        sqlite3 "$db_file" "UPDATE settings SET value='$old_value', updated_at=datetime('now','localtime') WHERE id=$setting_id;"
+        
+        # Änderungshistorie speichern
+        sqlite3 "$db_file" "INSERT INTO settings_history (setting_id, old_value, new_value, changed_at, changed_by, change_reason) 
+                           VALUES ($setting_id, '$current_value', '$old_value', datetime('now','localtime'), 'script', 'Rollback of change group $change_group');"
+    done
+
+    # Status der Änderungsgruppe auf 'rolled-back' setzen
+    sqlite3 "$db_file" "UPDATE change_groups SET status='rolled-back', updated_at=datetime('now','localtime') WHERE group_name='$change_group';"
+
+    # Transaktion abschließen
+    sqlite3 "$db_file" "COMMIT;"
+
+    # Prüfen, ob der Rollback erfolgreich war
+    if [ $? -ne 0 ]; then
+        debug "$(printf "$rollback_config_changes_debug_0003" "$change_group")"
+        log "$(printf "$rollback_config_changes_log_0002" "$change_group")"
+        return 1
+    fi
+
+    # Erfolgsmeldung ausgeben
+    debug "$(printf "$rollback_config_changes_debug_0004" "$change_group")"
+    log "$(printf "$rollback_config_changes_log_0003" "$change_group")"
     return 0
 }
