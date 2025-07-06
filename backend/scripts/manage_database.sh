@@ -97,7 +97,8 @@ _ensure_database_file_debug_0003="INFO: Initialisiere SQLite-Datenbank: '%s'"
 _ensure_database_file_debug_0004="SUCCESS: SQLite-Datenbank erfolgreich initialisiert: '%s'"
 _ensure_database_file_debug_0005="ERROR: Fehler beim Initialisieren der SQLite-Datenbank: '%s'"
 _ensure_database_file_debug_0006="ERROR: SQLite-Datenbank konnte nicht korrekt initialisiert werden: '%s'"
-_ensure_database_file_debug_0007="SUCCESS: SQLite-Datenbank existiert und ist gültig: '%s'"
+_ensure_database_file_debug_0007="INFO: Prüfe Tabellenstruktur in der Datenbank: '%s'"
+_ensure_database_file_debug_0008="SUCCESS: SQLite-Datenbank existiert und ist gültig: '%s'"
 
 _ensure_database_file() {
     # -----------------------------------------------------------------------
@@ -159,7 +160,15 @@ _ensure_database_file() {
         return 0
     fi
     
-    debug "$(printf "$_ensure_database_file_debug_0007" "$db_file")"
+    # Wenn die Datei bereits existiert und gültig ist, Tabellenstruktur prüfen
+    validate_database "$db_file"
+    if [ $? -ne 0 ]; then
+        debug "$(printf "$_ensure_database_file_debug_0007" "$db_file")"
+        echo ""
+        return 1
+    fi
+
+    debug "$(printf "$_ensure_database_file_debug_0008" "$db_file")"
     echo "$db_file"
     return 0
 }
