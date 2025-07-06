@@ -5,6 +5,13 @@ Dieses Modul bietet Funktionen zum Laden, Validieren und Speichern von Einstellu
 Es fungiert als zentrale Schnittstelle für alle einstellungsbezogenen Operationen.
 """
 
+# TODO: Integration mit manage_settings.sh
+# - Wrapper-Funktionen für die wichtigsten Bash-Funktionen implementieren (get_config_value, set_config_value, etc.)
+# - Kompatibilitätsschicht zwischen alter und neuer API
+# - Unterstützung für hierarchische Schlüssel und Gruppen-IDs
+# - Fehlerbehandlung und Status-Mapping zwischen Bash und Python
+# - Siehe detaillierte Anforderungen in 2025-07-02 Konfigurationswerte_neu.todo
+
 import os
 import json
 import logging

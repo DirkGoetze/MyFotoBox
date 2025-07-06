@@ -6,6 +6,13 @@ Dieses Modul stellt zentrale Funktionen für alle Datenbankoperationen bereit un
 stellt sicher, dass Datenbankzugriffe einheitlich und sicher erfolgen.
 """
 
+# TODO: Integration mit manage_database.sh
+# - Wrapper-Funktionen für Bash-Funktionen implementieren (ensure_database, backup_database, validate_database)
+# - SQL-Direktzugriff für Abwärtskompatibilität beibehalten
+# - Typenkonvertierung zwischen Python und Bash (besonders für JSON-Werte)
+# - Fehlerbehandlung und Logging der Bash-Aufrufe
+# - Siehe detaillierte Anforderungen in 2025-07-02 Konfigurationswerte_neu.todo
+
 import os
 import sqlite3
 import shutil

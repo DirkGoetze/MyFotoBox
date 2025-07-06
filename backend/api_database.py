@@ -5,6 +5,12 @@ Dieses Modul stellt die Flask-API-Endpunkte für Datenbankoperationen bereit und
 dient als Schnittstelle zwischen dem Frontend und dem manage_database-Modul.
 """
 
+# TODO: Integration mit dem neuen manage_database.sh-Modul
+# - API-Endpunkte für die neuen Funktionen bereitstellen (Backup, Validierung, etc.)
+# - Validierung von Anfragen anpassen (hierarchische Schlüssel)
+# - Response-Format vereinheitlichen
+# - Siehe detaillierte Anforderungen in 2025-07-02 Konfigurationswerte_neu.todo
+
 from flask import Blueprint, request
 from typing import Dict, Any, List, Optional
 import logging

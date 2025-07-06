@@ -16,7 +16,8 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 import manage_logging
 import manage_folders
 import manage_auth
-import manage_settings
+import manage_settings  # TODO: Anpassung für neue Settings-API (hierarchische Schlüssel und DB-Backend)
+import manage_database  # TODO: Integration mit manage_database.sh für zentralisierte Datenbankoperationen
 import manage_backend_service
 
 # Importiere API-Module

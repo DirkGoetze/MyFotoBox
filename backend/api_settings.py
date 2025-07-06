@@ -5,6 +5,13 @@ Dieses Modul stellt die Flask-API-Endpunkte für die Verwaltung von Einstellunge
 bereit und dient als Schnittstelle zwischen dem Frontend und dem manage_settings-Modul.
 """
 
+# TODO: Integration mit dem neuen manage_settings.sh-Modul
+# - API-Endpunkte für die neuen Settings-Funktionen bereitstellen (hierarchische Schlüssel, Transaktionen)
+# - Unterstützung für Transaktionen und Gruppen-IDs
+# - Validierung für hierarchische Schlüssel implementieren
+# - Fehlerbehandlung und sauberes Error-Reporting
+# - Siehe detaillierte Anforderungen in 2025-07-02 Konfigurationswerte_neu.todo
+
 from flask import Blueprint, request, jsonify
 import logging
 from typing import Dict, Any, Optional
