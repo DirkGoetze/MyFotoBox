@@ -237,44 +237,6 @@ _create_table() {
     return 0
 }
 
-# _is_column_exists
-_is_column_exists_debug_0001="INFO: Prüfe, ob Spalte '%s' in Tabelle '%s' existiert."
-_is_column_exists_debug_0002="INFO: Spalte '%s' in Tabelle '%s' gefunden."
-_is_column_exists_debug_0003="ERROR: Spalte '%s' in Tabelle '%s' nicht gefunden."
-
-_is_column_exists() {
-    # -----------------------------------------------------------------------
-    # _is_column_exists
-    # -----------------------------------------------------------------------
-    # Funktion.: Prüft ob eine Spalte in einer Tabelle vorkommt
-    # Parameter: $1 - Name der zu prüfenden Spalte
-    # .........  $2 - Name der Tabelle
-    # .........  $3 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Spalte existiert
-    # .........  1 - Spalte existiert nicht
-    # -----------------------------------------------------------------------
-    local column_name="$1"
-    local table_name="$2"
-    local db_file="$3"
-
-    # Überprüfen, ob der Spaltenname, Tabellenname und der Datenbankpfad angegeben sind
-    if ! check_param "$column_name" "column_name"; then return 1; fi
-    if ! check_param "$table_name" "table_name"; then return 1; fi
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$_is_column_exists_debug_0001" "$column_name" "$table_name")"
-
-    # Überprüfen, ob die Spalte in der Tabelle existiert
-    if sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$column_name"; then
-        debug "$(printf "$_is_column_exists_debug_0002" "$column_name" "$table_name")"
-        return 0
-    else
-        debug "$(printf "$_is_column_exists_debug_0003" "$column_name" "$table_name")"
-        return 1
-    fi
-}
-
 # _validate_table
 _validate_table_debug_0001="INFO: Prüfung der Tabelle '%s' auf Fehler."
 _validate_table_debug_0002="ERROR: Tabelle '%s' existiert nicht in der Datenbank."
