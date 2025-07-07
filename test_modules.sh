@@ -132,6 +132,9 @@ fi
 echo "---------------------------------------------------------------------------"
 echo
 
+DEBUG_MOD_GLOBAL=1
+setup_database
+
 exit
 
 # Zeige alle verfügbaren Funktionen in manage_folders.sh
