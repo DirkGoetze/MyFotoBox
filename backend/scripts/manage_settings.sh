@@ -291,11 +291,11 @@ _get_hierarchy_id() {
     if ! check_param "$db_file" "db_file"; then return 1; fi
 
     # Debug-Ausgabe eröffnen
-    debug "$(printf "$register_config_hierarchy_debug_0001" "$hierarchy_name" "$description" "$responsible")"
+    debug "$(printf "$register_config_hierarchy_debug_0001" "$hierarchy_name" "$description")"
 
     # Hierarchienamen bereinigen
-    hierarchy_name=$(clean_key "$hierarchy_name")
-    
+    hierarchy_name=$(_clean_key "$hierarchy_name")
+
     # ID aus der Datenbank abrufen
     local hierarchy_id=$(sqlite3 "$db_file" "SELECT id FROM config_hierarchies WHERE hierarchy_name='$hierarchy_name';")
 
@@ -366,7 +366,7 @@ register_config_hierarchy() {
     fi
     
     # Prüfen, ob die Hierarchie bereits existiert
-    if hierarchy_exists "$hierarchy_name" "$db_file"; then
+    if _hierarchy_exists "$hierarchy_name" "$db_file"; then
         debug "$(printf "$register_config_hierarchy_debug_0003" "$hierarchy_name")"
         log "$(printf "$register_config_hierarchy_log_0002" "$hierarchy_name")"
         return 1
