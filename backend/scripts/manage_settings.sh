@@ -344,7 +344,7 @@ register_config_hierarchy() {
     local hierarchy_name="$1"
     local description="$2"
     local responsible="$3"
-    local hierarchy_data="${4:-'{}'}"
+    local hierarchy_data="${4:-{}}"  # Standardwert für leere Hierarchie-Daten
     local db_file="${5:-$(get_data_file)}"
 
     # Überprüfen, ob alle erforderlichen Parameter angegeben sind
@@ -373,8 +373,15 @@ register_config_hierarchy() {
     fi
     
     # Hierarchie in die Datenbank einfügen
-    sqlite3 "$db_file" "INSERT INTO config_hierarchies (hierarchy_name, description, responsible, hierarchy_data) 
-                        VALUES ('$hierarchy_name', '$description', '$responsible', json('$hierarchy_data'));"
+    if [ "$hierarchy_data" = "{}" ]; then
+        # Einfaches leeres JSON direkt im SQL verwenden
+        sqlite3 "$db_file" "INSERT INTO config_hierarchies (hierarchy_name, description, responsible, hierarchy_data) 
+                           VALUES ('$hierarchy_name', '$description', '$responsible', '{}')"
+    else
+        # Für nicht-leere JSON-Werte die json()-Funktion verwenden
+        sqlite3 "$db_file" "INSERT INTO config_hierarchies (hierarchy_name, description, responsible, hierarchy_data) 
+                           VALUES ('$hierarchy_name', '$description', '$responsible', json('$hierarchy_data'))"
+    fi
 
     # Prüfen, ob der Einfügevorgang erfolgreich war
     if [ $? -ne 0 ]; then
