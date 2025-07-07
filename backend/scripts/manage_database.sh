@@ -96,7 +96,7 @@ _ensure_database_file_debug_0003="INFO: Initialisiere SQLite-Datenbank: '%s'"
 _ensure_database_file_debug_0004="SUCCESS: SQLite-Datenbank erfolgreich initialisiert: '%s'"
 _ensure_database_file_debug_0005="ERROR: Fehler beim Initialisieren der SQLite-Datenbank: '%s'"
 _ensure_database_file_debug_0006="ERROR: SQLite-Datenbank konnte nicht korrekt initialisiert werden: '%s'"
-_ensure_database_file_debug_0008="SUCCESS: SQLite-Datenbank existiert und ist gültig: '%s'"
+_ensure_database_file_debug_0007="SUCCESS: SQLite-Datenbank existiert und ist gültig: '%s'"
 
 _ensure_database_file() {
     # -----------------------------------------------------------------------
@@ -158,7 +158,7 @@ _ensure_database_file() {
         return 0
     fi
     
-    debug "$(printf "$_ensure_database_file_debug_0008" "$db_file")"
+    debug "$(printf "$_ensure_database_file_debug_0007" "$db_file")"
     echo "$db_file"
     return 0
 }
@@ -234,6 +234,98 @@ _create_table() {
 
     # Erfolgreich erstellt
     debug "$(printf "$_create_table_debug_0008" "$table_name")"
+    return 0
+}
+
+# _is_column_exists
+_is_column_exists_debug_0001="INFO: Prüfe, ob Spalte '%s' in Tabelle '%s' existiert."
+_is_column_exists_debug_0002="INFO: Spalte '%s' in Tabelle '%s' gefunden."
+_is_column_exists_debug_0003="ERROR: Spalte '%s' in Tabelle '%s' nicht gefunden."
+
+_is_column_exists() {
+    # -----------------------------------------------------------------------
+    # _is_column_exists
+    # -----------------------------------------------------------------------
+    # Funktion.: Prüft ob eine Spalte in einer Tabelle vorkommt
+    # Parameter: $1 - Name der zu prüfenden Spalte
+    # .........  $2 - Name der Tabelle
+    # .........  $3 - Pfad zur Datenbankdatei
+    # Rückgabe.: 0 - Spalte existiert
+    # .........  1 - Spalte existiert nicht
+    # -----------------------------------------------------------------------
+    local column_name="$1"
+    local table_name="$2"
+    local db_file="$3"
+
+    # Überprüfen, ob der Spaltenname, Tabellenname und der Datenbankpfad angegeben sind
+    if ! check_param "$column_name" "column_name"; then return 1; fi
+    if ! check_param "$table_name" "table_name"; then return 1; fi
+    if ! check_param "$db_file" "db_file"; then return 1; fi
+
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$_is_column_exists_debug_0001" "$column_name" "$table_name")"
+
+    # Überprüfen, ob die Spalte in der Tabelle existiert
+    if sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$column_name"; then
+        debug "$(printf "$_is_column_exists_debug_0002" "$column_name" "$table_name")"
+        return 0
+    else
+        debug "$(printf "$_is_column_exists_debug_0003" "$column_name" "$table_name")"
+        return 1
+    fi
+}
+
+# _validate_table
+_validate_table_debug_0001="INFO: Prüfung der Tabelle '%s' auf Fehler."
+_validate_table_debug_0002="ERROR: Tabelle '%s' existiert nicht in der Datenbank."
+_validate_table_debug_0003="SUCCESS: Tabelle '%s' hat die Integritätsprüfung bestanden."
+_validate_table_debug_0004="ERROR: Integritätsprobleme in Tabelle '%s' gefunden: %s"
+_validate_table_debug_0005="ERROR: Fremdschlüsselprobleme in Tabelle '%s' gefunden: %s"
+
+_validate_table() {
+    # -----------------------------------------------------------------------
+    # _validate_table
+    # -----------------------------------------------------------------------
+    # Funktion.: Führt eine Validierungsprüfung für die übergebene Tabelle
+    # .........  durch
+    # Parameter: $1 - Name der zu validierenden Tabelle
+    # Rückgabe.: 0 - Validierung erfolgreich
+    # .........  1 - Validierung fehlgeschlagen
+    # -----------------------------------------------------------------------
+    local table_name="$1"
+    
+    # Prüfen, ob Tabellenname angegeben wurde
+    if ! check_param "$table_name" "table_name"; then return 1; fi
+    
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$_validate_table_debug_0001" "$table_name")"
+
+    local db_file=$(get_data_file)
+    
+    # Prüfen, ob die Tabelle überhaupt existiert
+    if ! sqlite3 "$db_file" "SELECT name FROM sqlite_master WHERE type='table' AND name='$table_name';" | grep -q "$table_name"; then
+        debug "$(printf "$_validate_table_debug_0002" "$table_name")"
+        return 1
+    fi
+    
+    # 1. Allgemeine Integritätsprüfung mit PRAGMA integrity_check
+    local integrity_check=$(sqlite3 "$db_file" "PRAGMA integrity_check($table_name);")
+    
+    if [ "$integrity_check" != "ok" ]; then
+        debug "$(printf "$_validate_table_debug_0004" "$table_name" "$integrity_check")"
+        return 1
+    fi
+    
+    # 2. Fremdschlüsselprüfung mit PRAGMA foreign_key_check
+    local fk_check=$(sqlite3 "$db_file" "PRAGMA foreign_key_check($table_name);")
+    
+    if [ -n "$fk_check" ]; then
+        debug "$(printf "$_validate_table_debug_0005" "$table_name" "$fk_check")"
+        return 1
+    fi
+    
+    # Alles in Ordnung
+    debug "$(printf "$_validate_table_debug_0003" "$table_name")"
     return 0
 }
 
@@ -694,7 +786,6 @@ ensure_database() {
         validate_database "$db_file"
         if [ $? -ne 0 ]; then
             debug "$(printf "$ensure_database_debug_0013" "$db_file")"
-            echo ""
             return 1
         fi
 
