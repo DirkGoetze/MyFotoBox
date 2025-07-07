@@ -170,7 +170,6 @@ echo "| Test: get_venv_dir                                                    |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_venv_dir"
 debug "INFO: BACKEND_VENV_DIR: ${BACKEND_VENV_DIR:-nicht gesetzt}"
-DEBUG_MOD_LOCAL=1  # Aktiviere lokalen Debug-Modus für detaillierte Ausgaben
 # Test: get_backup_dir
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_backup_dir                                                  |"
@@ -416,6 +415,8 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_template_file (Allgemein)                                   |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_files_sh" "get_template_file" "allgemein" "fotobox"
+
+DEBUG_MOD_LOCAL=1  # Aktiviere lokalen Debug-Modus für detaillierte Ausgaben
 # Test: get_python_path
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_python_path                                                 |"
