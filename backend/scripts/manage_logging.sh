@@ -69,7 +69,7 @@ chk_log_file() {
     local log_file_to_check="$1"
     local MAX_ROTATE=5
 
-    echo "Prüfe Logdatei: ${log_file_to_check}"
+    debug "Prüfe Logdatei: ${log_file_to_check}"
 
     # Alte, maximal rotierte Datei löschen
     if [ -f "${log_file_to_check}.${MAX_ROTATE}.gz" ]; then
