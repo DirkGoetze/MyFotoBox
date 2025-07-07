@@ -820,3 +820,8 @@ setup_database() {
 
     return 0
 }
+
+# Prüfe, ob SQLite installiert ist und initialisiere die Datenbank
+if _is_sqlite_installed; then
+    ensure_database
+fi
