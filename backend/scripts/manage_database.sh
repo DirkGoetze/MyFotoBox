@@ -44,6 +44,7 @@ MANAGE_DATABASE_LOADED=0
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
 DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
+DEBUG_MOD_GLOBAL=1
 
 # ===========================================================================
 # Hilfsfunktionen
@@ -1361,8 +1362,6 @@ setup_database() {
     local output_mode="${1:-cli}"  # Standardmäßig CLI-Ausgabe
     local service_pid
 
-DEBUG_MOD_GLOBAL=1
-
     # Eröffnungsmeldung im Debug Modus
     debug "$setup_database_debug_0001"
 
@@ -1387,8 +1386,6 @@ DEBUG_MOD_GLOBAL=1
         debug "$setup_database_debug_0004"
         print_success "$setup_database_txt_0003"
     fi
-
-DEBUG_MOD_GLOBAL=0
 
     return 0
 }
