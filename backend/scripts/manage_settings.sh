@@ -578,7 +578,7 @@ set_config_value() {
     fi
 
     # Hierarchie und eigentlichen Schlüssel extrahieren
-    local parts=($(parse_hierarchical_key "$full_key"))
+    local parts=($(_parse_hierarchical_key "$full_key"))
     local hierarchy_name="${parts[0]}"
     local key_name="${parts[1]}"
 
