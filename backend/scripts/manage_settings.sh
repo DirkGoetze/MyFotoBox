@@ -616,6 +616,7 @@ set_config_value() {
         debug "Fehler beim Starten der Transaktion"
         return 1
     }
+    debug "Transaktion gestartet"
 
     # Prüfen, ob der Schlüssel bereits existiert
     local old_value=""
@@ -625,6 +626,7 @@ set_config_value() {
         debug "Fehler bei der Abfrage nach existierendem Schlüssel"
         return 1
     }
+    debug "Existierender Schlüssel: $exists"
 
     if [ -n "$exists" ]; then
         # Schlüssel existiert bereits, alten Wert speichern und aktualisieren
@@ -644,6 +646,7 @@ set_config_value() {
             debug "Fehler beim Aktualisieren des Settings"
             return 1
         }
+        debug "Schlüssel aktualisiert: ID=$setting_id, alter Wert='$old_value', neuer Wert='$value'"
         
         # Änderungshistorie speichern
         sqlite3 "$db_file" "INSERT INTO settings_history (setting_id, old_value, new_value, changed_at, changed_by, change_reason) 
@@ -652,6 +655,8 @@ set_config_value() {
             debug "Fehler beim Einfügen der Änderungshistorie"
             return 1
         }
+        debug "Änderungshistorie für Schlüssel '$key_name' gespeichert"
+
     else
         # Schlüssel existiert noch nicht, neu anlegen
         sqlite3 "$db_file" "INSERT INTO settings (hierarchy_id, key, value, value_type, description, weight, change_group, is_active) 
@@ -660,6 +665,7 @@ set_config_value() {
             debug "Fehler beim Erstellen des neuen Settings"
             return 1
         }
+        debug "Neuer Schlüssel '$key_name' in Hierarchie '$hierarchy_name' angelegt mit Wert '$value'"
         
         # Setting-ID für weitere Operationen abrufen
         setting_id=$(sqlite3 "$db_file" "SELECT last_insert_rowid();") || {
@@ -667,6 +673,7 @@ set_config_value() {
             debug "Fehler beim Abrufen der Setting-ID"
             return 1
         }
+        debug "Neue Setting-ID: $setting_id"
     fi
 
     # Änderungsgruppe in der Datenbank registrieren
@@ -675,6 +682,7 @@ set_config_value() {
         debug "Fehler beim Prüfen der existierenden Änderungsgruppe"
         return 1
     }
+    debug "Existierende Änderungsgruppe: $group_exists"
     
     if [ "$group_exists" -eq 0 ]; then
         # Neue Änderungsgruppe anlegen
@@ -685,6 +693,7 @@ set_config_value() {
             return 1
         }
     fi
+    debug "Änderungsgruppe '$change_group' erfolgreich registriert"
 
     # Verknüpfung zwischen Setting und Änderungsgruppe herstellen
     local change_group_id=$(sqlite3 "$db_file" "SELECT id FROM change_groups WHERE group_name='$change_group';") || {
@@ -692,12 +701,14 @@ set_config_value() {
         debug "Fehler beim Abrufen der change_group_id"
         return 1
     }
+    debug "Change Group ID: $change_group_id"
     
     local link_exists=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM settings_change_groups WHERE setting_id=$setting_id AND change_group_id=$change_group_id;") || {
         sqlite3 "$db_file" "ROLLBACK;"
         debug "Fehler beim Prüfen der Verknüpfung"
         return 1
     }
+    debug "Existierende Verknüpfung: $link_exists"
     
     if [ "$link_exists" -eq 0 ]; then
         sqlite3 "$db_file" "INSERT INTO settings_change_groups (setting_id, change_group_id) 
@@ -707,12 +718,14 @@ set_config_value() {
             return 1
         }
     fi
+    debug "Verknüpfung zwischen Setting-ID $setting_id und Änderungsgruppe-ID $change_group_id erfolgreich hergestellt"
 
     # Transaktion abschließen
     sqlite3 "$db_file" "COMMIT;" || {
         debug "Fehler beim Abschließen der Transaktion"
         return 1
     }
+    debug "Transaktion erfolgreich abgeschlossen"
 
     # Prüfen, ob der Einfügevorgang erfolgreich war
     if [ $? -ne 0 ]; then
