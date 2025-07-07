@@ -96,7 +96,6 @@ _ensure_database_file_debug_0003="INFO: Initialisiere SQLite-Datenbank: '%s'"
 _ensure_database_file_debug_0004="SUCCESS: SQLite-Datenbank erfolgreich initialisiert: '%s'"
 _ensure_database_file_debug_0005="ERROR: Fehler beim Initialisieren der SQLite-Datenbank: '%s'"
 _ensure_database_file_debug_0006="ERROR: SQLite-Datenbank konnte nicht korrekt initialisiert werden: '%s'"
-_ensure_database_file_debug_0007="INFO: Prüfe Tabellenstruktur in der Datenbank: '%s'"
 _ensure_database_file_debug_0008="SUCCESS: SQLite-Datenbank existiert und ist gültig: '%s'"
 
 _ensure_database_file() {
@@ -159,14 +158,6 @@ _ensure_database_file() {
         return 0
     fi
     
-    # Wenn die Datei bereits existiert und gültig ist, Tabellenstruktur prüfen
-    validate_database "$db_file"
-    if [ $? -ne 0 ]; then
-        debug "$(printf "$_ensure_database_file_debug_0007" "$db_file")"
-        echo ""
-        return 1
-    fi
-
     debug "$(printf "$_ensure_database_file_debug_0008" "$db_file")"
     echo "$db_file"
     return 0
@@ -246,447 +237,6 @@ _create_table() {
     return 0
 }
 
-# _is_column_exists
-_is_column_exists_debug_0001="INFO: Prüfe, ob Spalte '%s' in Tabelle '%s' existiert."
-_is_column_exists_debug_0002="INFO: Spalte '%s' in Tabelle '%s' gefunden."
-_is_column_exists_debug_0003="ERROR: Spalte '%s' in Tabelle '%s' nicht gefunden."
-
-_is_column_exists() {
-    # -----------------------------------------------------------------------
-    # _is_column_exists
-    # -----------------------------------------------------------------------
-    # Funktion.: Prüft ob eine Spalte in einer Tabelle vorkommt
-    # Parameter: $1 - Name der zu prüfenden Spalte
-    # .........  $2 - Name der Tabelle
-    # .........  $3 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Spalte existiert
-    # .........  1 - Spalte existiert nicht
-    # -----------------------------------------------------------------------
-    local column_name="$1"
-    local table_name="$2"
-    local db_file="$3"
-
-    # Überprüfen, ob der Spaltenname, Tabellenname und der Datenbankpfad angegeben sind
-    if ! check_param "$column_name" "column_name"; then return 1; fi
-    if ! check_param "$table_name" "table_name"; then return 1; fi
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$_is_column_exists_debug_0001" "$column_name" "$table_name")"
-
-    # Überprüfen, ob die Spalte in der Tabelle existiert
-    if sqlite3 "$db_file" "PRAGMA table_info($table_name);" | grep -q "$column_name"; then
-        debug "$(printf "$_is_column_exists_debug_0002" "$column_name" "$table_name")"
-        return 0
-    else
-        debug "$(printf "$_is_column_exists_debug_0003" "$column_name" "$table_name")"
-        return 1
-    fi
-}
-
-# _chk_invalid_types
-_chk_invalid_types_debug_0001="INFO: Prüfe auf ungültige Datentypen in Tabelle '%s'."
-_chk_invalid_types_debug_0002="INFO: Tabelle '%s' hat keine '%s'-Spalte, Typvalidierung wird übersprungen."
-_chk_invalid_types_debug_0003="ERROR: Ungültige Datentypen in Tabelle '%s' gefunden: %s"
-_chk_invalid_types_debug_0004="INFO: Keine ungültigen Datentypen in Tabelle '%s' gefunden."
-
-_chk_invalid_types() {
-    # -----------------------------------------------------------------------
-    # _chk_invalid_types
-    # -----------------------------------------------------------------------
-    # Funktion.: Prüft eine Tabelle auf ungültige Datentypen
-    # Parameter: $1 - Name der zu prüfenden Tabelle
-    # .........  $2 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Keine ungültigen Datentypen gefunden
-    # .........  1 - Ungültige Datentypen gefunden
-    # -----------------------------------------------------------------------
-    local table_name="$1"                # Name der zu prüfenden Tabelle
-    local db_file="$2"                   # Pfad zur Datenbankdatei
-    local column="key"                   # Standard-Spalte für Einstellungen
-    local field="value_type"             # Spalte mit dem Datentyp
-    local valid_types="'string','int','bool','float','json'"  
-
-    # Überprüfen, ob der Tabellenname und der Datenbankpfad angegeben sind
-    if ! check_param "$table_name" "table_name"; then return 1; fi
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$_chk_invalid_types_debug_0001" "$table_name")"
-
-    # Tabellen-spezifische Anpassungen
-    case "$table_name" in
-        settings)
-            column="key"
-            field="value_type"
-            valid_types="'string','int','bool','float','json'"
-            ;;
-        # Weitere Tabellen können hier hinzugefügt werden
-        *)
-            # Prüfen, ob die Tabelle die benötigten Spalten hat
-            if ! _is_column_exists "$field" "$table_name" "$db_file"; then
-                debug "$(printf "$_chk_invalid_types_debug_0002" "$table_name" "$field")"
-                return 0
-            fi
-            ;;
-    esac
-    
-    # SQL-Abfrage für ungültige Typen vorbereiten
-    local invalid_values=$(sqlite3 "$db_file" "SELECT $column FROM $table_name WHERE $field NOT IN ($valid_types);")
-    
-    # Auswertung des Ergebnisses
-    if [ -n "$invalid_values" ]; then
-        debug "$(printf "$_chk_invalid_types_debug_0003" "$table_name" "$invalid_values")"
-        return 1
-    else
-        debug "$(printf "$_chk_invalid_types_debug_0004" "$table_name")"
-        return 0
-    fi
-}
-
-# _chk_empty_values
-_chk_empty_values_debug_0001="INFO: Prüfe auf leere Werte in Tabelle '%s'."
-_chk_empty_values_debug_0002="INFO: Tabelle '%s' hat keine '%s'-Spalte, Leerwerteprüfung wird übersprungen."
-_chk_empty_values_debug_0003="ERROR: Leere Werte in Tabelle '%s' gefunden: %s"
-_chk_empty_values_debug_0004="INFO: Keine leeren Werte in Tabelle '%s' gefunden."
-
-_chk_empty_values() {
-    # -----------------------------------------------------------------------
-    # _chk_empty_values
-    # -----------------------------------------------------------------------
-    # Funktion.: Prüft eine Tabelle auf leere Werte
-    # Parameter: $1 - Name der zu prüfenden Tabelle
-    # .........  $2 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Keine leeren Werte gefunden
-    # .........  1 - Leere Werte gefunden
-    # -----------------------------------------------------------------------
-    local table_name="$1"                # Name der zu prüfenden Tabelle
-    local db_file="$2"                   # Pfad zur Datenbankdatei
-    local key_column="key"               # Standard-Spalte für Schlüssel
-    local value_column="value"           # Spalte mit dem Wert
-    
-    # Überprüfen, ob der Tabellenname und der Datenbankpfad angegeben sind
-    if ! check_param "$table_name" "table_name"; then return 1; fi
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$_chk_empty_values_debug_0001" "$table_name")"
-
-    # Tabellen-spezifische Anpassungen
-    case "$table_name" in
-        settings|config_hierarchies)
-            # Spezifische Spalten für diese Tabellen
-            ;;
-        # Weitere Tabellen können hier hinzugefügt werden
-        *)
-            # Prüfen, ob die Tabelle die benötigten Spalten hat
-            if ! _is_column_exists "$value_column" "$table_name" "$db_file"; then
-                debug "$(printf "$_chk_empty_values_debug_0002" "$table_name" "$value_column")"
-                return 0
-            fi
-            ;;
-    esac
-    
-    # SQL-Abfrage für leere Werte vorbereiten
-    local empty_values=$(sqlite3 "$db_file" "SELECT $key_column FROM $table_name WHERE $value_column IS NULL OR $value_column = '';")
-
-    # Auswertung des Ergebnisses
-    if [ -n "$empty_values" ]; then
-        debug "$(printf "$_chk_empty_values_debug_0003" "$table_name" "$empty_values")"
-        return 1
-    else
-        debug "$(printf "$_chk_empty_values_debug_0004" "$table_name")"
-        return 0
-    fi
-}
-
-# _chk_inactive_settings
-_chk_inactive_settings_debug_0001="INFO: Prüfe auf inaktive Einstellungen in Tabelle '%s'."
-_chk_inactive_settings_debug_0002="INFO: Tabelle '%s' hat keine '%s'-Spalte, Aktivitätsprüfung wird übersprungen."
-_chk_inactive_settings_debug_0003="WARN: Inaktive Einstellungen in Tabelle '%s' gefunden: %s"
-_chk_inactive_settings_debug_0004="INFO: Keine inaktiven Einstellungen in Tabelle '%s' gefunden."
-
-_chk_inactive_settings() {
-    # -----------------------------------------------------------------------
-    # _chk_inactive_settings
-    # -----------------------------------------------------------------------
-    # Funktion.: Prüft eine Tabelle auf inaktive Einstellungen
-    # Parameter: $1 - Name der zu prüfenden Tabelle
-    # .........  $2 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Keine inaktiven Einstellungen gefunden
-    # .........  1 - Inaktive Einstellungen gefunden
-    # -----------------------------------------------------------------------
-    local table_name="$1"           # Name der zu prüfenden Tabelle
-    local db_file="$2"              # Pfad zur Datenbankdatei
-    local key_column="key"          # Standard-Spalte für Schlüssel
-    local active_column="is_active" # Spalte, die den Aktivitätsstatus angibt
-    
-    # Überprüfen, ob der Tabellenname und der Datenbankpfad angegeben sind
-    if ! check_param "$table_name" "table_name"; then return 1; fi
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$_chk_inactive_settings_debug_0001" "$table_name")"
-
-    # Nur für Tabellen mit is_active-Spalte
-    if ! _is_column_exists "$active_column" "$table_name" "$db_file"; then
-        debug "$(printf "$_chk_inactive_settings_debug_0002" "$table_name" "$active_column")"
-        return 0
-    fi
-
-    # SQL-Abfrage für inaktive Einstellungen vorbereiten    
-    local inactive_settings=$(sqlite3 "$db_file" "SELECT $key_column FROM $table_name WHERE $active_column = 0;")
-    
-    # Bei inaktiven Einstellungen nur warnen, nicht als Fehler werten
-    if [ -n "$inactive_settings" ]; then
-        debug "$(printf "$_chk_inactive_settings_debug_0003" "$table_name" "$inactive_settings")"
-    else
-        debug "$(printf "$_chk_inactive_settings_debug_0004" "$table_name")"
-    fi
-    
-    # Immer erfolgreich, da inaktive Einstellungen kein Fehler sind
-    return 0
-}
-
-# _chk_foreign_key_integrity
-_chk_foreign_key_integrity_debug_0001="INFO: Prüfe Fremdschlüsselintegrität in Tabelle '%s'."
-_chk_foreign_key_integrity_debug_0002="INFO: Tabelle '%s' hat keine '%s'-Spalte, FK-Prüfung wird übersprungen."
-_chk_foreign_key_integrity_debug_0003="ERROR: Ungültige Fremdschlüsselreferenzen in Tabelle '%s' gefunden: %s"
-_chk_foreign_key_integrity_debug_0004="INFO: Keine ungültigen Fremdschlüsselreferenzen in Tabelle '%s' gefunden."
-
-_chk_foreign_key_integrity() {
-    # -----------------------------------------------------------------------
-    # _chk_foreign_key_integrity
-    # -----------------------------------------------------------------------
-    # Funktion.: Prüft eine Tabelle auf ungültige Fremdschlüsselreferenzen
-    # Parameter: $1 - Name der zu prüfenden Tabelle
-    # .........  $2 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Keine ungültigen Fremdschlüsselreferenzen gefunden
-    # .........  1 - Ungültige Fremdschlüsselreferenzen gefunden
-    # -----------------------------------------------------------------------
-    local table_name="$1"            # Name der zu prüfenden Tabelle
-    local db_file="$2"               # Pfad zur Datenbankdatei
-    local fk_column=""               # Standard-Spalte für Fremdschlüssel
-    local ref_table=""               # Referenztabelle für den Fremdschlüssel
-    local ref_column=""              # Referenzspalte in der Referenztabelle
-    
-    # Überprüfen, ob der Tabellenname und der Datenbankpfad angegeben sind
-    if ! check_param "$table_name" "table_name"; then return 1; fi
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$_chk_foreign_key_integrity_debug_0001" "$table_name")"
-
-    # Tabellen-spezifische Fremdschlüsselbeziehungen definieren
-    case "$table_name" in
-        settings)
-            fk_column="hierarchy_id"
-            ref_table="config_hierarchies"
-            ref_column="id"
-            ;;
-        settings_history)
-            fk_column="setting_id"
-            ref_table="settings"
-            ref_column="id"
-            ;;
-        # Weitere Tabellen können hier hinzugefügt werden
-        *)
-            # Wenn keine spezifischen FK-Beziehungen definiert sind, überspringen
-            debug "$(printf "$_chk_foreign_key_integrity_debug_0002" "$table_name" "$fk_column")"
-            return 0
-            ;;
-    esac
-    
-    # Prüfen, ob die Tabelle die benötigte FK-Spalte hat
-    if ! _is_column_exists "$fk_column" "$table_name" "$db_file"; then
-        debug "$(printf "$_chk_foreign_key_integrity_debug_0002" "$table_name" "$fk_column")"
-        return 0
-    fi
-    
-    # SQL-Abfrage für ungültige Fremdschlüsselreferenzen vorbereiten
-    local invalid_refs=$(sqlite3 "$db_file" "
-        SELECT s.$fk_column FROM $table_name s 
-        LEFT JOIN $ref_table r ON s.$fk_column = r.$ref_column 
-        WHERE s.$fk_column IS NOT NULL AND r.$ref_column IS NULL;")
-
-    # Auswertung des Ergebnisses
-    if [ -n "$invalid_refs" ]; then
-        debug "$(printf "$_chk_foreign_key_integrity_debug_0003" "$table_name" "$invalid_refs")"
-        return 1
-    else
-        debug "$(printf "$_chk_foreign_key_integrity_debug_0004" "$table_name")"
-        return 0
-    fi
-}
-
-# _chk_duplicate_keys
-_chk_duplicate_keys_debug_0001="INFO: Prüfe auf Duplikate in Tabelle '%s'."
-_chk_duplicate_keys_debug_0002="INFO: Tabelle '%s' hat keine '%s'-Spalte, Duplikatprüfung wird übersprungen."
-_chk_duplicate_keys_debug_0003="ERROR: Duplikate in Tabelle '%s' gefunden: %s"
-_chk_duplicate_keys_debug_0004="INFO: Keine Duplikate in Tabelle '%s' gefunden."
-
-_chk_duplicate_keys() {
-    # -----------------------------------------------------------------------
-    # _chk_duplicate_keys
-    # -----------------------------------------------------------------------
-    # Funktion.: Prüft eine Tabelle auf Duplikate in Schlüsseln
-    # Parameter: $1 - Name der zu prüfenden Tabelle
-    # .........  $2 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Keine Duplikate gefunden
-    # .........  1 - Duplikate gefunden
-    # -----------------------------------------------------------------------
-    local table_name="$1"      # Name der zu prüfenden Tabelle
-    local db_file="$2"         # Pfad zur Datenbankdatei
-    local key_column="key"     # Standard-Spalte für Schlüssel
-    local extra_column=""      # Zusätzliche Spalte für spezifische Tabellen
-    
-    # Überprüfen, ob der Tabellenname und der Datenbankpfad angegeben sind
-    if ! check_param "$table_name" "table_name"; then return 1; fi
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$_chk_duplicate_keys_debug_0001" "$table_name")"
-
-    # Tabellen-spezifische Anpassungen
-    case "$table_name" in
-        settings)
-            extra_column="hierarchy_id"
-            ;;
-        # Weitere Tabellen können hier hinzugefügt werden
-        *)
-            # Wenn keine spezifischen Schlüsselspalten definiert sind, überspringen
-            if ! _is_column_exists "$key_column" "$table_name" "$db_file"; then
-                debug "$(printf "$_chk_duplicate_keys_debug_0002" "$table_name" "$key_column")"
-                return 0
-            fi
-            ;;
-    esac
-
-    # SQL-Abfrage für Duplikate vorbereiten    
-    local sql_query
-    if [ -n "$extra_column" ] && _is_column_exists "$extra_column" "$table_name" "$db_file"; then
-        sql_query="SELECT $key_column, $extra_column, COUNT(*) as count FROM $table_name 
-                  GROUP BY $key_column, $extra_column HAVING count > 1;"
-    else
-        sql_query="SELECT $key_column, COUNT(*) as count FROM $table_name 
-                  GROUP BY $key_column HAVING count > 1;"
-    fi
-
-    # Führe die SQL-Abfrage aus und prüfe auf Duplikate    
-    local duplicates=$(sqlite3 "$db_file" "$sql_query")
-    
-    # Auswertung des Ergebnisses
-    if [ -n "$duplicates" ]; then
-        debug "$(printf "$_chk_duplicate_keys_debug_0003" "$table_name" "$duplicates")"
-        return 1
-    else
-        debug "$(printf "$_chk_duplicate_keys_debug_0004" "$table_name")"
-        return 0
-    fi
-}
-
-# _chk_invalid_key_chars
-_chk_invalid_key_chars_debug_0001="INFO: Prüfe auf ungültige Zeichen in Schlüsselnamen in Tabelle '%s'."
-_chk_invalid_key_chars_debug_0002="INFO: Tabelle '%s' hat keine '%s'-Spalte, Zeichenprüfung wird übersprungen."
-_chk_invalid_key_chars_debug_0003="ERROR: Ungültige Zeichen in Schlüsselnamen in Tabelle '%s' gefunden: %s"
-_chk_invalid_key_chars_debug_0004="INFO: Keine ungültigen Zeichen in Schlüsselnamen in Tabelle '%s' gefunden."
-
-_chk_invalid_key_chars() {
-    # -----------------------------------------------------------------------
-    # _chk_invalid_key_chars
-    # -----------------------------------------------------------------------
-    # Funktion.: Prüft eine Tabelle auf ungültige Zeichen in Schlüsselnamen
-    # Parameter: $1 - Name der zu prüfenden Tabelle
-    # .........  $2 - Pfad zur Datenbankdatei
-    # Rückgabe.: 0 - Keine ungültigen Zeichen gefunden
-    # .........  1 - Ungültige Zeichen gefunden
-    # -----------------------------------------------------------------------
-    local table_name="$1"                     # Name der zu prüfenden Tabelle
-    local db_file="$2"                        # Pfad zur Datenbankdatei
-    local key_column="key"                    # Standard-Spalte für Schlüssel
-    local allowed_pattern="[a-zA-Z0-9._-]"    # Erlaubte Zeichen im Schlüssel
-    
-    # Überprüfen, ob der Tabellenname und der Datenbankpfad angegeben sind
-    if ! check_param "$table_name" "table_name"; then return 1; fi
-    if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$_chk_invalid_key_chars_debug_0001" "$table_name")"
-
-    # Prüfen, ob die Tabelle die benötigte Schlüsselspalte hat
-    if ! _is_column_exists "$key_column" "$table_name" "$db_file"; then
-        debug "$(printf "$_chk_invalid_key_chars_debug_0002" "$table_name" "$key_column")"
-        return 0
-    fi
-
-    # SQL-Abfrage für ungültige Schlüsselzeichen vorbereiten
-    local invalid_keys=$(sqlite3 "$db_file" "SELECT $key_column FROM $table_name 
-                                           WHERE $key_column GLOB '*[^$allowed_pattern]*';")
-    
-    # Auswertung des Ergebnisses
-    if [ -n "$invalid_keys" ]; then
-        debug "$(printf "$_chk_invalid_key_chars_debug_0003" "$table_name" "$invalid_keys")"
-        return 1
-    else
-        debug "$(printf "$_chk_invalid_key_chars_debug_0004" "$table_name")"
-        return 0
-    fi
-}
-
-# _validate_table
-_validate_table_debug_0001="INFO: Validiere Tabelle '%s' mit %d Prüfungen."
-_validate_table_debug_0002="ERROR: Tabelle '%s' existiert nicht in der Datenbank."
-_validate_table_debug_0003="SUCCESS: Tabelle '%s' hat alle Validierungsprüfungen bestanden."
-_validate_table_debug_0004="ERROR: Tabelle '%s' hat %d Validierungsprüfungen nicht bestanden."
-
-_validate_table() {
-    # -----------------------------------------------------------------------
-    # _validate_table
-    # -----------------------------------------------------------------------
-    # Funktion.: Führt verschiedene Validierungsprüfungen für eine Tabelle
-    # .........  durch, sie ist die Zentrale Validierungsfunktion für eine
-    # .........  beliebige Tabellen
-    # Parameter: $1 - Name der zu validierenden Tabelle
-    # .........  $2 - Liste von Validierungsprüfungen, 
-    # .........       die durchgeführt werden sollen
-    # Rückgabe.: 0 - Validierung erfolgreich
-    # .........  1 - Validierung fehlgeschlagen
-    # -----------------------------------------------------------------------
-    local table_name="$1"
-    shift  # Entferne den ersten Parameter, übrig bleiben die Validierungsprüfungen
-    
-    # Prüfen, ob Tabellenname angegeben wurde
-    if ! check_param "$table_name" "table_name"; then return 1; fi
-    
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$_validate_table_debug_0001" "$table_name" "$#")"
-
-    local db_file=$(get_data_file)
-    local validation_errors=0
-    
-    # Prüfen, ob die Tabelle überhaupt existiert
-    if ! sqlite3 "$db_file" "SELECT name FROM sqlite_master WHERE type='table' AND name='$table_name';" | grep -q "$table_name"; then
-        debug "$(printf "$_validate_table_debug_0002" "$table_name")"
-        return 1
-    fi
-    
-    # Durchführen aller übergebenen Validierungsprüfungen
-    for validation in "$@"; do
-        # Prüfung durchführen und Fehler zählen
-        if ! "$validation" "$table_name" "$db_file"; then
-            validation_errors=$((validation_errors + 1))
-        fi
-    done
-    
-    # Rückgabe je nach Validierungsergebnis
-    if [ $validation_errors -eq 0 ]; then
-        debug "$(printf "$_validate_table_debug_0003" "$table_name")"
-        return 0
-    else
-        debug "$(printf "$_validate_table_debug_0004" "$table_name" "$validation_errors")"
-        return 1
-    fi
-}
-
 # ---------------------------------------------------------------------------
 # Hilfsfunktionen zu Datenbank-Tabellen-Struktur
 # ---------------------------------------------------------------------------
@@ -727,31 +277,6 @@ _ensure_table_schema_versions () {
 
     # Prüfen, ob die Tabelle erfolgreich erstellt wurde
     if [ $? -ne 0 ]; then return 1; else return 0; fi
-}
-
-# _validate_table_schema_versions
-_validate_table_schema_versions_debug_0001="INFO: Validiere die Integrität der 'schema_versions'-Tabelle."
-
-_validate_table_schema_versions() {
-    # -----------------------------------------------------------------------
-    # _validate_table_schema_versions
-    # -----------------------------------------------------------------------
-    # Funktion.: Überprüft die Integrität und Konsistenz der 'schema_versions'-Tabelle
-    # Parameter: keine
-    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
-    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
-    # -----------------------------------------------------------------------
-
-    # Debug-Ausgabe eröffnen
-    debug "$_validate_table_schema_versions_debug_0001"
-
-    _validate_table "schema_versions" \
-        _chk_empty_values \
-        _chk_invalid_types \
-        _chk_duplicate_keys \
-        _chk_invalid_key_chars
-
-    return $?
 }
 
 ## --- 2. Tabelle: db_backups -----------------------------------------------
@@ -796,31 +321,6 @@ _ensure_table_db_backups () {
     if [ $? -ne 0 ]; then return 1; else return 0; fi
 }   
 
-# _validate_table_db_backups
-_validate_table_db_backups_debug_0001="INFO: Validiere die Integrität der 'db_backups'-Tabelle."
-
-_validate_table_db_backups() {
-    # -----------------------------------------------------------------------
-    # _validate_table_db_backups
-    # -----------------------------------------------------------------------
-    # Funktion.: Überprüft die Integrität und Konsistenz der 'db_backups'-Tabelle
-    # Parameter: keine
-    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
-    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
-    # -----------------------------------------------------------------------
-
-    # Debug-Ausgabe eröffnen
-    debug "$_validate_table_db_backups_debug_0001"
-
-    _validate_table "db_backups" \
-        _chk_empty_values \
-        _chk_invalid_types \
-        _chk_duplicate_keys \
-        _chk_invalid_key_chars
-
-    return $?
-}
-
 ## --- 3. Tabelle: config_hierarchies ---------------------------------------
 # _ensure_table_config_hierarchies
 _ensure_table_config_hierarchies_debug_0001="INFO: Sicherstellen, dass die Tabelle 'config_hierarchies' existiert."
@@ -864,29 +364,6 @@ _ensure_table_config_hierarchies () {
 
     # Prüfen, ob die Tabelle erfolgreich erstellt wurde
     if [ $? -ne 0 ]; then return 1; else return 0; fi
-}
-
-# _validate_table_config_hierarchies
-_validate_table_config_hierarchies_debug_0001="INFO: Validiere die Integrität der 'config_hierarchies'-Tabelle."
-
-_validate_table_config_hierarchies() {
-    # -----------------------------------------------------------------------
-    # _validate_table_config_hierarchies
-    # -----------------------------------------------------------------------
-    # Funktion.: Überprüft die Integrität und Konsistenz der 'config_hierarchies'-Tabelle
-    # Parameter: keine
-    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
-    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
-    # -----------------------------------------------------------------------
-
-    # Debug-Ausgabe eröffnen
-    debug "$_validate_table_config_hierarchies_debug_0001"
-
-    _validate_table "config_hierarchies" \
-        _chk_empty_values \
-        _chk_duplicate_keys
-        
-    return $?
 }
 
 ## --- 4. Tabelle: settings -------------------------------------------------
@@ -941,34 +418,6 @@ _ensure_table_settings () {
     if [ $? -ne 0 ]; then return 1; else return 0; fi
 }
 
-# _validate_table_settings
-_validate_table_settings_debug_0001="INFO: Validiere die Integrität der 'settings'-Tabelle."
-
-_validate_table_settings() {
-    # -----------------------------------------------------------------------
-    # _validate_table_settings
-    # -----------------------------------------------------------------------
-    # Funktion.: Überprüft die Integrität und Konsistenz der 'settings'-Tabelle
-    # Parameter: keine
-    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
-    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
-    # -----------------------------------------------------------------------
-
-    # Debug-Ausgabe eröffnen
-    debug "$_validate_table_settings_debug_0001"
-
-    # Aufruf der generischen Validierungsfunktion mit den spezifischen Prüfungen für settings
-    _validate_table "settings" \
-        _chk_invalid_types \
-        _chk_empty_values \
-        _chk_inactive_settings \
-        _chk_foreign_key_integrity \
-        _chk_duplicate_keys \
-        _chk_invalid_key_chars
-        
-    return $?
-}
-
 ## --- 5. Tabelle: settings_history -----------------------------------------
 # _ensure_table_settings_history
 _ensure_table_settings_history_debug_0001="INFO: Sicherstellen, dass die Tabelle 'settings_history' existiert."
@@ -1014,30 +463,6 @@ _ensure_table_settings_history () {
     if [ $? -ne 0 ]; then return 1; else return 0; fi
 }
 
-# _validate_table_settings_history
-_validate_table_settings_history_debug_0001="INFO: Validiere die Integrität der 'settings_history'-Tabelle."
-
-_validate_table_settings_history() {
-    # -----------------------------------------------------------------------
-    # _validate_table_settings_history
-    # -----------------------------------------------------------------------
-    # Funktion.: Überprüft die Integrität und Konsistenz der 'settings_history'-Tabelle
-    # Parameter: keine
-    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
-    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
-    # -----------------------------------------------------------------------
-    debug "$_validate_table_settings_history_debug_0001"
-
-    # Aufruf der generischen Validierungsfunktion mit den spezifischen Prüfungen für settings_history
-    _validate_table "settings_history" \
-        _chk_invalid_types \
-        _chk_empty_values \
-        _chk_foreign_key_integrity \
-        _chk_duplicate_keys
-        
-    return $?
-}
-
 ## --- 6. Tabelle: setting_dependencies -------------------------------------
 # _ensure_table_setting_dependencies
 _ensure_table_setting_dependencies_debug_0001="INFO: Sicherstellen, dass die Tabelle 'setting_dependencies' existiert."
@@ -1078,31 +503,6 @@ _ensure_table_setting_dependencies () {
 
     # Prüfen, ob die Tabelle erfolgreich erstellt wurde
     if [ $? -ne 0 ]; then return 1; else return 0; fi
-}
-
-# _validate_table_setting_dependencies
-_validate_table_setting_dependencies_debug_0001="INFO: Validiere die Integrität der 'setting_dependencies'-Tabelle."
-
-_validate_table_setting_dependencies() {
-    # -----------------------------------------------------------------------
-    # _validate_table_setting_dependencies
-    # -----------------------------------------------------------------------
-    # Funktion.: Überprüft die Integrität und Konsistenz der 'setting_dependencies'-Tabelle
-    # Parameter: keine
-    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
-    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
-    # -----------------------------------------------------------------------
-
-    # Debug-Ausgabe eröffnen
-    debug "$_validate_table_setting_dependencies_debug_0001"
-
-    _validate_table "setting_dependencies" \
-        _chk_empty_values \
-        _chk_invalid_types \
-        _chk_duplicate_keys \
-        _chk_invalid_key_chars
-
-    return $?
 }
 
 ## --- 7. Tabelle: change_groups --------------------------------------------
@@ -1149,31 +549,6 @@ _ensure_table_change_groups () {
     if [ $? -ne 0 ]; then return 1; else return 0; fi
 }
 
-# _validate_table_change_groups
-_validate_table_change_groups_debug_0001="INFO: Validiere die Integrität der 'change_groups'-Tabelle."
-
-_validate_table_change_groups() {
-    # -----------------------------------------------------------------------
-    # _validate_table_change_groups
-    # -----------------------------------------------------------------------
-    # Funktion.: Überprüft die Integrität und Konsistenz der 'change_groups'-Tabelle
-    # Parameter: keine
-    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
-    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
-    # -----------------------------------------------------------------------
-
-    # Debug-Ausgabe eröffnen
-    debug "$_validate_table_change_groups_debug_0001"
-
-    _validate_table "change_groups" \
-        _chk_empty_values \
-        _chk_invalid_types \
-        _chk_duplicate_keys \
-        _chk_invalid_key_chars
-
-    return $?
-}
-
 ## --- 8. Tabelle: settings_change_groups -----------------------------------
 # _ensure_table_settings_change_groups
 _ensure_table_settings_change_groups_debug_0001="INFO: Sicherstellen, dass die Tabelle 'settings_change_groups' existiert."
@@ -1214,34 +589,58 @@ _ensure_table_settings_change_groups () {
     if [ $? -ne 0 ]; then return 1; else return 0; fi
 }
 
-# _validate_table_settings_change_groups
-_validate_table_settings_change_groups_debug_0001="INFO: Validiere die Integrität der 'settings_change_groups'-Tabelle."
-
-_validate_table_settings_change_groups() {
-    # -----------------------------------------------------------------------
-    # _validate_table_settings_change_groups
-    # -----------------------------------------------------------------------
-    # Funktion.: Überprüft die Integrität und Konsistenz der 'settings_change_groups'-Tabelle
-    # Parameter: keine
-    # Rückgabe.: 0 - Validierung erfolgreich (Tabelle ist konsistent)
-    # .........  1 - Validierung fehlgeschlagen (Probleme gefunden)
-    # -----------------------------------------------------------------------
-
-    # Debug-Ausgabe eröffnen
-    debug "$_validate_table_settings_change_groups_debug_0001"
-
-    _validate_table "settings_change_groups" \
-        _chk_empty_values \
-        _chk_invalid_types \
-        _chk_duplicate_keys \
-        _chk_invalid_key_chars
-
-    return $?
-}
-
 # ===========================================================================
 # Funktionen zur Datenbank-Verwaltung
 # ===========================================================================
+
+# validate_database
+validate_database_debug_0001="INFO: Starte Datenbankvalidierung..."
+validate_database_debug_0002="SUCCESS: Datenbankvalidierung abgeschlossen, keine Fehler gefunden."
+validate_database_debug_0003="ERROR: Datenbankvalidierung abgeschlossen, %d Fehler gefunden."
+validate_database_debug_0004="INFO: Führe vollständige PRAGMA integrity_check für die gesamte Datenbank aus..."
+validate_database_debug_0005="ERROR: Allgemeine Datenbankintegritätsprüfung fehlgeschlagen: %s"
+
+validate_database() {
+    # -----------------------------------------------------------------------
+    # validate_database
+    # -----------------------------------------------------------------------
+    # Funktion.: Stellt sicher, dass alle Tabellen in der SQLite-Datenbank 
+    # .........  konsistent sind und die Datenbank keine Fehler aufweist.
+    # Parameter: $1 - (Optional) Pfad zur Datenbankdatei
+    # Rückgabe.: 0 - Erfolg
+    # .........  1 - Fehler
+    # -----------------------------------------------------------------------
+    local db_file="${1:-$(get_data_file)}"
+    local validation_errors=0
+
+    # Debug-Ausgabe eröffnen
+    debug "$validate_database_debug_0001"
+
+    # 1. Vollständige Datenbank-Integritätsprüfung (schneller als tabellenweise)
+    debug "$validate_database_debug_0004"
+    local integrity_check=$(sqlite3 "$db_file" "PRAGMA integrity_check;")
+    
+    if [ "$integrity_check" != "ok" ]; then
+        debug "$(printf "$validate_database_debug_0005" "$integrity_check")"
+        return 1
+    fi
+
+    # 2. Validiere einzelne Tabellen (Struktur und Fremdschlüsselbeziehungen)
+    local tables=$(sqlite3 "$db_file" "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
+    
+    for table in $tables; do
+        _validate_table "$table" || validation_errors=$((validation_errors + 1))
+    done
+
+    # Zusammenfassung ausgeben
+    if [ $validation_errors -eq 0 ]; then
+        debug "$validate_database_debug_0002"
+        return 0
+    else
+        debug "$(printf "$validate_database_debug_0003" "$validation_errors")"
+        return 1
+    fi
+}
 
 # ensure_database
 ensure_database_debug_0001="INFO: Sicherstellen, dass die Datenbank initialisiert ist."
@@ -1256,6 +655,7 @@ ensure_database_debug_0009="ERROR: Tabelle 'settings_history' konnte nicht erste
 ensure_database_debug_0010="ERROR: Tabelle 'setting_dependencies' konnte nicht erstellt werden."
 ensure_database_debug_0011="ERROR: Tabelle 'change_groups' konnte nicht erstellt werden."
 ensure_database_debug_0012="ERROR: Tabelle 'settings_change_groups' konnte nicht erstellt werden."
+ensure_database_debug_0013="INFO: Prüfe Tabellenstruktur in der Datenbank: '%s'"
 
 ensure_database() {
     # -----------------------------------------------------------------------
@@ -1290,6 +690,14 @@ ensure_database() {
         if ! _ensure_table_change_groups "$db_file"; then debug "$ensure_database_debug_0011"; return 1; fi
         if ! _ensure_table_settings_change_groups "$db_file"; then debug "$ensure_database_debug_0012"; return 1; fi
 
+        # Wenn die Datei bereits existiert und gültig ist, Tabellenstruktur prüfen
+        validate_database "$db_file"
+        if [ $? -ne 0 ]; then
+            debug "$(printf "$ensure_database_debug_0013" "$db_file")"
+            echo ""
+            return 1
+        fi
+
         # Alle Tabellen erfolgreich erstellt, Datenbank ist bereit
         debug "$ensure_database_debug_0002"
         return 0
@@ -1299,45 +707,6 @@ ensure_database() {
         return 1
     fi    
 }   
-
-# validate_database
-validate_database_debug_0001="INFO: Starte Datenbankvalidierung..."
-validate_database_debug_0002="SUCCESS: Datenbankvalidierung abgeschlossen, keine Fehler gefunden."
-validate_database_debug_0003="ERROR: Datenbankvalidierung abgeschlossen, %d Fehler gefunden."
-
-validate_database() {
-    # -----------------------------------------------------------------------
-    # validate_database
-    # -----------------------------------------------------------------------
-    # Funktion.: Stellt sicher, dass alle Tabellen in der SQLite-Datenbank 
-    # .........  konsistent sind und die Datenbank keine Fehler aufweist.
-    # Parameter: keine
-    # Rückgabe.: 0 - Erfolg
-    # .........  1 - Fehler
-    # -----------------------------------------------------------------------
-    local validation_errors=0
-
-    # Debug-Ausgabe eröffnen
-    debug "$validate_database_debug_0001"
-
-    # Alle Tabellen validieren
-    _validate_table_schema_versions || validation_errors=$((validation_errors + 1))
-    _validate_table_db_backups || validation_errors=$((validation_errors + 1))
-    _validate_table_config_hierarchies || validation_errors=$((validation_errors + 1))
-    _validate_table_settings || validation_errors=$((validation_errors + 1))
-    _validate_table_settings_history || validation_errors=$((validation_errors + 1))
-    _validate_table_setting_dependencies || validation_errors=$((validation_errors + 1))
-    _validate_table_change_groups || validation_errors=$((validation_errors + 1))
-    _validate_table_settings_change_groups || validation_errors=$((validation_errors + 1))
-
-    if [ $validation_errors -eq 0 ]; then
-        debug "$validate_database_debug_0002"
-        return 0
-    else
-        debug "$validate_database_debug_0003" "$validation_errors"
-        return 1
-    fi
-}
 
 # setup_database
 setup_database_debug_0001="INFO: Starte Datenbank-Setup..."
