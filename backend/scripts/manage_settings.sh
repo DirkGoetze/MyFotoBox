@@ -225,7 +225,7 @@ _generate_group_id() {
 # _hierarchy_exists
 _hierarchy_exists_debug_0001="INFO: Prüfe, ob Hierarchie '%s' in der Datenbank existiert."
 _hierarchy_exists_debug_0002="SUCCESS: Hierarchie '%s' existiert in der Datenbank."
-_hierarchy_exists_debug_0003="ERROR: Hierarchie '%s' existiert nicht in der Datenbank."
+_hierarchy_exists_debug_0003="WARN: Hierarchie '%s' existiert noch nicht in der Datenbank."
 
 _hierarchy_exists() {
     # -----------------------------------------------------------------------
