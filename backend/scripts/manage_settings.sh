@@ -358,8 +358,8 @@ register_config_hierarchy() {
     debug "$(printf "$register_config_hierarchy_debug_0001" "$hierarchy_name" "$description" "$responsible")"
 
     # Hierarchienamen bereinigen und validieren
-    hierarchy_name=$(clean_key "$hierarchy_name")
-    if ! validate_key "$hierarchy_name"; then
+    hierarchy_name=$(_clean_key "$hierarchy_name")
+    if ! _validate_key "$hierarchy_name"; then
         debug "$(printf "$register_config_hierarchy_debug_0002" "$hierarchy_name")"
         log "$(printf "$register_config_hierarchy_log_0001" "$hierarchy_name")"
         return 1
