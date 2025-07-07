@@ -171,25 +171,18 @@ echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_venv_dir"
 debug "INFO: BACKEND_VENV_DIR: ${BACKEND_VENV_DIR:-nicht gesetzt}"
 DEBUG_MOD_LOCAL=1  # Aktiviere lokalen Debug-Modus für detaillierte Ausgaben
-# Test: get_python_path
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_python_path                                                 |"
-echo "+-----------------------------------------------------------------------+"
-test_function "manage_folders_sh" "get_python_path"
-debug "INFO: PYTHON_EXEC: ${PYTHON_EXEC:-nicht gesetzt}"
-DEBUG_MOD_LOCAL=0  # Aktiviere lokalen Debug-Modus für detaillierte Ausgaben
-# Test: get_pip_path
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_pip_path                                                    |"
-echo "+-----------------------------------------------------------------------+"
-test_function "manage_folders_sh" "get_pip_path"
-debug "INFO: PIP_EXEC: ${PIP_EXEC:-nicht gesetzt}"
 # Test: get_backup_dir
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_backup_dir                                                  |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_backup_dir"
 debug "INFO: BACKUP_DIR: ${BACKUP_DIR:-nicht gesetzt}"
+# Test: get_data_backup_dir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_data_backup_dir                                             |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_data_backup_dir"
+debug "INFO: BACKUP_DIR_DATA: ${BACKUP_DIR_DATA:-nicht gesetzt}"
 # Test: get_nginx_backup_dir
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_nginx_backup_dir                                            |"
@@ -202,6 +195,12 @@ echo "| Test: get_https_backup_dir                                            |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_https_backup_dir"
 debug "INFO: BACKUP_DIR_HTTPS: ${BACKUP_DIR_HTTPS:-nicht gesetzt}"
+# Test: get_system_backup_dir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_system_backup_dir                                           |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_system_backup_dir"
+debug "INFO: BACKUP_DIR_SYSTEM: ${BACKUP_DIR_SYSTEM:-nicht gesetzt}"
 # Test: get_config_dir
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_config_dir                                                  |"
@@ -349,7 +348,7 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: ensure_folder_structure                                         |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "ensure_folder_structure"
-
+exit
 # -------------------------------
 # Test der manage_files.sh Funktionen
 # -------------------------------
@@ -417,6 +416,21 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_template_file (Allgemein)                                   |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_files_sh" "get_template_file" "allgemein" "fotobox"
+# Test: get_python_path
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_python_path                                                 |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_python_path"
+debug "INFO: PYTHON_EXEC: ${PYTHON_EXEC:-nicht gesetzt}"
+DEBUG_MOD_LOCAL=0  # Aktiviere lokalen Debug-Modus für detaillierte Ausgaben
+# Test: get_pip_path
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_pip_path                                                    |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_pip_path"
+debug "INFO: PIP_EXEC: ${PIP_EXEC:-nicht gesetzt}"
+
+
 
 set_config_value "nginx.port" "80" "int" "Port für den Nginx-Server" 10 "grp_nginx_config"
 echo "$(get_config_value "nginx.port")"
