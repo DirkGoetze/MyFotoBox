@@ -248,8 +248,8 @@ _hierarchy_exists() {
     debug "$(printf "$_hierarchy_exists_debug_0001" "$hierarchy_name")"
 
     # Hierarchienamen bereinigen und validieren
-    hierarchy_name=$(clean_key "$hierarchy_name")
-    if ! validate_key "$hierarchy_name"; then
+    hierarchy_name=$(_clean_key "$hierarchy_name")
+    if ! _validate_key "$hierarchy_name"; then
         return 1
     fi
     
@@ -590,7 +590,7 @@ set_config_value() {
 
     # Wenn die Hierarchie nicht existiert, automatisch anlegen
     if ! _hierarchy_exists "$hierarchy_name" "$db_file"; then
-        _register_config_hierarchy "$hierarchy_name" \
+        register_config_hierarchy "$hierarchy_name" \
                                  "Automatisch erstellte Hierarchie" \
                                  "system" \
                                  '{"auto_created":true}' \
