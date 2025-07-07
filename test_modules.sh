@@ -133,6 +133,7 @@ echo "--------------------------------------------------------------------------
 echo
 
 DEBUG_MOD_GLOBAL=1
+ensure_database
 setup_database
 
 exit
