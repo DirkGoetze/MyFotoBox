@@ -132,17 +132,6 @@ fi
 echo "---------------------------------------------------------------------------"
 echo
 
-set_config_value "nginx.port" "80" "int" "Port für den Nginx-Server" 10 "grp_nginx_config"
-echo "$(get_config_value "nginx.port")"
-
-set_config_value "nginx.port" "443" "int" "Port für den Nginx-Server" 10 "grp_nginx_config"
-echo "$(get_config_value "nginx.port")"
-
-set_config_value "nginx.port" "8080" "int" "Port für den Nginx-Server" 10 "grp_nginx_config"
-echo "$(get_config_value "nginx.port")"
-
-exit
-
 # Zeige alle verfügbaren Funktionen in manage_folders.sh
 echo "+-----------------------------------------------------------------------+"
 echo "| Alle verfügbaren Funktionen                                           |" 
@@ -150,7 +139,6 @@ echo "+-----------------------------------------------------------------------+"
 declare -F | grep -E '(get_|set_|bind_|check_|log_)'
 echo "-------------------------------------------------------------------------"
 echo
-
 
 # -------------------------------
 # Test der manage_folders.sh Funktionen
@@ -427,6 +415,15 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_template_file (Allgemein)                                   |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_files_sh" "get_template_file" "allgemein" "fotobox"
+
+set_config_value "nginx.port" "80" "int" "Port für den Nginx-Server" 10 "grp_nginx_config"
+echo "$(get_config_value "nginx.port")"
+
+set_config_value "nginx.port" "443" "int" "Port für den Nginx-Server" 10 "grp_nginx_config"
+echo "$(get_config_value "nginx.port")"
+
+set_config_value "nginx.port" "8080" "int" "Port für den Nginx-Server" 10 "grp_nginx_config"
+echo "$(get_config_value "nginx.port")"
 
 exit
 
