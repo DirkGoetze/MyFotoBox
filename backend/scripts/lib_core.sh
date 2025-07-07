@@ -790,12 +790,14 @@ load_resources() {
     DEBUG_MOD_GLOBAL=0  # Setze globale Debug-Variable für das gesamte Skript
 
     # 5. manage_settings.sh einbinden
+    DEBUG_MOD_GLOBAL=1  # Setze globale Debug-Variable für das gesamte Skript
     debug_output "$(printf "$load_resources_debug_0002" "manage_settings.sh")"
     bind_resource "manage_settings.sh"
     if [ $? -ne 0 ]; then
         debug_output "$(printf "$load_resources_debug_0003" "manage_settings.sh")"
         result=1
     fi
+    DEBUG_MOD_GLOBAL=0  # Setze globale Debug-Variable für das gesamte Skript
 
     # 6. manage_nginx.sh einbinden
     debug_output "$(printf "$load_resources_debug_0002" "manage_nginx.sh")"
