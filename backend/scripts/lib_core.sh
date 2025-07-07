@@ -410,13 +410,14 @@ set_config_value() {
 : "${MANAGE_FOLDERS_LOADED:=0}"
 : "${MANAGE_FILES_LOADED:=0}"
 : "${MANAGE_LOGGING_LOADED:=0}"
+: "${MANAGE_DATABASE_LOADED:=0}"
+: "${MANAGE_SETTINGS_LOADED:=0}"
 : "${MANAGE_NGINX_LOADED:=0}"
 : "${MANAGE_HTTPS_LOADED:=0}"
 : "${MANAGE_FIREWALL_LOADED:=0}"
 : "${MANAGE_PYTHON_ENV_LOADED:=0}"
 : "${MANAGE_SQL_LOADED:=0}"
 : "${MANAGE_BACKEND_SERVICE_LOADED:=0}"
-: "${MANAGE_SETTINGS_LOADED:=0}"
 # ggf. weitere Guard-Variablen hier hinzufügen
 
 # check_module
