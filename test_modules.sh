@@ -134,6 +134,7 @@ echo
 
 DEBUG_MOD_GLOBAL=1
 setup_database
+validate_database
 
 exit
 
