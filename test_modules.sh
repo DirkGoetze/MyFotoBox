@@ -124,7 +124,7 @@ echo "Lade Module aus Verzeichnis: $TEST_SCRIPT_DIR"
 echo "Versuche lib_core.sh und alle anderen Module zu laden..."
 source "$TEST_SCRIPT_DIR/lib_core.sh"
 if [ $? -eq 0 ]; then
-    echo "✅ SUCCES: Modul lib_core.sh wurde geladen und sollte alle anderen Module mitgeladen haben."
+    echo "✅ SUCCES: Modul lib_core.sh und alle anderen Management-Module wurde geladen."
 else
     echo "❌ FEHLER: Beim Laden von lib_core.sh ist ein Fehler aufgetreten."
     exit 1

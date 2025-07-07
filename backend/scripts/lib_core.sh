@@ -308,7 +308,7 @@ get_config_file_debug_0002="ERROR: Konfigurationsdatei konnte nicht ermittelt we
 get_config_file_debug_0003="INFO: Konfigurationsdatei '%s' gefunden"
 get_config_file_debug_0004="SUCCESS: Wert für Schlüssel '%s' ist '%s'"
 
-get_config_value() {
+get_config_value1() {
     # -------------------------------------------------------------------------
     # get_config_value
     # -------------------------------------------------------------------------
@@ -350,7 +350,7 @@ set_config_value_debug_0005="INFO: Schlüssel '%s' existiert nicht, füge neuen 
 set_config_value_debug_0006="ERROR: Fehler beim Schreiben der Konfiguration"
 set_config_value_debug_0007="SUCCESS: Wert für Schlüssel '%s' auf '%s' gesetzt"
 
-set_config_value() {
+set_config_value1() {
     # -------------------------------------------------------------------------
     # set_config_value
     # -------------------------------------------------------------------------
@@ -507,8 +507,6 @@ bind_resource() {
     # Prüfen, ob die Ressource bereits geladen ist
     local base_name="${resource_name%.sh}"    
     local guard_var_name="${base_name^^}_LOADED"  # erzwinge Großbuchstaben für Guard-Variable
-    echo "DEBUG: Guard-Variable: $guard_var_name"
-    echo "DEBUG: Wert der Guard-Variable: $(eval echo \$$guard_var_name)"
     if [ "$(eval echo \$$guard_var_name)" -eq 1 ]; then
         debug_output "$(printf "$bind_resource_debug_0002" "$base_name")"
         return 0  # Bereits geladen, alles OK
