@@ -1636,3 +1636,8 @@ improved_nginx_install() {
     log_or_json "$mode" "success" "$improved_nginx_install_txt_0010" 0
     return 0
 }
+
+# Einstellungshierarchie für Manage Modul erstellen
+DEBUG_MOD_GLOBAL=1
+register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx" 
+DEBUG_MOD_GLOBAL=0
