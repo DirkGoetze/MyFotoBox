@@ -506,6 +506,8 @@ bind_resource() {
     # Prüfen, ob die Ressource bereits geladen ist
     local base_name="${resource_name%.sh}"    
     local guard_var_name="${base_name^^}_LOADED"  # erzwinge Großbuchstaben für Guard-Variable
+    echo "DEBUG: Guard-Variable: $guard_var_name"
+    echo "DEBUG: Wert der Guard-Variable: $(eval echo \$$guard_var_name)"
     if [ "$(eval echo \$$guard_var_name)" -eq 1 ]; then
         debug_output "$(printf "$bind_resource_debug_0002" "$base_name")"
         return 0  # Bereits geladen, alles OK
