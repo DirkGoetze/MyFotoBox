@@ -133,6 +133,7 @@ echo "--------------------------------------------------------------------------
 echo
 
 setup_database
+set_config_value "nginx.port" "8080" "int" "Port für den Nginx-Server" 10 "grp_nginx_config"
 
 exit
 
