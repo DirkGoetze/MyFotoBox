@@ -291,7 +291,7 @@ _get_hierarchy_id() {
     if ! check_param "$db_file" "db_file"; then return 1; fi
 
     # Debug-Ausgabe eröffnen
-    debug "$(printf "$register_config_hierarchy_debug_0001" "$hierarchy_name" "$description")"
+    debug "$(printf "$register_config_hierarchy_debug_0001" "$hierarchy_name" "$db_file")"
 
     # Hierarchienamen bereinigen
     hierarchy_name=$(_clean_key "$hierarchy_name")
