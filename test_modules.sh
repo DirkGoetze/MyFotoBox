@@ -170,12 +170,14 @@ echo "| Test: get_venv_dir                                                    |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_venv_dir"
 debug "INFO: BACKEND_VENV_DIR: ${BACKEND_VENV_DIR:-nicht gesetzt}"
+DEBUG_MOD_LOCAL=1  # Aktiviere lokalen Debug-Modus für detaillierte Ausgaben
 # Test: get_python_path
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_python_path                                                 |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_python_path"
 debug "INFO: PYTHON_EXEC: ${PYTHON_EXEC:-nicht gesetzt}"
+DEBUG_MOD_LOCAL=0  # Aktiviere lokalen Debug-Modus für detaillierte Ausgaben
 # Test: get_pip_path
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_pip_path                                                    |"
