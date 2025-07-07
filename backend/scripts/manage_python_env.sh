@@ -393,3 +393,6 @@ setup_python_env() {
     # Erfolgreiche Installation der Python-Umgebung
     return 0
 }
+
+# Einstellungshierarchie für Manage Modul erstellen
+register_config_hierarchy "python" "Python-Konfigurationsmodul" "manage_python_env"

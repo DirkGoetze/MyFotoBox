@@ -438,3 +438,6 @@ reset_firewall() {
     print_success "Fotobox-Firewall-Regeln wurden entfernt"
     return 0
 }
+
+# Einstellungshierarchie für Manage Modul erstellen
+register_config_hierarchy "firewall" "Firewall-Konfigurationsmodul" "manage_firewall"

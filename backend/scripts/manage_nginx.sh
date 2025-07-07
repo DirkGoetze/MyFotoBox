@@ -1638,6 +1638,4 @@ improved_nginx_install() {
 }
 
 # Einstellungshierarchie für Manage Modul erstellen
-DEBUG_MOD_GLOBAL=1
-register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx" "manage_nginx.sh" 
-DEBUG_MOD_GLOBAL=0
+register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx"

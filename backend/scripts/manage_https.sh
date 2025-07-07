@@ -1394,3 +1394,6 @@ EOF
     
     return 0
 }
+
+# Einstellungshierarchie für Manage Modul erstellen
+register_config_hierarchy "https" "HTTPS-Konfigurationsmodul" "manage_https"
