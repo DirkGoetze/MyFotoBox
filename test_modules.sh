@@ -132,18 +132,10 @@ fi
 echo "---------------------------------------------------------------------------"
 echo
 
-# Extrahiere alle Funktionsdefinitionen direkt aus der Quelldatei
-echo "+-----------------------------------------------------------------------+"
-echo "| Funktionen aus manage_folders.sh                                      |" 
-echo "+-----------------------------------------------------------------------+"
-grep -E '^[[:space:]]*(function[[:space:]]+)?[a-zA-Z0-9_]+\(\)[[:space:]]*\{' "$MANAGE_FOLDERS_SH" | 
-  sed -E 's/^[[:space:]]*(function[[:space:]]+)?([a-zA-Z0-9_]+)\(\).*/\2/' | 
-  sort
-echo "-------------------------------------------------------------------------"
-
 # -------------------------------
 # Test der manage_folders.sh Funktionen
 # -------------------------------
+list_module_functions "$MANAGE_FOLDERS_SH" false
 echo "========================================================================="
 echo "  Test der Funktionen in manage_folders.sh                               "
 echo "========================================================================="

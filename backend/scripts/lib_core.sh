@@ -840,6 +840,41 @@ load_resources() {
     return $result
 }
 
+list_module_functions() {
+    # -----------------------------------------------------------------------
+    # Funktion: Liste alle Funktionen eines Moduls auf
+    # Parameter: $1 - Dateiname des Moduls (z.B. "manage_folders.sh")
+    # .........  $2 - Optional: "true" zeigt auch private Funktionen an
+    # Rückgabe: 0 = OK, 1 = mind. eine Ressource fehlt oder ist nicht nutzbar
+    # -----------------------------------------------------------------------
+    local module_file="$1"
+    local module_name=$(basename "$module_file")
+    local show_private=${2:-false}  # Optional: true zeigt private Funktionen an
+    
+    echo "-------------------------------------------------------------------------"
+    echo " Funktionen aus $module_name" 
+    echo "-------------------------------------------------------------------------"
+    
+    if [ "$show_private" = "true" ]; then
+        # Zuerst private Funktionen anzeigen
+        echo "Private Funktionen:"
+        grep -E '^[[:space:]]*(function[[:space:]]+)?_[a-zA-Z0-9_]+\(\)[[:space:]]*\{' "$module_file" | 
+          sed -E 's/^[[:space:]]*(function[[:space:]]+)?([a-zA-Z0-9_]+)\(\).*/\2/' | 
+          sort
+        echo
+        echo "Öffentliche Funktionen:"
+    fi
+    
+    # Öffentliche Funktionen anzeigen
+    grep -E '^[[:space:]]*(function[[:space:]]+)?[a-zA-Z0-9_]+\(\)[[:space:]]*\{' "$module_file" | 
+      sed -E 's/^[[:space:]]*(function[[:space:]]+)?([a-zA-Z0-9_]+)\(\).*/\2/' | 
+      grep -v "^_" |
+      sort
+    
+    echo "-------------------------------------------------------------------------"
+    echo ""
+}
+
 # ===========================================================================
 # Hauptteil des Skripts: Ressourcen laden und Module überprüfen
 # ===========================================================================
