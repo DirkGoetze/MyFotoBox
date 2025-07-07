@@ -374,7 +374,7 @@ register_config_hierarchy() {
     
     # Hierarchie in die Datenbank einfügen
     sqlite3 "$db_file" "INSERT INTO config_hierarchies (hierarchy_name, description, responsible, hierarchy_data) 
-                        VALUES ('$hierarchy_name', '$description', '$responsible', '$hierarchy_data');"
+                        VALUES ('$hierarchy_name', '$description', '$responsible', json('$hierarchy_data'));"
 
     # Prüfen, ob der Einfügevorgang erfolgreich war
     if [ $? -ne 0 ]; then
