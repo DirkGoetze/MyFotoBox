@@ -52,7 +52,7 @@ DEBUG_MOD_GLOBAL=0           # Globales Flag, das alle lokalen überstimmt
 # Lademodus für Module
 # 0 = Bei Bedarf laden (für laufenden Betrieb)
 # 1 = Alle Module sofort laden (für Installation/Update/Deinstallation)
-: "${MODULE_LOAD_MODE:=0}"   # Standardmäßig Module nur bei Bedarf laden
+#: "${MODULE_LOAD_MODE:=0}"   # Standardmäßig Module nur bei Bedarf laden
 
 # Benutzer- und Berechtigungseinstellungen
 DEFAULT_USER="fotobox"
