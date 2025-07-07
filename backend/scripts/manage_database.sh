@@ -649,10 +649,12 @@ _ensure_table_settings_change_groups () {
 
 # validate_database
 validate_database_debug_0001="INFO: Starte Datenbankvalidierung..."
-validate_database_debug_0002="SUCCESS: Datenbankvalidierung abgeschlossen, keine Fehler gefunden."
-validate_database_debug_0003="ERROR: Datenbankvalidierung abgeschlossen, %d Fehler gefunden."
-validate_database_debug_0004="INFO: Führe vollständige PRAGMA integrity_check für die gesamte Datenbank aus..."
-validate_database_debug_0005="ERROR: Allgemeine Datenbankintegritätsprüfung fehlgeschlagen: %s"
+validate_database_debug_0002="INFO: Führe vollständige PRAGMA integrity_check für die gesamte Datenbank aus..."
+validate_database_debug_0003="ERROR: Allgemeine Datenbankintegritätsprüfung fehlgeschlagen: %s"
+validate_database_debug_0004="INFO: Prüfe Struktur und Fremdschlüsselbeziehungen für Tabelle: '%s'"
+validate_database_debug_0005="SUCCESS: Datenbankvalidierung abgeschlossen, keine Fehler gefunden."
+validate_database_debug_0006="ERROR: Datenbankvalidierung abgeschlossen, %d Fehler gefunden."
+validate_database_debug_0007="WARN: SQLite ist nicht installiert. Datenbankvalidierung wurde übersprungen."
 
 validate_database() {
     # -----------------------------------------------------------------------
@@ -667,32 +669,40 @@ validate_database() {
     local db_file="${1:-$(get_data_file)}"
     local validation_errors=0
 
-    # Debug-Ausgabe eröffnen
-    debug "$validate_database_debug_0001"
+    # Prüfe zuerst, ob SQLite installiert ist
+    if _is_sqlite_installed; then
 
-    # 1. Vollständige Datenbank-Integritätsprüfung (schneller als tabellenweise)
-    debug "$validate_database_debug_0004"
-    local integrity_check=$(sqlite3 "$db_file" "PRAGMA integrity_check;")
-    
-    if [ "$integrity_check" != "ok" ]; then
-        debug "$(printf "$validate_database_debug_0005" "$integrity_check")"
-        return 1
-    fi
+        # Debug-Ausgabe eröffnen
+        debug "$validate_database_debug_0001"
 
-    # 2. Validiere einzelne Tabellen (Struktur und Fremdschlüsselbeziehungen)
-    local tables=$(sqlite3 "$db_file" "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
-    
-    for table in $tables; do
-        _validate_table "$table" || validation_errors=$((validation_errors + 1))
-    done
-
-    # Zusammenfassung ausgeben
-    if [ $validation_errors -eq 0 ]; then
+        # 1. Vollständige Datenbank-Integritätsprüfung (schneller als tabellenweise)
         debug "$validate_database_debug_0002"
-        return 0
+        local integrity_check=$(sqlite3 "$db_file" "PRAGMA integrity_check;")
+        
+        if [ "$integrity_check" != "ok" ]; then
+            debug "$(printf "$validate_database_debug_0003" "$integrity_check")"
+            return 1
+        fi
+
+        # 2. Validiere einzelne Tabellen (Struktur und Fremdschlüsselbeziehungen)
+        local tables=$(sqlite3 "$db_file" "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
+        
+        for table in $tables; do
+            _validate_table "$table" || validation_errors=$((validation_errors + 1))
+            debug "$(printf "$validate_database_debug_0004" "$table")"
+        done
+
+        # Zusammenfassung ausgeben
+        if [ $validation_errors -eq 0 ]; then
+            debug "$validate_database_debug_0005"
+            return 0
+        else
+            debug "$(printf "$validate_database_debug_0006" "$validation_errors")"
+            return 1
+        fi
     else
-        debug "$(printf "$validate_database_debug_0003" "$validation_errors")"
-        return 1
+        # SQLite ist nicht installiert, daher kann die Validierung nicht durchgeführt werden
+        debug "$validate_database_debug_0007"
     fi
 }
 
