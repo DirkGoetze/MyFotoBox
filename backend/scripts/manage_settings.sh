@@ -320,11 +320,11 @@ _get_hierarchy_id() {
 # register_config_hierarchy
 register_config_hierarchy_debug_0001="INFO: Registriere Konfigurationshierarchie '%s' mit Beschreibung '%s', Verantwortlichem '%s'."
 register_config_hierarchy_debug_0002="ERROR: Ungültiger Hierarchiename: '%s'. Hierarchie konnte nicht registriert werden."
-register_config_hierarchy_debug_0003="ERROR: Hierarchie '%s' existiert bereits."
+register_config_hierarchy_debug_0003="WARN: Hierarchie '%s' existiert bereits."
 register_config_hierarchy_debug_0004="ERROR: Fehler beim Einfügen der Hierarchie in die Datenbank: %s"
 register_config_hierarchy_debug_0005="SUCCESS: Konfigurationshierarchie '%s' erfolgreich registriert."
 register_config_hierarchy_log_0001="ERROR: Ungültiger Hierarchiename: '%s'. Hierarchie konnte nicht registriert werden."
-register_config_hierarchy_log_0002="ERROR: Hierarchie '%s' existiert bereits."
+register_config_hierarchy_log_0002="WARN: Hierarchie '%s' existiert bereits."
 register_config_hierarchy_log_0003="ERROR: Fehler beim Einfügen der Hierarchie in die Datenbank: %s"
 register_config_hierarchy_log_0004="SUCCESS: Konfigurationshierarchie '%s' erfolgreich registriert."
 
@@ -369,7 +369,7 @@ register_config_hierarchy() {
     if _hierarchy_exists "$hierarchy_name" "$db_file"; then
         debug "$(printf "$register_config_hierarchy_debug_0003" "$hierarchy_name")"
         log "$(printf "$register_config_hierarchy_log_0002" "$hierarchy_name")"
-        return 1
+        return 0
     fi
     
     # Hierarchie in die Datenbank einfügen
