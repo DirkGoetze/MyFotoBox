@@ -612,7 +612,7 @@ set_config_value() {
     fi
 
     # Transaktion starten
-    sqlite3 "$db_file" "BEGIN TRANSACTION;" || {
+    sqlite3 "$db_file" -c "BEGIN TRANSACTION;" || {
         debug "Fehler beim Starten der Transaktion"
         return 1
     }
