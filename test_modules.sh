@@ -196,10 +196,10 @@ test_function "manage_folders_sh" "get_https_backup_dir"
 debug "INFO: BACKUP_DIR_HTTPS: ${BACKUP_DIR_HTTPS:-nicht gesetzt}"
 # Test: get_system_backup_dir
 echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_system_backup_dir                                           |"
+echo "| Test: get_systemd_backup_dir                                          |"
 echo "+-----------------------------------------------------------------------+"
-test_function "manage_folders_sh" "get_system_backup_dir"
-debug "INFO: BACKUP_DIR_SYSTEM: ${BACKUP_DIR_SYSTEM:-nicht gesetzt}"
+test_function "manage_folders_sh" "get_systemd_backup_dir"
+debug "INFO: BACKUP_DIR_SYSTEMD: ${BACKUP_DIR_SYSTEMD:-nicht gesetzt}"
 # Test: get_config_dir
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_config_dir                                                  |"
