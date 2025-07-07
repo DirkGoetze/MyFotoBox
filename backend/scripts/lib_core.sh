@@ -498,8 +498,6 @@ bind_resource() {
     local resource_name="$1"
     local resource_file="$SCRIPT_DIR/$resource_name"
 
-DEBUG_MOD_GLOBAL=1
-
     if [ -z "$resource_name" ]; then
         echo "Fehler: Ressource-Name ist leer."
         return 1
@@ -782,12 +780,14 @@ load_resources() {
     fi
 
     # 4. manage_database.sh einbinden
+    DEBUG_MOD_GLOBAL=1  # Setze globale Debug-Variable für das gesamte Skript
     debug_output "$(printf "$load_resources_debug_0002" "manage_database.sh")"
     bind_resource "manage_database.sh"
     if [ $? -ne 0 ]; then
         debug_output "$(printf "$load_resources_debug_0003" "manage_database.sh")"
         result=1
     fi
+    DEBUG_MOD_GLOBAL=0  # Setze globale Debug-Variable für das gesamte Skript
 
     # 5. manage_settings.sh einbinden
     debug_output "$(printf "$load_resources_debug_0002" "manage_settings.sh")"
