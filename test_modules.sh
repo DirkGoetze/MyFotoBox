@@ -368,6 +368,11 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_template_file (NGINX)                                       |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_files_sh" "get_template_file" "nginx" "nginx-fotobox"
+# Test: get_template_file (NGINX)
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_template_file (NGINX-Modul)                                       |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "get_nginx_template_file" "internal" "nginx-fotobox-internal"
 exit
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_template_file (SYSTEMD)                                     |"
