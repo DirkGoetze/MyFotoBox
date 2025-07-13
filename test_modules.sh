@@ -340,10 +340,10 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: ensure_folder_structure                                         |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "ensure_folder_structure"
-exit
 # -------------------------------
 # Test der manage_files.sh Funktionen
 # -------------------------------
+list_module_functions "$MANAGE_FILES_SH" false
 echo
 echo "========================================================================="
 echo "  Test der Funktionen in manage_files.sh"
@@ -368,6 +368,7 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_template_file (NGINX)                                       |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_files_sh" "get_template_file" "nginx" "nginx-fotobox"
+exit
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_template_file (SYSTEMD)                                     |"
 echo "+-----------------------------------------------------------------------+"

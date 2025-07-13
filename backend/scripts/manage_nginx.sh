@@ -52,48 +52,6 @@ DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 # Funktionen zur Template-Verarbeitung
 # ===========================================================================
 
-# apply_template
-apply_template_txt_0001="Template-Datei nicht gefunden: %s"
-apply_template_txt_0002="Template-Datei erfolgreich verarbeitet"
-apply_template_txt_0003="Ersetzung ausgeführt: %s"
-
-apply_template() {
-    # -----------------------------------------------------------------------
-    # apply_template
-    # -----------------------------------------------------------------------
-    # Funktion: Lädt eine Template-Datei und ersetzt Platzhalter
-    # Parameter: $1 = Pfad zur Template-Datei
-    #            $2 = Ausgabepfad
-    #            Rest: Name-Wert-Paare für Ersetzungen (NAME=value)
-    # Rückgabe:  0 = OK, 1 = Template nicht gefunden
-    # Seiteneffekte: Schreibt die verarbeitete Template-Datei
-    # -----------------------------------------------------------------------
-    local template_file="$1"
-    local output_file="$2"
-    shift 2
-    
-    if [ ! -f "$template_file" ]; then
-        log "$(printf "$apply_template_txt_0001" "$template_file")"
-        return 1
-    fi
-    
-    # Template in Variable laden
-    local content
-    content=$(cat "$template_file")
-    
-    # Ersetzungen durchführen
-    for pair in "$@"; do
-        local name="${pair%%=*}"
-        local value="${pair#*=}"
-        # Platzhalter im Format {{NAME}} ersetzen
-        content=$(echo "$content" | sed "s|{{$name}}|$value|g")
-    done
-    
-    # In Ausgabedatei schreiben
-    echo "$content" > "$output_file"
-    return 0
-}
-
 # get_nginx_template_path
 get_nginx_template_path_txt_0001="Template-Datei nicht gefunden: %s"
 get_nginx_template_path_txt_0002="manage_folders.sh nicht verfügbar"

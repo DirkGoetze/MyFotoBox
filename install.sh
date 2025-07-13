@@ -700,31 +700,16 @@ dlg_nginx_installation() {
     print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] NGINX-Installation und Konfiguration ..."
 
     debug "Starte NGINX-Dialog, UNATTENDED=$UNATTENDED, SCRIPT_DIR=$SCRIPT_DIR" "CLI" "dlg_nginx_installation"
-    # Verwenden der globalen Variable zur Prüfung, ob manage_nginx.sh existiert
-    # Robustere Prüfung auf Verfügbarkeit von manage_nginx.sh
-    if [ -z "$MANAGE_NGINX_AVAILABLE" ]; then
-        # Falls die Variable nicht gesetzt ist, prüfen wir direkt die Dateipräsenz
-        if [ -f "$SCRIPT_DIR/manage_nginx.sh" ]; then
-            MANAGE_NGINX_AVAILABLE=1
-        else
-            MANAGE_NGINX_AVAILABLE=0
-        fi
-    fi
-    
-    if [ "$MANAGE_NGINX_AVAILABLE" -ne 1 ]; then
+
+    # Prüfen, ob das Modul 'manage_nginx.sh' existiert
+    if ! check_module "manage_nginx.sh"; then
         debug "manage_nginx.sh ist nicht verfügbar (MANAGE_NGINX_AVAILABLE=$MANAGE_NGINX_AVAILABLE)" "CLI" "dlg_nginx_installation"
         print_error "manage_nginx.sh nicht gefunden! Die Projektstruktur wurde vermutlich noch nicht geklont."
         return 1  # Wir verwenden return statt exit, damit die Installation nicht komplett abbricht
     fi
+
     # NGINX-Installation prüfen/ausführen (zentral)
-    # Verwende den in set_fallback_security_settings gespeicherten Pfad zu manage_nginx.sh
-    if [ -n "$MANAGE_NGINX_PATH" ]; then
-        NGINX_SCRIPT="$MANAGE_NGINX_PATH"
-    else
-        # Fallback auf den standardmäßigen Pfad
-        NGINX_SCRIPT="$SCRIPT_DIR/manage_nginx.sh"
-    fi
-    
+    # call: chk_nginx_installation um zu prüfen, ob NGINX bereits installiert ist
     if [ "$UNATTENDED" -eq 1 ]; then
         debug "Starte $NGINX_SCRIPT --json install" "CLI" "dlg_nginx_installation"
         install_result=$(bash "$NGINX_SCRIPT" --json install)
@@ -734,11 +719,13 @@ dlg_nginx_installation() {
         install_result=$(bash "$NGINX_SCRIPT" install)
         install_rc=$?
     fi
+
     debug "install_rc=$install_rc, install_result=$install_result" "CLI" "dlg_nginx_installation"
     if [ $install_rc -ne 0 ]; then
         print_error "NGINX-Installation fehlgeschlagen: $install_result"
         return 1
     fi
+
     # Betriebsmodus abfragen (default/multisite)
     if [ "$UNATTENDED" -eq 1 ]; then
         debug "Starte $NGINX_SCRIPT --json activ" "CLI" "dlg_nginx_installation"
@@ -750,10 +737,12 @@ dlg_nginx_installation() {
         activ_rc=$?
     fi
     debug "activ_rc=$activ_rc, activ_result=$activ_result" "CLI" "dlg_nginx_installation"
+
     if [ $activ_rc -eq 2 ]; then
         print_error "Konnte NGINX-Betriebsmodus nicht eindeutig ermitteln. Bitte prüfen Sie die Konfiguration."
         return 1
     fi
+
     # Dialog: Default-Integration oder eigene Konfiguration
     if [ $activ_rc -eq 0 ]; then
         if [ "$UNATTENDED" -eq 1 ]; then

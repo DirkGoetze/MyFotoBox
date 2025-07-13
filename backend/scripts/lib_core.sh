@@ -22,6 +22,21 @@ LIB_CORE_LOADED=1
 : "${SCRIPT_DIR:="/opt/fotobox/backend/scripts"}"
 : "${CONF_DIR:="/opt/fotobox/conf"}"
 
+# Standardwerte für Guard-Variablen festlegen
+# ------------------------------------------------------------------------------
+: "${MANAGE_FOLDERS_LOADED:=0}"
+: "${MANAGE_FILES_LOADED:=0}"
+: "${MANAGE_LOGGING_LOADED:=0}"
+: "${MANAGE_DATABASE_LOADED:=0}"
+: "${MANAGE_SETTINGS_LOADED:=0}"
+: "${MANAGE_NGINX_LOADED:=0}"
+: "${MANAGE_HTTPS_LOADED:=0}"
+: "${MANAGE_FIREWALL_LOADED:=0}"
+: "${MANAGE_PYTHON_ENV_LOADED:=0}"
+: "${MANAGE_SQL_LOADED:=0}"
+: "${MANAGE_BACKEND_SERVICE_LOADED:=0}"
+# ggf. weitere Guard-Variablen hier hinzufügen
+
 # Farbkonstanten für Ausgaben (Shell-ANSI)
 # ------------------------------------------------------------------------------
 # HINWEIS: Für Shellskripte gilt zusätzlich:
@@ -102,7 +117,7 @@ trace_output() {
 # check_param
 check_param_debug_0001="INFO: Parameterprüfung für [%s:%s()] Parameter: %s:%s"
 check_param_debug_0002="ERROR: Parameter '%s' in Funktion '%s' des Moduls '%s' ist leer oder nicht gesetzt"
-#check_param_log_0001="check_param: Parameter '%s' fehlt in Funktion '%s' des Moduls '%s'"
+check_param_log_0001="ERROR: Parameter '%s' in Funktion '%s' des Moduls '%s' ist leer oder nicht gesetzt"
 
 check_param() {
     # -----------------------------------------------------------------------
@@ -132,13 +147,13 @@ check_param() {
     module_name=$(echo "$module_name" | tr '[:lower:]' '[:upper:]')
 
     # Debugging-Ausgabe für die Modul-Identifikation
-    debug "$(printf "$check_param_debug_0001" "$module_name" "$calling_function" "$param_name" "$param")" "CLI" "check_param"
+    debug "$(printf "$check_param_debug_0001" "$module_name" "$calling_function" "$param_name" "$param")"
 
     # Überprüfen, ob ein Parameter übergeben wurde
     if [ -z "$param" ]; then
         # Parameter ist leer oder nicht gesetzt
-        debug "$(printf "$check_param_debug_0002" "$param_name" "$calling_function" "$module_name")" "CLI" "check_param"
-        #log "$(printf "$check_param_log_0001" "$param_name" "$calling_function" "$module_name")" "check_param" "$module_name"
+        debug "$(printf "$check_param_debug_0002" "$param_name" "$calling_function" "$module_name")"
+        log "$(printf "$check_param_log_0001" "$param_name" "$calling_function" "$module_name")"
         return 1
     fi
   
@@ -302,6 +317,61 @@ show_spinner() {
     return $exit_code
 }
 
+# ===========================================================================
+# Funktionen zur Template-Verarbeitung
+# ===========================================================================
+
+# apply_template
+apply_template_debug_0001="INFO: Lade Template-Datei '%s' und ersetze Platzhalter"
+apply_template_debug_0002="ERROR: Template-Datei '%s' konnte nicht geladen werden"
+apply_template_debug_0003="SUCCESS: Template-Datei '%s' erfolgreich verarbeitet"
+apply_template_log_0001="Template-Datei nicht gefunden: %s"
+apply_template_log_0002="Template-Datei '%s' erfolgreich erstellt"
+
+apply_template() {
+    # -----------------------------------------------------------------------
+    # apply_template
+    # -----------------------------------------------------------------------
+    # Funktion: Lädt eine Template-Datei und ersetzt Platzhalter
+    # Parameter: $1 = Pfad zur Template-Datei
+    #            $2 = Ausgabepfad
+    #            Rest: Name-Wert-Paare für Ersetzungen (NAME=value)
+    # Rückgabe:  0 = OK, 1 = Template nicht gefunden
+    # Seiteneffekte: Schreibt die verarbeitete Template-Datei
+    # -----------------------------------------------------------------------
+    local template_file="$1"
+    local output_file="$2"
+    shift 2
+    
+    # Debug-Ausgabe eröffnen
+    debug_output "$(printf "$apply_template_debug_0001" "$template_file")"
+
+    # Prüfe, ob die Template-Datei existiert
+    if [ ! -f "$template_file" ]; then
+        log "$(printf "$apply_template_log_0001" "$template_file")"
+        debug_output "$(printf "$apply_template_debug_0002" "$template_file")"
+        return 1
+    fi
+    
+    # Template in Variable laden
+    local content
+    content=$(cat "$template_file")
+    
+    # Ersetzungen durchführen
+    for pair in "$@"; do
+        local name="${pair%%=*}"
+        local value="${pair#*=}"
+        # Platzhalter im Format {{NAME}} ersetzen
+        content=$(echo "$content" | sed "s|{{$name}}|$value|g")
+    done
+    
+    # In Ausgabedatei schreiben
+    echo "$content" > "$output_file"
+    log "$(printf "$apply_template_log_0002" "$output_file")"
+    debug_output "$(printf "$apply_template_debug_0003" "$template_file")"
+    return 0
+}
+
 # get_config_file
 get_config_file_debug_0001="INFO: Suche Wert für Schlüssel '%s'"
 get_config_file_debug_0002="ERROR: Konfigurationsdatei konnte nicht ermittelt werden"
@@ -406,19 +476,6 @@ set_config_value1() {
 # ===========================================================================
 # Hilfsfunktionen zur Einbindung externer Skript-Ressourcen
 # ===========================================================================
-# Standardwerte für Guard-Variablen festlegen
-: "${MANAGE_FOLDERS_LOADED:=0}"
-: "${MANAGE_FILES_LOADED:=0}"
-: "${MANAGE_LOGGING_LOADED:=0}"
-: "${MANAGE_DATABASE_LOADED:=0}"
-: "${MANAGE_SETTINGS_LOADED:=0}"
-: "${MANAGE_NGINX_LOADED:=0}"
-: "${MANAGE_HTTPS_LOADED:=0}"
-: "${MANAGE_FIREWALL_LOADED:=0}"
-: "${MANAGE_PYTHON_ENV_LOADED:=0}"
-: "${MANAGE_SQL_LOADED:=0}"
-: "${MANAGE_BACKEND_SERVICE_LOADED:=0}"
-# ggf. weitere Guard-Variablen hier hinzufügen
 
 # check_module
 check_module_debug_0001="[check_module] INFO: Prüfe Modul '%s'"
@@ -429,6 +486,7 @@ check_module_debug_0005="[check_module] INFO: Prüfe Pfad-Variable"
 check_module_debug_0006="[check_module] INFO: Pfad-Variable '%s' ist korrekt definiert (%s)"
 check_module_debug_0007="[check_module] ERROR: Pfad-Variable '%s' ist NICHT korrekt definiert (%s)"
 check_module_debug_0008="[check_module] SUCCESS: Modul '%s' wurde korrekt geladen"
+check_module_debug_0009="[check_module] ERROR: Datei '%s' wurde nicht gefunden oder ist nicht lesbar. Die Projektstruktur ist beschädigt."
 
 check_module() {
     # -----------------------------------------------------------------------
@@ -436,7 +494,8 @@ check_module() {
     # Parameter: $1 - Dateiname des Moduls
     # Rückgabe: 0 = OK, 
     # ........  1 = Guard-Variable des Moduls ist nicht 1
-    # ........  2 = Pfadvariable des Moduls ist nicht gesetzt
+    # ........  2 = Modul nicht vorhanden / Pfadvariable des Moduls ist 
+    # ........      nicht gesetzt
     # -----------------------------------------------------------------------
     local module_name="$1"
     
@@ -449,6 +508,12 @@ check_module() {
 
     # Debug-Ausgabe
     debug_output "$(printf "$check_module_debug_0001" "$(basename "${module_name%.sh}" | tr '[:lower:]' '[:upper:]')")"
+
+    # Prüfe die Dateipräsenz des Moduls
+    if [ ! -f "$SCRIPT_DIR/$module_name" ]; then
+        debug_output "$(printf "$check_module_debug_0009" "$SCRIPT_DIR/$module_name")"
+        return 2  # Modul nicht vorhanden
+    fi
 
     # Prüfe Guard-Variable
     debug_output "$(printf "$check_module_debug_0002")"
@@ -852,7 +917,7 @@ list_module_functions() {
     local show_private=${2:-false}  # Optional: true zeigt private Funktionen an
     
     echo "-------------------------------------------------------------------------"
-    echo " Funktionen aus $module_name" 
+    echo " Liste der Funktionen aus $module_name" 
     echo "-------------------------------------------------------------------------"
     
     if [ "$show_private" = "true" ]; then

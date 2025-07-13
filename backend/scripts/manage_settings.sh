@@ -154,17 +154,14 @@ _validate_key() {
     # -----------------------------------------------------------------------
     local key="$1"
 
-    # Überprüfen, ob der Schlüssel angegeben ist
-    if ! check_param "$key" "key"; then return 1; fi
+    # Überprüfen, ob der Schlüssel angegeben ist - Leerer Schlüssel ungültig
+    if ! check_param "$key" "key"; then 
+        debug "$_validate_key_debug_0002"
+        return 1; 
+    fi
 
     # Debug-Ausgabe eröffnen
     debug "$(printf "$_validate_key_debug_0001" "$key")"
-
-    # Leerer Schlüssel ist ungültig
-    if [ -z "$key" ]; then
-        debug "$_validate_key_debug_0002"
-        return 1
-    fi
 
     # Ungültige Zeichen prüfen (nur a-z, A-Z, 0-9, ., _ und - sind erlaubt)
     if ! [[ "$key" =~ ^[a-zA-Z0-9._-]+$ ]]; then
