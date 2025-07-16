@@ -57,6 +57,7 @@ CONFIG_FILE_EXT_SSH=".ssh"
 LOG_FILE_EXT_DEFAULT=".log"
 TMP_FILE_EXT_DEFAULT=".tmp"
 DB_FILE_EXT_DEFAULT=".db"
+BACKUP_FILE_EXT_DEFAULT=".bak" #'.zip' ist nicht mehr Standard, da wir keine ZIP-Backups mehr machen.
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
@@ -627,6 +628,7 @@ get_config_file_nginx() {
 
 # get_backup_file
 get_backup_file_debug_0001="Ermittle Backup-Datei für Komponente: %s"
+get_backup_file_debug_0002="Extrahierter Dateiname: %s, Endung: %s"
 
 get_backup_file() {
     # -----------------------------------------------------------------------
@@ -634,12 +636,12 @@ get_backup_file() {
     # -----------------------------------------------------------------------
     # Funktion: Gibt den Pfad zu einer Backup-Datei zurück
     # Parameter: $1 - Komponente die eine Backup-Datei anlegen möchte
-    #            $2 - Suffix für die Dateierweiterung (optional)
+    #            $2 - Vollständiger Pfad zur Quelldatei (optional)
     # Rückgabewert: Der vollständige Pfad zur Datei
     # -----------------------------------------------------------------------
     local component="$1"
-    local src_file="${2:-$1}"     # Optional: Quell-Datei für den Backup
-    local extension="${3:-.zip}"  # Default: .zip
+    local src_file="${2:-$1}"         # Optional: Quell-Datei für den Backup
+    local default_ext="$BACKUP_FILE_EXT_DEFAULT"           # Standard-Endung 
 
     # Debug-Ausgabe eröffnen
     debug "$(printf "$get_backup_file_debug_0001" "$component")"
@@ -647,6 +649,21 @@ get_backup_file() {
     # Überprüfen, ob die erforderlichen Parameter angegeben sind
     if ! check_param "$component" "component"; then return 1; fi
     
+    # Dateinamen ohne Pfad extrahieren (nur Basename)
+    local basename=$(basename "$src_file")
+    
+    # Dateiendung extrahieren (letzter Teil nach dem Punkt)
+    local extension=""
+    if [[ "$basename" == *.* ]]; then
+        extension=".${basename##*.}"  # Extrahiert alles nach dem letzten Punkt
+        basename="${basename%.*}"     # Entfernt die Endung vom Basename
+    else
+        # Keine Endung gefunden, verwende Default
+        extension="$default_ext"
+    fi
+
+    debug "$(printf "$get_backup_file_debug_0002" "$basename" "$extension")"
+
     # Je nach Komponente den richtigen Backup-Ordner verwenden
     local backup_dir
     case "$component" in
@@ -677,33 +694,7 @@ get_backup_file() {
     esac
 
     # Dateinamen generieren und mit Backup-Verzeichnis kombinieren
-    echo "${backup_dir}/$(date +%Y-%m-%d_%H-%M-%S)_${src_file}${extension}"
-}
-
-# get_backup_data_file
-get_backup_data_file_debug_0001="Ermittle Backup-Daten-Datei für Komponente: %s"
-
-get_backup_data_file() {
-    # -----------------------------------------------------------------------
-    # get_backup_data_file
-    # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zu einer Backup-Datenbank-Datei zurück
-    # Parameter: $1 - Komponente die eine Backup-Datenbank-Datei anlegt 
-    #            $2 - Suffix für die Dateierweiterung (optional)
-    # Rückgabewert: Der vollständige Pfad zur Datei
-    # -----------------------------------------------------------------------
-    local component="$1"
-    local extension="${2:-.zip}"  # Default: .zip
-    local backup_dir
-
-    debug "$(printf "$get_backup_data_file_debug_0001" "$component")"
-
-    # Überprüfen, ob die erforderlichen Parameter angegeben sind
-    if ! check_param "$component" "component"; then return 1; fi
-    
-    # Backup-Verzeichnis abrufen und Dateinamen generieren
-    backup_dir="$(get_data_backup_dir)"
-    echo "${backup_dir}/$(date +%Y-%m-%d)_${component}${extension}"
+    echo "${backup_dir}/$(date +%Y-%m-%d_%H-%M-%S)_${basename}${extension}"
 }
 
 # get_backup_meta_file
