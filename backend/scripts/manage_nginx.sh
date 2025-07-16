@@ -568,6 +568,9 @@ set_default_config_nginx() {
     # -----------------------------------------------------------------------
     # local default_conf="/etc/nginx/sites-available/default"
 
+# Global Debug-Modus aktivieren
+DEBUG_MOD_GLOBAL=1
+
     # Debug-Meldung eröffnen
     debug "$set_default_config_nginx_debug_0001"
 
@@ -1705,9 +1708,6 @@ setup_nginx_service() {
     # -----------------------------------------------------------------------
     local output_mode="${1:-cli}"  # Standardmäßig CLI-Ausgabe
     local service_pid
-
-# Global Debug-Modus aktivieren
-DEBUG_MOD_GLOBAL=1
 
     # Eröffnungsmeldung im Debug Modus
     debug "$setup_nginx_service_debug_0001"
