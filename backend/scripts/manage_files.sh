@@ -677,7 +677,7 @@ get_backup_file() {
     esac
 
     # Dateinamen generieren und mit Backup-Verzeichnis kombinieren
-    echo "${backup_dir}/$(date +%Y-%m-%d)_${src_file}${extension}"
+    echo "${backup_dir}/$(date +%Y-%m-%d_%H-%M-%S)_${src_file}${extension}"
 }
 
 # get_backup_data_file
