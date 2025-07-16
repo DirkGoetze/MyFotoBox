@@ -1706,6 +1706,9 @@ setup_nginx_service() {
     local output_mode="${1:-cli}"  # Standardmäßig CLI-Ausgabe
     local service_pid
 
+# Global Debug-Modus aktivieren
+DEBUG_MOD_GLOBAL=1
+
     # Eröffnungsmeldung im Debug Modus
     debug "$setup_nginx_service_debug_0001"
 
