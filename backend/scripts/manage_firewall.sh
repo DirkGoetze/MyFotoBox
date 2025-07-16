@@ -439,5 +439,8 @@ reset_firewall() {
     return 0
 }
 
-# Einstellungshierarchie für Manage Modul erstellen
-register_config_hierarchy "firewall" "Firewall-Konfigurationsmodul" "manage_firewall"
+# Prüfe, ob SQLite installiert ist 
+if _is_sqlite_installed; then
+    # Einstellungshierarchie für Manage Modul erstellen
+    register_config_hierarchy "firewall" "Firewall-Konfigurationsmodul" "manage_firewall"
+fi

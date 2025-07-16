@@ -1395,5 +1395,8 @@ EOF
     return 0
 }
 
-# Einstellungshierarchie für Manage Modul erstellen
-register_config_hierarchy "https" "HTTPS-Konfigurationsmodul" "manage_https"
+# Prüfe, ob SQLite installiert ist 
+if _is_sqlite_installed; then
+    # Einstellungshierarchie für Manage Modul erstellen
+    register_config_hierarchy "https" "HTTPS-Konfigurationsmodul" "manage_https"
+fi

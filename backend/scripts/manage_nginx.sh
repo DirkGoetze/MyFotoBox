@@ -1793,5 +1793,8 @@ setup_nginx_service() {
     fi
 }
 
-# Einstellungshierarchie für Manage Modul erstellen
-register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx"
+# Prüfe, ob SQLite installiert ist 
+if _is_sqlite_installed; then
+    # Einstellungshierarchie für Manage Modul erstellen
+    register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx"
+fi

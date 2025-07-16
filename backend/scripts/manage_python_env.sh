@@ -394,5 +394,8 @@ setup_python_env() {
     return 0
 }
 
-# Einstellungshierarchie für Manage Modul erstellen
-register_config_hierarchy "python" "Python-Konfigurationsmodul" "manage_python_env"
+# Prüfe, ob SQLite installiert ist 
+if _is_sqlite_installed; then
+    # Einstellungshierarchie für Manage Modul erstellen
+    register_config_hierarchy "python" "Python-Konfigurationsmodul" "manage_python_env"
+fi
