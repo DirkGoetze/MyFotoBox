@@ -490,7 +490,7 @@ test_function "manage_files_sh" "get_backup_file" "systemd" "fotobox.service"
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_backup_meta_file (NGINX)                                    |"
 echo "+-----------------------------------------------------------------------+"
-local backup_file=$(get_backup_file "nginx" "default.conf")
+backup_file=$(get_backup_file "nginx" "default.conf")
 test_function "manage_files_sh" "get_backup_meta_file" "$backup_file"
 exit
 
