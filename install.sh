@@ -320,19 +320,19 @@ check_system_requirements() {
     fi
     
     # --- 3. Prüfen, ob alle benötigten Ressourcen verfügbar sind
-    if ! check_module "manage_folders"; then
+    if ! check_module "manage_folders.sh"; then
         print_error "Modul 'manage_folders' ist nicht verfügbar."
         return 1
     fi
-    if ! check_module "manage_files"; then
+    if ! check_module "manage_files.sh"; then
         print_error "Modul 'manage_files' ist nicht verfügbar."
         return 1
     fi
-    if ! check_module "manage_logging"; then
+    if ! check_module "manage_logging.sh"; then
         print_error "Modul 'manage_logging' ist nicht verfügbar."
         return 1
     fi
-    if ! check_module "manage_nginx"; then
+    if ! check_module "manage_nginx.sh"; then
         print_error "Modul 'manage_nginx' ist nicht verfügbar."
         return 1
     fi
