@@ -443,17 +443,24 @@ echo "+-----------------------------------------------------------------------+"
 test_function "manage_files_sh" "get_template_file" "ssh" "fotobox-ssh"
 # Test: get_config_file_nginx
 echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_config_file_nginx (default)                                 |"
+echo "| Test: get_config_file_nginx [ohne Parameter - external]               |"
 echo "+-----------------------------------------------------------------------+"
-test_function "manage_files_sh" "get_config_file_nginx" "default"
+test_function "manage_files_sh" "get_config_file_nginx"
 # Test: get_config_file_nginx
 echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_config_file_nginx (multisite)                               |"
+echo "| Test: get_config_file_nginx (default/internal)                        |"
 echo "+-----------------------------------------------------------------------+"
-test_function "manage_files_sh" "get_config_file_nginx" "multisite"
-
-
-
+test_function "manage_files_sh" "get_config_file_nginx" "internal"
+# Test: get_config_file_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_config_file_nginx (multisite/external)                      |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_config_file_nginx" "external"
+# Test: get_config_file_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_config_file_nginx (activated)                               |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_config_file_nginx" "activated"
 exit
 
 
