@@ -638,17 +638,46 @@ get_backup_file() {
     # Rückgabewert: Der vollständige Pfad zur Datei
     # -----------------------------------------------------------------------
     local component="$1"
-    local extension="${2:-.zip}"  # Default: .zip
-    local backup_dir
+    local src_file="${2:-$1}"     # Optional: Quell-Datei für den Backup
+    local extension="${3:-.zip}"  # Default: .zip
 
+    # Debug-Ausgabe eröffnen
     debug "$(printf "$get_backup_file_debug_0001" "$component")"
 
     # Überprüfen, ob die erforderlichen Parameter angegeben sind
     if ! check_param "$component" "component"; then return 1; fi
     
-    # Backup-Verzeichnis abrufen und Dateinamen generieren
-    backup_dir="$(get_backup_dir)"
-    echo "${backup_dir}/$(date +%Y-%m-%d)_${component}${extension}"
+    # Je nach Komponente den richtigen Backup-Ordner verwenden
+    local backup_dir
+    case "$component" in
+        "photos"|"videos"|"thumbnails")
+            # Für Fotos, Videos und Thumbnails den Daten-Backup-Ordner verwenden
+            backup_dir="$(get_backup_dir)/$(_get_clean_foldername "$component")"
+            ;;
+        "data")
+            # Für Daten-Backups den Daten-Backup-Ordner verwenden
+            backup_dir="$(get_data_backup_dir)"
+            ;;
+        "nginx")
+            # Für Nginx-Konfigurationen den Nginx-Backup-Ordner verwenden
+            backup_dir="$(get_nginx_backup_dir)"
+            ;;
+        "https")
+            # Für HTTPS-Zertifikate den HTTPS-Backup-Ordner verwenden
+            backup_dir="$(get_https_backup_dir)"
+            ;;
+        "systemd")
+            # Für Systemd-Konfigurationen den Systemd-Backup-Ordner verwenden
+            backup_dir="$(get_systemd_backup_dir)"
+            ;;
+        *)
+            # Für andere Komponenten den allgemeinen Backup-Ordner verwenden
+            backup_dir="$(get_backup_dir)"
+            ;;
+    esac
+
+    # Dateinamen generieren und mit Backup-Verzeichnis kombinieren
+    echo "${backup_dir}/$(date +%Y-%m-%d)_${src_file}${extension}"
 }
 
 # get_backup_data_file

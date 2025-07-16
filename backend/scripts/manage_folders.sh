@@ -668,7 +668,6 @@ get_data_backup_dir() {
     return 1
 }
 
-
 # get_nginx_backup_dir
 get_nginx_backup_dir_debug_0001="INFO: Ermittle NGINX-Backup-Verzeichnis"
 get_nginx_backup_dir_debug_0002="SUCCESS: Verwende für NGINX-Backup-Verzeichnis \$BACKUP_DIR_NGINX: %s"

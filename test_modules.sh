@@ -463,9 +463,29 @@ echo "+-----------------------------------------------------------------------+"
 test_function "manage_files_sh" "get_config_file_nginx" "activated"
 # Test: get_backup_file
 echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_backup_file [Ohne Parameter]                                |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_backup_file" "irgendwas"
+# Test: get_backup_file
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_backup_file (Datenbank)                                     |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_backup_file" "data"
+# Test: get_backup_file
+echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_backup_file (NGINX)                                         |"
 echo "+-----------------------------------------------------------------------+"
-test_function "manage_files_sh" "get_backup_file" "nginx"
+test_function "manage_files_sh" "get_backup_file" "nginx" "default" ".conf"
+# Test: get_backup_file
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_backup_file (HTTPS)                                         |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_backup_file" "https"
+# Test: get_backup_file
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_backup_file (Systemd)                                         |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_backup_file" "systemd"
 # Test: get_backup_meta_file
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_backup_meta_file (NGINX)                                    |"
