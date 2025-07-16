@@ -1768,7 +1768,7 @@ DEBUG_MOD_GLOBAL=1
 
     # Schritt 3: Je nach aktuellen Zustand der NGINX-Konfiguration vorgehen
     local nginx_status
-    nginx_status=$(is_nginx_default)
+    nginx_status=$(_is_default_nginx)
     if [ $? -eq 0 ]; then  # Default-Konfiguration
         if [ "$output_mode" = "json" ]; then
             set_default_config_nginx || return 1
