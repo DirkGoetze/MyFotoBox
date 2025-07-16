@@ -320,6 +320,7 @@ check_system_requirements() {
     fi
     
     # --- 3. Prüfen, ob alle benötigten Ressourcen verfügbar sind
+DEBUG_MOD_GLOBAL=1
     if ! check_module "manage_folders.sh"; then
         print_error "Modul 'manage_folders' ist nicht verfügbar."
         return 1
