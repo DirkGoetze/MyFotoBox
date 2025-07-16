@@ -321,20 +321,20 @@ check_system_requirements() {
     
     # --- 3. Prüfen, ob alle benötigten Ressourcen verfügbar sind
 DEBUG_MOD_GLOBAL=1
-    if ! check_module "manage_folders"; then
-        print_error "Modul 'manage_folders' ist nicht verfügbar."
+    if ! check_module "manage_folders.sh"; then
+        print_error "Modul 'manage_folders.sh' ist nicht verfügbar."
         return 1
     fi
-    if ! check_module "manage_files"; then
-        print_error "Modul 'manage_files' ist nicht verfügbar."
+    if ! check_module "manage_files.sh"; then
+        print_error "Modul 'manage_files.sh' ist nicht verfügbar."
         return 1
     fi
-    if ! check_module "manage_logging"; then
-        print_error "Modul 'manage_logging' ist nicht verfügbar."
+    if ! check_module "manage_logging.sh"; then
+        print_error "Modul 'manage_logging.sh' ist nicht verfügbar."
         return 1
     fi
-    if ! check_module "manage_nginx"; then
-        print_error "Modul 'manage_nginx' ist nicht verfügbar."
+    if ! check_module "manage_nginx.sh"; then
+        print_error "Modul 'manage_nginx.sh' ist nicht verfügbar."
         return 1
     fi
     # --- 4. Prüfen, ob Skript mit root-Rechten ausgeführt wird
