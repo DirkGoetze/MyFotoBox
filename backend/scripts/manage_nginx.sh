@@ -568,9 +568,6 @@ set_default_config_nginx() {
     # -----------------------------------------------------------------------
     # local default_conf="/etc/nginx/sites-available/default"
 
-# Global Debug-Modus aktivieren
-DEBUG_MOD_GLOBAL=1
-
     # Debug-Meldung eröffnen
     debug "$set_default_config_nginx_debug_0001"
 
@@ -584,8 +581,11 @@ DEBUG_MOD_GLOBAL=1
         return 1
     fi
 
+# Global Debug-Modus aktivieren
+DEBUG_MOD_GLOBAL=1
+
     # Backup der Default-Konfiguration anlegen
-    backup_nginx_config "$default_conf" "internal" "set_default_config_nginx"|| return 2
+    backup_config_nginx "$default_conf" "internal" "set_default_config_nginx"
     if [ $? -ne 0 ]; then
         # Fehler beim Backup der Default-Konfiguration
         debug "$set_default_config_nginx_debug_0003"
