@@ -704,21 +704,21 @@ get_backup_meta_file() {
     # -----------------------------------------------------------------------
     # get_backup_meta_file
     # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zu einer Backup-Metadaten-Datei zurück
-    # Parameter: $1 - Komponente die eine Backup-Datei anlegen möchte
+    # Funktion: Gibt den Namen einer Backup-Metadaten-Datei zurück
+    # Parameter: $1 - Der vollständige Pfad der Backup-Datei
     # Rückgabewert: Der vollständige Pfad zur Datei
     # -----------------------------------------------------------------------
-    local component="$1"
-    local backup_dir
+    local src_file="$1"
 
-    debug "$(printf "$get_backup_meta_file_debug_0001" "$component")" "CLI" "get_backup_meta_file"
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$get_backup_meta_file_debug_0001" "$src_file")"
 
     # Überprüfen, ob die erforderlichen Parameter angegeben sind
-    if ! check_param "$component" "component"; then return 1; fi
-    
+    if ! check_param "$src_file" "src_file"; then return 1; fi
+
     # Backup-Verzeichnis abrufen und Dateinamen generieren
     backup_dir="$("$MANAGE_FOLDERS_SH" get_backup_dir)"
-    echo "${backup_dir}/$(date +%Y-%m-%d)_${component}.meta.json"
+    echo "${src_file}.meta.json"
 }
 
 # get_image_file
