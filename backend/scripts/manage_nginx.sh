@@ -1677,16 +1677,13 @@ setup_nginx_service_debug_0008="INFO: NGINX-Server läuft bereits."
 setup_nginx_service_debug_0009="INFO: Konfiguriere NGINX-Server neu..."
 setup_nginx_service_debug_0010="ERROR: NGINX-Server Konfiguration fehlgeschlagen!"
 setup_nginx_service_debug_0011="SUCCESS: NGINX-Server Konfiguration erfolgreich. Server neu gestartet."
-
 setup_nginx_service_txt_0001="[/] Starte NGINX-Server-Setup..."
 setup_nginx_service_txt_0002="NGINX-Server Installation fehlgeschlagen!"
 setup_nginx_service_txt_0003="NGINX-Server erfolgreich installiert."
-
 setup_nginx_service_txt_0004="[/] Starte NGINX-Server..."
 setup_nginx_service_txt_0005="NGINX-Server Start fehlgeschlagen!"
 setup_nginx_service_txt_0006="NGINX-Server erfolgreich gestartet."
 setup_nginx_service_txt_0007="NGINX-Server läuft bereits."
-
 setup_nginx_service_txt_0008="[/] Konfiguriere NGINX-Server..."
 setup_nginx_service_txt_0009="NGINX-Server Einrichtung fehlgeschlagen!"
 setup_nginx_service_txt_0010="NGINX-Server Einrichtung erfolgreich. Server neu gestartet."
@@ -1782,7 +1779,7 @@ setup_nginx_service() {
                 print_error "$setup_nginx_service_txt_0009"
                 return 1
             fi
-            print_success "$setup_nginx_service_txt_0011"
+            print_success "$setup_nginx_service_txt_0010"
         fi
     elif [ $? -eq 1 ]; then  # Angepasste Konfiguration
         if [ "$output_mode" = "json" ]; then

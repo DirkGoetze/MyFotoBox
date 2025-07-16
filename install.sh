@@ -703,6 +703,7 @@ dlg_nginx_installation() {
         print_error "Fehler bei der NGINX-Installation oder -Konfiguration."
         return 1
     fi
+    
     return 0
 
     # Prüfen, ob NGINX installiert und aktiv ist
