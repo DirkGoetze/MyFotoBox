@@ -185,7 +185,7 @@ _is_default_nginx() {
     enabled_sites=$(ls /etc/nginx/sites-enabled 2>/dev/null | wc -l)
 
     # Debug-Meldung eröffnen
-    log_debug "$_is_default_nginx_debug_0001"
+    debug "$_is_default_nginx_debug_0001"
 
     # Prüfen, ob nur die Default-Site aktiv ist
     if [ "$enabled_sites" -eq 1 ] && [ -f /etc/nginx/sites-enabled/default ]; then

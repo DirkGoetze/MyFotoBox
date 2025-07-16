@@ -170,6 +170,11 @@ log() {
     local msg="${1:-}"
     local log_file="$LOG_FILENAME"
 
+    # Wenn Debug-Modus aktiv ist, kein Log, sondern nur Debug
+    if [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ]; then
+        return 0
+    fi
+    
     # Prüfe, ob Systemvariable gesetzt ist
     if [ -z "${LOG_FILENAME+x}" ] || [ -z "$LOG_FILENAME" ]; then
         # Logdatei ist nicht gesetzt, versuche sie zu ermitteln
