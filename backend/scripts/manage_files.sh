@@ -521,20 +521,28 @@ get_template_file() {
     # Dateiendung basierend auf dem Modul festlegen
     local file_ext=""
     case "$modul" in
-        "nginx")            file_ext="$CONFIG_FILE_EXT_NGINX" ;;
-        "systemd")          file_ext="$CONFIG_FILE_EXT_SYSTEMD" ;;
-        "ssl_cert")         file_ext="$CONFIG_FILE_EXT_SSL_CERT" ;;
-        "ssl_key")          file_ext="$CONFIG_FILE_EXT_SSL_KEY" ;;
-        "backup_meta")      file_ext="$CONFIG_FILE_EXT_BACKUP_META" ;;
-        "firewall")         file_ext="$CONFIG_FILE_EXT_FIREWALL" ;;
-        "ssh")              file_ext="$CONFIG_FILE_EXT_SSH" ;;
+        "nginx")            file_ext="$CONFIG_FILE_EXT_NGINX"
+                            folder_path="$(get_template_dir "$modul")" ;;
+        "systemd")          file_ext="$CONFIG_FILE_EXT_SYSTEMD"
+                            folder_path="$(get_template_dir "$modul")" ;;
+        "ssl_cert")         file_ext="$CONFIG_FILE_EXT_SSL_CERT"
+                            folder_path="$(get_template_dir "ssl")" ;;
+        "ssl_key")          file_ext="$CONFIG_FILE_EXT_SSL_KEY"
+                            folder_path="$(get_template_dir "ssl")" ;;
+        "backup_meta")      file_ext="$CONFIG_FILE_EXT_BACKUP_META"
+                            folder_path="$(get_template_dir "$modul")" ;;
+        "firewall")         file_ext="$CONFIG_FILE_EXT_FIREWALL"
+                            folder_path="$(get_template_dir "$modul")" ;;
+        "ssh")              file_ext="$CONFIG_FILE_EXT_SSH"
+                            folder_path="$(get_template_dir "$modul")" ;;
         # Verwende den Modulnamen direkt als Dateiendung
-        "html"|"js"|"css")  file_ext=".$modul" ;; 
+        "html"|"js"|"css")  file_ext=".$modul" 
+                            folder_path="$(get_template_dir "$modul")";; 
         # Für andere Module keine spezifische Endung hinzufügen
         # Wir nehmen an, dass der Name bereits die korrekte Endung enthält
-        *)                  file_ext=".$modul.tmpl" ;;
+        *)                  file_ext=".$modul.tmpl"
+                            folder_path="$(get_template_dir "$modul")" ;;
     esac
-    folder_path="$(get_template_dir "$modul")"
     debug "$(printf "$get_tmp_file_debug_0002" "$folder_path")"
 
     # Zusammensetzen des vollständigen Dateinamens erfolgreich
