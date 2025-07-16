@@ -461,6 +461,16 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_config_file_nginx (activated)                               |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_files_sh" "get_config_file_nginx" "activated"
+# Test: get_backup_file
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_backup_file (NGINX)                                         |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_backup_file" "nginx"
+# Test: get_backup_meta_file
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_backup_meta_file (NGINX)                                    |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_backup_meta_file" "nginx"
 exit
 
 
@@ -553,24 +563,6 @@ if [ -n "$temp_file" ]; then
     echo "✅ Die Funktion get_temp_file wurde erfolgreich ausgeführt. Ergebnis: $temp_file"
 else
     echo "❌ Die Funktion get_temp_file ist fehlgeschlagen."
-fi
-
-# Test: get_backup_file
-echo -n "Test get_backup_file: "
-backup_file=$(call_module_function "$manage_files_sh" "get_backup_file" "test_backup")
-if [ -n "$backup_file" ]; then
-    echo "✅ Die Funktion get_backup_file wurde erfolgreich ausgeführt. Ergebnis: $backup_file"
-else
-    echo "❌ Die Funktion get_backup_file ist fehlgeschlagen."
-fi
-
-# Test: get_backup_meta_file
-echo -n "Test get_backup_meta_file: "
-backup_meta_file=$(call_module_function "$manage_files_sh" "get_backup_meta_file" "test_backup")
-if [ -n "$backup_meta_file" ]; then
-    echo "✅ Die Funktion get_backup_meta_file wurde erfolgreich ausgeführt. Ergebnis: $backup_meta_file"
-else
-    echo "❌ Die Funktion get_backup_meta_file ist fehlgeschlagen."
 fi
 
 # Test: get_image_file

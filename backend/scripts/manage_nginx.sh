@@ -238,7 +238,7 @@ _is_multisite_nginx() {
 }   
 
 # ===========================================================================
-# Externe Funktionen zur NGINX-Verwaltung
+# Externe Funktionen zur Prüfung der NGINX-Server Installation
 # ===========================================================================
 
 # chk_installation_nginx
@@ -314,6 +314,10 @@ chk_config_nginx() {
         return 1
     fi
 }
+
+# ===========================================================================
+# Externe Funktionen zur Steuerung des NGINX-Server
+# ===========================================================================
 
 # start_nginx
 start_nginx_debug_0001="INFO: Starte NGINX-Dienst..."
@@ -402,6 +406,174 @@ nginx_stop() {
     fi
 }
 
+# ===========================================================================
+# Externe Funktionen zur Bearbeitung der NGINX-Server Koniguration
+# ===========================================================================
+
+# backup_config_nginx
+backup_config_nginx_debug_0001="INFO: Backup der NGINX-Konfiguration wird erstellt..."
+backup_config_nginx_debug_0002="ERROR: NGINX-Konfigurationsdatei nicht gefunden: %s"
+backup_config_nginx_debug_0003="ERROR: Backup-Verzeichnis konnte nicht ermittelt werden."
+backup_config_nginx_debug_0004="ERROR: Backup der NGINX-Konfiguration fehlgeschlagen: %s"
+backup_config_nginx_debug_0005="SUCCESS: Backup der NGINX-Konfiguration erfolgreich erstellt: %s"
+
+backup_nginx_config_txt_0001="Backup und Metadaten angelegt: %s"
+backup_nginx_config_txt_0002="Backup fehlgeschlagen: %s"
+backup_nginx_config_txt_0003="Fallback-Backup-Verzeichnis wird verwendet"
+
+backup_config_nginx() {
+    # -----------------------------------------------------------------------
+    # backup_config_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Legt ein Backup der übergebenen NGINX-Konfigurationsdatei 
+    # .........  im zentralen Backup-Ordner an und erzeugt eine 
+    # .........  maschinenlesbare Metadaten-Datei (.meta.json)
+    # Parameter: $1 = Quellpfad der Konfigurationsdatei
+    # .........  $2 = Konfigurationstyp (internal/external)
+    # .........  $3 = Aktion (z.B. set_port)
+    # .........  $4 = Modus (text|json)
+    # Rückgabe.:  0 = OK, 
+    # .........   1 = Fehler
+    # Seiteneffekte: Schreibt Backup- und Metadaten-Dateien ins Dateisystem
+    # -----------------------------------------------------------------------
+    local src="$1"
+    local config_type="$2"
+    local action="$3"
+    local mode="${4:-text}"
+
+    # Debug-Meldung eröffnen
+    debug "$backup_config_nginx_debug_0001"
+
+    # Ermitteln des Backup-Verzeichnisses
+    local backup_dir="$(get_nginx_backup_dir)"
+
+    
+    local timestamp
+    timestamp="$(date +%Y%m%d_%H%M%S)"
+    local base_name
+    base_name="$(basename "$src")"
+    local backup_file="$backup_dir/${base_name}.bak.$timestamp"
+    local meta_file="$backup_file.meta.json"
+    
+    # Verwende manage_folders.sh zur Verzeichniserstellung, falls verfügbar
+    if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
+        # Die Verzeichniserstellung wird automatisch durch get_nginx_backup_dir erledigt,
+        # aber um sicherzugehen, verwenden wir create_directory
+        "$manage_folders_sh" create_directory "$backup_dir"
+    else
+        mkdir -p "$backup_dir"
+    fi
+    if cp "$src" "$backup_file"; then
+        # Metadaten über Template-Datei erstellen
+        local template_file
+        template_file="$(get_nginx_template_path "backup_file.meta.json")"
+        
+        # Falls Template nicht gefunden wurde, verwende Fallback-Pfad direkt
+        if [ -z "$template_file" ]; then
+            local nginx_conf_dir
+            if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
+                nginx_conf_dir="$("$manage_folders_sh" get_nginx_conf_dir)"
+            else
+                nginx_conf_dir="${DEFAULT_DIR_CONF_NGINX:-/opt/fotobox/conf/nginx}"
+            fi
+            template_file="$nginx_conf_dir/template_backup_file.meta.json"
+        fi
+        
+        # Wende Template an
+        apply_template "$template_file" "$meta_file" \
+            "timestamp=$timestamp" \
+            "source=$src" \
+            "backup=$backup_file" \
+            "config_type=$config_type" \
+            "action=$action"
+        if [ "$mode" = "json" ]; then
+            json_out "success" "$(printf "$backup_nginx_config_txt_0001" "$backup_file")" 0
+        else
+            log "$(printf "$backup_nginx_config_txt_0001" "$backup_file")"
+        fi
+        return 0
+    else
+        if [ "$mode" = "json" ]; then
+            json_out "error" "$(printf "$backup_nginx_config_txt_0002" "$src")" 1
+        else
+            log "$(printf "$backup_nginx_config_txt_0002" "$src")"
+        fi
+        return 1
+    fi
+}
+
+# set_default_config_nginx
+set_default_config_nginx_debug_0001="INFO: Integration der Fotobox in Default-NGINX-Konfiguration gestartet."
+set_default_config_nginx_debug_0002="ERROR: Default-Konfiguration nicht gefunden: %s"
+
+set_default_config_nginx_log_0001="Default-Konfiguration nicht gefunden: %s"
+
+set_default_config_nginx_txt_0003="Backup der Default-Konfiguration fehlgeschlagen!"
+set_default_config_nginx_txt_0004="Backup der Default-Konfiguration nach %s"
+set_default_config_nginx_txt_0005="Fotobox-Block in Default-Konfiguration eingefügt."
+set_default_config_nginx_txt_0006="Fotobox-Block bereits in Default-Konfiguration vorhanden."
+set_default_config_nginx_txt_0007="NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
+
+set_default_config_nginx() {
+    # -----------------------------------------------------------------------
+    # set_default_config_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Integriert Fotobox in die Default-Konfiguration von NGINX,
+    # .........  indem die default-Konfiguration wie ein Template geladen
+    # .........  und angepasst wird.
+    # Parameter: keine
+    # Rückgabe.:  0 = OK, 
+    # .........   1 = Fehler, 
+    # .........   2 = Backup-Fehler, 
+    # .........   4 = Reload-Fehler
+    # -----------------------------------------------------------------------
+    # local default_conf="/etc/nginx/sites-available/default"
+
+    # Debug-Meldung eröffnen
+    debug "$set_default_config_nginx_debug_0001"
+
+    # Ermitteln der Default-Konfigurationsdatei inkl. Prüfung
+    local default_conf
+    default_conf=$(get_config_file_nginx "internal")
+    if [ $? -ne 0 ] || [ -z "$default_conf" ]; then
+        # Fehler beim Abrufen der Konfigurationsdatei
+        debug "$(printf "$set_default_config_nginx_debug_0002" "$default_conf")"
+        log "$(printf "$set_default_config_nginx_log_0001" "$default_conf")"
+        return 1
+    fi
+
+    # Backup der Default-Konfiguration anlegen
+    backup_nginx_config "$default_conf" "internal" "set_default_config_nginx" "$mode" || return 2
+    log_or_json "$mode" "success" "$set_default_config_nginx_txt_0004" 0
+    # Prüfen, ob Fotobox-Block bereits vorhanden ist
+    if ! grep -q "# Fotobox-Integration BEGIN" "$default_conf"; then
+        # Bestimme den Frontend-Pfad über manage_folders
+        local frontend_path
+        if [ -f "$(dirname "$0")/manage_folders.sh" ] && [ -x "$(dirname "$0")/manage_folders.sh" ]; then
+            frontend_path="$($(dirname "$0")/manage_folders.sh get_frontend_dir)"
+        else
+            frontend_path="${DEFAULT_DIR_FRONTEND:-/opt/fotobox/frontend}"
+        fi
+        
+        sed -i "/^}/i \\n    # Fotobox-Integration BEGIN\\n    location /fotobox/ {\\n        alias $frontend_path/;\\n        index start.html index.html;\\n    }\\n    location /fotobox/api/ {\\n        proxy_pass http://127.0.0.1:5000/;\\n        proxy_set_header Host \$host;\\n        proxy_set_header X-Real-IP \$remote_addr;\\n        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\\n        proxy_set_header X-Forwarded-Proto \$scheme;\\n    }\\n    # Fotobox-Integration END\\n" "$default_conf"
+        log_or_json "$mode" "success" "$set_nginx_cnf_internal_txt_0005" 0
+    else
+        log_or_json "$mode" "info" "$set_nginx_cnf_internal_txt_0006" 0
+    fi
+    local reload_result
+    reload_result=$(chk_nginx_reload "$mode")
+    local reload_status=$?
+    
+    if [ $reload_status -ne 0 ]; then 
+        log_or_json "$mode" "error" "NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!" 4
+        return 4
+    fi
+    
+    # Firewall-Regeln aktualisieren
+    update_firewall_rules "$mode"
+    
+    return 0
+}
 
 
 
@@ -458,98 +630,6 @@ get_nginx_template_path() {
     fi
     
     echo "$template_file"
-}
-
-# backup_nginx_config
-backup_nginx_config_txt_0001="Backup und Metadaten angelegt: %s"
-backup_nginx_config_txt_0002="Backup fehlgeschlagen: %s"
-backup_nginx_config_txt_0003="Fallback-Backup-Verzeichnis wird verwendet"
-
-backup_nginx_config() {
-    # -----------------------------------------------------------------------
-    # backup_nginx_config
-    # -----------------------------------------------------------------------
-    # Funktion: Legt ein Backup der übergebenen NGINX-Konfigurationsdatei im zentralen Backup-Ordner an
-    #           und erzeugt eine maschinenlesbare Metadaten-Datei (.meta.json)
-    # Parameter: $1 = Quellpfad der Konfigurationsdatei
-    #            $2 = Konfigurationstyp (internal/external)
-    #            $3 = Aktion (z.B. set_port)
-    #            $4 = Modus (text|json)
-    # Rückgabe:  0 = OK, 1 = Fehler
-    # Seiteneffekte: Schreibt Backup- und Metadaten-Dateien ins Dateisystem
-    local src="$1"
-    local config_type="$2"
-    local action="$3"
-    local mode="${4:-text}"
-
-    local backup_dir
-    local manage_folders_sh
-    
-    # Verwende manage_folders.sh, falls verfügbar
-    manage_folders_sh="$(dirname "$0")/manage_folders.sh"
-    if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
-        # Hole Backup-Verzeichnis über manage_folders.sh mit der neuen get_nginx_backup_dir Funktion
-        backup_dir="$("$manage_folders_sh" get_nginx_backup_dir)"
-    else
-        # Fallback zur alten Methode
-        backup_dir="$FALLBACK_DIR_BACKUP_NGINX"
-        # Falls auch FALLBACK_DIR_BACKUP_NGINX nicht definiert ist
-        [ -z "$backup_dir" ] && backup_dir="/opt/fotobox/backup/nginx"
-        log "$backup_nginx_config_txt_0003: $backup_dir"
-    fi
-    
-    local timestamp
-    timestamp="$(date +%Y%m%d_%H%M%S)"
-    local base_name
-    base_name="$(basename "$src")"
-    local backup_file="$backup_dir/${base_name}.bak.$timestamp"
-    local meta_file="$backup_file.meta.json"
-    
-    # Verwende manage_folders.sh zur Verzeichniserstellung, falls verfügbar
-    if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
-        # Die Verzeichniserstellung wird automatisch durch get_nginx_backup_dir erledigt,
-        # aber um sicherzugehen, verwenden wir create_directory
-        "$manage_folders_sh" create_directory "$backup_dir"
-    else
-        mkdir -p "$backup_dir"
-    fi
-    if cp "$src" "$backup_file"; then
-        # Metadaten über Template-Datei erstellen
-        local template_file
-        template_file="$(get_nginx_template_path "backup_file.meta.json")"
-        
-        # Falls Template nicht gefunden wurde, verwende Fallback-Pfad direkt
-        if [ -z "$template_file" ]; then
-            local nginx_conf_dir
-            if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
-                nginx_conf_dir="$("$manage_folders_sh" get_nginx_conf_dir)"
-            else
-                nginx_conf_dir="${DEFAULT_DIR_CONF_NGINX:-/opt/fotobox/conf/nginx}"
-            fi
-            template_file="$nginx_conf_dir/template_backup_file.meta.json"
-        fi
-        
-        # Wende Template an
-        apply_template "$template_file" "$meta_file" \
-            "timestamp=$timestamp" \
-            "source=$src" \
-            "backup=$backup_file" \
-            "config_type=$config_type" \
-            "action=$action"
-        if [ "$mode" = "json" ]; then
-            json_out "success" "$(printf "$backup_nginx_config_txt_0001" "$backup_file")" 0
-        else
-            log "$(printf "$backup_nginx_config_txt_0001" "$backup_file")"
-        fi
-        return 0
-    else
-        if [ "$mode" = "json" ]; then
-            json_out "error" "$(printf "$backup_nginx_config_txt_0002" "$src")" 1
-        else
-            log "$(printf "$backup_nginx_config_txt_0002" "$src")"
-        fi
-        return 1
-    fi
 }
 
 # chk_nginx_reload
@@ -1123,68 +1203,6 @@ conf_nginx_port() {
         fi
     fi
     return 1
-}
-
-# set_nginx_cnf_internal
-set_nginx_cnf_internal_txt_0001="Integration der Fotobox in Default-NGINX-Konfiguration gestartet."
-set_nginx_cnf_internal_txt_0002="Default-Konfiguration nicht gefunden: %s"
-set_nginx_cnf_internal_txt_0003="Backup der Default-Konfiguration fehlgeschlagen!"
-set_nginx_cnf_internal_txt_0004="Backup der Default-Konfiguration nach %s"
-set_nginx_cnf_internal_txt_0005="Fotobox-Block in Default-Konfiguration eingefügt."
-set_nginx_cnf_internal_txt_0006="Fotobox-Block bereits in Default-Konfiguration vorhanden."
-set_nginx_cnf_internal_txt_0007="NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
-
-set_nginx_cnf_internal() {
-    # -----------------------------------------------------------------------
-    # set_nginx_cnf_internal
-    # -----------------------------------------------------------------------
-    # Funktion.: Integriert Fotobox in die Default-Konfiguration von NGINX
-    # Parameter: keine
-    # Rückgabe.:  0 = OK, 
-    # .........   1 = Fehler, 
-    # .........   2 = Backup-Fehler, 
-    # .........   4 = Reload-Fehler
-    # -----------------------------------------------------------------------
-    local default_conf="/etc/nginx/sites-available/default"
-
-    log "${set_nginx_cnf_internal_txt_0001}"
-    # Prüfen, ob Default-Konfiguration existiert
-    if [ ! -f "$default_conf" ]; then
-        log_or_json "$mode" "error" "$set_nginx_cnf_internal_txt_0002" 1
-        return 1
-    fi
-
-    # Backup der Default-Konfiguration anlegen
-    backup_nginx_config "$default_conf" "internal" "set_nginx_cnf_internal" "$mode" || return 2
-    log_or_json "$mode" "success" "$set_nginx_cnf_internal_txt_0004" 0
-    # Prüfen, ob Fotobox-Block bereits vorhanden ist
-    if ! grep -q "# Fotobox-Integration BEGIN" "$default_conf"; then
-        # Bestimme den Frontend-Pfad über manage_folders
-        local frontend_path
-        if [ -f "$(dirname "$0")/manage_folders.sh" ] && [ -x "$(dirname "$0")/manage_folders.sh" ]; then
-            frontend_path="$($(dirname "$0")/manage_folders.sh get_frontend_dir)"
-        else
-            frontend_path="${DEFAULT_DIR_FRONTEND:-/opt/fotobox/frontend}"
-        fi
-        
-        sed -i "/^}/i \\n    # Fotobox-Integration BEGIN\\n    location /fotobox/ {\\n        alias $frontend_path/;\\n        index start.html index.html;\\n    }\\n    location /fotobox/api/ {\\n        proxy_pass http://127.0.0.1:5000/;\\n        proxy_set_header Host \$host;\\n        proxy_set_header X-Real-IP \$remote_addr;\\n        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\\n        proxy_set_header X-Forwarded-Proto \$scheme;\\n    }\\n    # Fotobox-Integration END\\n" "$default_conf"
-        log_or_json "$mode" "success" "$set_nginx_cnf_internal_txt_0005" 0
-    else
-        log_or_json "$mode" "info" "$set_nginx_cnf_internal_txt_0006" 0
-    fi
-    local reload_result
-    reload_result=$(chk_nginx_reload "$mode")
-    local reload_status=$?
-    
-    if [ $reload_status -ne 0 ]; then 
-        log_or_json "$mode" "error" "NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!" 4
-        return 4
-    fi
-    
-    # Firewall-Regeln aktualisieren
-    update_firewall_rules "$mode"
-    
-    return 0
 }
 
 # set_nginx_cnf_external
