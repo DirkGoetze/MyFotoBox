@@ -1011,12 +1011,12 @@ get_nginx_conf_dir() {
     local dir
     # Standard-Pfade für NGINX-Konfiguration bei Integration der eigenen
     # Einstellungen in einen existierenden WEB-Server
-    local path_system="/etc/nginx/"
+    local path_system="/etc/nginx"
     local path_system_internal="$path_system/sites-available"
     # Standard-Pfade für NGINX-Konfiguration bei eigener Konfigurations-
     # .........  Datei im Conf-Verzeichnis, wird per Symlink aufgerufen
     local path_default="$CONF_DIR/nginx"
-    local path_default_external="$CONF_DIR/nginx/sites-available"
+    local path_default_external="$CONF_DIR/nginx"
     # Standard-Pfad für die aktivierte NGINX-Konfiguration
     local path_activated="$path_system/sites-enabled"
 
