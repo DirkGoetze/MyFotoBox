@@ -406,20 +406,68 @@ nginx_stop() {
     fi
 }
 
+# reload_nginx
+reload_nginx_debug_0001="INFO: NGINX-Konfiguration wird getestet und ein Reload versucht ..."
+reload_nginx_debug_0002="SUCCESS: NGINX-Konfiguration erfolgreich neu geladen."
+reload_nginx_debug_0003="ERROR: NGINX konnte nicht neu geladen werden! Statusauszug: \n%s"
+reload_nginx_debug_0004="ERROR: Fehler in der NGINX-Konfiguration! Bitte prüfen."
+reload_nginx_log_0001="NGINX konnte nicht neu geladen werden! Statusauszug: \n%s"
+reload_nginx_log_0002="Fehler in der NGINX-Konfiguration! Bitte prüfen."
+
+
+reload_nginx() {
+    # -----------------------------------------------------------------------
+    # reload_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Testet die NGINX-Konfiguration und lädt sie falls fehlerfrei
+    # .........  neu
+    # Parameter: keine
+    # Rückgabe.:  0 = OK, 
+    # .........   1 = Reload-Fehler,
+    # .........   2 = Konfigurationsfehler
+    # Seiteneffekte: Reload von nginx (systemctl reload nginx)
+    # -----------------------------------------------------------------------
+
+    # Debug-Meldung eröffnen
+    debug "$reload_nginx_debug_0001"
+
+    # Prüfen, ob die NGINX-Konfiguration fehlerfrei ist
+    if chk_config_nginx; then
+        # Konfiguration ist fehlerfrei
+        if systemctl reload nginx; then
+            # Reload erfolgreich
+            debug "$reload_nginx_debug_0002"
+            return 0
+        else
+            # Reload fehlgeschlagen, Fehlerdetails ausgeben
+            local status_out
+            status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
+            debug "$(printf "$reload_nginx_debug_0003" "$status_out")"
+            log "$(printf "$reload_nginx_log_0001" "$status_out")"
+            return 1
+        fi
+    else
+        # Konfiguration fehlerhaft
+        debug "$reload_nginx_debug_0004"
+        log "$reload_nginx_log_0002"
+        return 2
+    fi
+}
+
+
 # ===========================================================================
 # Externe Funktionen zur Bearbeitung der NGINX-Server Koniguration
 # ===========================================================================
 
 # backup_config_nginx
 backup_config_nginx_debug_0001="INFO: Backup der NGINX-Konfiguration wird erstellt..."
-backup_config_nginx_debug_0002="ERROR: NGINX-Konfigurationsdatei nicht gefunden: %s"
-backup_config_nginx_debug_0003="ERROR: Backup-Verzeichnis konnte nicht ermittelt werden."
-backup_config_nginx_debug_0004="ERROR: Backup der NGINX-Konfiguration fehlgeschlagen: %s"
-backup_config_nginx_debug_0005="SUCCESS: Backup der NGINX-Konfiguration erfolgreich erstellt: %s"
-
-backup_nginx_config_txt_0001="Backup und Metadaten angelegt: %s"
-backup_nginx_config_txt_0002="Backup fehlgeschlagen: %s"
-backup_nginx_config_txt_0003="Fallback-Backup-Verzeichnis wird verwendet"
+backup_config_nginx_debug_0002="ERROR: Orginal NGINX-Konfigurationsdatei nicht gefunden: %s"
+backup_config_nginx_debug_0003="ERROR: Schreiben der Metadaten-Datei fehlgeschlagen: %s"
+backup_config_nginx_debug_0004="SUCCESS: Backup der NGINX-Konfiguration erfolgreich erstellt: %s"
+backup_config_nginx_debug_0005="ERROR: Backup der NGINX-Konfiguration fehlgeschlagen: %s"
+backup_config_nginx_log_0001="Orginal NGINX-Konfigurationsdatei nicht gefunden: %s"
+backup_config_nginx_log_0002="Schreiben der Metadaten-Datei fehlgeschlagen: %s"
+backup_config_nginx_log_0003="Backup der NGINX-Konfiguration fehlgeschlagen: %s"
 
 backup_config_nginx() {
     # -----------------------------------------------------------------------
@@ -429,75 +477,61 @@ backup_config_nginx() {
     # .........  im zentralen Backup-Ordner an und erzeugt eine 
     # .........  maschinenlesbare Metadaten-Datei (.meta.json)
     # Parameter: $1 = Quellpfad der Konfigurationsdatei
-    # .........  $2 = Konfigurationstyp (internal/external)
-    # .........  $3 = Aktion (z.B. set_port)
-    # .........  $4 = Modus (text|json)
+    # .........  $2 = Typ der Konfiguration (z.B. internal, external)
+    # .........  $3 = Aktion (z.B. set_port, set_default_config)
     # Rückgabe.:  0 = OK, 
-    # .........   1 = Fehler
+    # .........   1 = Fehler bei Erstellung der Backup-Datei, 
+    # .........   2 = Fehler bei Erstellung der Metadaten-Datei
     # Seiteneffekte: Schreibt Backup- und Metadaten-Dateien ins Dateisystem
     # -----------------------------------------------------------------------
     local src="$1"
     local config_type="$2"
     local action="$3"
-    local mode="${4:-text}"
 
     # Debug-Meldung eröffnen
     debug "$backup_config_nginx_debug_0001"
 
-    # Ermitteln des Backup-Verzeichnisses
-    local backup_dir="$(get_nginx_backup_dir)"
+    # Parameterprüfung
+    if ! check_param "$src" "src"; then return 1; fi
+    if ! check_param "$config_type" "config_type"; then return 1; fi
+    if ! check_param "$action" "action"; then return 1; fi
 
-    
-    local timestamp
-    timestamp="$(date +%Y%m%d_%H%M%S)"
-    local base_name
-    base_name="$(basename "$src")"
-    local backup_file="$backup_dir/${base_name}.bak.$timestamp"
-    local meta_file="$backup_file.meta.json"
-    
-    # Verwende manage_folders.sh zur Verzeichniserstellung, falls verfügbar
-    if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
-        # Die Verzeichniserstellung wird automatisch durch get_nginx_backup_dir erledigt,
-        # aber um sicherzugehen, verwenden wir create_directory
-        "$manage_folders_sh" create_directory "$backup_dir"
-    else
-        mkdir -p "$backup_dir"
+    # Prüfen, ob die Quell-Konfigurationsdatei existiert
+    if [ ! -f "$src" ]; then
+        # Quell-Datei nicht gefunden, Fehler melden
+        debug "$(printf "$backup_config_nginx_debug_0002" "$src")"
+        log "$(printf "$backup_config_nginx_log_0001" "$src")"
+        return 1
     fi
+
+    # Ermitteln des Backup-und Backup-Meta-Dateipfades
+    local backup_file="$(get_backup_file "nginx" "$src")"
+    local backup_meta_file="$(get_backup_meta_file "$backup_file")"
+    
+    # Quell-Datei sichern 
     if cp "$src" "$backup_file"; then
         # Metadaten über Template-Datei erstellen
         local template_file
-        template_file="$(get_nginx_template_path "backup_file.meta.json")"
-        
-        # Falls Template nicht gefunden wurde, verwende Fallback-Pfad direkt
-        if [ -z "$template_file" ]; then
-            local nginx_conf_dir
-            if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
-                nginx_conf_dir="$("$manage_folders_sh" get_nginx_conf_dir)"
-            else
-                nginx_conf_dir="${DEFAULT_DIR_CONF_NGINX:-/opt/fotobox/conf/nginx}"
-            fi
-            template_file="$nginx_conf_dir/template_backup_file.meta.json"
-        fi
-        
+        template_file="$(get_template_file "backup_meta" "backup-nginx.meta.json")"
+
         # Wende Template an
-        apply_template "$template_file" "$meta_file" \
+        apply_template "$template_file" "$backup_meta_file" \
             "timestamp=$timestamp" \
             "source=$src" \
             "backup=$backup_file" \
             "config_type=$config_type" \
             "action=$action"
-        if [ "$mode" = "json" ]; then
-            json_out "success" "$(printf "$backup_nginx_config_txt_0001" "$backup_file")" 0
-        else
-            log "$(printf "$backup_nginx_config_txt_0001" "$backup_file")"
+        if [ $? -ne 0 ]; then
+            debug "$(printf "$backup_config_nginx_debug_0003" "$backup_meta_file")"
+            log "$(printf "$backup_config_nginx_log_0002" "$backup_meta_file")"
+            return 2
         fi
+        debug "$(printf "$backup_config_nginx_debug_0004" "$backup_file")"
         return 0
     else
-        if [ "$mode" = "json" ]; then
-            json_out "error" "$(printf "$backup_nginx_config_txt_0002" "$src")" 1
-        else
-            log "$(printf "$backup_nginx_config_txt_0002" "$src")"
-        fi
+        # Fehler beim Kopieren der Konfigurationsdatei
+        debug "$(printf "$backup_config_nginx_debug_0005" "$src")"
+        log "$(printf "$backup_config_nginx_log_0003" "$src")"
         return 1
     fi
 }
@@ -505,10 +539,14 @@ backup_config_nginx() {
 # set_default_config_nginx
 set_default_config_nginx_debug_0001="INFO: Integration der Fotobox in Default-NGINX-Konfiguration gestartet."
 set_default_config_nginx_debug_0002="ERROR: Default-Konfiguration nicht gefunden: %s"
+set_default_config_nginx_debug_0003="ERROR: Backup der Default-Konfiguration fehlgeschlagen!"
+set_default_config_nginx_debug_0004="ERROR: Beim Verwenden des Template '%s' ist ein Fehler aufgetreten!"
+set_default_config_nginx_debug_0005="ERROR: NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
 
 set_default_config_nginx_log_0001="Default-Konfiguration nicht gefunden: %s"
+set_default_config_nginx_log_0002="Backup der Default-Konfiguration fehlgeschlagen!"
+set_default_config_nginx_log_0003="NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
 
-set_default_config_nginx_txt_0003="Backup der Default-Konfiguration fehlgeschlagen!"
 set_default_config_nginx_txt_0004="Backup der Default-Konfiguration nach %s"
 set_default_config_nginx_txt_0005="Fotobox-Block in Default-Konfiguration eingefügt."
 set_default_config_nginx_txt_0006="Fotobox-Block bereits in Default-Konfiguration vorhanden."
@@ -525,6 +563,7 @@ set_default_config_nginx() {
     # Rückgabe.:  0 = OK, 
     # .........   1 = Fehler, 
     # .........   2 = Backup-Fehler, 
+    # .........   3 = Template-Fehler, 
     # .........   4 = Reload-Fehler
     # -----------------------------------------------------------------------
     # local default_conf="/etc/nginx/sites-available/default"
@@ -543,34 +582,47 @@ set_default_config_nginx() {
     fi
 
     # Backup der Default-Konfiguration anlegen
-    backup_nginx_config "$default_conf" "internal" "set_default_config_nginx" "$mode" || return 2
-    log_or_json "$mode" "success" "$set_default_config_nginx_txt_0004" 0
-    # Prüfen, ob Fotobox-Block bereits vorhanden ist
-    if ! grep -q "# Fotobox-Integration BEGIN" "$default_conf"; then
-        # Bestimme den Frontend-Pfad über manage_folders
-        local frontend_path
-        if [ -f "$(dirname "$0")/manage_folders.sh" ] && [ -x "$(dirname "$0")/manage_folders.sh" ]; then
-            frontend_path="$($(dirname "$0")/manage_folders.sh get_frontend_dir)"
-        else
-            frontend_path="${DEFAULT_DIR_FRONTEND:-/opt/fotobox/frontend}"
-        fi
-        
-        sed -i "/^}/i \\n    # Fotobox-Integration BEGIN\\n    location /fotobox/ {\\n        alias $frontend_path/;\\n        index start.html index.html;\\n    }\\n    location /fotobox/api/ {\\n        proxy_pass http://127.0.0.1:5000/;\\n        proxy_set_header Host \$host;\\n        proxy_set_header X-Real-IP \$remote_addr;\\n        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;\\n        proxy_set_header X-Forwarded-Proto \$scheme;\\n    }\\n    # Fotobox-Integration END\\n" "$default_conf"
-        log_or_json "$mode" "success" "$set_nginx_cnf_internal_txt_0005" 0
-    else
-        log_or_json "$mode" "info" "$set_nginx_cnf_internal_txt_0006" 0
+    backup_nginx_config "$default_conf" "internal" "set_default_config_nginx"|| return 2
+    if [ $? -ne 0 ]; then
+        # Fehler beim Backup der Default-Konfiguration
+        debug "$set_default_config_nginx_debug_0003"
+        log "$set_default_config_nginx_log_0002"
+        return 2
     fi
-    local reload_result
-    reload_result=$(chk_nginx_reload "$mode")
-    local reload_status=$?
-    
-    if [ $reload_status -ne 0 ]; then 
-        log_or_json "$mode" "error" "NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!" 4
+
+    # Template-Ersetzung vorbereiten
+    local frontend_dir   # WEB-Root Verzeichnis der Fotobox
+    local port=80        # Standardport für NGINX
+    local template_file  # Pfad zur Template-Datei
+
+    frontend_dir="$(get_frontend_dir)"
+    template_file="$(get_template_file "nginx" "template_local")"
+
+    # Template-Datei wurde gefunden, Platzhalter ersetzen
+    apply_template "$template_file" "$default_conf" \
+                "PORT=$port" \
+                "SERVER_NAME=_" \
+                "DOCUMENT_ROOT=$frontend_dir" \
+                "INDEX_FILE=start.html index.html" \
+                "API_URL=http://127.0.0.1:5000"
+    if [ $? -ne 0 ]; then
+        # Fehler beim Anwenden des Templates
+        debug "$(printf "$set_default_config_nginx_debug_0004" "$template_file")"
+        return 3
+    fi
+
+    # NGINX-Konfiguration neu laden
+    reload_nginx    
+    if [ $? -ne 0 ]; then 
+        # Fehler beim Neuladen der NGINX-Konfiguration
+        debug "$set_default_config_nginx_debug_0005"
+        log "$(printf "$set_default_config_nginx_log_0003" "$default_conf")"
         return 4
     fi
     
     # Firewall-Regeln aktualisieren
-    update_firewall_rules "$mode"
+    # TODO: Firewall Modul einbinden
+    # update_firewall_rules "$mode"
     
     return 0
 }
@@ -630,45 +682,6 @@ get_nginx_template_path() {
     fi
     
     echo "$template_file"
-}
-
-# chk_nginx_reload
-chk_nginx_reload_txt_0001="NGINX-Konfiguration wird getestet ..."
-chk_nginx_reload_txt_0002="NGINX-Konfiguration erfolgreich neu geladen."
-chk_nginx_reload_txt_0003="NGINX konnte nicht neu geladen werden! Statusauszug:"
-chk_nginx_reload_txt_0004="Fehler in der NGINX-Konfiguration!"
-chk_nginx_reload_txt_0005="Fehler in der NGINX-Konfiguration! Bitte prüfen."
-chk_nginx_reload_txt_0006="NGINX konnte nicht neu geladen werden!"
-
-chk_nginx_reload() {
-    # -----------------------------------------------------------------------
-    # chk_nginx_reload
-    # -----------------------------------------------------------------------
-    # Funktion: Testet die NGINX-Konfiguration und lädt sie neu, falls fehlerfrei.
-    # Parameter: $1 = Modus (text|json)
-    # Rückgabe:  0 = OK, 1 = Konfigurationsfehler, 2 = Reload-Fehler
-    # Seiteneffekte: Reload von nginx (systemctl reload nginx)
-    local mode="$1"
-    log "${chk_nginx_reload_txt_0001}"
-    # Prüfen, ob die NGINX-Konfiguration fehlerfrei ist
-    if nginx -t; then
-        # Konfiguration ist fehlerfrei
-        if systemctl reload nginx; then
-            # Reload erfolgreich
-            log_or_json "$mode" "success" "${chk_nginx_reload_txt_0002}" 0
-            return 0
-        else
-            # Reload fehlgeschlagen, Fehlerdetails ausgeben
-            local status_out
-            status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
-            log_or_json "$mode" "error" "${chk_nginx_reload_txt_0006}" 2
-            return 2
-        fi
-    else
-        # Konfiguration fehlerhaft
-        log_or_json "$mode" "error" "${chk_nginx_reload_txt_0004}" 1
-        return 1
-    fi
 }
 
 # chk_nginx_port
@@ -1472,7 +1485,7 @@ improved_nginx_install() {
         # Option 1: NGINX hat nur Default-Konfiguration
         # In diesem Fall können wir entweder die Default-Konfiguration ergänzen
         # oder eine komplett neue Konfiguration anlegen
-        
+
         # Variante: Neue Konfiguration erstellen und aktivieren
         local nginx_content
         local config_name="fotobox"
@@ -1664,6 +1677,9 @@ setup_nginx_service_debug_0005="INFO: Versuche Start NGINX-Server ..."
 setup_nginx_service_debug_0006="ERROR: NGINX-Server Start fehlgeschlagen!"
 setup_nginx_service_debug_0007="INFO: NGINX-Server erfolgreich gestartet."
 setup_nginx_service_debug_0008="INFO: NGINX-Server läuft bereits."
+setup_nginx_service_debug_0009="INFO: Konfiguriere NGINX-Server neu..."
+setup_nginx_service_debug_0010="ERROR: NGINX-Server Konfiguration fehlgeschlagen!"
+setup_nginx_service_debug_0011="SUCCESS: NGINX-Server Konfiguration erfolgreich. Server neu gestartet."
 
 setup_nginx_service_txt_0001="[/] Starte NGINX-Server-Setup..."
 setup_nginx_service_txt_0002="NGINX-Server Installation fehlgeschlagen!"
@@ -1674,6 +1690,9 @@ setup_nginx_service_txt_0005="NGINX-Server Start fehlgeschlagen!"
 setup_nginx_service_txt_0006="NGINX-Server erfolgreich gestartet."
 setup_nginx_service_txt_0007="NGINX-Server läuft bereits."
 
+setup_nginx_service_txt_0008="[/] Konfiguriere NGINX-Server..."
+setup_nginx_service_txt_0009="NGINX-Server Einrichtung fehlgeschlagen!"
+setup_nginx_service_txt_0010="NGINX-Server Einrichtung erfolgreich. Server neu gestartet."
 
 setup_nginx_service() {
     # -----------------------------------------------------------------------
@@ -1749,9 +1768,23 @@ setup_nginx_service() {
     nginx_status=$(is_nginx_default)
     if [ $? -eq 0 ]; then  # Default-Konfiguration
         if [ "$output_mode" = "json" ]; then
-            set_nginx_cnf_internal "json" || return 1
+            set_default_config_nginx || return 1
         else
-            set_nginx_cnf_internal "text" || return 1
+            # Ausgabe im CLI-Modus, Spinner anzeigen
+            echo -n "$setup_nginx_service_txt_0008"
+            # Einrichtung NGINX-Server im Hintergrund ausführen
+            # und Spinner anzeigen
+            debug "$setup_nginx_service_debug_0009"
+            (set_default_config_nginx) &> /dev/null 2>&1 & 
+            service_pid=$!
+            show_spinner "$service_pid" "dots"
+            # Überprüfe, ob die neue Konfiguration erfolgreich war
+            if [ $? -ne 0 ]; then
+                debug "$setup_nginx_service_debug_0010"
+                print_error "$setup_nginx_service_txt_0009"
+                return 1
+            fi
+            print_success "$setup_nginx_service_txt_0011"
         fi
     elif [ $? -eq 1 ]; then  # Angepasste Konfiguration
         if [ "$output_mode" = "json" ]; then

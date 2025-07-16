@@ -531,7 +531,7 @@ get_template_file() {
         "ssl_key")          file_ext="$CONFIG_FILE_EXT_SSL_KEY"
                             folder_path="$(get_template_dir "ssl")" ;;
         "backup_meta")      file_ext="$CONFIG_FILE_EXT_BACKUP_META"
-                            folder_path="$(get_template_dir "$modul")" ;;
+                            folder_path="$(get_template_dir "backup")" ;;
         "firewall")         file_ext="$CONFIG_FILE_EXT_FIREWALL"
                             folder_path="$(get_template_dir "$modul")" ;;
         "ssh")              file_ext="$CONFIG_FILE_EXT_SSH"

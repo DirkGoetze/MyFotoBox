@@ -699,6 +699,12 @@ dlg_nginx_installation() {
     ((STEP_COUNTER++))
     print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] NGINX-Installation und Konfiguration ..."
 
+    if ! setup_nginx_service ; then
+        print_error "Fehler bei der NGINX-Installation oder -Konfiguration."
+        return 1
+    fi
+    return 0
+
     # Prüfen, ob NGINX installiert und aktiv ist
     chk_nginx_installation $UNATTENDED
     activ_rc=$?
@@ -1082,8 +1088,8 @@ main() {
     run_step dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
     run_step dlg_prepare_structure        # Erstelle Verzeichnisstruktur, klone Projekt und setze Rechte
     run_step dlg_backend_integration      # Python-Backend, venv, systemd-Service, Start
-    exit 0
     run_step dlg_nginx_installation       # NGINX-Konfiguration (Integration oder eigene Site)
+    exit 0
     run_step dlg_firewall_config          # Firewall-Konfiguration für HTTP/HTTPS-Ports
     run_step dlg_show_summary             # Zeige Zusammenfassung der Installation an
     
