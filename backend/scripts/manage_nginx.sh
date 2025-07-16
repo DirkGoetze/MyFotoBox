@@ -81,7 +81,7 @@ _is_installed_nginx() {
     if [ "${UNATTENDED:-0}" -eq 1 ]; then install_decision="J"; fi
 
     # Debug-Meldung eröffnen
-    log_debug "$_is_installed_nginx_debug_0001"
+    debug "$_is_installed_nginx_debug_0001"
 
     # Prüfen, ob nginx installiert ist
     if ! command -v nginx >/dev/null 2>&1; then  
@@ -137,7 +137,7 @@ _is_running_nginx() {
     # Seiteneffekte: keine
     # -----------------------------------------------------------------------
     # Debug-Meldung eröffnen
-    log_debug "$_is_running_nginx_debug_0001"
+    debug "$_is_running_nginx_debug_0001"
 
     # Zuerst prüfen, ob NGINX überhaupt installiert ist
     _is_installed_nginx
