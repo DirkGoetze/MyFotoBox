@@ -117,6 +117,7 @@ trace_output() {
 # check_param
 check_param_debug_0001="INFO: Parameterprüfung für [%s:%s()] Parameter: %s:%s"
 check_param_debug_0002="ERROR: Parameter '%s' in Funktion '%s' des Moduls '%s' ist leer oder nicht gesetzt"
+check_param_debug_0003="SUCCESS: Parameter '%s' in Funktion '%s' des Moduls '%s' ist gesetzt"
 check_param_log_0001="ERROR: Parameter '%s' in Funktion '%s' des Moduls '%s' ist leer oder nicht gesetzt"
 
 check_param() {
@@ -157,6 +158,8 @@ check_param() {
         return 1
     fi
   
+    # Parameter ist gesetzt, Debug-Ausgabe für Erfolg
+    debug "$(printf "$check_param_debug_0003" "$param_name" "$calling_function" "$module_name")"
     return 0
 }
 

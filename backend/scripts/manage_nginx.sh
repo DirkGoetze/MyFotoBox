@@ -542,15 +542,9 @@ set_default_config_nginx_debug_0002="ERROR: Default-Konfiguration nicht gefunden
 set_default_config_nginx_debug_0003="ERROR: Backup der Default-Konfiguration fehlgeschlagen!"
 set_default_config_nginx_debug_0004="ERROR: Beim Verwenden des Template '%s' ist ein Fehler aufgetreten!"
 set_default_config_nginx_debug_0005="ERROR: NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
-
 set_default_config_nginx_log_0001="Default-Konfiguration nicht gefunden: %s"
 set_default_config_nginx_log_0002="Backup der Default-Konfiguration fehlgeschlagen!"
 set_default_config_nginx_log_0003="NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
-
-set_default_config_nginx_txt_0004="Backup der Default-Konfiguration nach %s"
-set_default_config_nginx_txt_0005="Fotobox-Block in Default-Konfiguration eingefügt."
-set_default_config_nginx_txt_0006="Fotobox-Block bereits in Default-Konfiguration vorhanden."
-set_default_config_nginx_txt_0007="NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
 
 set_default_config_nginx() {
     # -----------------------------------------------------------------------
@@ -580,9 +574,6 @@ set_default_config_nginx() {
         log "$(printf "$set_default_config_nginx_log_0001" "$default_conf")"
         return 1
     fi
-
-# Global Debug-Modus aktivieren
-DEBUG_MOD_GLOBAL=1
 
     # Backup der Default-Konfiguration anlegen
     backup_config_nginx "$default_conf" "internal" "set_default_config_nginx"
@@ -629,6 +620,9 @@ DEBUG_MOD_GLOBAL=1
     
     return 0
 }
+
+
+
 
 
 

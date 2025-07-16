@@ -627,8 +627,12 @@ get_config_file_nginx() {
 }
 
 # get_backup_file
-get_backup_file_debug_0001="Ermittle Backup-Datei für Komponente: %s"
-get_backup_file_debug_0002="Extrahierter Dateiname: %s, Endung: %s"
+get_backup_file_debug_0001="INFO: Ermittle Backup-Datei für Komponente: '%s', Quell-Datei: '%s'"
+get_backup_file_debug_0002="INFO: Extrahierter Dateiname Quell-Datei: '%s'"
+get_backup_file_debug_0003="INFO: Extrahierte Dateiendung Quell-Datei: '%s'"
+get_backup_file_debug_0004="SUCCESS: Vollständiger Pfad zur Backup-Datei: '%s'"
+get_backup_file_log_0001="Generiere Backup-Datei für Komponente '%s', Quell-Datei: '%s'"
+get_backup_file_log_0002="Vollständiger Pfad zur Backup-Datei: '%s'"
 
 get_backup_file() {
     # -----------------------------------------------------------------------
@@ -644,11 +648,13 @@ get_backup_file() {
     local default_ext="$BACKUP_FILE_EXT_DEFAULT"           # Standard-Endung 
 
     # Debug-Ausgabe eröffnen
-    debug "$(printf "$get_backup_file_debug_0001" "$component")"
+    debug "$(printf "$get_backup_file_debug_0001" "$component" "$src_file")"
+    log "$(printf "$get_backup_file_log_0001" "$component" "$src_file")"
 
     # Überprüfen, ob die erforderlichen Parameter angegeben sind
     if ! check_param "$component" "component"; then return 1; fi
-    
+    if ! check_param "$src_file" "src_file"; then return 1; fi
+
     # Dateinamen ohne Pfad extrahieren (nur Basename)
     local basename=$(basename "$src_file")
     
@@ -661,8 +667,8 @@ get_backup_file() {
         # Keine Endung gefunden, verwende Default
         extension="$default_ext"
     fi
-
-    debug "$(printf "$get_backup_file_debug_0002" "$basename" "$extension")"
+    debug "$(printf "$get_backup_file_debug_0002" "$basename")"
+    debug "$(printf "$get_backup_file_debug_0003" "$extension")"
 
     # Je nach Komponente den richtigen Backup-Ordner verwenden
     local backup_dir
@@ -694,7 +700,11 @@ get_backup_file() {
     esac
 
     # Dateinamen generieren und mit Backup-Verzeichnis kombinieren
-    echo "${backup_dir}/$(date +%Y-%m-%d_%H-%M-%S)_${basename}${extension}"
+    local backup_file_name="${backup_dir}/$(date +%Y-%m-%d_%H-%M-%S)_${basename}${extension}"
+    debug "$(printf "$get_backup_file_debug_0004" "$backup_file_name")"
+    log "$(printf "$get_backup_file_log_0002" "$backup_file_name")"
+    echo "$backup_file_name"
+    return 0
 }
 
 # get_backup_meta_file
