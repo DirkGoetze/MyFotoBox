@@ -1778,7 +1778,8 @@ setup_nginx_service() {
             # Einrichtung NGINX-Server im Hintergrund ausführen
             # und Spinner anzeigen
             debug "$setup_nginx_service_debug_0009"
-            (set_default_config_nginx) &> /dev/null 2>&1 & 
+            #(set_default_config_nginx) &> /dev/null 2>&1 & 
+            set_default_config_nginx
             service_pid=$!
             show_spinner "$service_pid" "dots"
             # Überprüfe, ob die neue Konfiguration erfolgreich war
