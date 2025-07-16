@@ -213,9 +213,27 @@ test_function "manage_folders_sh" "get_https_conf_dir"
 debug "INFO: CONF_DIR_HTTPS: ${CONF_DIR_HTTPS:-nicht gesetzt}"
 # Test: get_nginx_conf_dir
 echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_nginx_conf_dir                                              |"
+echo "| Test: get_nginx_conf_dir [ohne Parameter - external]                  |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_nginx_conf_dir"
+debug "INFO: CONF_DIR_NGINX: ${CONF_DIR_NGINX:-nicht gesetzt}"
+# Test: get_nginx_conf_dir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_nginx_conf_dir (external)                                   |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_nginx_conf_dir" "external"
+debug "INFO: CONF_DIR_NGINX: ${CONF_DIR_NGINX:-nicht gesetzt}"
+# Test: get_nginx_conf_dir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_nginx_conf_dir (internal)                                   |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_nginx_conf_dir" "internal"
+debug "INFO: CONF_DIR_NGINX: ${CONF_DIR_NGINX:-nicht gesetzt}"
+# Test: get_nginx_conf_dir
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_nginx_conf_dir (activated)                                  |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_folders_sh" "get_nginx_conf_dir" "activated"
 debug "INFO: CONF_DIR_NGINX: ${CONF_DIR_NGINX:-nicht gesetzt}"
 # Test: get_template_dir
 echo "+-----------------------------------------------------------------------+"
