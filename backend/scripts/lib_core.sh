@@ -744,31 +744,31 @@ load_resources() {
         print_step() { 
             debug_output "print_step (Fallback): $*"
             echo -e "${COLOR_YELLOW}$*${COLOR_RESET}"
-            log "STEP: $*"
+            log "$*"
         }
         
         print_info() { 
             debug_output "print_info (Fallback): $*"
             echo -e "  $*"
-            log "INFO: $*"
+            log "$*"
         }
         
         print_success() { 
             debug_output "print_success (Fallback): $*"
             echo -e "${COLOR_GREEN}  → [OK]${COLOR_RESET} $*"
-            log "SUCCESS: $*"
+            log "$*"
         }
         
         print_warning() { 
             debug_output "print_warning (Fallback): $*"
             echo -e "${COLOR_YELLOW}  → [WARN]${COLOR_RESET} $*"
-            log "WARNING: $*"
+            log "$*"
         }
         
         print_error() { 
             debug_output "print_error (Fallback): $*"
             echo -e "${COLOR_RED}  → [ERROR]${COLOR_RESET} $*" >&2
-            log "ERROR: $*"
+            log "$*"
         }
         
         print_prompt() {
