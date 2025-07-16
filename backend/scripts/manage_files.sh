@@ -570,9 +570,13 @@ get_config_file_nginx() {
     # get_config_file_nginx
     # -----------------------------------------------------------------------
     # Funktion: Gibt den Pfad zu einer Nginx-Konfigurationsdatei zurück
-    # Parameter: keine
+    # Parameter: $1 - Modus der WEB-Server Konfiguration, mögliche Werte:
+    # .........  'external'  = Eigene Konfiguration im Projekt Ordner
+    # .........  'internal'  = Integration in bestehende Konfig 
+    # .........  'activated' = Aktivierte Konfiguration
     # Rückgabewert: Der vollständige Name, inklusive Pfad zur Datei
     # -----------------------------------------------------------------------
+    local conf_mode="${1:-external}"    # Standard: 'external' 
     local folder_path                   # Pfad zum Nginx-Konfigurationsordner
     local file_name                     # Name der Nginx-Konfigurationsdatei
     local file_ext                      # Standard-Dateiendung
@@ -581,9 +585,32 @@ get_config_file_nginx() {
     debug "$(printf "$get_config_file_nginx_debug_0001")"
 
     # Festlegen der Bestandteile für den Dateinamen
-    file_name="fotobox_nginx"
-    file_ext="$CONFIG_FILE_EXT_NGINX"
-    folder_path="$(get_nginx_conf_dir)"
+    case "$conf_mode" in
+        "external")
+            # Externe Konfiguration im Projekt Ordner
+            folder_path="$(get_config_dir "external")"
+            file_name="fotobox_nginx"
+            file_ext="$CONFIG_FILE_EXT_NGINX"
+            ;;
+        "internal")
+            # Interne Konfiguration, Integration in bestehende Nginx-Konfig
+            folder_path="$(get_nginx_conf_dir "internal")"
+            file_name="default"
+            file_ext=""
+            ;;
+        "activated")
+            # Aktivierte Konfiguration, z.B. für aktivierte Sites
+            folder_path="$(get_nginx_conf_dir "activated")"
+            file_name="fotobox_nginx"
+            file_ext="$CONFIG_FILE_EXT_NGINX"
+            ;;
+        *)
+            # Fallback auf externe Konfiguration
+            folder_path="$(get_config_dir)"
+            conf_mode="external"
+            file_ext="$CONFIG_FILE_EXT_NGINX"
+            ;;
+    esac
     debug "$(printf "$get_config_file_nginx_debug_0002" "$folder_path")"
 
     # Zusammensetzen des vollständigen Dateinamens erfolgreich
