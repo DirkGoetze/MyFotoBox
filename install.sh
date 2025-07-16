@@ -306,8 +306,8 @@ check_system_requirements() {
     # Rückgabe: 0 = OK, 1 = fehlerhafte Umgebung, Skript abgebrechen
 
     # --- 1. Prüfen, ob das Skript im vorgegebenen INSTALL_DIR ausgeführt wird
-    local SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
-    if [ "$SCRIPT_DIR" != "$INSTALL_DIR" ]; then
+    local RUN_DIR=$(dirname "$(readlink -f "$0")")
+    if [ "$RUN_DIR" != "$INSTALL_DIR" ]; then
         # Kein gültiges Verzeichnis, Abbruch
         print_error "Das Skript muss im Installationsverzeichnis ($INSTALL_DIR) ausgeführt werden."
         return 1
