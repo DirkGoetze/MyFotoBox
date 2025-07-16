@@ -49,6 +49,363 @@ DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 # ===========================================================================
 
 # ===========================================================================
+# Interne Hilfsfunktionen
+# ===========================================================================
+
+# _is_installed_nginx
+_is_installed_nginx_debug_0001="INFO: NGINX-Installation wird geprüft ..."
+_is_installed_nginx_debug_0002="ERROR: NGINX ist nicht installiert!"
+_is_installed_nginx_debug_0003="WARN: NGINX ist nicht installiert, Installation wird gestartet."
+_is_installed_nginx_debug_0004="ERROR: NGINX-Installation fehlgeschlagen!"
+_is_installed_nginx_debug_0005="INFO: NGINX-Installation erfolgreich abgeschlossen."
+_is_installed_nginx_debug_0006="SUCCESS: NGINX ist installiert."
+_is_installed_nginx_log_0001="ERROR: NGINX nicht installiert!"
+_is_installed_nginx_log_0002="ERROR: NGINX konnte nicht installiert werden!"
+_is_installed_nginx_log_0003="INFO: NGINX wurde erfolgreich nach installiert."
+_is_installed_nginx_log_0004="SUCCESS: NGINX ist installiert."
+
+_is_installed_nginx() {
+    # -----------------------------------------------------------------------
+    # _is_installed_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Prüft, ob NGINX installiert ist und installiert ggf. nach 
+    # Parameter: $1 = Installationsentscheidung (j/N), optional (Default: N)
+    # Rückgabe.:  0 = OK (Installiert)
+    # .........   1 = Fehler (Nicht installiert)
+    # .........   2 = Installationsfehler
+    # Seiteneffekte: Installiert ggf. nginx über apt-get
+    # -----------------------------------------------------------------------
+    local install_decision="${1:-N}"
+    
+    # Prüfung 'Unattended'-Modus' bei Install-Skripten
+    if [ "${UNATTENDED:-0}" -eq 1 ]; then install_decision="J"; fi
+
+    # Debug-Meldung eröffnen
+    log_debug "$_is_installed_nginx_debug_0001"
+
+    # Prüfen, ob nginx installiert ist
+    if ! command -v nginx >/dev/null 2>&1; then  
+        # nicht installiert - Prüfe Freigabe für Installation
+        if [[ "$install_decision" =~ ^([nN])$ ]]; then
+            debug "$_is_installed_nginx_debug_0002"
+            log "$_is_installed_nginx_log_0001" 1
+            return 1
+        fi
+
+        # Freigabe für Installation - Installation von nginx durchführen 
+        # Verwende 'manage_update.py', da das die Abhängigkeiten aus 
+        # 'conf/requirements_system.inf' verwendet
+        debug "$_is_installed_nginx_debug_0003"
+        local backend_dir
+        backend_dir="$(get_backend_dir)"
+        python3 "$backend_dir/manage_update.py" --install-system-deps
+
+        # Nach der Installation erneut prüfen, ob nginx jetzt verfügbar ist
+        if ! command -v nginx >/dev/null 2>&1; then
+            debug "$_is_installed_nginx_debug_0004"
+            log "$_is_installed_nginx_log_0002"
+            return 2
+        fi
+        debug "$_is_installed_nginx_debug_0005"
+        log "$_is_installed_nginx_log_0003"
+    fi
+
+    # NGINX ist jetzt installiert
+    debug "$_is_installed_nginx_debug_0006"
+    log "$_is_installed_nginx_log_0004"
+    return 0
+}
+
+# _is_running_nginx
+_is_running_nginx_debug_0001="INFO: NGINX-Dienst wird geprüft ..."
+_is_running_nginx_debug_0002="WARN: NGINX ist nicht installiert!"
+_is_running_nginx_debug_0003="ERROR: NGINX-Dienst ist gestoppt!"
+_is_running_nginx_debug_0004="SUCCESS: NGINX-Dienst ist aktiv."
+_is_running_nginx_log_0001="NGINX ist nicht installiert!"
+_is_running_nginx_log_0002="NGINX-Dienst ist gestoppt."
+_is_running_nginx_log_0003="NGINX-Dienst läuft."
+
+_is_running_nginx() {
+    # -----------------------------------------------------------------------
+    # _is_running_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Prüft, ob der NGINX-Dienst aktiv läuft
+    # Parameter: keine
+    # Rückgabe.:  0 = NGINX läuft
+    # .........   1 = NGINX gestoppt/Fehler
+    # .........   2 = NGINX nicht installiert
+    # Seiteneffekte: keine
+    # -----------------------------------------------------------------------
+    # Debug-Meldung eröffnen
+    log_debug "$_is_running_nginx_debug_0001"
+
+    # Zuerst prüfen, ob NGINX überhaupt installiert ist
+    _is_installed_nginx
+    if [ $? -ne 0 ]; then
+        # NGINX ist nicht installiert
+        debug "$_is_running_nginx_debug_0002"
+        log "$_is_running_nginx_log_0001"
+        return 2
+    fi
+
+    # NGINX ist installiert, jetzt Status prüfen
+    if ! systemctl is-active --quiet nginx; then
+        # NGINX-Dienst ist gestoppt oder hat Fehler
+        debug "$_is_running_nginx_debug_0003"
+        log "$_is_running_nginx_log_0002"
+        return 1
+    fi
+
+    debug "$_is_running_nginx_debug_0004"
+    log "$_is_running_nginx_log_0003"
+    return 0
+}
+
+# _is_default_nginx
+_is_default_nginx_debug_0001="INFO: NGINX-Dienst Konfigurationsmodus prüfen ..."
+_is_default_nginx_debug_0002="SUCCESS: NGINX-Dienst verwendet Default-Konfiguration."
+_is_default_nginx_debug_0003="WARN: NGINX-Dienst verwendet eine angepasste Konfiguration."
+_is_default_nginx_debug_0004="ERROR: NGINX-Dienst Konfigurationsstatus unklar."
+_is_default_nginx_log_0001="NGINX verwendet Default-Konfiguration."
+_is_default_nginx_log_0002="NGINX verwendet angepasste Konfiguration."
+_is_default_nginx_log_0003="NGINX-Konfigurationsstatus unklar."
+
+_is_default_nginx() {
+    # -----------------------------------------------------------------------
+    # _is_default_nginx
+    # -----------------------------------------------------------------------
+    # Funktion: Prüft, ob NGINX in der Default-Konfiguration vorliegt oder
+    # .........  bereits eine angepasste Konfiguration verwendet wird.
+    # Parameter: keine
+    # Rückgabe.:  0 = Default-Konfiguration, 
+    # .........   1 = angepasste Konfiguration, 
+    # .........   2 = Status unklar
+    # -----------------------------------------------------------------------
+    local enabled_sites
+    enabled_sites=$(ls /etc/nginx/sites-enabled 2>/dev/null | wc -l)
+
+    # Debug-Meldung eröffnen
+    log_debug "$_is_default_nginx_debug_0001"
+
+    # Prüfen, ob nur die Default-Site aktiv ist
+    if [ "$enabled_sites" -eq 1 ] && [ -f /etc/nginx/sites-enabled/default ]; then
+        # Nur Default-Site aktiv
+        debug "$_is_default_nginx_debug_0002"
+        log "$_is_default_nginx_log_0001"
+        return 0
+    elif [ "$enabled_sites" -ge 1 ]; then
+        # Eine oder mehrere Sites aktiv, die nicht der Default entsprechen
+        debug "$_is_default_nginx_debug_0003"
+        log "$_is_default_nginx_log_0002"
+        return 1
+    else
+        # Status unklar
+        debug "$_is_default_nginx_debug_0004"
+        log "$_is_default_nginx_log_0003"
+        return 2
+    fi
+}
+
+# _is_multisite_nginx
+_is_multisite_nginx_debug_0001="INFO: NGINX-Dienst auf Multisite-Konfiguration prüfen ..."
+_is_multisite_nginx_debug_0002="SUCCESS: NGINX-Dienst verwendet Multisite-Konfiguration."
+_is_multisite_nginx_debug_0003="WARN: NGINX-Dienst verwendet eine Single-Konfiguration."
+
+_is_multisite_nginx() {
+    # -----------------------------------------------------------------------
+    # _is_multisite_nginx
+    # -----------------------------------------------------------------------
+    # Funktion: Prüft, ob NGINX im Multisite-Modus läuft
+    # Parameter: keine
+    # Rückgabe.: 0 = Multisite, 1 = Singlesite
+    # -----------------------------------------------------------------------
+
+    # Debug-Meldung eröffnen
+    log_debug "$_is_multisite_nginx_debug_0001"
+    
+    # NGINX-Dienst läuft - Betriebsmodus prüfen
+    local nginx_mode=$(nginx -V 2>&1 | grep -o "multisite")
+
+    if [ -n "$nginx_mode" ]; then
+        debug "$_is_multisite_nginx_debug_0002"
+        echo "multisite"
+        return 0
+    else
+        debug "$_is_multisite_nginx_debug_0003"
+        echo "default"
+        return 1
+    fi
+}   
+
+# ===========================================================================
+# Externe Funktionen zur NGINX-Verwaltung
+# ===========================================================================
+
+# chk_installation_nginx
+chk_installation_nginx_debug_0001="INFO: Überprüfung der NGINX-Installation ..."
+chk_installation_nginx_debug_0002="ERROR: NGINX konnte nicht installiert werden!"
+chk_installation_nginx_debug_0003="SUCCESS: NGINX ist installiert und aktiv."
+
+chk_installation_nginx() {
+    # -----------------------------------------------------------------------
+    # chk_installation_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Prüft, ob NGINX installiert und aktiv ist, ggf. wird wenn 
+    # .........  nicht anders ausgewählt NGINX nachinstalliert.
+    # Parameter: $1 = Installationsentscheidung (J/n), optional (Default: J)
+    # Rückgabe:  0 = OK, 1 = Installationsfehler
+    # Seiteneffekte: Installiert ggf. nginx 
+    # -----------------------------------------------------------------------
+    local install_decision="${1:-J}"
+
+    # Debug-Meldung eröffnen
+    log_debug "$chk_installation_nginx_debug_0001"
+
+    # Prüfen, ob nginx installiert und aktiv ist
+    _is_running_nginx $install_decision
+    local nginx_status=$?
+    if [ $nginx_status -ne 0 ]; then
+        # NGINX ist nicht installiert oder Installation wurde abgebrochen
+        debug "$chk_installation_nginx_debug_0002"
+        return 1
+    fi
+
+    # NGINX ist installiert und läuft
+    debug "$chk_installation_nginx_debug_0003"
+    return 0
+}
+
+# chk_config_nginx
+chk_config_nginx_debug_0001="INFO: Prüfe NGINX-Konfiguration..."
+chk_config_nginx_debug_0002="ERROR: NGINX ist nicht installiert."
+chk_config_nginx_debug_0003="SUCCESS: NGINX-Konfiguration ist fehlerfrei."
+chk_config_nginx_debug_0004="ERROR: Fehler in der NGINX-Konfiguration gefunden! \n%s"
+
+chk_config_nginx() {
+    # -----------------------------------------------------------------------
+    # chk_config_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Prüft die NGINX-Konfiguration auf Syntaxfehler
+    # Parameter: keine
+    # Rückgabe.:  0 = Konfiguration gültig
+    # .........   1 = Fehler in der NGINX-Konfiguration
+    # Seiteneffekte: keine
+    # -----------------------------------------------------------------------
+
+    # Debug-Meldung eröffnen
+    debug "$chk_config_nginx_debug_0001"
+
+    # Zuerst prüfen, ob NGINX überhaupt installiert ist
+    if ! _is_installed_nginx; then
+        debug "$chk_config_nginx_debug_0002"
+        return 1
+    fi
+
+    # NGINX-Konfiguration testen
+    if nginx -t 2>&1 | grep -q "syntax is ok"; then
+        # Konfiguration ist fehlerfrei
+        debug "$chk_config_nginx_debug_0003"
+        return 0
+    else
+        # Konfiguration fehlerhaft, Fehlerdetails ausgeben
+        local error_out
+        error_out=$(nginx -t 2>&1)
+        debug "$(printf "$chk_config_nginx_debug_0004" "$error_out")"
+        return 1
+    fi
+}
+
+# start_nginx
+start_nginx_debug_0001="INFO: Starte NGINX-Dienst..."
+start_nginx_debug_0002="ERROR: NGINX ist nicht installiert."
+start_nginx_debug_0003="ERROR: NGINX-Dienst konnte nicht gestartet werden! Meldung: \n%s"
+start_nginx_debug_0004="SUCCESS: NGINX-Dienst erfolgreich gestartet."
+start_nginx_log_0001="Start NGINX-Server fehlgeschlagen: NGINX ist nicht installiert!"
+start_nginx_log_0002="Start NGINX-Server fehlgeschlagen: \n%s"
+start_nginx_log_0003="NGINX-Server erfolgreich gestartet."
+
+start_nginx() {
+    # -----------------------------------------------------------------------
+    # start_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Startet den NGINX-Dienst
+    # Parameter: keine
+    # Rückgabe.:  0 = erfolgreich gestartet, 
+    # .........   1 = Fehler
+    # Seiteneffekte: Startet den NGINX-Dienst (systemctl start nginx)
+    # -----------------------------------------------------------------------
+
+    # Debug-Meldung eröffnen
+    debug "$start_nginx_debug_0001"
+
+    # Zuerst prüfen, ob NGINX überhaupt installiert ist
+    if ! _is_installed_nginx; then
+        # NGINX ist nicht installiert
+        debug "$start_nginx_debug_0002"
+        log "$start_nginx_log_0001"
+        return 1
+    fi
+
+    # NGINX ist installiert, jetzt NGINX-Service starten
+    if ! systemctl start nginx; then
+        # Start fehlgeschlagen, Fehlerdetails ausgeben
+        local status_out
+        status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
+        debug "$(printf "$start_nginx_debug_0003" "$status_out")"
+        log "$(printf "$start_nginx_log_0002" "$status_out")"
+        return 1
+    fi
+
+    # Start erfolgreich
+    debug "$start_nginx_debug_0004"
+    log "$start_nginx_log_0003"
+    return 0
+}
+
+# nginx_stop
+nginx_stop_txt_0001="Stoppe NGINX-Dienst..."
+nginx_stop_txt_0002="NGINX-Dienst erfolgreich gestoppt."
+nginx_stop_txt_0003="NGINX-Dienst konnte nicht gestoppt werden!"
+nginx_stop_txt_0004="NGINX ist nicht installiert."
+
+nginx_stop() {
+    # -----------------------------------------------------------------------
+    # nginx_stop
+    # -----------------------------------------------------------------------
+    # Funktion: Stoppt den NGINX-Dienst
+    # Parameter: $1 = Modus (text|json), optional (Default: text)
+    # Rückgabe:  0 = erfolgreich gestoppt, 1 = Fehler
+    # Seiteneffekte: Stoppt den NGINX-Dienst (systemctl stop nginx)
+    
+    local mode="${1:-text}"
+    
+    # Zuerst prüfen, ob NGINX überhaupt installiert ist
+    if ! is_nginx_available >/dev/null; then
+        log_or_json "$mode" "error" "${nginx_stop_txt_0004}" 1
+        return 1
+    fi
+    
+    log_or_json "$mode" "info" "${nginx_stop_txt_0001}" 0
+    
+    # NGINX-Dienst stoppen
+    if systemctl stop nginx; then
+        # Stop erfolgreich
+        log_or_json "$mode" "success" "${nginx_stop_txt_0002}" 0
+        return 0
+    else
+        # Stop fehlgeschlagen, Fehlerdetails ausgeben
+        local status_out
+        status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
+        log_or_json "$mode" "error" "${nginx_stop_txt_0003}" 1
+        log "$status_out"
+        return 1
+    fi
+}
+
+
+
+
+# ===========================================================================
 # Funktionen zur Template-Verarbeitung
 # ===========================================================================
 
@@ -102,10 +459,6 @@ get_nginx_template_path() {
     
     echo "$template_file"
 }
-
-# ===========================================================================
-# Externe Funktionen zur NGINX-Verwaltung
-# ===========================================================================
 
 # backup_nginx_config
 backup_nginx_config_txt_0001="Backup und Metadaten angelegt: %s"
@@ -197,48 +550,6 @@ backup_nginx_config() {
         fi
         return 1
     fi
-}
-
-# chk_nginx_installation
-chk_nginx_installation_txt_0001="NGINX nicht installiert, Installation wird gestartet."
-chk_nginx_installation_txt_0002="NGINX ist nicht installiert. Jetzt installieren? [J/n]"
-chk_nginx_installation_txt_0003="NGINX-Installation abgebrochen."
-chk_nginx_installation_txt_0004="NGINX konnte nicht installiert werden!"
-chk_nginx_installation_txt_0005="NGINX wurde erfolgreich installiert."
-chk_nginx_installation_txt_0006="NGINX ist bereits installiert."
-
-chk_nginx_installation() {
-    # -----------------------------------------------------------------------
-    # chk_nginx_installation
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob NGINX installiert ist, installiert ggf. nach (mit Rückfrage)
-    # Parameter: $1 = Modus (text|json)
-    #            $2 = Installationsentscheidung (J/n), optional (Default: J)
-    # Rückgabe:  0 = OK, 1 = Installation abgebrochen, 2 = Installationsfehler
-    # Seiteneffekte: Installiert ggf. nginx über apt-get
-    local mode="$1"
-    local install_decision="${2:-J}"
-    # Prüfen, ob nginx installiert ist
-    if ! command -v nginx >/dev/null 2>&1; then  # Falls nicht installiert
-        log_or_json "$mode" "prompt" "$chk_nginx_installation_txt_0002" 10
-        # Kein read mehr, Entscheidung kommt als Parameter
-        # Prüfen, ob der Nutzer die Installation abgelehnt hat
-        if [[ "$install_decision" =~ ^([nN])$ ]]; then
-            log_or_json "$mode" "error" "$chk_nginx_installation_txt_0003" 1
-            return 1
-        fi
-        # Installation von nginx durchführen mit manage_update.py, das die Abhängigkeiten aus conf/requirements_system.inf verwendet
-        python3 "$SCRIPT_DIR/../manage_update.py" --install-system-deps
-        # Nach der Installation erneut prüfen, ob nginx jetzt verfügbar ist
-        if ! command -v nginx >/dev/null 2>&1; then
-            log_or_json "$mode" "error" "$chk_nginx_installation_txt_0004" 2
-            return 2
-        fi
-        log_or_json "$mode" "success" "$chk_nginx_installation_txt_0005" 0
-    else
-        log "$chk_nginx_installation_txt_0006"
-    fi
-    return 0
 }
 
 # chk_nginx_reload
@@ -333,49 +644,6 @@ chk_nginx_port() {
         return 2
     fi
     # log "${chk_nginx_port_txt_0005}"  # ENTFERNT
-}
-
-# chk_nginx_activ
-chk_nginx_activ_txt_0001="Nur Default-Site ist aktiv."
-chk_nginx_activ_txt_0002="Weitere Sites sind aktiv."
-chk_nginx_activ_txt_0003="Konnte aktive NGINX-Sites nicht eindeutig ermitteln."
-chk_nginx_activ_txt_0004="NGINX-Status: Nur Default-Site aktiv."
-chk_nginx_activ_txt_0005="NGINX-Status: Mehrere Sites aktiv."
-chk_nginx_activ_txt_0006="Fehler: NGINX-Site-Status unklar."
-chk_nginx_activ_txt_0007="Statusabfrage abgeschlossen."
-chk_nginx_activ_txt_0008="Fehler bei der Statusabfrage."
-
-chk_nginx_activ() {
-    # -----------------------------------------------------------------------
-    # chk_nginx_activ
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob NGINX nur im Default-Modus läuft oder weitere Sites aktiv sind.
-    # Parameter: $1 = Modus (text|json)
-    # Rückgabe:  0 = Nur Default-Site aktiv, 1 = Mehrere Sites aktiv, 2 = Status unklar
-    # Seiteneffekte: keine
-    local mode="$1"
-    local enabled_sites
-    enabled_sites=$(ls /etc/nginx/sites-enabled 2>/dev/null | wc -l)
-    # Prüfen, ob nur die Default-Site aktiv ist
-    if [ "$enabled_sites" -eq 1 ] && [ -f /etc/nginx/sites-enabled/default ]; then
-        # Nur Default-Site aktiv
-        log_or_json "$mode" "success" "${chk_nginx_activ_txt_0001}" 0
-        log "${chk_nginx_activ_txt_0004}"
-        log "${chk_nginx_activ_txt_0007}"
-        return 0
-    elif [ "$enabled_sites" -gt 1 ]; then
-        # Mehrere Sites aktiv
-        log_or_json "$mode" "success" "${chk_nginx_activ_txt_0002}" 1
-        log "${chk_nginx_activ_txt_0005}"
-        log "${chk_nginx_activ_txt_0007}"
-        return 1
-    else
-        # Status unklar
-        log_or_json "$mode" "error" "${chk_nginx_activ_txt_0003}" 2
-        log "${chk_nginx_activ_txt_0006}"
-        log "${chk_nginx_activ_txt_0008}"
-        return 2
-    fi
 }
 
 # ===========================================================================
@@ -870,9 +1138,13 @@ set_nginx_cnf_internal() {
     # -----------------------------------------------------------------------
     # set_nginx_cnf_internal
     # -----------------------------------------------------------------------
-    # Funktion: Integriert Fotobox in die Default-Konfiguration von NGINX
-    # Rückgabe: 0 = OK, 1 = Fehler, 2 = Backup-Fehler, 4 = Reload-Fehler
-    local mode="$1"
+    # Funktion.: Integriert Fotobox in die Default-Konfiguration von NGINX
+    # Parameter: keine
+    # Rückgabe.:  0 = OK, 
+    # .........   1 = Fehler, 
+    # .........   2 = Backup-Fehler, 
+    # .........   4 = Reload-Fehler
+    # -----------------------------------------------------------------------
     local default_conf="/etc/nginx/sites-available/default"
 
     log "${set_nginx_cnf_internal_txt_0001}"
@@ -1006,236 +1278,6 @@ get_nginx_template_file() {
     # Fallback zur alten Methode
     echo "/opt/fotobox/conf/nginx-$template_type.conf"
     return 0
-}
-
-# is_nginx_available
-is_nginx_available_txt_0001="NGINX ist installiert."
-is_nginx_available_txt_0002="NGINX ist nicht installiert."
-is_nginx_available_txt_0003="Prüfe NGINX-Installation..."
-
-is_nginx_available() {
-    # -----------------------------------------------------------------------
-    # is_nginx_available
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob NGINX installiert ist
-    # Parameter: $1 = Modus (text|json), optional (Default: text)
-    # Rückgabe:  0 = NGINX installiert, 1 = NGINX nicht installiert
-    # Seiteneffekte: keine
-    
-    local mode="${1:-text}"
-    
-    log_debug "${is_nginx_available_txt_0003}"
-    
-    if command -v nginx >/dev/null 2>&1; then
-        # NGINX ist installiert
-        log_or_json "$mode" "success" "${is_nginx_available_txt_0001}" 0
-        return 0
-    else
-        # NGINX ist nicht installiert
-        log_or_json "$mode" "info" "${is_nginx_available_txt_0002}" 1
-        return 1
-    fi
-}
-
-# is_nginx_running
-is_nginx_running_txt_0001="NGINX-Dienst läuft."
-is_nginx_running_txt_0002="NGINX-Dienst ist gestoppt."
-is_nginx_running_txt_0003="Prüfe NGINX-Status..."
-
-is_nginx_running() {
-    # -----------------------------------------------------------------------
-    # is_nginx_running
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob der NGINX-Dienst aktiv läuft
-    # Parameter: $1 = Modus (text|json), optional (Default: text)
-    # Rückgabe:  0 = NGINX läuft, 1 = NGINX gestoppt/Fehler
-    # Seiteneffekte: keine
-    
-    local mode="${1:-text}"
-    
-    log_debug "${is_nginx_running_txt_0003}"
-    
-    # Zuerst prüfen, ob NGINX überhaupt installiert ist
-    if is_nginx_available >/dev/null; then
-        # NGINX ist installiert, jetzt Status prüfen
-        if systemctl is-active nginx >/dev/null 2>&1; then
-            # NGINX läuft
-            log_or_json "$mode" "success" "${is_nginx_running_txt_0001}" 0
-            return 0
-        else
-            # NGINX ist gestoppt oder hat Fehler
-            log_or_json "$mode" "warning" "${is_nginx_running_txt_0002}" 1
-            return 1
-        fi
-    else
-        # NGINX ist nicht installiert
-        log_or_json "$mode" "warning" "${is_nginx_available_txt_0002}" 1
-        return 1
-    fi
-}
-
-# is_nginx_default
-is_nginx_default_txt_0001="NGINX verwendet Default-Konfiguration."
-is_nginx_default_txt_0002="NGINX verwendet angepasste Konfiguration."
-is_nginx_default_txt_0003="NGINX-Konfigurationsstatus unklar."
-is_nginx_default_txt_0004="Prüfe NGINX-Konfigurationsstatus..."
-
-is_nginx_default() {
-    # -----------------------------------------------------------------------
-    # is_nginx_default
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob NGINX in Default-Konfiguration vorliegt
-    # Parameter: $1 = Modus (text|json), optional (Default: text)
-    # Rückgabe:  0 = Default-Konfiguration, 1 = angepasste Konfiguration, 2 = Status unklar
-    # Seiteneffekte: keine
-    
-    local mode="${1:-text}"
-    
-    log_debug "${is_nginx_default_txt_0004}"
-    
-    # Zuerst prüfen, ob NGINX überhaupt installiert ist
-    if ! is_nginx_available >/dev/null; then
-        log_or_json "$mode" "warning" "${is_nginx_available_txt_0002}" 2
-        return 2
-    fi
-    
-    local enabled_sites
-    enabled_sites=$(ls /etc/nginx/sites-enabled 2>/dev/null | wc -l)
-    
-    # Prüfen, ob nur die Default-Site aktiv ist
-    if [ "$enabled_sites" -eq 1 ] && [ -f /etc/nginx/sites-enabled/default ]; then
-        # Nur Default-Site aktiv
-        log_or_json "$mode" "success" "${is_nginx_default_txt_0001}" 0
-        return 0
-    elif [ "$enabled_sites" -ge 1 ]; then
-        # Eine oder mehrere Sites aktiv, die nicht der Default entsprechen
-        log_or_json "$mode" "info" "${is_nginx_default_txt_0002}" 1
-        return 1
-    else
-        # Status unklar
-        log_or_json "$mode" "warning" "${is_nginx_default_txt_0003}" 2
-        return 2
-    fi
-}
-
-# nginx_start
-nginx_start_txt_0001="Starte NGINX-Dienst..."
-nginx_start_txt_0002="NGINX-Dienst erfolgreich gestartet."
-nginx_start_txt_0003="NGINX-Dienst konnte nicht gestartet werden!"
-nginx_start_txt_0004="NGINX ist nicht installiert."
-
-nginx_start() {
-    # -----------------------------------------------------------------------
-    # nginx_start
-    # -----------------------------------------------------------------------
-    # Funktion: Startet den NGINX-Dienst
-    # Parameter: $1 = Modus (text|json), optional (Default: text)
-    # Rückgabe:  0 = erfolgreich gestartet, 1 = Fehler
-    # Seiteneffekte: Startet den NGINX-Dienst (systemctl start nginx)
-    
-    local mode="${1:-text}"
-    
-    # Zuerst prüfen, ob NGINX überhaupt installiert ist
-    if ! is_nginx_available >/dev/null; then
-        log_or_json "$mode" "error" "${nginx_start_txt_0004}" 1
-        return 1
-    fi
-    
-    log_or_json "$mode" "info" "${nginx_start_txt_0001}" 0
-    
-    # NGINX-Dienst starten
-    if systemctl start nginx; then
-        # Start erfolgreich
-        log_or_json "$mode" "success" "${nginx_start_txt_0002}" 0
-        return 0
-    else
-        # Start fehlgeschlagen, Fehlerdetails ausgeben
-        local status_out
-        status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
-        log_or_json "$mode" "error" "${nginx_start_txt_0003}" 1
-        log "$status_out"
-        return 1
-    fi
-}
-
-# nginx_stop
-nginx_stop_txt_0001="Stoppe NGINX-Dienst..."
-nginx_stop_txt_0002="NGINX-Dienst erfolgreich gestoppt."
-nginx_stop_txt_0003="NGINX-Dienst konnte nicht gestoppt werden!"
-nginx_stop_txt_0004="NGINX ist nicht installiert."
-
-nginx_stop() {
-    # -----------------------------------------------------------------------
-    # nginx_stop
-    # -----------------------------------------------------------------------
-    # Funktion: Stoppt den NGINX-Dienst
-    # Parameter: $1 = Modus (text|json), optional (Default: text)
-    # Rückgabe:  0 = erfolgreich gestoppt, 1 = Fehler
-    # Seiteneffekte: Stoppt den NGINX-Dienst (systemctl stop nginx)
-    
-    local mode="${1:-text}"
-    
-    # Zuerst prüfen, ob NGINX überhaupt installiert ist
-    if ! is_nginx_available >/dev/null; then
-        log_or_json "$mode" "error" "${nginx_stop_txt_0004}" 1
-        return 1
-    fi
-    
-    log_or_json "$mode" "info" "${nginx_stop_txt_0001}" 0
-    
-    # NGINX-Dienst stoppen
-    if systemctl stop nginx; then
-        # Stop erfolgreich
-        log_or_json "$mode" "success" "${nginx_stop_txt_0002}" 0
-        return 0
-    else
-        # Stop fehlgeschlagen, Fehlerdetails ausgeben
-        local status_out
-        status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
-        log_or_json "$mode" "error" "${nginx_stop_txt_0003}" 1
-        log "$status_out"
-        return 1
-    fi
-}
-
-# nginx_test_config
-nginx_test_config_txt_0001="Prüfe NGINX-Konfiguration..."
-nginx_test_config_txt_0002="NGINX-Konfiguration ist fehlerfrei."
-nginx_test_config_txt_0003="Fehler in der NGINX-Konfiguration gefunden!"
-nginx_test_config_txt_0004="NGINX ist nicht installiert."
-
-nginx_test_config() {
-    # -----------------------------------------------------------------------
-    # nginx_test_config
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft die NGINX-Konfiguration auf Syntaxfehler
-    # Parameter: $1 = Modus (text|json), optional (Default: text)
-    # Rückgabe:  0 = Konfiguration gültig, 1 = Fehler
-    # Seiteneffekte: keine
-    
-    local mode="${1:-text}"
-    
-    # Zuerst prüfen, ob NGINX überhaupt installiert ist
-    if ! is_nginx_available >/dev/null; then
-        log_or_json "$mode" "error" "${nginx_test_config_txt_0004}" 1
-        return 1
-    fi
-    
-    log_or_json "$mode" "info" "${nginx_test_config_txt_0001}" 0
-    
-    # NGINX-Konfiguration testen
-    if nginx -t 2>&1 | grep -q "syntax is ok"; then
-        # Konfiguration ist fehlerfrei
-        log_or_json "$mode" "success" "${nginx_test_config_txt_0002}" 0
-        return 0
-    else
-        # Konfiguration fehlerhaft, Fehlerdetails ausgeben
-        local error_out
-        error_out=$(nginx -t 2>&1)
-        log_or_json "$mode" "error" "${nginx_test_config_txt_0003}" 1
-        log "$error_out"
-        return 1
-    fi
 }
 
 # ===========================================================================
@@ -1385,7 +1427,7 @@ improved_nginx_install() {
     if ! is_nginx_available >/dev/null; then
         log_or_json "$mode" "warning" "$improved_nginx_install_txt_0002" 0
         # NGINX installieren
-        if ! chk_nginx_installation "$mode" $is_interactive; then
+        if ! chk_installation_nginx "$mode" $is_interactive; then
             log_or_json "$mode" "error" "$improved_nginx_install_txt_0003" 1
             return 1
         fi
@@ -1593,6 +1635,116 @@ improved_nginx_install() {
     
     log_or_json "$mode" "success" "$improved_nginx_install_txt_0010" 0
     return 0
+}
+
+# setup_nginx_service
+setup_nginx_service_debug_0001="INFO: Starte NGINX-Server-Setup..."
+setup_nginx_service_debug_0002="INFO: Prüfe NGINX-Installation..."
+setup_nginx_service_debug_0003="ERROR: NGINX-Installation fehlgeschlagen!"
+setup_nginx_service_debug_0004="INFO: NGINX-Server erfolgreich installiert."
+setup_nginx_service_debug_0005="INFO: Versuche Start NGINX-Server ..."
+setup_nginx_service_debug_0006="ERROR: NGINX-Server Start fehlgeschlagen!"
+setup_nginx_service_debug_0007="INFO: NGINX-Server erfolgreich gestartet."
+setup_nginx_service_debug_0008="INFO: NGINX-Server läuft bereits."
+
+setup_nginx_service_txt_0001="[/] Starte NGINX-Server-Setup..."
+setup_nginx_service_txt_0002="NGINX-Server Installation fehlgeschlagen!"
+setup_nginx_service_txt_0003="NGINX-Server erfolgreich installiert."
+
+setup_nginx_service_txt_0004="[/] Starte NGINX-Server..."
+setup_nginx_service_txt_0005="NGINX-Server Start fehlgeschlagen!"
+setup_nginx_service_txt_0006="NGINX-Server erfolgreich gestartet."
+setup_nginx_service_txt_0007="NGINX-Server läuft bereits."
+
+
+setup_nginx_service() {
+    # -----------------------------------------------------------------------
+    # setup_nginx_service
+    # -----------------------------------------------------------------------
+    # Funktion: Führt die komplette Installation des NGINX-Servers durch
+    # Parameter: $1 - Optional: CLI oder JSON-Ausgabe. Wenn nicht angegeben, 
+    # .........       wird die Standardausgabe verwendet (CLI-Ausgabe)
+    # Rückgabe: 0 bei Erfolg, 1 bei Fehler
+    # -----------------------------------------------------------------------
+    local output_mode="${1:-cli}"  # Standardmäßig CLI-Ausgabe
+    local service_pid
+
+    # Eröffnungsmeldung im Debug Modus
+    debug "$setup_nginx_service_debug_0001"
+
+    # Schritt 1: NGINX-Installation prüfen
+    if [ "$output_mode" = "json" ]; then
+        _is_installed_nginx "J" || return 1
+    else
+        # Ausgabe im CLI-Modus, Spinner anzeigen
+        echo -n "$setup_nginx_service_txt_0001"
+        # Installation des Backend-Services im Hintergrund ausführen
+        # und Spinner anzeigen
+        debug "$setup_nginx_service_debug_0002"
+        (_is_installed_nginx "J") &> /dev/null 2>&1 &
+        service_pid=$!
+        show_spinner "$service_pid" "dots"
+        # Überprüfe, ob die Installation erfolgreich war
+        if [ $? -ne 0 ]; then
+            debug "$setup_nginx_service_debug_0003"
+            print_error "$setup_nginx_service_txt_0002"
+            return 1
+        fi
+        debug "$setup_nginx_service_debug_0004"
+        print_success "$setup_nginx_service_txt_0003"
+    fi
+
+    # Schritt 2: Prüfen, ob NGINX aktiv ist
+    if ! _is_running_nginx; then
+        if [ "$output_mode" = "json" ]; then
+            start_nginx || return 1
+        else
+            # Ausgabe im CLI-Modus, Spinner anzeigen
+            echo -n "$setup_nginx_service_txt_0004"
+            # Installation des Backend-Services im Hintergrund ausführen
+            # und Spinner anzeigen
+            debug "$setup_nginx_service_debug_0005"
+            (start_nginx) &> /dev/null 2>&1 &
+            service_pid=$!
+            show_spinner "$service_pid" "dots"
+            # Überprüfe, ob die Installation erfolgreich war
+            if [ $? -ne 0 ]; then
+                debug "$setup_nginx_service_debug_0006"
+                print_error "$setup_nginx_service_txt_0005"
+                return 1
+            fi
+            debug "$setup_nginx_service_debug_0007"
+            print_success "$setup_nginx_service_txt_0006"
+        fi
+    else
+        if [ "$output_mode" = "json" ]; then
+            log "$setup_nginx_service_txt_0007"
+        else
+            debug "$setup_nginx_service_debug_0008"
+            log "$setup_nginx_service_txt_0007"
+            print_success "$setup_nginx_service_txt_0007"
+        fi
+    fi
+
+    # Schritt 3: Je nach aktuellen Zustand der NGINX-Konfiguration vorgehen
+    local nginx_status
+    nginx_status=$(is_nginx_default)
+    if [ $? -eq 0 ]; then  # Default-Konfiguration
+        if [ "$output_mode" = "json" ]; then
+            set_nginx_cnf_internal "json" || return 1
+        else
+            set_nginx_cnf_internal "text" || return 1
+        fi
+    elif [ $? -eq 1 ]; then  # Angepasste Konfiguration
+        if [ "$output_mode" = "json" ]; then
+            set_nginx_cnf_external "json" || return 1
+        else
+            set_nginx_cnf_external "text" || return 1
+        fi
+    else  # Unklarer Status
+        log_or_json "$output_mode" "error" "$improved_nginx_install_txt_0009" 9
+        return 9
+    fi
 }
 
 # Einstellungshierarchie für Manage Modul erstellen

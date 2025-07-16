@@ -699,49 +699,9 @@ dlg_nginx_installation() {
     ((STEP_COUNTER++))
     print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] NGINX-Installation und Konfiguration ..."
 
-    debug "Starte NGINX-Dialog, UNATTENDED=$UNATTENDED, SCRIPT_DIR=$SCRIPT_DIR" "CLI" "dlg_nginx_installation"
-
-    # Prüfen, ob das Modul 'manage_nginx.sh' existiert
-    if ! check_module "manage_nginx.sh"; then
-        debug "manage_nginx.sh ist nicht verfügbar (MANAGE_NGINX_AVAILABLE=$MANAGE_NGINX_AVAILABLE)" "CLI" "dlg_nginx_installation"
-        print_error "manage_nginx.sh nicht gefunden! Die Projektstruktur wurde vermutlich noch nicht geklont."
-        return 1  # Wir verwenden return statt exit, damit die Installation nicht komplett abbricht
-    fi
-
-    # NGINX-Installation prüfen/ausführen (zentral)
-    # call: chk_nginx_installation um zu prüfen, ob NGINX bereits installiert ist
-    if [ "$UNATTENDED" -eq 1 ]; then
-        debug "Starte $NGINX_SCRIPT --json install" "CLI" "dlg_nginx_installation"
-        install_result=$(bash "$NGINX_SCRIPT" --json install)
-        install_rc=$?
-    else
-        debug "Starte $NGINX_SCRIPT install" "CLI" "dlg_nginx_installation"
-        install_result=$(bash "$NGINX_SCRIPT" install)
-        install_rc=$?
-    fi
-
-    debug "install_rc=$install_rc, install_result=$install_result" "CLI" "dlg_nginx_installation"
-    if [ $install_rc -ne 0 ]; then
-        print_error "NGINX-Installation fehlgeschlagen: $install_result"
-        return 1
-    fi
-
-    # Betriebsmodus abfragen (default/multisite)
-    if [ "$UNATTENDED" -eq 1 ]; then
-        debug "Starte $NGINX_SCRIPT --json activ" "CLI" "dlg_nginx_installation"
-        activ_result=$(bash "$NGINX_SCRIPT" --json activ)
-        activ_rc=$?
-    else
-        debug "Starte $NGINX_SCRIPT activ" "CLI" "dlg_nginx_installation"
-        activ_result=$(bash "$NGINX_SCRIPT" activ)
-        activ_rc=$?
-    fi
-    debug "activ_rc=$activ_rc, activ_result=$activ_result" "CLI" "dlg_nginx_installation"
-
-    if [ $activ_rc -eq 2 ]; then
-        print_error "Konnte NGINX-Betriebsmodus nicht eindeutig ermitteln. Bitte prüfen Sie die Konfiguration."
-        return 1
-    fi
+    # Prüfen, ob NGINX installiert und aktiv ist
+    chk_nginx_installation $UNATTENDED
+    activ_rc=$?
 
     # Dialog: Default-Integration oder eigene Konfiguration
     if [ $activ_rc -eq 0 ]; then

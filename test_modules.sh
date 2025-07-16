@@ -348,6 +348,11 @@ echo
 echo "========================================================================="
 echo "  Test der Funktionen in manage_files.sh"
 echo "========================================================================="
+# Test: get_data_file
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_data_file                                                   |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_data_file"
 # Test: get_config_file
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_config_file                                                 |"
@@ -358,6 +363,16 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_log_file                                                    |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_files_sh" "get_log_file"
+# Test: get_requirements_system_file
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_requirements_system_file                                    |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_requirements_system_file"
+# Test: get_requirements_python_file
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_requirements_python_file                                    |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_requirements_python_file"
 # Test: get_tmp_file
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_tmp_file                                                    |"
@@ -365,15 +380,66 @@ echo "+-----------------------------------------------------------------------+"
 test_function "manage_files_sh" "get_tmp_file"
 # Test: get_template_file
 echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_template_file (NGINX)                                       |"
+echo "| Test: get_template_file (NGINX local)                                 |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_template_file" "nginx" "template_local"
+# Test: get_template_file
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_template_file (NGINX internal)                              |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_files_sh" "get_template_file" "nginx" "template_internal"
-# Test: get_template_file (NGINX)
+# Test: get_template_file
 echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_template_file (NGINX-Modul)                                       |"
+echo "| Test: get_template_file (NGINX external)                              |"
 echo "+-----------------------------------------------------------------------+"
-test_function "manage_nginx_sh" "get_nginx_template_file" "internal"
+test_function "manage_files_sh" "get_template_file" "nginx" "template_external"
+# Test: get_template_file
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_template_file (SYSTEMD)                                     |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_template_file" "systemd" "fotobox-backend"
+# Test: get_template_file
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_template_file (SSL Zertifikat)                              |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_template_file" "ssl_cert" "fotobox"
+# Test: get_template_file
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_template_file (SSL Schlüssel)                               |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_template_file" "ssl_key" "fotobox"
+# Test: get_template_file
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_template_file (Backup Metadata)                             |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_template_file" "backup_meta" "fotobox-backup"
+# Test: get_template_file
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_template_file (Firewall)                                    |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_template_file" "firewall" "fotobox-firewall"
+# Test: get_template_file
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_template_file (SSH)                                         |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_template_file" "ssh" "fotobox-ssh"
+# Test: get_config_file_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_config_file_nginx (default)                                 |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_config_file_nginx" "default"
+# Test: get_config_file_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_config_file_nginx (multisite)                               |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_config_file_nginx" "multisite"
+
+
+
 exit
+
+
+
 echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_template_file (SYSTEMD)                                     |"
 echo "+-----------------------------------------------------------------------+"
