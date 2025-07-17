@@ -1084,8 +1084,6 @@ main() {
         fi
     }
 
-DEBUG_MOD_GLOBAL=1
-
     # Ausführung der einzelnen Dialogschritte, robuste Fehlerbehandlung
     run_step dlg_check_system_requirements "$@"  # Prüfe Systemvoraussetzungen 
     run_step dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
