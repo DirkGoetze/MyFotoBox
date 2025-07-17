@@ -516,21 +516,21 @@ DEBUG_MOD_GLOBAL=1
     if cp "$src" "$backup_file"; then
         # Metadaten über Template-Datei erstellen
         local template_file
-        template_file="$(get_template_file "backup_meta" "backup-nginx.meta.json")"
+        template_file="$(get_template_file "backup_meta" "backup-nginx")"
 
         # Template Daten vorbereiten
         local timestamp="$(date +%Y-%m-%dT%H:%M:%S%z)"  # Aktueller Zeitstempel
 
         # Wende Template an
-        debug "$(printf "Zu sichernde Datei: '%s'" "$src")"
-        debug "$(printf "Backup-Datei: '%s'" "$backup_file")"
-        debug "$(printf "Metadaten-Datei: '%s'" "$backup_meta_file")"
+        debug "$(printf "Zu sichernde Datei.: '%s'" "$src")"
+        debug "$(printf "Backup-Datei.......: '%s'" "$backup_file")"
+        debug "$(printf "Metadaten-Datei....: '%s'" "$backup_meta_file")"
         debug "$(printf "Ersetze Platzhalter:\
-                         \n\t\ttimestamp: '%s' \
-                         \n\t\tsource: '%s' \
-                         \n\t\tbackup: '%s' \
-                         \n\t\tconfig_type: '%s' \
-                         \n\t\taction: '%s'\n" \
+                         \n\t\ttimestamp\t: '%s' \
+                         \n\t\tsource\t: '%s' \
+                         \n\t\tbackup\t: '%s' \
+                         \n\t\tconfig_type\t: '%s' \
+                         \n\t\taction\t: '%s'\n" \
                          "$timestamp" "$src" "$backup_file" "$config_type" "$action")"
 
         apply_template "$template_file" "$backup_meta_file" \
