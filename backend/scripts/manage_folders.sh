@@ -1859,17 +1859,35 @@ ensure_folder_structure() {
     
     # Hauptverzeichnisse erstellen
     get_install_dir >/dev/null || return 1
+
+    # -> Backend Verzeichnisse prüfen
+    get_backend_dir >/dev/null || return 1
+    get_script_dir >/dev/null || return 1
+
+    # -> Backup Verzeichnis
     get_backup_dir >/dev/null || return 1
+
+    # -> Config Verzeichnisse prüfen
     get_config_dir >/dev/null || return 1
+    get_camera_conf_dir >/dev/null || return 1
+    get_template_dir >/dev/null || return 1
+    get_template_dir "backup" >/dev/null || return 1
+    get_template_dir "camera" >/dev/null || return 1
+    get_template_dir "nginx" >/dev/null || return 1
+    get_template_dir "systemd" >/dev/null || return 1
+
+    # -> Daten Verzeichnis prüfen
     get_data_dir >/dev/null || return 1
+
+    # -> Frontend Verzeichnisse prüfen
     get_frontend_dir >/dev/null || return 1
-    get_log_dir >/dev/null || return 1
-    
-    # Frontend-Unterverzeichnisse erstellen
     get_frontend_css_dir >/dev/null || true
     get_frontend_js_dir >/dev/null || true
     get_frontend_fonts_dir >/dev/null || true
     get_frontend_picture_dir >/dev/null || true
+
+    # -> Log Verzeichni prüfen
+    get_log_dir >/dev/null || return 1
     
     # Fotos-Verzeichnisstruktur
     get_photos_dir >/dev/null || return 1
@@ -1882,11 +1900,11 @@ ensure_folder_structure() {
 
     # HTTPS-Verzeichnisstruktur
     get_https_conf_dir >/dev/null || return 1
-    get_https_backup_dir >/dev/null || return 1
+    #get_https_backup_dir >/dev/null || return 1
 
     # Kamera-Verzeichnisstruktur
     get_camera_conf_dir >/dev/null || return 1
-    get_script_dir >/dev/null || return 1
+    #get_script_dir >/dev/null || return 1
 
     # Setze Ausführbarkeitsrechte für Skripte
     set_script_permissions || true

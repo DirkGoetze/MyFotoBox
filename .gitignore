@@ -4,14 +4,12 @@
 .resourcen/
 # Ordner, die von Git ignoriert werden sollen
 # Diese Dateien und Ordner werden nicht versioniert
-backend/tests/
-backend/scripts/tests/
-backend/venv/
 backup/
 data/
 frontend/tests/
+log/
 reviews/
-tests/
+tmp/
 
 # Ausnahmen für bestimmte Ordner/Dateien
 !conf/templates/backup/
