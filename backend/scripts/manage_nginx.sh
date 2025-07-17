@@ -59,10 +59,10 @@ _is_installed_nginx_debug_0003="WARN: NGINX ist nicht installiert, Installation 
 _is_installed_nginx_debug_0004="ERROR: NGINX-Installation fehlgeschlagen!"
 _is_installed_nginx_debug_0005="INFO: NGINX-Installation erfolgreich abgeschlossen."
 _is_installed_nginx_debug_0006="SUCCESS: NGINX ist installiert."
-_is_installed_nginx_log_0001="ERROR: NGINX nicht installiert!"
-_is_installed_nginx_log_0002="ERROR: NGINX konnte nicht installiert werden!"
-_is_installed_nginx_log_0003="INFO: NGINX wurde erfolgreich nach installiert."
-_is_installed_nginx_log_0004="SUCCESS: NGINX ist installiert."
+_is_installed_nginx_log_0001="NGINX nicht installiert!"
+_is_installed_nginx_log_0002="NGINX konnte nicht installiert werden!"
+_is_installed_nginx_log_0003="NGINX wurde erfolgreich nach installiert."
+_is_installed_nginx_log_0004="NGINX ist installiert."
 
 _is_installed_nginx() {
     # -----------------------------------------------------------------------
@@ -454,7 +454,6 @@ reload_nginx() {
     debug "$reload_nginx_debug_0004"
     return 0
 }
-
 
 # ===========================================================================
 # Externe Funktionen zur Bearbeitung der NGINX-Server Koniguration

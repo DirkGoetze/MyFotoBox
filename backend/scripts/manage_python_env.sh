@@ -67,13 +67,13 @@ create_python_env_debug_0010="INFO: Starte die Einrichtung des Python-Virtual-En
 create_python_env_debug_0011="ERROR: Virtual-Environment-Erstellung fehlgeschlagen. Konnte venv nicht anlegen! Log-Auszug: %s"
 create_python_env_debug_0012="SUCCESS: Python-Virtual-Environment erfolgreich erstellt."
 
-create_python_env_log_0001="ERROR: Fehler beim Erstellen der temporären Datei für die Kommandoausgabe."
-create_python_env_log_0002="ERROR: Fehler beim Ermitteln des Python-Virtual-Environment-Verzeichnisses."
-create_python_env_log_0003="ERROR: Kein Python-Interpreter gefunden. Bitte installieren Sie Python 3"
-create_python_env_log_0004="INFO: Starte die Einrichtung des Python-Virtual-Environment"
+create_python_env_log_0001="Fehler beim Erstellen der temporären Datei für die Kommandoausgabe."
+create_python_env_log_0002="Fehler beim Ermitteln des Python-Virtual-Environment-Verzeichnisses."
+create_python_env_log_0003="Kein Python-Interpreter gefunden. Bitte installieren Sie Python 3"
+create_python_env_log_0004="Starte die Einrichtung des Python-Virtual-Environment"
 create_python_env_log_0005="VENV CREATE AUSGABE: %s"
-create_python_env_log_0006="ERROR: Konnte venv nicht anlegen! Log-Auszug: %s"
-create_python_env_log_0007="SUCCESS: Python-Virtual-Environment erfolgreich erstellt."
+create_python_env_log_0006="Konnte venv nicht anlegen! Log-Auszug: %s"
+create_python_env_log_0007="Python-Virtual-Environment erfolgreich erstellt."
 
 create_python_env() {
     # -----------------------------------------------------------------------
@@ -159,12 +159,12 @@ install_pip_debug_0009="SUCCESS: Python-Paketmanager (PIP): '%s'"
 install_pip_debug_0010="ERROR: Python-Paketmanager pip-Upgrade fehlgeschlagen! Fehler beim Upgrade von Python-Paketmanager pip. Log-Auszug: %s"
 install_pip_debug_0011="SUCCESS: Python-Paketmanager pip erfolgreich aktualisiert."
 
-install_pip_log_0001="ERROR: Fehler beim Erstellen der temporären Datei für die Kommandoausgabe."
-install_pip_log_0002="ERROR: Fehler beim Ermitteln des Python-Virtual-Environment-Verzeichnisses."
-install_pip_log_0003="ERROR: Python-Paketmanager (PIP) nicht gefunden. Bitte installieren Sie Python-Paketmanager (PIP) für Python 3."
+install_pip_log_0001="Fehler beim Erstellen der temporären Datei für die Kommandoausgabe."
+install_pip_log_0002="Fehler beim Ermitteln des Python-Virtual-Environment-Verzeichnisses."
+install_pip_log_0003="Python-Paketmanager (PIP) nicht gefunden. Bitte installieren Sie Python-Paketmanager (PIP) für Python 3."
 install_pip_log_0004="PIP install AUSGABE: %s"
-install_pip_log_0005="ERROR: Fehler beim Upgrade von Python-Paketmanager pip. Log-Auszug: %s"
-install_pip_log_0006="SUCCESS: Python-Paketmanager pip erfolgreich aktualisiert."
+install_pip_log_0005="Fehler beim Upgrade von Python-Paketmanager pip. Log-Auszug: %s"
+install_pip_log_0006="Python-Paketmanager pip erfolgreich aktualisiert."
 
 install_pip() {
     # -----------------------------------------------------------------------
@@ -247,12 +247,12 @@ install_python_requirements_debug_0009="SUCCESS: Python-Paketmanager (PIP): '%s'
 install_python_requirements_debug_0010="Installation der Python-Abhängigkeiten fehlgeschlagen. Konnte Abhängigkeiten nicht installieren! Log-Auszug: %s"
 install_python_requirements_debug_0011="SUCCESS: Python-Abhängigkeiten erfolgreich installiert."
 
-install_python_requirements_log_0001="ERROR: Fehler beim Erstellen der temporären Datei für die Kommandoausgabe."
-install_python_requirements_log_0002="ERROR: Python-Anforderungsdatei nicht gefunden."
-install_python_requirements_log_0003="ERROR: Python-Paketmanager (PIP) nicht gefunden. Bitte installieren Sie Python-Paketmanager (PIP) für Python 3."
+install_python_requirements_log_0001="Fehler beim Erstellen der temporären Datei für die Kommandoausgabe."
+install_python_requirements_log_0002="Python-Anforderungsdatei nicht gefunden."
+install_python_requirements_log_0003="Python-Paketmanager (PIP) nicht gefunden. Bitte installieren Sie Python-Paketmanager (PIP) für Python 3."
 install_python_requirements_log_0004="PIP install AUSGABE: %s"
-install_python_requirements_log_0005="ERROR: Konnte Abhängigkeiten nicht installieren! Log-Auszug: %s. Log-Auszug: %s"
-install_python_requirements_log_0006="SUCCESS: Python-Abhängigkeiten erfolgreich installiert."
+install_python_requirements_log_0005="Konnte Abhängigkeiten nicht installieren! Log-Auszug: %s. Log-Auszug: %s"
+install_python_requirements_log_0006="Python-Abhängigkeiten erfolgreich installiert."
 
 install_python_requirements() {
     # -----------------------------------------------------------------------

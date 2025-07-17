@@ -112,7 +112,7 @@ create_symlink_to_standard_path_debug_0007="INFO: Symlink existiert bereits und 
 create_symlink_to_standard_path_debug_0008="ERROR: Eine Datei existiert bereits am Standard-Pfad"
 create_symlink_to_standard_path_debug_0009="INFO: Erstelle Symlink von %s zu %s"
 create_symlink_to_standard_path_debug_0010="ERROR: Fehler beim Erstellen des Symlinks"
-# create_symlink_to_standard_path_log_0001="INFO: Symlink erstellt: %s -> %s"
+create_symlink_to_standard_path_log_0001="INFO: Symlink erstellt: %s -> %s"
 
 _create_symlink_to_standard_path() {
     # -----------------------------------------------------------------------
@@ -187,7 +187,7 @@ _create_symlink_to_standard_path() {
         return 1
     }
 
-    # log "$(printf "$create_symlink_to_standard_path_log_0001" "$standard_path" "$actual_path")" "create_symlink_to_standard_path"
+    log "$(printf "$create_symlink_to_standard_path_log_0001" "$standard_path" "$actual_path")"
     return 0
 }
 
@@ -197,12 +197,12 @@ create_directory_debug_0002="ERROR: Fehler beim Erstellen von '%s'"
 create_directory_debug_0003="WARN: Warnung! <chown> '%s:%s' für '%s' fehlgeschlagen, Eigentümer nicht geändert"
 create_directory_debug_0004="WARN: Warnung! <chmod> '%s' für '%s' fehlgeschlagen, Berechtigungen nicht geändert"
 create_directory_debug_0005="INFO: Verzeichnis '%s' erfolgreich vorbereitet"
-# create_directory_log_0001="ERROR: create_directory: Kein Verzeichnis angegeben"
-# create_directory_log_0002="ERROR: Fehler beim Erstellen des Verzeichnisses %s"
-# create_directory_log_0003="INFO: Verzeichnis %s wurde erstellt"
-# create_directory_log_0004="WARN: Fehler beim Setzen der Berechtigungen für %s"
-# create_directory_log_0005="INFO: Verzeichnis %s erfolgreich vorbereitet"
-# create_directory_log_0006="ERROR: Verzeichnis %s konnte nicht korrekt vorbereitet werden"
+create_directory_log_0001="Kein Verzeichnis angegeben"
+create_directory_log_0002="Fehler beim Erstellen des Verzeichnisses %s"
+create_directory_log_0003="Verzeichnis %s wurde erstellt"
+create_directory_log_0004="Fehler beim Setzen der Berechtigungen für %s"
+create_directory_log_0005="Verzeichnis %s erfolgreich vorbereitet"
+create_directory_log_0006="Verzeichnis %s konnte nicht korrekt vorbereitet werden"
 
 _create_directory() {
     # -----------------------------------------------------------------------
@@ -230,33 +230,33 @@ _create_directory() {
     if [ ! -d "$dir" ]; then
         debug "$(printf "$create_directory_debug_0001" "$dir")"
         mkdir -p "$dir" || {
-            # log "$(printf "$create_directory_log_0002" "$dir")" "create_directory"
+            log "$(printf "$create_directory_log_0002" "$dir")"
             debug "$(printf "$create_directory_debug_0002" "$dir")"
             return 1
         }
-        # log "$(printf "$create_directory_log_0003" "$dir")"
+        log "$(printf "$create_directory_log_0003" "$dir")"
     fi
 
     # Berechtigungen setzen
     chown "$user:$group" "$dir" 2>/dev/null || {
-        # log "$(printf "$create_directory_log_0004" "$dir")" "create_directory"
+        log "$(printf "$create_directory_log_0004" "$dir")"
         debug "$(printf "$create_directory_debug_0003" "$user" "$group" "$dir")"
         # Fehler beim chown ist kein kritischer Fehler
     }
 
     chmod "$mode" "$dir" 2>/dev/null || {
-        # log "$(printf "$create_directory_log_0004" "$dir")" "create_directory"
+        log "$(printf "$create_directory_log_0004" "$dir")"
         debug "$(printf "$create_directory_debug_0004" "$mode" "$dir")"
         # Fehler beim chmod ist kein kritischer Fehler
     }
 
     # Überprüfen, ob das Verzeichnis existiert und lesbar ist
     if [ -d "$dir" ] && [ -r "$dir" ]; then
-        # log "$(printf "$create_directory_log_0005" "$dir")" "create_directory"
+        log "$(printf "$create_directory_log_0005" "$dir")"
         debug "$(printf "$create_directory_debug_0005" "$dir")"
         return 0
     else
-        # log "$(printf "$create_directory_log_0006" "$dir")" "create_directory"
+        log "$(printf "$create_directory_log_0006" "$dir")"
         return 1
     fi
 }
@@ -274,7 +274,7 @@ get_folder_path_debug_0009="WARN: Symlink-Erstellung fehlgeschlagen, möglicherw
 get_folder_path_debug_0010="INFO: Verwende Root-Verzeichnis als letzten Fallback: '%s'"
 get_folder_path_debug_0011="SUCCESS: Root-Verzeichnis ok, verwende Root-Verzeichnis: '%s'"
 get_folder_path_debug_0012="ERROR: Kein gültiger Pfad für die Ordnererstellung verfügbar, alle Versuche fehlgeschlagen"
-# get_folder_path_log_0001="ERROR: Kein gültiger Pfad für die Ordnererstellung verfügbar"
+get_folder_path_log_0001="Kein gültiger Pfad für die Ordnererstellung verfügbar"
 
 _get_folder_path() {
     # -----------------------------------------------------------------------
@@ -344,7 +344,7 @@ _get_folder_path() {
 
     # Wenn alle Versuche fehlschlagen, eine Fehlermeldung im Log ausgeben
     debug "$(printf "$get_folder_path_debug_0012")"
-    # log "$get_folder_path_log_0001" "get_folder_path"
+    log "$get_folder_path_log_0001" "get_folder_path"
     return 1
 }
 

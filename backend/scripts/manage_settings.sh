@@ -267,8 +267,8 @@ _hierarchy_exists() {
 _get_hierarchy_id_debug_0001="INFO: Abrufen der Hierarchie-ID für '%s' aus der Datenbank '%s'."
 _get_hierarchy_id_debug_0002="ERROR: Hierarchie '%s' existiert nicht in der Datenbank."
 _get_hierarchy_id_debug_0003="SUCCESS: Hierarchie-ID für '%s': %s"
-_get_hierarchy_id_log_0001="ERROR: Hierarchie '%s' existiert nicht in der Datenbank."
-_get_hierarchy_id_log_0002="SUCCESS: Hierarchie-ID für '%s': %s"
+_get_hierarchy_id_log_0001="Hierarchie '%s' existiert nicht in der Datenbank."
+_get_hierarchy_id_log_0002="Hierarchie-ID für '%s': %s"
 
 _get_hierarchy_id() {
     # -----------------------------------------------------------------------
@@ -320,10 +320,10 @@ register_config_hierarchy_debug_0002="ERROR: Ungültiger Hierarchiename: '%s'. H
 register_config_hierarchy_debug_0003="WARN: Hierarchie '%s' existiert bereits."
 register_config_hierarchy_debug_0004="ERROR: Fehler beim Einfügen der Hierarchie in die Datenbank: %s"
 register_config_hierarchy_debug_0005="SUCCESS: Konfigurationshierarchie '%s' erfolgreich registriert."
-register_config_hierarchy_log_0001="ERROR: Ungültiger Hierarchiename: '%s'. Hierarchie konnte nicht registriert werden."
-register_config_hierarchy_log_0002="WARN: Hierarchie '%s' existiert bereits."
-register_config_hierarchy_log_0003="ERROR: Fehler beim Einfügen der Hierarchie in die Datenbank: %s"
-register_config_hierarchy_log_0004="SUCCESS: Konfigurationshierarchie '%s' erfolgreich registriert."
+register_config_hierarchy_log_0001="Ungültiger Hierarchiename: '%s'. Hierarchie konnte nicht registriert werden."
+register_config_hierarchy_log_0002="Hierarchie '%s' existiert bereits."
+register_config_hierarchy_log_0003="Fehler beim Einfügen der Hierarchie in die Datenbank: %s"
+register_config_hierarchy_log_0004="Konfigurationshierarchie '%s' erfolgreich registriert."
 
 register_config_hierarchy() {
     # -----------------------------------------------------------------------
@@ -399,10 +399,10 @@ _has_config_value_debug_0002="ERROR: Ungültiger Schlüsselname: '%s'."
 _has_config_value_debug_0003="ERROR: Hierarchie '%s' existiert nicht in der Datenbank '%s'."
 _has_config_value_debug_0004="SUCCESS: Konfigurationswert für '%s' in der Hierarchie '%s' existiert."
 _has_config_value_debug_0005="ERROR: Konfigurationswert für '%s' in der Hierarchie '%s' existiert nicht."
-_has_config_value_log_0001="ERROR: Ungültiger Schlüsselname: '%s'."
-_has_config_value_log_0002="ERROR: Hierarchie '%s' existiert nicht in der Datenbank '%s'."
-_has_config_value_log_0003="SUCCESS: Konfigurationswert für '%s' in der Hierarchie '%s'' existiert."
-_has_config_value_log_0004="ERROR: Konfigurationswert für '%s' in der Hierarchie '%s' existiert nicht."
+_has_config_value_log_0001="Ungültiger Schlüsselname: '%s'."
+_has_config_value_log_0002="Hierarchie '%s' existiert nicht in der Datenbank '%s'."
+_has_config_value_log_0003="Konfigurationswert für '%s' in der Hierarchie '%s' existiert."
+_has_config_value_log_0004="Konfigurationswert für '%s' in der Hierarchie '%s' existiert nicht."
 
 has_config_value() {
     # -----------------------------------------------------------------------
@@ -465,9 +465,9 @@ get_config_value_debug_0001="INFO: Abrufen des Konfigurationswerts für '%s' aus
 get_config_value_debug_0002="ERROR: Ungültiger Schlüsselname: '%s'."
 get_config_value_debug_0003="ERROR: Hierarchie '%s' existiert nicht in der Datenbank '%s'."
 get_config_value_debug_0004="SUCCESS: Konfigurationswert für '%s' in der Hierarchie '%s' abgerufen: '%s'."
-get_config_value_log_0001="ERROR: Ungültiger Schlüsselname: '%s'."
-get_config_value_log_0002="ERROR: Hierarchie '%s' existiert nicht in der Datenbank '%s'."
-get_config_value_log_0003="SUCCESS: Konfigurationswert für '%s' in der Hierarchie '%s' abgerufen: '%s'."
+get_config_value_log_0001="Ungültiger Schlüsselname: '%s'."
+get_config_value_log_0002="Hierarchie '%s' existiert nicht in der Datenbank '%s'."
+get_config_value_log_0003="Konfigurationswert für '%s' in der Hierarchie '%s' abgerufen: '%s'."
 
 get_config_value() {
     # -----------------------------------------------------------------------
@@ -535,11 +535,11 @@ set_config_value_debug_0003="ERROR: Ungültiger Schlüssel: %s - keine Hierarchi
 set_config_value_debug_0004="ERROR: Fehler beim Erstellen der Hierarchie '%s'"
 set_config_value_debug_0005="SUCCESS: Konfigurationswert für '%s' in der Hierarchie '%s' gesetzt: '%s'."
 set_config_value_debug_0006="ERROR: Konfigurationswert für '%s' in der Hierarchie '%s' konnte nicht gesetzt werden: %s"
-set_config_value_log_0001="ERROR: Ungültiger Schlüsselname: '%s'."
-set_config_value_log_0002="ERROR: Ungültiger Schlüssel: %s - keine Hierarchie angegeben."
-set_config_value_log_0003="ERROR: Fehler beim Erstellen der Hierarchie '%s'."
-set_config_value_log_0004="SUCCESS: Konfigurationswert für '%s' in der Hierarchie '%s' gesetzt: '%s'."
-set_config_value_log_0005="ERROR: Konfigurationswert für '%s' in der Hierarchie '%s' konnte nicht gesetzt werden: %s."
+set_config_value_log_0001="Ungültiger Schlüsselname: '%s'."
+set_config_value_log_0002="Ungültiger Schlüssel: %s - keine Hierarchie angegeben."
+set_config_value_log_0003="Fehler beim Erstellen der Hierarchie '%s'."
+set_config_value_log_0004="Konfigurationswert für '%s' in der Hierarchie '%s' gesetzt: '%s'."
+set_config_value_log_0005="Konfigurationswert für '%s' in der Hierarchie '%s' konnte nicht gesetzt werden: %s."
 
 set_config_value() {
     # -----------------------------------------------------------------------
@@ -563,17 +563,9 @@ set_config_value() {
     local change_group="${6:-}"
     local db_file="${7:-$(get_data_file)}"
 
-# Debug-Modus für dieses Skript aktivieren
-DEBUG_MOD_GLOBAL=1
-
     # Überprüfen, ob alle erforderlichen Parameter angegeben sind
     if ! check_param "$full_key" "full_key"; then return 1; fi
     if ! check_param "$value" "value"; then return 1; fi
-    #if ! check_param "$value_type" "value_type"; then return 1; fi
-    #if ! check_param "$description" "description"; then return 1; fi
-    #if ! check_param "$weight" "weight"; then return 1; fi
-    #if ! check_param "$change_group" "change_group"; then return 1; fi
-    #if ! check_param "$db_file" "db_file"; then return 1; fi
 
     # Debug-Ausgabe eröffnen
     debug "$(printf "$set_config_value_debug_0001" "$full_key")"
@@ -728,10 +720,6 @@ DEBUG_MOD_GLOBAL=1
     # Erfolgsmeldung ausgeben
     debug "$(printf "$set_config_value_debug_0005" "$key_name" "$hierarchy_name" "$value")"
     log "$(printf "$set_config_value_log_0004" "$key_name" "$hierarchy_name" "$value")"
-
-# Debug-Modus für dieses Skript deaktivieren
-DEBUG_MOD_GLOBAL=0
-
     return 0
 }
 
@@ -741,10 +729,10 @@ del_config_value_debug_0002="ERROR: Ungültiger Schlüsselname: '%s'."
 del_config_value_debug_0003="ERROR: Hierarchie '%s' existiert nicht in der Datenbank '%s'."
 del_config_value_debug_0004="ERROR: Schlüssel '%s' existiert nicht in der Hierarchie '%s'."
 del_config_value_debug_0005="SUCCESS: Konfigurationswert '%s' gelöscht (physisch: %s)."
-del_config_value_log_0001="ERROR: Ungültiger Schlüsselname: '%s'."
-del_config_value_log_0002="ERROR: Hierarchie '%s' existiert nicht in der Datenbank '%s'."
-del_config_value_log_0003="ERROR: Schlüssel '%s' existiert nicht in der Hierarchie '%s'."
-del_config_value_log_0004="SUCCESS: Konfigurationswert '%s' gelöscht (physisch: %s)."
+del_config_value_log_0001="Ungültiger Schlüsselname: '%s'."
+del_config_value_log_0002="Hierarchie '%s' existiert nicht in der Datenbank '%s'."
+del_config_value_log_0003="Schlüssel '%s' existiert nicht in der Hierarchie '%s'."
+del_config_value_log_0004="Konfigurationswert '%s' gelöscht (physisch: %s)."
 
 del_config_value() {
     # -----------------------------------------------------------------------
@@ -911,8 +899,8 @@ lst_config_values() {
 apply_config_changes_debug_0001="INFO: Wende Änderungen der Änderungsgruppe '%s' an der Datenbank '%s' an."
 apply_config_changes_debug_0002="ERROR: Änderungsgruppe '%s' existiert nicht."
 apply_config_changes_debug_0003="SUCCESS: Änderungen der Änderungsgruppe '%s' erfolgreich angewendet."
-apply_config_changes_log_0001="ERROR: Änderungsgruppe '%s' existiert nicht."
-apply_config_changes_log_0002="SUCCESS: Änderungen der Änderungsgruppe '%s' erfolgreich angewendet."
+apply_config_changes_log_0001="Änderungsgruppe '%s' existiert nicht."
+apply_config_changes_log_0002="Änderungen der Änderungsgruppe '%s' erfolgreich angewendet."
 
 apply_config_changes() {
     # -----------------------------------------------------------------------
@@ -966,9 +954,9 @@ rollback_config_changes_debug_0001="INFO: Setzt alle Änderungen der Änderungsg
 rollback_config_changes_debug_0002="ERROR: Änderungsgruppe '%s' existiert nicht."
 rollback_config_changes_debug_0003="ERROR: Fehler beim Zurücksetzen der Änderungen der Änderungsgruppe '%s'"
 rollback_config_changes_debug_0004="SUCCESS: Änderungen der Änderungsgruppe '%s' erfolgreich zurückgesetzt."
-rollback_config_changes_log_0001="ERROR: Änderungsgruppe '%s' existiert nicht."
-rollback_config_changes_log_0002="ERROR: Fehler beim Zurücksetzen der Änderungen der Änderungsgruppe '%s'"
-rollback_config_changes_log_0003="SUCCESS: Änderungen der Änderungsgruppe '%s' erfolgreich zurückgesetzt."
+rollback_config_changes_log_0001="Änderungsgruppe '%s' existiert nicht."
+rollback_config_changes_log_0002="Fehler beim Zurücksetzen der Änderungen der Änderungsgruppe '%s'"
+rollback_config_changes_log_0003="Änderungen der Änderungsgruppe '%s' erfolgreich zurückgesetzt."
 
 rollback_config_changes() {
     # -----------------------------------------------------------------------

@@ -708,7 +708,10 @@ get_backup_file() {
 }
 
 # get_backup_meta_file
-get_backup_meta_file_debug_0001="Ermittle Backup-Metadaten-Datei für Komponente: %s"
+get_backup_meta_file_debug_0001="INFO: Ermittle Backup-Metadaten-Datei für Backup-Datei: %s"
+get_backup_meta_file_debug_0002="ERROR: Backup-Verzeichnis konnte nicht ermittelt werden."
+get_backup_meta_file_debug_0003="SUCCESS: Backup-Metadaten-Datei für Komponente '%s': %s"
+get_backup_meta_file_log_0001="Backup-Metadaten-Datei für Komponente '%s': %s"
 
 get_backup_meta_file() {
     # -----------------------------------------------------------------------
@@ -727,8 +730,19 @@ get_backup_meta_file() {
     if ! check_param "$src_file" "src_file"; then return 1; fi
 
     # Backup-Verzeichnis abrufen und Dateinamen generieren
-    backup_dir="$("$MANAGE_FOLDERS_SH" get_backup_dir)"
-    echo "${src_file}.meta.json"
+    backup_dir="$(get_backup_dir)"
+    if [ -z "$backup_dir" ]; then
+        debug "$get_backup_meta_file_debug_0002"
+        return 1
+    fi
+
+    # Dateinamen generieren, indem die Backup-Datei mit der Endung für Metadaten ergänzt wird
+    local backup_meta_file="${src_file}$CONFIG_FILE_EXT_BACKUP_META"
+    debug "$(printf "$get_backup_meta_file_debug_0003" "$src_file" "$backup_meta_file")"
+    log "$(printf "$get_backup_meta_file_log_0001" "$src_file" "$backup_meta_file")"
+    # Rückgabe des vollständigen Pfads zur Backup-Metadaten-Datei
+    echo "$backup_meta_file"
+    return 0
 }
 
 # get_image_file
@@ -947,15 +961,24 @@ get_pip_cmd() {
 # get_system_file
 get_system_file_debug_0001="Ermittle Systemdatei für Typ: %s, Name: %s"
 get_system_file_debug_0002="Systemverzeichnis für %s: %s"
-get_system_file_log_0001="ERROR: Konnte Nginx-Systemverzeichnis nicht ermitteln"
-get_system_file_log_0002="ERROR: Leeres Ergebnis beim Ermitteln des Nginx-Systemverzeichnisses"
-get_system_file_log_0003="ERROR: Konnte systemd-Systemverzeichnis nicht ermitteln"
-get_system_file_log_0004="ERROR: Leeres Ergebnis beim Ermitteln des systemd-Systemverzeichnisses"
-get_system_file_log_0005="ERROR: Konnte SSL-Zertifikat-Systemverzeichnis nicht ermitteln"
-get_system_file_log_0006="ERROR: Leeres Ergebnis beim Ermitteln des SSL-Zertifikat-Systemverzeichnisses"
-get_system_file_log_0007="ERROR: Konnte SSL-Schlüssel-Systemverzeichnis nicht ermitteln"
-get_system_file_log_0008="ERROR: Leeres Ergebnis beim Ermitteln des SSL-Schlüssel-Systemverzeichnisses"
-get_system_file_log_0009="ERROR: Unbekannter Dateityp: %s"
+get_system_file_debug_0003="ERROR: Konnte Nginx-Systemverzeichnis nicht ermitteln"
+get_system_file_debug_0004="ERROR: Leeres Ergebnis beim Ermitteln des Nginx-Systemverzeichnisses"
+get_system_file_debug_0005="ERROR: Konnte systemd-Systemverzeichnis nicht ermitteln"
+get_system_file_debug_0006="ERROR: Leeres Ergebnis beim Ermitteln des systemd-Systemverzeichnisses"
+get_system_file_debug_0007="ERROR: Konnte SSL-Zertifikat-Systemverzeichnis nicht ermitteln"
+get_system_file_debug_0008="ERROR: Leeres Ergebnis beim Ermitteln des SSL-Zertifikat-Systemverzeichnisses"
+get_system_file_debug_0009="ERROR: Konnte SSL-Schlüssel-Systemverzeichnis nicht ermitteln"
+get_system_file_debug_0010="ERROR: Leeres Ergebnis beim Ermitteln des SSL-Schlüssel-Systemverzeichnisses"
+get_system_file_debug_0011="ERROR: Unbekannter Dateityp: %s"
+get_system_file_log_0001="Konnte Nginx-Systemverzeichnis nicht ermitteln"
+get_system_file_log_0002="Leeres Ergebnis beim Ermitteln des Nginx-Systemverzeichnisses"
+get_system_file_log_0003="Konnte systemd-Systemverzeichnis nicht ermitteln"
+get_system_file_log_0004="Leeres Ergebnis beim Ermitteln des systemd-Systemverzeichnisses"
+get_system_file_log_0005="Konnte SSL-Zertifikat-Systemverzeichnis nicht ermitteln"
+get_system_file_log_0006="Leeres Ergebnis beim Ermitteln des SSL-Zertifikat-Systemverzeichnisses"
+get_system_file_log_0007="Konnte SSL-Schlüssel-Systemverzeichnis nicht ermitteln"
+get_system_file_log_0008="Leeres Ergebnis beim Ermitteln des SSL-Schlüssel-Systemverzeichnisses"
+get_system_file_log_0009="Unbekannter Dateityp: %s"
 
 get_system_file() {
     # -----------------------------------------------------------------------
@@ -988,15 +1011,15 @@ get_system_file() {
             # Pfad für Nginx-Konfigurationsdateien
             system_folder=$(get_nginx_systemdir)
             if [ $? -ne 0 ]; then
+                debug "$get_system_file_debug_0003"
                 log "$get_system_file_log_0001"
-                debug "$get_system_file_log_0001"
                 return 1
             fi
 
             # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
             if [ -z "$system_folder" ]; then
+                debug "$get_system_file_debug_0004"
                 log "$get_system_file_log_0002"
-                debug "$get_system_file_log_0002"
                 return 1
             fi
             file_ext="$CONFIG_FILE_EXT_NGINX"
@@ -1005,15 +1028,15 @@ get_system_file() {
             # Pfad für Systemd-Dienste
             system_folder=$(get_systemd_systemdir "$system_dir")
             if [ $? -ne 0 ]; then
+                debug "$get_system_file_debug_0005"
                 log "$get_system_file_log_0003"
-                debug "$get_system_file_log_0003"
                 return 1
             fi
 
             # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
             if [ -z "$system_folder" ]; then
+                debug "$get_system_file_debug_0006"
                 log "$get_system_file_log_0004"
-                debug "$get_system_file_log_0004"
                 return 1
             fi
             file_ext="$CONFIG_FILE_EXT_SYSTEMD"
@@ -1022,15 +1045,15 @@ get_system_file() {
             # Pfad für SSL-Zertifikate
             system_folder=$(get_ssl_cert_systemdir)
             if [ $? -ne 0 ]; then
+                debug "$get_system_file_debug_0007"
                 log "$get_system_file_log_0005"
-                debug "$get_system_file_log_0005"
                 return 1
             fi
 
             # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
             if [ -z "$system_folder" ]; then
+                debug "$get_system_file_debug_0008"
                 log "$get_system_file_log_0006"
-                debug "$get_system_file_log_0006"
                 return 1
             fi
             file_ext="$CONFIG_FILE_EXT_SSL_CERT"
@@ -1039,22 +1062,22 @@ get_system_file() {
             # Pfad für SSL-Schlüsseldateien
             system_folder=$(get_ssl_key_systemdir)
             if [ $? -ne 0 ]; then
+                debug "$get_system_file_debug_0009"
                 log "$get_system_file_log_0007"
-                debug "$get_system_file_log_0007"
                 return 1
             fi
 
             # Prüfe, ob ein nicht-leeres Ergebnis zurückgegeben wurde
             if [ -z "$system_folder" ]; then
+                debug "$get_system_file_debug_0010"
                 log "$get_system_file_log_0008"
-                debug "$get_system_file_log_0008"
                 return 1
             fi
             file_ext="$CONFIG_FILE_EXT_SSL_KEY"
             ;;
         *)
+            debug "$(printf "$get_system_file_debug_0011" "$file_type")"
             log "$(printf "$get_system_file_log_0009" "$file_type")"
-            debug "$(printf "$get_system_file_log_0009" "$file_type")"
             return 1
             ;;
     esac
@@ -1075,8 +1098,8 @@ get_system_file() {
 file_exists_debug_0001="Überprüfe, ob Datei existiert: %s"
 file_exists_debug_0002="INFO: Datei existiert bereits: %s"
 file_exists_debug_0003="INFO: Datei existiert nicht: %s"
-file_exists_log_0001="INFO: Datei existiert bereits: %s"
-file_exists_log_0002="INFO: Datei existiert nicht: %s"
+file_exists_log_0001="Datei existiert bereits: %s"
+file_exists_log_0002="Datei existiert nicht: %s"
 
 file_exists() {
     # -----------------------------------------------------------------------
@@ -1107,9 +1130,9 @@ file_exists() {
 
 # create_empty_file
 create_empty_file_debug_0001="Erstelle leere Datei: %s"
-create_empty_file_log_0001="INFO: Datei existiert bereits: %s"
-create_empty_file_log_0002="INFO: Datei wurde erstellt: %s"
-create_empty_file_log_0003="ERROR: Konnte Datei nicht erstellen: %s"
+create_empty_file_log_0001="Datei existiert bereits: %s"
+create_empty_file_log_0002="Datei wurde erstellt: %s"
+create_empty_file_log_0003="Konnte Datei nicht erstellen: %s"
 
 create_empty_file() {
     # -----------------------------------------------------------------------
