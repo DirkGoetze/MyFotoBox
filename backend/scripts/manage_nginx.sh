@@ -526,11 +526,11 @@ DEBUG_MOD_GLOBAL=1
         debug "$(printf "Backup-Datei.......: '%s'" "$backup_file")"
         debug "$(printf "Metadaten-Datei....: '%s'" "$backup_meta_file")"
         debug "$(printf "Ersetze Platzhalter:\
-                         \n\t\ttimestamp\t: '%s' \
-                         \n\t\tsource\t: '%s' \
-                         \n\t\tbackup\t: '%s' \
-                         \n\t\tconfig_type\t: '%s' \
-                         \n\t\taction\t: '%s'\n" \
+                         \n\t\ttimestamp  : '%s' \
+                         \n\t\tsource     : '%s' \
+                         \n\t\tbackup     : '%s' \
+                         \n\t\tconfig_type: '%s' \
+                         \n\t\taction     : '%s'" \
                          "$timestamp" "$src" "$backup_file" "$config_type" "$action")"
 
         apply_template "$template_file" "$backup_meta_file" \
