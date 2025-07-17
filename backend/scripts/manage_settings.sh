@@ -563,6 +563,9 @@ set_config_value() {
     local change_group="${6:-}"
     local db_file="${7:-$(get_data_file)}"
 
+# Debug-Modus für dieses Skript aktivieren
+DEBUG_MOD_GLOBAL=1
+
     # Überprüfen, ob alle erforderlichen Parameter angegeben sind
     if ! check_param "$full_key" "full_key"; then return 1; fi
     if ! check_param "$value" "value"; then return 1; fi
@@ -725,6 +728,9 @@ set_config_value() {
     # Erfolgsmeldung ausgeben
     debug "$(printf "$set_config_value_debug_0005" "$key_name" "$hierarchy_name" "$value")"
     log "$(printf "$set_config_value_log_0004" "$key_name" "$hierarchy_name" "$value")"
+
+# Debug-Modus für dieses Skript deaktivieren
+DEBUG_MOD_GLOBAL=0
 
     return 0
 }
