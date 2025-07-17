@@ -489,9 +489,6 @@ backup_config_nginx() {
     local config_type="$2"
     local action="$3"
 
-# Debug-Modus für dieses Skript aktivieren
-DEBUG_MOD_GLOBAL=1  
-
     # Debug-Meldung eröffnen
     debug "$backup_config_nginx_debug_0001"
 
@@ -547,15 +544,11 @@ DEBUG_MOD_GLOBAL=1
         fi
 
         debug "$(printf "$backup_config_nginx_debug_0004" "$backup_file")"
-# Debug-Modus für dieses Skript deaktivieren
-DEBUG_MOD_GLOBAL=0
         return 0
     else
         # Fehler beim Kopieren der Konfigurationsdatei
         debug "$(printf "$backup_config_nginx_debug_0005" "$src")"
         log "$(printf "$backup_config_nginx_log_0003" "$src")"
-# Debug-Modus für dieses Skript deaktivieren
-DEBUG_MOD_GLOBAL=0
         return 1
     fi
 }
