@@ -521,8 +521,16 @@ DEBUG_MOD_GLOBAL=1
         local timestamp="$(date +%Y-%m-%dT%H:%M:%S%z)"  # Aktueller Zeitstempel
 
         # Wende Template an
-        debug "$(printf "Sichere Metadaten-Datei: '%s' zu Backupdatei '%s'" "$backup_meta_file" "$backup_file")"
-        debug "$(printf "Inhalt: \n\ttimestamp: '%s'\n\t\source: '%s'\n\tbackup: '%s'\n\tconfig_type: '%s'\n\taction: '%s'\n" "$timestamp" "$src" "$backup_file" "$config_type" "$action")"
+        debug "$(printf "Zu sichernde Datei: '%s'" "$src")"
+        debug "$(printf "Backup-Datei: '%s'" "$backup_file")"
+        debug "$(printf "Metadaten-Datei: '%s'" "$backup_meta_file")"
+        debug "$(printf "Ersetze Platzhalter:\
+                         \n\t\ttimestamp: '%s' \
+                         \n\t\tsource: '%s' \
+                         \n\t\tbackup: '%s' \
+                         \n\t\tconfig_type: '%s' \
+                         \n\t\taction: '%s'\n" \
+                         "$timestamp" "$src" "$backup_file" "$config_type" "$action")"
 
         apply_template "$template_file" "$backup_meta_file" \
             "timestamp=$timestamp" \
@@ -607,11 +615,11 @@ set_default_config_nginx() {
     local api_url="http://127.0.0.1:5000"      # API-URL
 
     register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx"
-    set_config_value "nginx.port" "$port" "Port für NGINX-Server"
-    set_config_value "nginx.server_name" "$server_name" "Server-Name für NGINX-Server"
-    set_config_value "nginx.document_root" "$frontend_dir" "Web-Root Verzeichnis der Fotobox"
-    set_config_value "nginx.index_files" "$index_files" "Index-Dateien für NGINX-Server"
-    set_config_value "nginx.api_url" "$api_url" "API-URL für NGINX-Server"
+    set_config_value "nginx.port"          "$port"         "int"    "Port für NGINX-Server" 
+    set_config_value "nginx.server_name"   "$server_name"  "string" "Server-Name für NGINX-Server" 
+    set_config_value "nginx.document_root" "$frontend_dir" "string" "Web-Root Verzeichnis der Fotobox" 
+    set_config_value "nginx.index_files"   "$index_files"  "string" "Index-Dateien für NGINX-Server" 
+    set_config_value "nginx.api_url"       "$api_url"      "string" "API-URL für NGINX-Server" 
 
     # Template-Datei suchen, wenn gefunden wurde, Platzhalter ersetzen
     local template_file  # Pfad zur Template-Datei

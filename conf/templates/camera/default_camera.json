@@ -1,0 +1,33 @@
+{
+    "name": "Beispiel Template",
+    "description": "Standardeinstellungen für eine Camera",
+    "type": "webcam",
+    "interface": "opencv",
+    "detection": {
+        "method": "auto",
+        "index": 0
+    },
+    "settings": {
+        "resolution": {
+            "width": 1280,
+            "height": 720
+        },
+        "fps": 30,
+        "focus": "auto",
+        "exposure": "auto",
+        "white_balance": "auto",
+        "compression": 95
+    },
+    "preview": {
+        "resolution": {
+            "width": 640,
+            "height": 480
+        },
+        "fps": 20,
+        "compression": 70
+    },
+    "defaults": {
+        "create_thumbnail": true,
+        "save_directory": "photos"
+    }
+}
