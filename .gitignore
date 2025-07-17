@@ -13,6 +13,9 @@ frontend/tests/
 reviews/
 tests/
 
+# Ausnahmen für bestimmte Ordner/Dateien
+!conf/templates/backup/
+
 # Die folgenden Ordner werden im Zuge des Installationsprozesses erzeugt
 # und müssen nicht im Repository enthalten sein (vormals durch .folder.info gesichert)
 frontend/css/
