@@ -408,11 +408,11 @@ nginx_stop() {
 
 # reload_nginx
 reload_nginx_debug_0001="INFO: NGINX-Konfiguration wird getestet und ein Reload versucht ..."
-reload_nginx_debug_0002="SUCCESS: NGINX-Konfiguration erfolgreich neu geladen."
+reload_nginx_debug_0002="ERROR: Fehler in der NGINX-Konfiguration! Bitte prüfen."
 reload_nginx_debug_0003="ERROR: NGINX konnte nicht neu geladen werden! Statusauszug: \n%s"
-reload_nginx_debug_0004="ERROR: Fehler in der NGINX-Konfiguration! Bitte prüfen."
-reload_nginx_log_0001="NGINX konnte nicht neu geladen werden! Statusauszug: \n%s"
-reload_nginx_log_0002="Fehler in der NGINX-Konfiguration! Bitte prüfen."
+reload_nginx_debug_0004="SUCCESS: NGINX-Konfiguration erfolgreich neu geladen."
+reload_nginx_log_0001="Fehler in der NGINX-Konfiguration! Bitte prüfen."
+reload_nginx_log_0002="NGINX konnte nicht neu geladen werden! Statusauszug: \n%s"
 
 
 reload_nginx() {
@@ -432,26 +432,27 @@ reload_nginx() {
     debug "$reload_nginx_debug_0001"
 
     # Prüfen, ob die NGINX-Konfiguration fehlerfrei ist
-    if chk_config_nginx; then
-        # Konfiguration ist fehlerfrei
-        if systemctl reload nginx; then
-            # Reload erfolgreich
-            debug "$reload_nginx_debug_0002"
-            return 0
-        else
-            # Reload fehlgeschlagen, Fehlerdetails ausgeben
-            local status_out
-            status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
-            debug "$(printf "$reload_nginx_debug_0003" "$status_out")"
-            log "$(printf "$reload_nginx_log_0001" "$status_out")"
-            return 1
-        fi
-    else
-        # Konfiguration fehlerhaft
-        debug "$reload_nginx_debug_0004"
-        log "$reload_nginx_log_0002"
+    chk_config_nginx
+    if [ $? -ne 0 ]; then
+        # Konfiguration fehlerhaft, Fehlerdetails ausgeben
+        debug "$reload_nginx_debug_0002"
+        log "$reload_nginx_log_0001"
         return 2
     fi
+
+    # Konfiguration ist fehlerfrei
+    if ! systemctl reload nginx; then
+        # Reload fehlgeschlagen, Fehlerdetails ausgeben
+        local status_out
+        status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
+        debug "$(printf "$reload_nginx_debug_0003" "$status_out")"
+        log "$(printf "$reload_nginx_log_0002" "$status_out")"
+        return 1
+    fi
+
+    # Reload erfolgreich
+    debug "$reload_nginx_debug_0004"
+    return 0
 }
 
 
