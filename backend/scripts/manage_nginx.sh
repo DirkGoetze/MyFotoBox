@@ -612,7 +612,7 @@ set_default_config_nginx() {
     local port=80                              # Standardport für NGINX
     local server_name="_"                      # Standard Server-Name
     local frontend_dir="$(get_frontend_dir)"   # WEB-Root Verzeichnis
-    local index_files="start.html index.html"  # Standard Index-Dateien
+    local index_files="index.html"             # Standard Index-Dateien
     local api_url="http://127.0.0.1:5000"      # API-URL
 
     register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx"
