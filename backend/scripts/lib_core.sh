@@ -645,8 +645,6 @@ load_resources() {
     # -----------------------------------------------------------------------
     local result=0
     
-DEBUG_MOD_GLOBAL=1
-
     debug_output "$(printf "$load_resources_debug_0001")"
     
     # 1. manage_folders.sh einbinden
