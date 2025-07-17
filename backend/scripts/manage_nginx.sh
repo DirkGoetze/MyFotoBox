@@ -585,14 +585,22 @@ set_default_config_nginx() {
     fi
 
     # Template-Ersetzung vorbereiten
-    local frontend_dir   # WEB-Root Verzeichnis der Fotobox
-    local port=80        # Standardport für NGINX
-    local template_file  # Pfad zur Template-Datei
+    local port=80                              # Standardport für NGINX
+    local server_name="_"                      # Standard Server-Name
+    local frontend_dir="$(get_frontend_dir)"   # WEB-Root Verzeichnis
+    local index_files="start.html index.html"  # Standard Index-Dateien
+    local api_url="http://127.0.0.1:5000"      # API-URL
 
-    frontend_dir="$(get_frontend_dir)"
-    template_file="$(get_template_file "nginx" "template_local")"
+    register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx"
+    set_config_value "nginx.port" "$port" "Port für NGINX-Server"
+    set_config_value "nginx.server_name" "$server_name" "Server-Name für NGINX-Server"
+    set_config_value "nginx.document_root" "$frontend_dir" "Web-Root Verzeichnis der Fotobox"
+    set_config_value "nginx.index_files" "$index_files" "Index-Dateien für NGINX-Server"
+    set_config_value "nginx.api_url" "$api_url" "API-URL für NGINX-Server"
 
     # Template-Datei wurde gefunden, Platzhalter ersetzen
+    local template_file  # Pfad zur Template-Datei
+    template_file="$(get_template_file "nginx" "template_local")"
     apply_template "$template_file" "$default_conf" \
                 "PORT=$port" \
                 "SERVER_NAME=_" \
