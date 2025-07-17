@@ -305,8 +305,6 @@ check_system_requirements() {
     # ......... sicher
     # Rückgabe: 0 = OK, 1 = fehlerhafte Umgebung, Skript abgebrechen
 
-DEBUG_MOD_GLOBAL=1
-
     # --- 1. Prüfen, ob das Skript im vorgegebenen INSTALL_DIR ausgeführt wird
     local RUN_DIR=$(dirname "$(readlink -f "$0")")
     if [ "$RUN_DIR" != "$INSTALL_DIR" ]; then
@@ -1085,7 +1083,9 @@ main() {
             # Wir brechen nicht ab, sondern versuchen den nächsten Schritt
         fi
     }
-        
+
+DEBUG_MOD_GLOBAL=1
+
     # Ausführung der einzelnen Dialogschritte, robuste Fehlerbehandlung
     run_step dlg_check_system_requirements "$@"  # Prüfe Systemvoraussetzungen 
     run_step dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
