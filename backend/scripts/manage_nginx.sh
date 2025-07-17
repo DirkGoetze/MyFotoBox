@@ -629,7 +629,7 @@ set_default_config_nginx() {
                 "PORT=$port" \
                 "SERVER_NAME=$server_name" \
                 "DOCUMENT_ROOT=$frontend_dir" \
-                "INDEX_FILES=$index_files" \
+                "INDEX_FILE=$index_files" \
                 "API_URL=$api_url"
 
     if [ $? -ne 0 ]; then

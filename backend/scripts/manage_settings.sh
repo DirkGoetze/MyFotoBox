@@ -569,11 +569,11 @@ DEBUG_MOD_GLOBAL=1
     # Überprüfen, ob alle erforderlichen Parameter angegeben sind
     if ! check_param "$full_key" "full_key"; then return 1; fi
     if ! check_param "$value" "value"; then return 1; fi
-    if ! check_param "$value_type" "value_type"; then return 1; fi
-    if ! check_param "$description" "description"; then return 1; fi
-    if ! check_param "$weight" "weight"; then return 1; fi
-    if ! check_param "$change_group" "change_group"; then return 1; fi
-    if ! check_param "$db_file" "db_file"; then return 1; fi
+    #if ! check_param "$value_type" "value_type"; then return 1; fi
+    #if ! check_param "$description" "description"; then return 1; fi
+    #if ! check_param "$weight" "weight"; then return 1; fi
+    #if ! check_param "$change_group" "change_group"; then return 1; fi
+    #if ! check_param "$db_file" "db_file"; then return 1; fi
 
     # Debug-Ausgabe eröffnen
     debug "$(printf "$set_config_value_debug_0001" "$full_key")"
