@@ -46,6 +46,12 @@ DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
 # Debug-Modus für dieses Skript (lokales Flag)
 
+# Port-Einstellungen für WEB-Server
+# ---------------------------------------------------------------------------
+DEFAULT_HTTP_PORT=80                     # Standard-Ports für HTTP
+DEFAULT_HTTPS_PORT=443                   # Standard-Ports für HTTPS
+DEFAULT_HTTP_PORT_FALLBACK=8080          # falls 80/443 nicht verfügbar sind
+
 # ===========================================================================
 
 # ===========================================================================
@@ -456,7 +462,92 @@ reload_nginx() {
 }
 
 # ===========================================================================
-# Externe Funktionen zur Bearbeitung der NGINX-Server Koniguration
+# Funktionen zur Konfiguration der NGINX-Server in der Datenbank
+# ===========================================================================
+
+# get_port_nginx
+get_port_nginx_debug_0001="INFO: Port für NGINX aus DB abgefragen..."
+get_port_nginx_debug_0002="ERROR: Port für NGINX nicht gesetzt, Standardwert 80 wird verwendet."
+get_port_nginx_degug_0003="SUCCESS: Port für NGINX: %s."
+get_port_nginx_log_0001="Port für NGINX nicht gesetzt, Standardwert wird verwendet."
+get_port_nginx_log_0002="Port für NGINX: %s."
+
+get_port_nginx() {
+    # -----------------------------------------------------------------------
+    # get_port_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Gibt den aktuell konfigurierten Port für NGINX aus der 
+    # .........  Datenbank zurück. Falls kein Port gesetzt ist, wird der
+    # .........  Standardport 80 zurückgegeben.
+    # Parameter: keine
+    # Rückgabe.: Portnummer (Standard: 80)
+    # Seiteneffekte: keine
+    # -----------------------------------------------------------------------
+
+    # Debug-Meldung eröffnen
+    debug "$get_port_nginx_debug_0001"
+
+    # Port aus der Konfiguration abrufen
+    local port=$(get_config_value "nginx.port")
+    if [ $? -ne 0 ] || [ -z "$port" ]; then
+        # Port nicht gesetzt, Standardwert verwenden
+        debug "$get_port_nginx_debug_0002"
+        log "$get_port_nginx_log_0001"
+        port=$DEFAULT_HTTP_PORT
+    fi
+
+    # Port zurückgeben
+    debug "$(printf "$get_port_nginx_debug_0003" "$port")"
+    log "$(printf "$get_port_nginx_log_0002" "$port")"
+    echo "$port"  # Standardwert 80, falls nicht gesetzt
+    return 0
+}
+
+# set_port_nginx
+set_port_nginx_debug_0001="INFO: Setze NGINX-Port auf: '%s'"
+set_port_nginx_debug_0002="ERROR: Fehler beim Schreiben des Port: '%s'"
+set_port_nginx_debug_0003="SUCCESS: NGINX-Port erfolgreich geschrieben: '%s'"
+set_port_nginx_log_0001="Fehler beim Schreiben des Port: '%s'"
+
+set_port_nginx() {
+    # -----------------------------------------------------------------------
+    # set_port_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Setzt den Port für NGINX in der Datenbank
+    # Parameter: $1 = Portnummer (z.B. 80, 443)
+    # Rückgabe.:  0 = OK, 
+    # .........   1 = Fehler (ungültiger Port)
+    # Seiteneffekte: Aktualisiert die NGINX-Konfiguration in der Datenbank
+    # -----------------------------------------------------------------------
+    local port="$1"
+
+    # Debug-Meldung eröffnen
+    debug "$(printf "$set_port_nginx_debug_0001" "$port")"
+
+    # Parameterprüfung
+    if ! check_param "$port" "port"; then return 1; fi
+
+    # Port in der Konfiguration setzen
+    set_config_value "nginx.port" "$port" "int" "Port für NGINX-Server"    
+    if [ $? -ne 0 ]; then
+        # Fehler beim Setzen des Ports
+        debug "$(printf "$set_port_nginx_debug_0002" "$port")"
+        log "$(printf "$set_port_nginx_log_0001" "$port")"
+        return 1
+    fi
+
+    debug "$(printf "$set_port_nginx_debug_0003" "$port")"
+    return 0
+}
+
+# get_server_name_nginx
+# set_server_name_nginx
+
+# get_frontend_dir_nginx
+# set_frontend_dir_nginx
+
+# ===========================================================================
+# Externe Funktionen zur Bearbeitung der NGINX-Server Konigurationsdateien
 # ===========================================================================
 
 # backup_config_nginx
@@ -566,9 +657,9 @@ set_default_config_nginx() {
     # -----------------------------------------------------------------------
     # set_default_config_nginx
     # -----------------------------------------------------------------------
-    # Funktion.: Integriert Fotobox in die Default-Konfiguration von NGINX,
-    # .........  indem die default-Konfiguration wie ein Template geladen
-    # .........  und angepasst wird.
+    # Funktion.: Integriert die Anwendung in die Default-Konfiguration von 
+    # .........  NGINX, indem die default-Konfiguration wie ein Template 
+    # .........  geladen und angepasst wird.
     # Parameter: keine
     # Rückgabe.:  0 = OK, 
     # .........   1 = Fehler, 
@@ -600,17 +691,19 @@ set_default_config_nginx() {
         return 2
     fi
 
-    # Template-Ersetzung vorbereiten
-    local port=80                              # Standardport für NGINX
+    # Template-Ersetzung vorbereiten, Einstellungen aus der Datenbank abrufen
+    # TODO: Einstellungen aus der Datenbank abrufen
+    local port="$(get_port_nginx)"             # Port für NGINX
     local server_name="_"                      # Standard Server-Name
     local frontend_dir="$(get_frontend_dir)"   # WEB-Root Verzeichnis
     local index_files="index.html"             # Standard Index-Dateien
     local api_url="http://127.0.0.1:5000"      # API-URL
 
+    # Konfiguration in die Datenbank schreiben
     register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx"
-    set_config_value "nginx.port"          "$port"         "int"    "Port für NGINX-Server" 
+    set_port_nginx "$port" 
     set_config_value "nginx.server_name"   "$server_name"  "string" "Server-Name für NGINX-Server" 
-    set_config_value "nginx.document_root" "$frontend_dir" "string" "Web-Root Verzeichnis der Fotobox" 
+    set_config_value "nginx.document_root" "$(get_frontend_dir)" "string" "Web-Root Verzeichnis der Application" 
     set_config_value "nginx.index_files"   "$index_files"  "string" "Index-Dateien für NGINX-Server" 
     set_config_value "nginx.api_url"       "$api_url"      "string" "API-URL für NGINX-Server" 
 
@@ -646,7 +739,110 @@ set_default_config_nginx() {
     return 0
 }
 
+# set_external_config_nginx
+set_nginx_cnf_external_debug_0001="INFO: Eignene NGINX-Konfiguration gestartet."
+set_nginx_cnf_external_debug_0002="ERROR: Aktive-Konfiguration nicht gefunden: %s"
+set_nginx_cnf_external_debug_0003="ERROR: Backup der Default-Konfiguration fehlgeschlagen!"
+set_nginx_cnf_external_log_0001="Aktive-Konfiguration nicht gefunden: %s"
+set_nginx_cnf_external_log_0002="Backup der Default-Konfiguration fehlgeschlagen!"
 
+set_nginx_cnf_external_txt_0002="Backup der bestehenden Fotobox-Konfiguration fehlgeschlagen!"
+set_nginx_cnf_external_txt_0003="Backup der bestehenden Fotobox-Konfiguration nach %s"
+set_nginx_cnf_external_txt_0004="Kopieren der Fotobox-Konfiguration fehlgeschlagen!"
+set_nginx_cnf_external_txt_0005="Fotobox-Konfiguration nach %s kopiert."
+set_nginx_cnf_external_txt_0006="Symlink für Fotobox-Konfiguration konnte nicht erstellt werden!"
+set_nginx_cnf_external_txt_0007="Symlink für Fotobox-Konfiguration erstellt."
+set_nginx_cnf_external_txt_0008="NGINX-Konfiguration konnte nach externer Integration nicht neu geladen werden!"
+
+set_external_config_nginx() {
+    # -----------------------------------------------------------------------
+    # set_external_config_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Erstellt für die Anwendung aus dem Template eine eigene
+    # .........  Konfiguration im Projekt Ordner und bindet diese über einen
+    # .........  Symlink in die aktuelle NGINX-Konfiguration ein
+    # Parameter: keine
+    # Rückgabe.:  0 = OK
+    # .........   1 = Fehler
+    # .........   2 = Backup-Fehler
+    # .........   4 = Reload-Fehler
+    # .........   10 = Symlink-Fehler
+    # ------------------------------------------------------------------------
+    # local nginx_cnf_dst="/etc/nginx/sites-available/fotobox"
+    # local nginx_cnf_src="$(get_config_file_nginx "activated")"
+
+    # Debug-Meldung eröffnen
+    debug "$set_nginx_cnf_external_debug_0001"
+
+    # Ermitteln der aktiven NGINX-Konfigurationsdatei
+    local nginx_cnf_src
+    nginx_cnf_src=$(get_config_file_nginx "activated")
+    if [ $? -ne 0 ] || [ -z "$nginx_cnf_src" ]; then
+        # Fehler beim Abrufen der Konfigurationsdatei
+        debug "$(printf "$set_nginx_cnf_external_debug_0002" "$nginx_cnf_src")"
+        log "$set_nginx_cnf_external_log_0001" "$nginx_cnf_src"
+        return 1
+    fi
+
+    # Backup der bestehenden NGINX-Konfiguration anlegen
+    backup_config_nginx "$nginx_cnf_src" "external" "set_external_config_nginx"
+    if [ $? -ne 0 ]; then
+        # Fehler beim Backup der NGINX-Konfiguration
+        debug "$set_nginx_cnf_external_debug_0003"
+        log "$set_nginx_cnf_external_log_0002"
+        return 2
+    fi
+
+    # Template-Ersetzung vorbereiten, Einstellungen aus der Datenbank abrufen
+    # TODO: Einstellungen aus der Datenbank abrufen
+    local port="$(get_port_nginx)"             # Port für NGINX
+    local server_name="_"                      # Standard Server-Name
+    local frontend_dir="$(get_frontend_dir)"   # WEB-Root Verzeichnis
+    local index_files="index.html"             # Standard Index-Dateien
+    local api_url="http://127.0.0.1:5000"      # API-URL
+
+    # Konfiguration in die Datenbank schreiben
+    register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx"
+    set_port_nginx "$port" 
+    set_config_value "nginx.server_name"   "$server_name"  "string" "Server-Name für NGINX-Server" 
+    set_config_value "nginx.document_root" "$(get_frontend_dir)" "string" "Web-Root Verzeichnis der Application" 
+    set_config_value "nginx.index_files"   "$index_files"  "string" "Index-Dateien für NGINX-Server" 
+    set_config_value "nginx.api_url"       "$api_url"      "string" "API-URL für NGINX-Server" 
+
+
+
+
+    local nginx_dst="/etc/nginx/sites-available/fotobox"
+    local conf_src="$(get_nginx_template_file fotobox)"
+
+    log "${set_nginx_cnf_external_txt_0001}"
+    # Prüfen, ob bereits eine Zielkonfiguration existiert
+    if [ -f "$nginx_dst" ]; then
+        backup_nginx_config "$nginx_dst" "external" "set_nginx_cnf_external" "$mode" || return 2
+        log_or_json "$mode" "success" "$set_nginx_cnf_external_txt_0003" 0
+    fi
+    # Neue Konfiguration kopieren
+    cp "$conf_src" "$nginx_dst" || { log_or_json "$mode" "error" "$set_nginx_cnf_external_txt_0004" 1; return 1; }
+    log_or_json "$mode" "success" "$set_nginx_cnf_external_txt_0005" 0
+    # Prüfen, ob Symlink existiert, sonst anlegen
+    if [ ! -L /etc/nginx/sites-enabled/fotobox ]; then
+        ln -s "$nginx_dst" /etc/nginx/sites-enabled/fotobox || { log_or_json "$mode" "error" "$set_nginx_cnf_external_txt_0006" 10; return 10; }
+        log_or_json "$mode" "success" "$set_nginx_cnf_external_txt_0007" 0
+    fi
+    local reload_result
+    reload_result=$(chk_nginx_reload "$mode")
+    local reload_status=$?
+    
+    if [ $reload_status -ne 0 ]; then 
+        log_or_json "$mode" "error" "$set_nginx_cnf_external_txt_0008" 4
+        return 4
+    fi
+    
+    # Firewall-Regeln aktualisieren
+    update_firewall_rules "$mode"
+    
+    return 0
+}
 
 
 
@@ -1240,55 +1436,6 @@ conf_nginx_port() {
     return 1
 }
 
-# set_nginx_cnf_external
-set_nginx_cnf_external_txt_0001="Externe Fotobox-NGINX-Konfiguration wird eingerichtet."
-set_nginx_cnf_external_txt_0002="Backup der bestehenden Fotobox-Konfiguration fehlgeschlagen!"
-set_nginx_cnf_external_txt_0003="Backup der bestehenden Fotobox-Konfiguration nach %s"
-set_nginx_cnf_external_txt_0004="Kopieren der Fotobox-Konfiguration fehlgeschlagen!"
-set_nginx_cnf_external_txt_0005="Fotobox-Konfiguration nach %s kopiert."
-set_nginx_cnf_external_txt_0006="Symlink für Fotobox-Konfiguration konnte nicht erstellt werden!"
-set_nginx_cnf_external_txt_0007="Symlink für Fotobox-Konfiguration erstellt."
-set_nginx_cnf_external_txt_0008="NGINX-Konfiguration konnte nach externer Integration nicht neu geladen werden!"
-
-set_nginx_cnf_external() {
-    # -----------------------------------------------------------------------
-    # set_nginx_cnf_external
-    # -----------------------------------------------------------------------
-    # Funktion: Legt eigene Fotobox-Konfiguration an, bindet sie ein 
-    # Rückgabe: 0 = OK, 1 = Fehler, 2 = Backup-Fehler, 4 = Reload-Fehler, 10 = Symlink-Fehler
-    local mode="$1"
-    local nginx_dst="/etc/nginx/sites-available/fotobox"
-    local conf_src="$(get_nginx_template_file fotobox)"
-
-    log "${set_nginx_cnf_external_txt_0001}"
-    # Prüfen, ob bereits eine Zielkonfiguration existiert
-    if [ -f "$nginx_dst" ]; then
-        backup_nginx_config "$nginx_dst" "external" "set_nginx_cnf_external" "$mode" || return 2
-        log_or_json "$mode" "success" "$set_nginx_cnf_external_txt_0003" 0
-    fi
-    # Neue Konfiguration kopieren
-    cp "$conf_src" "$nginx_dst" || { log_or_json "$mode" "error" "$set_nginx_cnf_external_txt_0004" 1; return 1; }
-    log_or_json "$mode" "success" "$set_nginx_cnf_external_txt_0005" 0
-    # Prüfen, ob Symlink existiert, sonst anlegen
-    if [ ! -L /etc/nginx/sites-enabled/fotobox ]; then
-        ln -s "$nginx_dst" /etc/nginx/sites-enabled/fotobox || { log_or_json "$mode" "error" "$set_nginx_cnf_external_txt_0006" 10; return 10; }
-        log_or_json "$mode" "success" "$set_nginx_cnf_external_txt_0007" 0
-    fi
-    local reload_result
-    reload_result=$(chk_nginx_reload "$mode")
-    local reload_status=$?
-    
-    if [ $reload_status -ne 0 ]; then 
-        log_or_json "$mode" "error" "$set_nginx_cnf_external_txt_0008" 4
-        return 4
-    fi
-    
-    # Firewall-Regeln aktualisieren
-    update_firewall_rules "$mode"
-    
-    return 0
-}
-
 get_nginx_template_file() {
     # -----------------------------------------------------------------------
     # get_nginx_template_file
@@ -1794,6 +1941,7 @@ setup_nginx_service() {
             # Einrichtung NGINX-Server im Hintergrund ausführen
             # und Spinner anzeigen
             debug "$setup_nginx_service_debug_0009"
+            # TODO: set_default_config_nginx im Hintergrund ausführen für DEBUG abgeschaltet
             #(set_default_config_nginx) &> /dev/null 2>&1 & 
             set_default_config_nginx
             service_pid=$!
@@ -1808,9 +1956,9 @@ setup_nginx_service() {
         fi
     elif [ $? -eq 1 ]; then  # Angepasste Konfiguration
         if [ "$output_mode" = "json" ]; then
-            set_nginx_cnf_external "json" || return 1
+            set_external_config_nginx "json" || return 1
         else
-            set_nginx_cnf_external "text" || return 1
+            set_external_config_nginx "text" || return 1
         fi
     else  # Unklarer Status
         log_or_json "$output_mode" "error" "$improved_nginx_install_txt_0009" 9

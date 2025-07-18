@@ -570,7 +570,7 @@ get_config_file_nginx() {
     # -----------------------------------------------------------------------
     # get_config_file_nginx
     # -----------------------------------------------------------------------
-    # Funktion: Gibt den Pfad zu einer Nginx-Konfigurationsdatei zurück
+    # Funktion.: Gibt den Pfad zu einer Nginx-Konfigurationsdatei zurück
     # Parameter: $1 - Modus der WEB-Server Konfiguration, mögliche Werte:
     # .........  'external'  = Eigene Konfiguration im Projekt Ordner
     # .........  'internal'  = Integration in bestehende Konfig 

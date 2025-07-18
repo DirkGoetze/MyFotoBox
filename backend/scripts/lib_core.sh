@@ -75,10 +75,6 @@ DEFAULT_GROUP="fotobox"
 DEFAULT_MODE_FOLDER="755"
 DEFAULT_MODE_FILES="664"
 
-# Port-Einstellungen
-DEFAULT_HTTP_PORT=80
-DEFAULT_HTTPS_PORT=443
-
 # Konfigurationsdatei
 DEFAULT_CONFIG_FILE="$CONF_DIR/fotobox-config.ini"
 
