@@ -973,7 +973,7 @@ set_api_url_nginx() {
 }
 
 # ===========================================================================
-# Externe Funktionen zur Bearbeitung der NGINX-Server Konigurationsdateien
+# Externe Funktionen zur Verarbeitung der NGINX-Server Konigurationsdateien
 # ===========================================================================
 
 # backup_config_nginx
@@ -1074,10 +1074,14 @@ write_config_file_nginx_debug_0001="INFO: Integration der Applikation in die NGI
 write_config_file_nginx_debug_0002="ERROR: Default-Konfiguration nicht gefunden: %s"
 write_config_file_nginx_debug_0003="ERROR: Backup der NGINX-Konfiguration fehlgeschlagen!"
 write_config_file_nginx_debug_0004="ERROR: Beim Verwenden des Template '%s' ist ein Fehler aufgetreten!"
-write_config_file_nginx_debug_0005="ERROR: NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
+write_config_file_nginx_debug_0005="ERROR: NGINX-Symlink konnte nicht erstellt oder aktualisiert werden!"
+write_config_file_nginx_debug_0006="ERROR: NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
+write_config_file_nginx_debug_0007="SUCCESS: NGINX-Konfiguration erfolgreich integriert und neu geladen."
 write_config_file_nginx_log_0001="NGINX-Konfiguration nicht gefunden: %s"
 write_config_file_nginx_log_0002="Backup der NGINX-Konfiguration fehlgeschlagen!"
-write_config_file_nginx_log_0003="NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
+write_config_file_nginx_log_0003="NGINX-Symlink konnte nicht erstellt oder aktualisiert werden!"
+write_config_file_nginx_log_0004="NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
+write_config_file_nginx_log_0005="NGINX-Konfiguration erfolgreich integriert und neu geladen."
 
 write_config_file_nginx() {
     # -----------------------------------------------------------------------
@@ -1102,17 +1106,17 @@ write_config_file_nginx() {
     if ! check_param "$modus_nginx" "modus_nginx"; then return 1; fi
 
     # Ermitteln der Default-Konfigurationsdatei inkl. Prüfung
-    local default_conf
-    default_conf=$(get_config_file_nginx "$modus_nginx")
-    if [ $? -ne 0 ] || [ -z "$default_conf" ]; then
+    local src_cnf_file_nginx
+    src_cnf_file_nginx=$(get_config_file_nginx "$modus_nginx")
+    if [ $? -ne 0 ] || [ -z "$src_cnf_file_nginx" ]; then
         # Fehler beim Abrufen der Konfigurationsdatei
-        debug "$(printf "$write_config_file_nginx_debug_0002" "$default_conf")"
-        log "$(printf "$write_config_file_nginx_log_0001" "$default_conf")"
+        debug "$(printf "$write_config_file_nginx_debug_0002" "$src_cnf_file_nginx")"
+        log "$(printf "$write_config_file_nginx_log_0001" "$src_cnf_file_nginx")"
         return 1
     fi
 
     # Backup der Default-Konfiguration anlegen
-    backup_config_nginx "$default_conf" "$modus_nginx" "write_config_file_nginx"
+    backup_config_nginx "$src_cnf_file_nginx" "$modus_nginx" "write_config_file_nginx"
     if [ $? -ne 0 ]; then
         # Fehler beim Backup der Default-Konfiguration
         debug "$write_config_file_nginx_debug_0003"
@@ -1130,7 +1134,7 @@ write_config_file_nginx() {
     # Template-Datei suchen, wenn gefunden wurde, Platzhalter ersetzen
     local template_file  
     template_file="$(_template_filename_nginx $modus_nginx)"
-    apply_template "$template_file" "$default_conf" \
+    apply_template "$template_file" "$src_cnf_file_nginx" \
                 "PORT=$port" \
                 "SERVER_NAME=$server_name" \
                 "DOCUMENT_ROOT=$frontend_dir" \
@@ -1144,28 +1148,28 @@ write_config_file_nginx() {
     fi
 
     # --- TODO: Prüfe KI Source ---------------------------------------------
-    # Wenn nicht "local" Modus, dann auch Symlink in sites-enabled setzen
-    if [ "$modus_nginx" != "local" ]; then
-        # Prüfen, ob der Symlink bereits existiert
-        if [ ! -L /etc/nginx/sites-enabled/fotobox ]; then
-            # Symlink erstellen, wenn nicht vorhanden
-            if ! ln -s "$default_conf" /etc/nginx/sites-enabled/fotobox; then
-                # Fehler beim Erstellen des Symlinks
-                debug "$(printf "$write_config_file_nginx_debug_0005" "$default_conf")
-                log "$(printf "$write_config_file_nginx_log_0003" "$default_conf")
+    # Trenne den Dateinamen vom Pfad und erstelle den Symlink-Namen
+    local sites_enabled="/etc/nginx/sites-enabled"
+    local enabled_link="$sites_enabled/$(basename "$src_cnf_file_nginx")"
+    # Prüfen, ob der Symlink bereits existiert
+    if [ ! -L "$enabled_link" ]; then
+        # Symlink erstellen, wenn nicht vorhanden
+        if ! ln -s "$src_cnf_file_nginx" "$enabled_link"; then
+            # Fehler beim Erstellen des Symlinks
+            debug "$(printf "$write_config_file_nginx_debug_0005" "$src_cnf_file_nginx")"
+            log "$(printf "$write_config_file_nginx_log_0003" "$src_cnf_file_nginx")"
+            return 4
+        fi
+    else
+        # Symlink existiert bereits, prüfen ob er auf die richtige Datei zeigt
+        local current_link_target=$(readlink "$enabled_link")
+        if [ "$current_link_target" != "$src_cnf_file_nginx" ]; then
+            # Symlink zeigt auf eine andere Datei, aktualisieren
+            if ! ln -sf "$src_cnf_file_nginx" "$enabled_link"; then
+                # Fehler beim Aktualisieren des Symlinks
+                debug "$(printf "$write_config_file_nginx_debug_0005" "$src_cnf_file_nginx")"
+                log "$(printf "$write_config_file_nginx_log_0003" "$src_cnf_file_nginx")"
                 return 4
-            fi
-        else
-            # Symlink existiert bereits, prüfen ob er auf die richtige Datei zeigt
-            local current_link_target=$(readlink /etc/nginx/sites-enabled/fotobox)
-            if [ "$current_link_target" != "$default_conf" ]; then
-                # Symlink zeigt auf eine andere Datei, aktualisieren
-                if ! ln -sf "$default_conf" /etc/nginx/sites-enabled/fotobox; then
-                    # Fehler beim Aktualisieren des Symlinks
-                    debug "$(printf "$write_config_file_nginx_debug_0005" "$default_conf")
-                    log "$(printf "$write_config_file_nginx_log_0003" "$default_conf")
-                    return 4
-                fi
             fi
         fi
     fi
@@ -1175,20 +1179,62 @@ write_config_file_nginx() {
     reload_nginx    
     if [ $? -ne 0 ]; then 
         # Fehler beim Neuladen der NGINX-Konfiguration
-        debug "$write_config_file_nginx_debug_0005"
-        log "$(printf "$write_config_file_nginx_log_0003" "$default_conf")"
+        debug "$write_config_file_nginx_debug_0006"
+        log "$(printf "$write_config_file_nginx_log_0004" "$src_cnf_file_nginx")"
         return 4
     fi
     
     # Firewall-Regeln aktualisieren
     # TODO: Firewall Modul einbinden
     # update_firewall_rules "$mode"
-    
+
+    # Erfolgreiche Integration der NGINX-Konfiguration
+    debug "$write_config_file_nginx_debug_0007"
+    log "$(printf "$write_config_file_nginx_log_0005")"
     return 0
 }
 
+# read_url_nginx
+read_url_nginx_debug_0001="INFO: NGINX-URL wird ermittelt..."
+read_url_nginx_debug_0002="ERROR: NGINX-URL konnte nicht ermittelt werden!"
+read_url_nginx_debug_0003="SUCCESS: NGINX-URL: '%s'"
+read_url_nginx_log_0001="NGINX-URL konnte nicht ermittelt werden!"
+read_url_nginx_log_0002="NGINX-URL: '%s'"
 
+read_url_nginx() {
+    # -----------------------------------------------------------------------
+    # read_url_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Ermittelt die aktuelle NGINX-URL basierend auf der 
+    # .........  Konfiguration und gibt sie zurück.
+    # Parameter: keine
+    # Rückgabe.:  0 = OK, 
+    # .........   1 = Fehler bei der URL-Ermittlung
+    # Seiteneffekte: Keine
+    # -----------------------------------------------------------------------
 
+    # Debug-Meldung eröffnen
+    debug "$read_url_nginx_debug_0001"
+
+    # Protokoll basierend auf Port ermitteln
+    local server_port=$(get_nginx_port "text")
+ 
+    # NGINX-URL ermitteln
+    local nginx_url=$(get_nginx_url "text")
+    
+    if [ $? -ne 0 ] || [ -z "$nginx_url" ]; then
+        # Fehler bei der URL-Ermittlung
+        debug "$read_url_nginx_debug_0002"
+        log "$read_url_nginx_log_0001"
+        return 1
+    fi
+
+    debug "$(printf "$read_url_nginx_debug_0003" "$nginx_url")"
+    log "$(printf "$read_url_nginx_log_0002" "$nginx_url")"
+    
+    echo "$nginx_url"
+    return 0
+}
 
 
 # ===========================================================================
@@ -1715,110 +1761,6 @@ get_nginx_template_file() {
 }
 
 # ===========================================================================
-# Erweiterte NGINX-Konfigurationsverwaltung
-# ===========================================================================
-
-#nginx_add_config
-nginx_add_config_txt_0001="Füge neue NGINX-Konfiguration hinzu: %s"
-nginx_add_config_txt_0002="Konfigurationsdatei %s erfolgreich erstellt."
-nginx_add_config_txt_0003="Fehler beim Erstellen der Konfigurationsdatei %s"
-nginx_add_config_txt_0004="Symlink für Konfiguration %s erstellt."
-nginx_add_config_txt_0005="Fehler beim Erstellen des Symlinks für Konfiguration %s"
-nginx_add_config_txt_0006="NGINX-Konfiguration konnte nach dem Hinzufügen nicht neu geladen werden!"
-nginx_add_config_txt_0007="Prioritätswert muss eine Zahl zwischen 10 und 99 sein"
-nginx_add_config_txt_0008="Konfigurationsname darf nur alphanumerische Zeichen und Bindestriche enthalten"
-nginx_add_config_txt_0009="Konfigurationsinhalt darf nicht leer sein"
-nginx_add_config_txt_0010="NGINX-Konfiguration %s wurde erfolgreich hinzugefügt und aktiviert."
-nginx_add_config_txt_0011="NGINX ist nicht installiert. Installation erforderlich."
-
-nginx_add_config() {
-    # -----------------------------------------------------------------------
-    # nginx_add_config
-    # -----------------------------------------------------------------------
-    # Funktion: Fügt eine neue NGINX-Konfiguration hinzu und aktiviert sie
-    # Parameter: $1 = Konfigurationsinhalt
-    #            $2 = Konfigurationsname (default: fotobox)
-    #            $3 = Priorität (10-99, niedrigere Zahl = höhere Priorität)
-    #            $4 = Modus (text|json), optional (Default: text)
-    # Rückgabe: 0 = OK, >0 = Fehler
-    # -----------------------------------------------------------------------
-    local config_content="$1"
-    local config_name="${2:-fotobox}"
-    local priority="${3:-50}"
-    local mode="${4:-text}"
-    
-    local sites_available="/etc/nginx/sites-available"
-    local sites_enabled="/etc/nginx/sites-enabled"
-    
-    # Prüfen, ob NGINX installiert ist
-    if ! is_nginx_available >/dev/null; then
-        log_or_json "$mode" "error" "$nginx_add_config_txt_0011" 1
-        return 1
-    fi
-    
-    # Validierungen
-    if [ -z "$config_content" ]; then
-        log_or_json "$mode" "error" "$nginx_add_config_txt_0009" 2
-        return 2
-    fi
-    
-    if ! [[ "$config_name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
-        log_or_json "$mode" "error" "$nginx_add_config_txt_0008" 3
-        return 3
-    fi
-    
-    if ! [[ "$priority" =~ ^[0-9]+$ ]] || [ "$priority" -lt 10 ] || [ "$priority" -gt 99 ]; then
-        log_or_json "$mode" "error" "$nginx_add_config_txt_0007" 4
-        return 4
-    fi
-    
-    local config_file="$sites_available/$config_name"
-    local enabled_link="$sites_enabled/${priority}-$config_name"
-    
-    log_or_json "$mode" "info" "$(printf "$nginx_add_config_txt_0001" "$config_name")" 0
-    
-    # Existierende Konfiguration sichern, falls vorhanden
-    if [ -f "$config_file" ]; then
-        backup_nginx_config "$config_file" "add_config" "nginx_add_config" "$mode" || return 5
-    fi
-    
-    # Konfiguration schreiben
-    echo "$config_content" > "$config_file"
-    if [ $? -ne 0 ]; then
-        log_or_json "$mode" "error" "$(printf "$nginx_add_config_txt_0003" "$config_file")" 6
-        return 6
-    fi
-    log_or_json "$mode" "success" "$(printf "$nginx_add_config_txt_0002" "$config_file")" 0
-    
-    # Alte Symlinks entfernen, falls vorhanden
-    find "$sites_enabled" -name "*-$config_name" -type l -delete
-    
-    # Neuen Symlink erstellen
-    ln -s "$config_file" "$enabled_link"
-    if [ $? -ne 0 ]; then
-        log_or_json "$mode" "error" "$(printf "$nginx_add_config_txt_0005" "$config_name")" 7
-        return 7
-    fi
-    log_or_json "$mode" "success" "$(printf "$nginx_add_config_txt_0004" "$config_name")" 0
-    
-    # NGINX neu laden
-    local reload_result
-    reload_result=$(chk_nginx_reload "$mode")
-    local reload_status=$?
-    
-    if [ $reload_status -ne 0 ]; then 
-        log_or_json "$mode" "error" "$nginx_add_config_txt_0006" 8
-        return 8
-    fi
-    
-    # Firewall-Regeln aktualisieren
-    update_firewall_rules "$mode"
-    
-    log_or_json "$mode" "success" "$(printf "$nginx_add_config_txt_0010" "$config_name")" 0
-    return 0
-}
-
-# ===========================================================================
 # Verbesserter NGINX-Installationsfluss
 # ===========================================================================
 
@@ -2184,8 +2126,8 @@ setup_nginx_service() {
             # und Spinner anzeigen
             debug "$setup_nginx_service_debug_0009"
             # TODO: write_default_config_nginx im Hintergrund ausführen für DEBUG abgeschaltet
-            #(write_default_config_nginx) &> /dev/null 2>&1 & 
-            write_default_config_nginx
+            #(write_config_file_nginx "local") &> /dev/null 2>&1 & 
+            write_config_file_nginx "local"
             service_pid=$!
             show_spinner "$service_pid" "dots"
             # Überprüfe, ob die neue Konfiguration erfolgreich war
@@ -2206,8 +2148,8 @@ setup_nginx_service() {
             # und Spinner anzeigen
             debug "$setup_nginx_service_debug_0009"
             # TODO: write_external_config_nginx im Hintergrund ausführen für DEBUG abgeschaltet
-            #(write_external_config_nginx) &> /dev/null 2>&1 & 
-            write_external_config_nginx
+            #(write_config_file_nginx "external") &> /dev/null 2>&1 & 
+            write_config_file_nginx "external"
             service_pid=$!
             show_spinner "$service_pid" "dots"
             # Überprüfe, ob die neue Konfiguration erfolgreich war

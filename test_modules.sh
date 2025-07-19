@@ -448,6 +448,11 @@ echo "+-----------------------------------------------------------------------+"
 test_function "manage_files_sh" "get_config_file_nginx"
 # Test: get_config_file_nginx
 echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_config_file_nginx (default/local)                           |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_files_sh" "get_config_file_nginx" "local"
+# Test: get_config_file_nginx
+echo "+-----------------------------------------------------------------------+"
 echo "| Test: get_config_file_nginx (default/internal)                        |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_files_sh" "get_config_file_nginx" "internal"
