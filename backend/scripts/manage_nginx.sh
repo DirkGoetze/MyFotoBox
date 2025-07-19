@@ -1197,37 +1197,35 @@ write_external_config_nginx() {
     set_index_file_nginx "$DEFAULT_INDEX_FILE"
     set_api_url_nginx "$DEFAULT_API_URL"
 
-
-
-
-    local nginx_dst="/etc/nginx/sites-available/fotobox"
-    local conf_src="$(get_nginx_template_file fotobox)"
-
-    log "${write_external_config_nginx_txt_0001}"
-    # Prüfen, ob bereits eine Zielkonfiguration existiert
-    if [ -f "$nginx_dst" ]; then
-        backup_nginx_config "$nginx_dst" "external" "set_nginx_cnf_external" "$mode" || return 2
-        log_or_json "$mode" "success" "$write_external_config_nginx_txt_0003" 0
-    fi
-    # Neue Konfiguration kopieren
-    cp "$conf_src" "$nginx_dst" || { log_or_json "$mode" "error" "$write_external_config_nginx_txt_0004" 1; return 1; }
-    log_or_json "$mode" "success" "$write_external_config_nginx_txt_0005" 0
-    # Prüfen, ob Symlink existiert, sonst anlegen
-    if [ ! -L /etc/nginx/sites-enabled/fotobox ]; then
-        ln -s "$nginx_dst" /etc/nginx/sites-enabled/fotobox || { log_or_json "$mode" "error" "$write_external_config_nginx_txt_0006" 10; return 10; }
-        log_or_json "$mode" "success" "$write_external_config_nginx_txt_0007" 0
-    fi
-    local reload_result
-    reload_result=$(chk_nginx_reload "$mode")
-    local reload_status=$?
+    # Template-Datei suchen, wenn gefunden wurde, Platzhalter ersetzen
+    local conf_src  # Pfad zur Template-Datei
+    conf_src="$(get_nginx_template_file "external")"
+    apply_template "$conf_src" "$nginx_cnf_src" \
+                "PORT=$port" \
+                "SERVER_NAME=$server_name" \
+                "DOCUMENT_ROOT=$frontend_dir" \
+                "INDEX_FILE=$index_files" \
+                "API_URL=$api_url"
     
-    if [ $reload_status -ne 0 ]; then 
-        log_or_json "$mode" "error" "$write_external_config_nginx_txt_0008" 4
+    if [ $? -ne 0 ]; then
+        # Fehler beim Anwenden des Templates
+        debug "$(printf "$write_external_config_nginx_debug_0004" "$conf_src")
+        log "$(printf "$write_external_config_nginx_log_0002" "$conf_src")
+        return 3
+    fi
+
+    # NGINX-Konfiguration neu laden
+    reload_nginx    
+    if [ $? -ne 0 ]; then 
+        # Fehler beim Neuladen der NGINX-Konfiguration
+        debug "$write_external_config_nginx_debug_0005"
+        log "$(printf "$write_external_config_nginx_log_0003" "$nginx_cnf_src")"
         return 4
     fi
-    
+
     # Firewall-Regeln aktualisieren
-    update_firewall_rules "$mode"
+    # TODO: Firewall Modul einbinden
+    # update_firewall_rules "$mode"
     
     return 0
 }
@@ -2291,10 +2289,27 @@ setup_nginx_service() {
         if [ "$output_mode" = "json" ]; then
             write_external_config_nginx "json" || return 1
         else
-            write_external_config_nginx "text" || return 1
+            # Ausgabe im CLI-Modus, Spinner anzeigen
+            echo -n "$setup_nginx_service_txt_0008"
+            # Einrichtung NGINX-Server im Hintergrund ausführen
+            # und Spinner anzeigen
+            debug "$setup_nginx_service_debug_0009"
+            # TODO: write_external_config_nginx im Hintergrund ausführen für DEBUG abgeschaltet
+            #(write_external_config_nginx) &> /dev/null 2>&1 & 
+            write_external_config_nginx
+            service_pid=$!
+            show_spinner "$service_pid" "dots"
+            # Überprüfe, ob die neue Konfiguration erfolgreich war
+            if [ $? -ne 0 ]; then
+                debug "$setup_nginx_service_debug_0010"
+                print_error "$setup_nginx_service_txt_0009"
+                return 1
+            fi
+            print_success "$setup_nginx_service_txt_0010"
         fi
     else  # Unklarer Status
-        log_or_json "$output_mode" "error" "$improved_nginx_install_txt_0009" 9
+        debug "$setup_nginx_service_debug_0010"
+        log "$setup_nginx_service_txt_0009"
         return 9
     fi
 }
