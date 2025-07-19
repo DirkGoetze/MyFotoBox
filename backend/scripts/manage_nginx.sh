@@ -1040,7 +1040,6 @@ write_external_config_nginx() {
     set_port_nginx "$port" "80"
     set_server_name_nginx "$server_name" "_"
     set_frontend_dir_nginx "$frontend_dir"  
-    set_config_value "nginx.document_root" "$(get_frontend_dir)" "string" "Web-Root Verzeichnis der Application" 
     set_config_value "nginx.index_files"   "$index_files"  "string" "Index-Dateien für NGINX-Server" 
     set_config_value "nginx.api_url"       "$api_url"      "string" "API-URL für NGINX-Server" 
 
