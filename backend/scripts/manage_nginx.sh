@@ -779,6 +779,81 @@ set_frontend_dir_nginx() {
     return 0
 }
 
+# get_index_file_nginx
+get_index_file_nginx_debug_0001="INFO: Index-Datei für NGINX aus DB abfragen..."
+get_index_file_nginx_debug_0002="ERROR: Index-Datei für NGINX nicht gesetzt, Standardwert '%s' wird verwendet."
+get_index_file_nginx_debug_0003="SUCCESS: NGINX-Index-Datei: '%s'."
+get_index_file_nginx_log_0001="Index-Datei für NGINX nicht gesetzt, Standardwert wird verwendet."
+get_index_file_nginx_log_0002="NGINX-Index-Datei: '%s'."
+
+get_index_file_nginx() {
+    # -----------------------------------------------------------------------
+    # get_index_file_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Gibt die aktuell konfigurierte Index-Datei für NGINX aus 
+    # .........  der Datenbank zurück. Falls keine Index-Datei gesetzt ist, 
+    # .........  wird der Standardwert 'index.html' zurückgegeben.
+    # Parameter: keine
+    # Rückgabe.: Index-Datei (Standard: 'index.html')
+    # Seiteneffekte: keine
+    # -----------------------------------------------------------------------
+
+    # Debug-Meldung eröffnen
+    debug "$get_index_file_nginx_debug_0001"
+
+    # Index-Datei aus der Konfiguration abrufen
+    local index_file=$(get_config_value "nginx.index_files")
+    if [ $? -ne 0 ] || [ -z "$index_file" ]; then
+        # Index-Datei nicht gesetzt, Standardwert verwenden
+        debug "$(printf "$get_index_file_nginx_debug_0002" "$DEFAULT_INDEX_FILE_FALLBACK")"
+        log "$(printf "$get_index_file_nginx_log_0001" "$DEFAULT_INDEX_FILE_FALLBACK")"
+        index_file=$DEFAULT_INDEX_FILE
+    fi
+
+    # Index-Datei zurückgeben
+    debug "$(printf "$get_index_file_nginx_debug_0003" "$index_file")"
+    log "$(printf "$get_index_file_nginx_log_0002" "$index_file")"
+    echo "$index_file"  # Standardwert 'index.html', falls nicht gesetzt
+    return 0
+}
+
+# set_index_file_nginx
+set_index_file_nginx_debug_0001="INFO: Setze Index-Datei für NGINX auf: '%s'"
+set_index_file_nginx_debug_0002="ERROR: Fehler beim Schreiben der Index-Datei: '%s'"
+set_index_file_nginx_debug_0003="SUCCESS: NGINX-Index-Datei erfolgreich geschrieben: '%s'"
+set_index_file_nginx_log_0001="Fehler beim Schreiben der Index-Datei: '%s'"
+
+set_index_file_nginx() {
+    # -----------------------------------------------------------------------
+    # set_index_file_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Setzt die Index-Datei für NGINX in der Datenbank
+    # Parameter: $1 = Index-Datei (z.B. 'index.html')
+    # Rückgabe.:  0 = OK, 
+    # .........   1 = Fehler (ungültige Index-Datei)
+    # Seiteneffekte: Aktualisiert die NGINX-Konfiguration in der Datenbank
+    # -----------------------------------------------------------------------
+    local index_file="$1"
+
+    # Debug-Meldung eröffnen
+    debug "$(printf "$set_index_file_nginx_debug_0001" "$index_file")"
+
+    # Parameterprüfung
+    if ! check_param "$index_file" "index_file"; then return 1; fi
+
+    # Index-Datei in der Konfiguration setzen
+    set_config_value "nginx.index_files" "$index_file" "string" "Index-Dateien für NGINX-Server"
+    if [ $? -ne 0 ]; then
+        # Fehler beim Setzen der Index-Datei
+        debug "$(printf "$set_index_file_nginx_debug_0002" "$index_file")"
+        log "$(printf "$set_index_file_nginx_log_0001" "$index_file")"
+        return 1
+    fi
+
+    debug "$(printf "$set_index_file_nginx_debug_0003" "$index_file")"
+    return 0
+}
+
 # ===========================================================================
 # Externe Funktionen zur Bearbeitung der NGINX-Server Konigurationsdateien
 # ===========================================================================
@@ -926,18 +1001,18 @@ write_default_config_nginx() {
 
     # Template-Ersetzung vorbereiten, Einstellungen aus der Datenbank abrufen
     # TODO: Einstellungen aus der Datenbank abrufen
-    local port="$(get_port_nginx)"             # Port für NGINX
-    local server_name="_"                      # Standard Server-Name
-    local frontend_dir="$(get_frontend_dir)"   # WEB-Root Verzeichnis
-    local index_files="index.html"             # Standard Index-Dateien
-    local api_url="http://127.0.0.1:5000"      # API-URL
+    local port="$(get_port_nginx)"               # Port für NGINX
+    local server_name="$(get_server_name_nginx)" # Standard Server-Name
+    local frontend_dir="$(get_frontend_dir)"     # WEB-Root Verzeichnis
+    local index_files="$(get_index_file_nginx)"  # Standard Index-Dateien
+    local api_url="http://127.0.0.1:5000"        # API-URL
 
     # Konfiguration in die Datenbank schreiben
     register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx"
-    set_port_nginx "$port" "80"
-    set_server_name_nginx "$server_name" "_"
-    set_frontend_dir_nginx "$frontend_dir"  
-    set_config_value "nginx.document_root" "$(get_frontend_dir)" "string" "Web-Root Verzeichnis der Application" 
+    set_port_nginx "$DEFAULT_HTTP_PORT"
+    set_server_name_nginx "$DEFAULT_SERVER_NAME"
+    set_frontend_dir_nginx "$DEFAULT_FRONTEND_DIR"
+    set_index_file_nginx "$DEFAULT_INDEX_FILE"
     set_config_value "nginx.index_files"   "$index_files"  "string" "Index-Dateien für NGINX-Server" 
     set_config_value "nginx.api_url"       "$api_url"      "string" "API-URL für NGINX-Server" 
 
@@ -1032,7 +1107,7 @@ write_external_config_nginx() {
     local port="$(get_port_nginx)"               # Port für NGINX
     local server_name="$(get_server_name_nginx)" # Standard Server-Name
     local frontend_dir="$(get_frontend_dir)"     # WEB-Root Verzeichnis
-    local index_files="index.html"               # Standard Index-Dateien
+    local index_files="$(get_index_file_nginx)"  # Standard Index-Dateien
     local api_url="http://127.0.0.1:5000"        # API-URL
 
     # Konfiguration in die Datenbank schreiben
@@ -1040,7 +1115,7 @@ write_external_config_nginx() {
     set_port_nginx "$DEFAULT_HTTP_PORT"
     set_server_name_nginx "$DEFAULT_SERVER_NAME"
     set_frontend_dir_nginx "$DEFAULT_FRONTEND_DIR"  
-    set_config_value "nginx.index_files"   "$index_files"  "string" "Index-Dateien für NGINX-Server" 
+    set_index_file_nginx "$DEFAULT_INDEX_FILE"
     set_config_value "nginx.api_url"       "$api_url"      "string" "API-URL für NGINX-Server" 
 
 
