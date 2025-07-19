@@ -52,6 +52,10 @@ DEFAULT_HTTP_PORT=80                     # Standard-Ports für HTTP
 DEFAULT_HTTPS_PORT=443                   # Standard-Ports für HTTPS
 DEFAULT_HTTP_PORT_FALLBACK=8080          # falls 80/443 nicht verfügbar sind
 
+# Standard-Server-Name für NGINX
+DEFAULT_SERVER_NAME="fotobox.local"       # Standard-Server-Name für NGINX
+DEFAULT_SERVER_NAME_FALLBACK="localhost"  # Standard-Server-Name für NGINX
+
 # ===========================================================================
 
 # ===========================================================================
@@ -540,7 +544,7 @@ reload_nginx() {
 
 # get_port_nginx
 get_port_nginx_debug_0001="INFO: Port für NGINX aus DB abgefragen..."
-get_port_nginx_debug_0002="ERROR: Port für NGINX nicht gesetzt, Standardwert 80 wird verwendet."
+get_port_nginx_debug_0002="ERROR: Port für NGINX nicht gesetzt, Standardwert '80' wird verwendet."
 get_port_nginx_degug_0003="SUCCESS: Port für NGINX: %s."
 get_port_nginx_log_0001="Port für NGINX nicht gesetzt, Standardwert wird verwendet."
 get_port_nginx_log_0002="Port für NGINX: %s."
@@ -551,7 +555,7 @@ get_port_nginx() {
     # -----------------------------------------------------------------------
     # Funktion.: Gibt den aktuell konfigurierten Port für NGINX aus der 
     # .........  Datenbank zurück. Falls kein Port gesetzt ist, wird der
-    # .........  Standardport 80 zurückgegeben.
+    # .........  Standardport '80' zurückgegeben.
     # Parameter: keine
     # Rückgabe.: Portnummer (Standard: 80)
     # Seiteneffekte: keine
@@ -614,7 +618,79 @@ set_port_nginx() {
 }
 
 # get_server_name_nginx
+get_server_name_nginx_debug_0001="INFO: Server-Name für NGINX aus DB abfragen..."
+get_server_name_nginx_debug_0002="ERROR: Server-Name für NGINX nicht gesetzt, Standardwert 'localhost' wird verwendet."
+get_server_name_nginx_debug_0003="SUCCESS: NGINX-Server-Name: '%s'."
+get_server_name_nginx_log_0001="Server-Name für NGINX nicht gesetzt, Standardwert wird verwendet."
+get_server_name_nginx_log_0002="NGINX-Server-Name: '%s'."
+
+get_server_name_nginx() {
+    # -----------------------------------------------------------------------
+    # get_server_name_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Gibt den aktuell konfigurierten Server-Name für NGINX aus
+    # .........  der Datenbank zurück. Falls kein Server-Name gesetzt ist, 
+    # .........  wird der Standardwert 'localhost' zurückgegeben.
+    # Parameter: keine
+    # Rückgabe.: Server-Name (Standard: 'localhost')
+    # Seiteneffekte: keine
+    # -----------------------------------------------------------------------
+
+    # Debug-Meldung eröffnen
+    debug "$get_server_name_nginx_debug_0001"
+
+    # Server-Name aus der Konfiguration abrufen
+    local server_name=$(get_config_value "nginx.server_name")
+    if [ $? -ne 0 ] || [ -z "$server_name" ]; then
+        # Server-Name nicht gesetzt, Standardwert verwenden
+        debug "$get_server_name_nginx_debug_0002"
+        log "$get_server_name_nginx_log_0001"
+        server_name=$DEFAULT_SERVER_NAME_FALLBACK
+    fi
+
+    # Server-Name zurückgeben
+    debug "$(printf "$get_server_name_nginx_debug_0003" "$server_name")"
+    log "$(printf "$get_server_name_nginx_log_0002" "$server_name")"
+    echo "$server_name"  # Standardwert 'localhost', falls nicht gesetzt
+    return 0
+}
+
 # set_server_name_nginx
+set_server_name_nginx_debug_0001="INFO: Server-Name für NGINX aus DB abfragen..."
+set_server_name_nginx_debug_0002="ERROR: Fehler beim Schreiben des Server-Name: '%s'"
+set_server_name_nginx_debug_0003="SUCCESS: NGINX-Server-Name erfolgreich geschrieben: '%s'"
+set_server_name_nginx_log_0001="Fehler beim Schreiben des Server-Name: '%s'"
+
+set_server_name_nginx() {
+    # -----------------------------------------------------------------------
+    # set_server_name_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Setzt den Server-Name für NGINX in der Datenbank
+    # Parameter: $1 = Server-Name (z.B. 'localhost', 'example.com')
+    # Rückgabe.:  0 = OK, 
+    # .........   1 = Fehler (ungültiger Server-Name)
+    # Seiteneffekte: Aktualisiert die NGINX-Konfiguration in der Datenbank
+    # -----------------------------------------------------------------------
+    local server_name="$1"
+
+    # Debug-Meldung eröffnen
+    debug "$(printf "$set_server_name_nginx_debug_0001" "$server_name")"
+
+    # Parameterprüfung
+    if ! check_param "$server_name" "server_name"; then return 1; fi
+
+    # Server-Name in der Konfiguration setzen
+    set_config_value "nginx.server_name" "$server_name" "string" "Server-Name für NGINX-Server"
+    if [ $? -ne 0 ]; then
+        # Fehler beim Setzen des Server-Namens
+        debug "$(printf "$set_server_name_nginx_debug_0002" "$server_name")"
+        log "$(printf "$set_server_name_nginx_log_0001" "$server_name")"
+        return 1
+    fi
+
+    debug "$(printf "$set_server_name_nginx_debug_0003" "$server_name")"
+    return 0
+}
 
 # get_frontend_dir_nginx
 # set_frontend_dir_nginx
