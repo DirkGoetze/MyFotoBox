@@ -507,7 +507,7 @@ get_template_file() {
     # -----------------------------------------------------------------------
     local modul="$1"
     local folder_path                         # Basispfad zum Templateordner
-    local file_name="$2"                      # Name der Konfigurationsdatei
+    local file_name="$2"                      # Name der Template-Datei
     local file_ext                            # Standard-Dateiendung
     local full_filename
     
@@ -587,17 +587,23 @@ get_config_file_nginx() {
 
     # Festlegen der Bestandteile für den Dateinamen
     case "$conf_mode" in
+        "local")
+            # Interne Konfiguration, Integration in bestehende Nginx-Konfig
+            folder_path="$(get_nginx_conf_dir "internal")"
+            file_name="default"
+            file_ext=""
+            ;;
+        "internal")
+            # Interne Konfiguration, Integration in bestehende Nginx-Konfig
+            folder_path="$(get_nginx_conf_dir "internal")"
+            file_name="fotobox_nginx"
+            file_ext=""
+            ;;
         "external")
             # Externe Konfiguration im Projekt Ordner
             folder_path="$(get_config_dir "external")"
             file_name="fotobox_nginx"
             file_ext="$CONFIG_FILE_EXT_NGINX"
-            ;;
-        "internal")
-            # Interne Konfiguration, Integration in bestehende Nginx-Konfig
-            folder_path="$(get_nginx_conf_dir "internal")"
-            file_name="default"
-            file_ext=""
             ;;
         "activated")
             # Aktivierte Konfiguration, z.B. für aktivierte Sites

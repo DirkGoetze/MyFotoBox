@@ -263,6 +263,44 @@ _is_multisite_nginx() {
     fi
 }   
 
+# get_nginx_template_path
+get_nginx_template_path_txt_0001="Template-Datei nicht gefunden: %s"
+get_nginx_template_path_txt_0002="manage_folders.sh nicht verfügbar"
+get_nginx_template_path_txt_0003="Template-Datei im Fallback-Pfad nicht gefunden: %s"
+
+_template_filename_nginx() {
+    # -----------------------------------------------------------------------
+    # _template_filename_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Hilfsfunktion zum Ermitteln des vollständigen Pfads zur
+    # .........  NGINX-Template-Datei basierend auf dem Typ (local, internal,
+    # .........  external).
+    # Parameter: $1 = Template-Typ (local, internal, external)
+    # Rückgabe:  Pfad zur NGINX-Template-Datei
+    # -----------------------------------------------------------------------
+    local template_type="${1:-internal}"
+    local template_file
+    
+    case "$template_type" in
+        local)
+            template_file="$(get_template_file "nginx" "template_local")"
+            ;;
+        internal)
+            template_file="$(get_template_file "nginx" "template_internal")"
+            ;;
+        external)
+            template_file="$(get_template_file "nginx" "template_external")"
+            ;;
+        *)
+            log "Ungültiger Template-Typ: $template_type"
+            return 1
+            ;;
+    esac
+    
+    echo "$template_file"
+    return 0
+}
+
 # ===========================================================================
 # Externe Funktionen zur Prüfung der NGINX-Server Installation
 # ===========================================================================
@@ -1031,73 +1069,67 @@ backup_config_nginx() {
     fi
 }
 
-# write_default_config_nginx
-write_default_config_nginx_debug_0001="INFO: Integration der Fotobox in Default-NGINX-Konfiguration gestartet."
-write_default_config_nginx_debug_0002="ERROR: Default-Konfiguration nicht gefunden: %s"
-write_default_config_nginx_debug_0003="ERROR: Backup der Default-Konfiguration fehlgeschlagen!"
-write_default_config_nginx_debug_0004="ERROR: Beim Verwenden des Template '%s' ist ein Fehler aufgetreten!"
-write_default_config_nginx_debug_0005="ERROR: NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
-write_default_config_nginx_log_0001="Default-Konfiguration nicht gefunden: %s"
-write_default_config_nginx_log_0002="Backup der Default-Konfiguration fehlgeschlagen!"
-write_default_config_nginx_log_0003="NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
+# write_config_file_nginx
+write_config_file_nginx_debug_0001="INFO: Integration der Applikation in die NGINX-Konfiguration gestartet."
+write_config_file_nginx_debug_0002="ERROR: Default-Konfiguration nicht gefunden: %s"
+write_config_file_nginx_debug_0003="ERROR: Backup der NGINX-Konfiguration fehlgeschlagen!"
+write_config_file_nginx_debug_0004="ERROR: Beim Verwenden des Template '%s' ist ein Fehler aufgetreten!"
+write_config_file_nginx_debug_0005="ERROR: NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
+write_config_file_nginx_log_0001="NGINX-Konfiguration nicht gefunden: %s"
+write_config_file_nginx_log_0002="Backup der NGINX-Konfiguration fehlgeschlagen!"
+write_config_file_nginx_log_0003="NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
 
-write_default_config_nginx() {
+write_config_file_nginx() {
     # -----------------------------------------------------------------------
-    # write_default_config_nginx
+    # write_config_file_nginx
     # -----------------------------------------------------------------------
-    # Funktion.: Integriert die Anwendung in die Default-Konfiguration von 
-    # .........  NGINX, indem die default-Konfiguration wie ein Template 
+    # Funktion.: Integriert die Anwendung in die Konfiguration von 
+    # .........  NGINX, indem die Konfiguration wie ein Template 
     # .........  geladen und angepasst wird.
-    # Parameter: keine
+    # Parameter: $1 = Modus (z.B. local, internal, external)
     # Rückgabe.:  0 = OK, 
     # .........   1 = Fehler, 
     # .........   2 = Backup-Fehler, 
     # .........   3 = Template-Fehler, 
     # .........   4 = Reload-Fehler
     # -----------------------------------------------------------------------
-    # local default_conf="/etc/nginx/sites-available/default"
+    local modus_nginx="$1"
 
     # Debug-Meldung eröffnen
-    debug "$write_default_config_nginx_debug_0001"
+    debug "$write_config_file_nginx_debug_0001"
+
+    # Parameterprüfung
+    if ! check_param "$modus_nginx" "modus_nginx"; then return 1; fi
 
     # Ermitteln der Default-Konfigurationsdatei inkl. Prüfung
     local default_conf
-    default_conf=$(get_config_file_nginx "internal")
+    default_conf=$(get_config_file_nginx "$modus_nginx")
     if [ $? -ne 0 ] || [ -z "$default_conf" ]; then
         # Fehler beim Abrufen der Konfigurationsdatei
-        debug "$(printf "$write_default_config_nginx_debug_0002" "$default_conf")"
-        log "$(printf "$write_default_config_nginx_log_0001" "$default_conf")"
+        debug "$(printf "$write_config_file_nginx_debug_0002" "$default_conf")"
+        log "$(printf "$write_config_file_nginx_log_0001" "$default_conf")"
         return 1
     fi
 
     # Backup der Default-Konfiguration anlegen
-    backup_config_nginx "$default_conf" "internal" "write_default_config_nginx"
+    backup_config_nginx "$default_conf" "$modus_nginx" "write_config_file_nginx"
     if [ $? -ne 0 ]; then
         # Fehler beim Backup der Default-Konfiguration
-        debug "$write_default_config_nginx_debug_0003"
-        log "$write_default_config_nginx_log_0002"
+        debug "$write_config_file_nginx_debug_0003"
+        log "$write_config_file_nginx_log_0002"
         return 2
     fi
 
     # Template-Ersetzung vorbereiten, Einstellungen aus der Datenbank abrufen
-    # TODO: Einstellungen aus der Datenbank abrufen
     local port="$(get_port_nginx)"               # Port für NGINX
     local server_name="$(get_server_name_nginx)" # Standard Server-Name
     local frontend_dir="$(get_frontend_dir)"     # WEB-Root Verzeichnis
     local index_files="$(get_index_file_nginx)"  # Standard Index-Dateien
     local api_url="$(get_api_url_nginx)"         # API-URL
 
-    # Konfiguration in die Datenbank schreiben
-    register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx"
-    set_port_nginx "$DEFAULT_HTTP_PORT"
-    set_server_name_nginx "$DEFAULT_SERVER_NAME"
-    set_frontend_dir_nginx "$DEFAULT_FRONTEND_DIR"
-    set_index_file_nginx "$DEFAULT_INDEX_FILE"
-    set_api_url_nginx "$DEFAULT_API_URL"
-
     # Template-Datei suchen, wenn gefunden wurde, Platzhalter ersetzen
-    local template_file  # Pfad zur Template-Datei
-    template_file="$(get_template_file "nginx" "template_local")"
+    local template_file  
+    template_file="$(_template_filename_nginx $modus_nginx)"
     apply_template "$template_file" "$default_conf" \
                 "PORT=$port" \
                 "SERVER_NAME=$server_name" \
@@ -1107,186 +1139,57 @@ write_default_config_nginx() {
 
     if [ $? -ne 0 ]; then
         # Fehler beim Anwenden des Templates
-        debug "$(printf "$write_default_config_nginx_debug_0004" "$template_file")"
+        debug "$(printf "$write_config_file_nginx_debug_0004" "$template_file")"
         return 3
     fi
 
-    # NGINX-Konfiguration neu laden
-    reload_nginx    
-    if [ $? -ne 0 ]; then 
-        # Fehler beim Neuladen der NGINX-Konfiguration
-        debug "$write_default_config_nginx_debug_0005"
-        log "$(printf "$write_default_config_nginx_log_0003" "$default_conf")"
-        return 4
-    fi
-    
-    # Firewall-Regeln aktualisieren
-    # TODO: Firewall Modul einbinden
-    # update_firewall_rules "$mode"
-    
-    return 0
-}
-
-# write_external_config_nginx
-write_external_config_nginx_debug_0001="INFO: Eignene NGINX-Konfiguration gestartet."
-write_external_config_nginx_debug_0002="ERROR: Aktive-Konfiguration nicht gefunden: %s"
-write_external_config_nginx_debug_0003="ERROR: Backup der Default-Konfiguration fehlgeschlagen!"
-write_external_config_nginx_log_0001="Aktive-Konfiguration nicht gefunden: %s"
-write_external_config_nginx_log_0002="Backup der Default-Konfiguration fehlgeschlagen!"
-
-write_external_config_nginx_txt_0002="Backup der bestehenden Fotobox-Konfiguration fehlgeschlagen!"
-write_external_config_nginx_txt_0003="Backup der bestehenden Fotobox-Konfiguration nach %s"
-write_external_config_nginx_txt_0004="Kopieren der Fotobox-Konfiguration fehlgeschlagen!"
-write_external_config_nginx_txt_0005="Fotobox-Konfiguration nach %s kopiert."
-write_external_config_nginx_txt_0006="Symlink für Fotobox-Konfiguration konnte nicht erstellt werden!"
-write_external_config_nginx_txt_0007="Symlink für Fotobox-Konfiguration erstellt."
-write_external_config_nginx_txt_0008="NGINX-Konfiguration konnte nach externer Integration nicht neu geladen werden!"
-
-write_external_config_nginx() {
-    # -----------------------------------------------------------------------
-    # write_external_config_nginx
-    # -----------------------------------------------------------------------
-    # Funktion.: Erstellt für die Anwendung aus dem Template eine eigene
-    # .........  Konfiguration im Projekt Ordner und bindet diese über einen
-    # .........  Symlink in die aktuelle NGINX-Konfiguration ein
-    # Parameter: keine
-    # Rückgabe.:  0 = OK
-    # .........   1 = Fehler
-    # .........   2 = Backup-Fehler
-    # .........   4 = Reload-Fehler
-    # .........   10 = Symlink-Fehler
-    # ------------------------------------------------------------------------
-    # local nginx_cnf_dst="/etc/nginx/sites-available/fotobox"
-    # local nginx_cnf_src="$(get_config_file_nginx "activated")"
-
-    # Debug-Meldung eröffnen
-    debug "$write_external_config_nginx_debug_0001"
-
-    # Ermitteln der aktiven NGINX-Konfigurationsdatei
-    local nginx_cnf_src
-    nginx_cnf_src=$(get_config_file_nginx "activated")
-    if [ $? -ne 0 ] || [ -z "$nginx_cnf_src" ]; then
-        # Fehler beim Abrufen der Konfigurationsdatei
-        debug "$(printf "$write_external_config_nginx_debug_0002" "$nginx_cnf_src")"
-        log "$write_external_config_nginx_log_0001" "$nginx_cnf_src"
-        return 1
-    fi
-
-    # Backup der bestehenden NGINX-Konfiguration anlegen
-    backup_config_nginx "$nginx_cnf_src" "external" "write_external_config_nginx"
-    if [ $? -ne 0 ]; then
-        # Fehler beim Backup der NGINX-Konfiguration
-        debug "$write_external_config_nginx_debug_0003"
-        log "$write_external_config_nginx_log_0002"
-        return 2
-    fi
-
-    # Template-Ersetzung vorbereiten, Einstellungen aus der Datenbank abrufen
-    # TODO: Einstellungen aus der Datenbank abrufen
-    local port="$(get_port_nginx)"               # Port für NGINX
-    local server_name="$(get_server_name_nginx)" # Standard Server-Name
-    local frontend_dir="$(get_frontend_dir)"     # WEB-Root Verzeichnis
-    local index_files="$(get_index_file_nginx)"  # Standard Index-Dateien
-    local api_url="$(get_api_url_nginx)"         # API-URL
-
-    # Konfiguration in die Datenbank schreiben
-    register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx"
-    set_port_nginx "$DEFAULT_HTTP_PORT"
-    set_server_name_nginx "$DEFAULT_SERVER_NAME"
-    set_frontend_dir_nginx "$DEFAULT_FRONTEND_DIR"  
-    set_index_file_nginx "$DEFAULT_INDEX_FILE"
-    set_api_url_nginx "$DEFAULT_API_URL"
-
-    # Template-Datei suchen, wenn gefunden wurde, Platzhalter ersetzen
-    local conf_src  # Pfad zur Template-Datei
-    conf_src="$(get_nginx_template_file "external")"
-    apply_template "$conf_src" "$nginx_cnf_src" \
-                "PORT=$port" \
-                "SERVER_NAME=$server_name" \
-                "DOCUMENT_ROOT=$frontend_dir" \
-                "INDEX_FILE=$index_files" \
-                "API_URL=$api_url"
-    
-    if [ $? -ne 0 ]; then
-        # Fehler beim Anwenden des Templates
-        debug "$(printf "$write_external_config_nginx_debug_0004" "$conf_src")
-        log "$(printf "$write_external_config_nginx_log_0002" "$conf_src")
-        return 3
-    fi
-
-    # NGINX-Konfiguration neu laden
-    reload_nginx    
-    if [ $? -ne 0 ]; then 
-        # Fehler beim Neuladen der NGINX-Konfiguration
-        debug "$write_external_config_nginx_debug_0005"
-        log "$(printf "$write_external_config_nginx_log_0003" "$nginx_cnf_src")"
-        return 4
-    fi
-
-    # Firewall-Regeln aktualisieren
-    # TODO: Firewall Modul einbinden
-    # update_firewall_rules "$mode"
-    
-    return 0
-}
-
-
-
-
-# ===========================================================================
-# Funktionen zur Template-Verarbeitung
-# ===========================================================================
-
-# get_nginx_template_path
-get_nginx_template_path_txt_0001="Template-Datei nicht gefunden: %s"
-get_nginx_template_path_txt_0002="manage_folders.sh nicht verfügbar"
-get_nginx_template_path_txt_0003="Template-Datei im Fallback-Pfad nicht gefunden: %s"
-
-get_nginx_template_path() {
-    # -----------------------------------------------------------------------
-    # get_nginx_template_path
-    # -----------------------------------------------------------------------
-    # Funktion: Ermittelt den Pfad zu einer bestimmten NGINX-Template-Datei
-    # Parameter: $1 = Template-Typ (local, internal, external)
-    # Rückgabe:  Pfad zur NGINX-Template-Datei
-    # -----------------------------------------------------------------------
-    local template_type="${1:-internal}"
-    local manage_folders_sh
-    local template_file
-    
-    # Verwende manage_folders.sh, falls verfügbar
-    manage_folders_sh="$(dirname "$0")/manage_folders.sh"
-    
-    if [ -f "$manage_folders_sh" ] && [ -x "$manage_folders_sh" ]; then
-        # Hole NGINX-Konfigurationsverzeichnis
-        local nginx_conf_dir
-        nginx_conf_dir="$("$manage_folders_sh" get_nginx_conf_dir)"
-        template_file="$nginx_conf_dir/template_${template_type}.conf"
-        
-        # Prüfe, ob die Datei existiert
-        if [ ! -f "$template_file" ]; then
-            log "$(printf "$get_nginx_template_path_txt_0001" "$template_file")"
-            template_file="" # Leerer String als Fehlerindikator
-        fi
-    else
-        log "$get_nginx_template_path_txt_0002"
-        
-        # Fallback: Versuche manuelle Pfaderstellung
-        if [ -n "$DEFAULT_DIR_CONF_NGINX" ]; then
-            template_file="$DEFAULT_DIR_CONF_NGINX/template_${template_type}.conf"
+    # --- TODO: Prüfe KI Source ---------------------------------------------
+    # Wenn nicht "local" Modus, dann auch Symlink in sites-enabled setzen
+    if [ "$modus_nginx" != "local" ]; then
+        # Prüfen, ob der Symlink bereits existiert
+        if [ ! -L /etc/nginx/sites-enabled/fotobox ]; then
+            # Symlink erstellen, wenn nicht vorhanden
+            if ! ln -s "$default_conf" /etc/nginx/sites-enabled/fotobox; then
+                # Fehler beim Erstellen des Symlinks
+                debug "$(printf "$write_config_file_nginx_debug_0005" "$default_conf")
+                log "$(printf "$write_config_file_nginx_log_0003" "$default_conf")
+                return 4
+            fi
         else
-            template_file="" # Leerer String als Fehlerindikator
-        fi
-        
-        # Prüfe, ob die Datei existiert im Fallback
-        if [ -n "$template_file" ] && [ ! -f "$template_file" ]; then
-            log "$(printf "$get_nginx_template_path_txt_0003" "$template_file")"
-            template_file="" # Leerer String als Fehlerindikator
+            # Symlink existiert bereits, prüfen ob er auf die richtige Datei zeigt
+            local current_link_target=$(readlink /etc/nginx/sites-enabled/fotobox)
+            if [ "$current_link_target" != "$default_conf" ]; then
+                # Symlink zeigt auf eine andere Datei, aktualisieren
+                if ! ln -sf "$default_conf" /etc/nginx/sites-enabled/fotobox; then
+                    # Fehler beim Aktualisieren des Symlinks
+                    debug "$(printf "$write_config_file_nginx_debug_0005" "$default_conf")
+                    log "$(printf "$write_config_file_nginx_log_0003" "$default_conf")
+                    return 4
+                fi
+            fi
         fi
     fi
+    # --- Ende TODO: Prüfe KI Source ---------------------------------------------
+
+    # NGINX-Konfiguration neu laden
+    reload_nginx    
+    if [ $? -ne 0 ]; then 
+        # Fehler beim Neuladen der NGINX-Konfiguration
+        debug "$write_config_file_nginx_debug_0005"
+        log "$(printf "$write_config_file_nginx_log_0003" "$default_conf")"
+        return 4
+    fi
     
-    echo "$template_file"
+    # Firewall-Regeln aktualisieren
+    # TODO: Firewall Modul einbinden
+    # update_firewall_rules "$mode"
+    
+    return 0
 }
+
+
+
+
 
 # ===========================================================================
 # Hilfsfunktionen zum lesen und setzen von einzelnen NGINX-Konfigurationen
@@ -2260,12 +2163,20 @@ setup_nginx_service() {
         fi
     fi
 
+    # Standard-Konfiguration in die Datenbank schreiben
+    register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx"
+    set_port_nginx "$DEFAULT_HTTP_PORT"
+    set_server_name_nginx "$DEFAULT_SERVER_NAME"
+    set_frontend_dir_nginx "$DEFAULT_FRONTEND_DIR"  
+    set_index_file_nginx "$DEFAULT_INDEX_FILE"
+    set_api_url_nginx "$DEFAULT_API_URL"
+
     # Schritt 3: Je nach aktuellen Zustand der NGINX-Konfiguration vorgehen
     local nginx_status
     nginx_status=$(_is_default_nginx)
     if [ $? -eq 0 ]; then  # Default-Konfiguration
         if [ "$output_mode" = "json" ]; then
-            write_default_config_nginx || return 1
+            write_config_file_nginx "local" || return 1
         else
             # Ausgabe im CLI-Modus, Spinner anzeigen
             echo -n "$setup_nginx_service_txt_0008"
