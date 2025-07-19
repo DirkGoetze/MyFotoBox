@@ -321,6 +321,73 @@ chk_config_nginx() {
     fi
 }
 
+# chk_port_nginx
+chk_port_nginx_debug_0001="INFO: Port-Prüfung starten ..."
+chk_port_nginx_debug_0002="WARN: Port '%s' ist belegt."
+chk_port_nginx_debug_0003="SUCCESS: Port '%s' ist frei."
+chk_port_nginx_debug_0004="ERROR: Fehler bei der Portprüfung! (Tools 'lsof'/'ss'/'netstat' fehlen!)"
+chk_port_nginx_log_0001="Port '%s' ist belegt."
+chk_port_nginx_log_0002="Port '%s' ist frei."
+chk_port_nginx_log_0003="Fehler bei der Portprüfung! (Tools 'lsof'/'ss'/'netstat' fehlen!)"
+
+chk_port_nginx() {
+    # -----------------------------------------------------------------------
+    # chk_port_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Prüft, ob der übergebene Port belegt ist oder frei.
+    # Parameter: $1 = Port (Default: 80/443)
+    # Rückgabe.:  0 = frei
+    # .........   1 = belegt
+    # .........   2 = Fehler
+    # Seiteneffekte: keine
+    # -----------------------------------------------------------------------
+    local port=${1:-$DEFAULT_HTTP_PORT}
+
+    # Debug-Meldung eröffnen
+    debug "$chk_port_nginx_debug_0001"
+
+    # Prüfen, ob lsof, ss oder netstat verfügbar ist
+    if command -v lsof >/dev/null 2>&1; then
+        # Prüfen, ob der Port belegt ist (lsof)
+        if lsof -i :$port | grep LISTEN > /dev/null; then
+            debug "$(printf "$chk_port_nginx_debug_0002" "$port")"
+            log "$(printf "$chk_port_nginx_log_0001" "$port")"
+            return 1
+        else
+            debug "$(printf "$chk_port_nginx_debug_0003" "$port")"
+            log "$(printf "$chk_port_nginx_log_0002" "$port")"
+            return 0
+        fi
+    elif command -v ss >/dev/null 2>&1; then
+        # Prüfen, ob der Port belegt ist (ss)
+        if ss -tuln | grep -E ":$port[[:space:]]" > /dev/null; then
+            debug "$(printf "$chk_port_nginx_debug_0002" "$port")"
+            log "$(printf "$chk_port_nginx_log_0003" "$port")"
+            return 1
+        else
+            debug "$(printf "$chk_port_nginx_debug_0003" "$port")"
+            log "$(printf "$chk_port_nginx_log_0004" "$port")"
+            return 0
+        fi
+    elif command -v netstat >/dev/null 2>&1; then
+        # Prüfen, ob der Port belegt ist (netstat)
+        if netstat -tuln | grep -E ":$port[[:space:]]" > /dev/null; then
+            debug "$(printf "$chk_port_nginx_debug_0002" "$port")"
+            log "$(printf "$chk_port_nginx_log_0003" "$port")"
+            return 1
+        else
+            debug "$(printf "$chk_port_nginx_debug_0003" "$port")"
+            log "$(printf "$chk_port_nginx_log_0004" "$port")"
+            return 0
+        fi
+    else
+        # Keines der Tools verfügbar
+        debug "$chk_port_nginx_debug_0004"
+        log "${chk_port_nginx_log_0003}"
+        return 2
+    fi
+}
+
 # ===========================================================================
 # Externe Funktionen zur Steuerung des NGINX-Server
 # ===========================================================================
@@ -643,19 +710,19 @@ backup_config_nginx() {
     fi
 }
 
-# set_default_config_nginx
-set_default_config_nginx_debug_0001="INFO: Integration der Fotobox in Default-NGINX-Konfiguration gestartet."
-set_default_config_nginx_debug_0002="ERROR: Default-Konfiguration nicht gefunden: %s"
-set_default_config_nginx_debug_0003="ERROR: Backup der Default-Konfiguration fehlgeschlagen!"
-set_default_config_nginx_debug_0004="ERROR: Beim Verwenden des Template '%s' ist ein Fehler aufgetreten!"
-set_default_config_nginx_debug_0005="ERROR: NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
-set_default_config_nginx_log_0001="Default-Konfiguration nicht gefunden: %s"
-set_default_config_nginx_log_0002="Backup der Default-Konfiguration fehlgeschlagen!"
-set_default_config_nginx_log_0003="NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
+# write_default_config_nginx
+write_default_config_nginx_debug_0001="INFO: Integration der Fotobox in Default-NGINX-Konfiguration gestartet."
+write_default_config_nginx_debug_0002="ERROR: Default-Konfiguration nicht gefunden: %s"
+write_default_config_nginx_debug_0003="ERROR: Backup der Default-Konfiguration fehlgeschlagen!"
+write_default_config_nginx_debug_0004="ERROR: Beim Verwenden des Template '%s' ist ein Fehler aufgetreten!"
+write_default_config_nginx_debug_0005="ERROR: NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
+write_default_config_nginx_log_0001="Default-Konfiguration nicht gefunden: %s"
+write_default_config_nginx_log_0002="Backup der Default-Konfiguration fehlgeschlagen!"
+write_default_config_nginx_log_0003="NGINX-Konfiguration konnte nach Integration nicht neu geladen werden!"
 
-set_default_config_nginx() {
+write_default_config_nginx() {
     # -----------------------------------------------------------------------
-    # set_default_config_nginx
+    # write_default_config_nginx
     # -----------------------------------------------------------------------
     # Funktion.: Integriert die Anwendung in die Default-Konfiguration von 
     # .........  NGINX, indem die default-Konfiguration wie ein Template 
@@ -670,24 +737,24 @@ set_default_config_nginx() {
     # local default_conf="/etc/nginx/sites-available/default"
 
     # Debug-Meldung eröffnen
-    debug "$set_default_config_nginx_debug_0001"
+    debug "$write_default_config_nginx_debug_0001"
 
     # Ermitteln der Default-Konfigurationsdatei inkl. Prüfung
     local default_conf
     default_conf=$(get_config_file_nginx "internal")
     if [ $? -ne 0 ] || [ -z "$default_conf" ]; then
         # Fehler beim Abrufen der Konfigurationsdatei
-        debug "$(printf "$set_default_config_nginx_debug_0002" "$default_conf")"
-        log "$(printf "$set_default_config_nginx_log_0001" "$default_conf")"
+        debug "$(printf "$write_default_config_nginx_debug_0002" "$default_conf")"
+        log "$(printf "$write_default_config_nginx_log_0001" "$default_conf")"
         return 1
     fi
 
     # Backup der Default-Konfiguration anlegen
-    backup_config_nginx "$default_conf" "internal" "set_default_config_nginx"
+    backup_config_nginx "$default_conf" "internal" "write_default_config_nginx"
     if [ $? -ne 0 ]; then
         # Fehler beim Backup der Default-Konfiguration
-        debug "$set_default_config_nginx_debug_0003"
-        log "$set_default_config_nginx_log_0002"
+        debug "$write_default_config_nginx_debug_0003"
+        log "$write_default_config_nginx_log_0002"
         return 2
     fi
 
@@ -719,7 +786,7 @@ set_default_config_nginx() {
 
     if [ $? -ne 0 ]; then
         # Fehler beim Anwenden des Templates
-        debug "$(printf "$set_default_config_nginx_debug_0004" "$template_file")"
+        debug "$(printf "$write_default_config_nginx_debug_0004" "$template_file")"
         return 3
     fi
 
@@ -727,8 +794,8 @@ set_default_config_nginx() {
     reload_nginx    
     if [ $? -ne 0 ]; then 
         # Fehler beim Neuladen der NGINX-Konfiguration
-        debug "$set_default_config_nginx_debug_0005"
-        log "$(printf "$set_default_config_nginx_log_0003" "$default_conf")"
+        debug "$write_default_config_nginx_debug_0005"
+        log "$(printf "$write_default_config_nginx_log_0003" "$default_conf")"
         return 4
     fi
     
@@ -739,24 +806,24 @@ set_default_config_nginx() {
     return 0
 }
 
-# set_external_config_nginx
-set_nginx_cnf_external_debug_0001="INFO: Eignene NGINX-Konfiguration gestartet."
-set_nginx_cnf_external_debug_0002="ERROR: Aktive-Konfiguration nicht gefunden: %s"
-set_nginx_cnf_external_debug_0003="ERROR: Backup der Default-Konfiguration fehlgeschlagen!"
-set_nginx_cnf_external_log_0001="Aktive-Konfiguration nicht gefunden: %s"
-set_nginx_cnf_external_log_0002="Backup der Default-Konfiguration fehlgeschlagen!"
+# write_external_config_nginx
+write_external_config_nginx_debug_0001="INFO: Eignene NGINX-Konfiguration gestartet."
+write_external_config_nginx_debug_0002="ERROR: Aktive-Konfiguration nicht gefunden: %s"
+write_external_config_nginx_debug_0003="ERROR: Backup der Default-Konfiguration fehlgeschlagen!"
+write_external_config_nginx_log_0001="Aktive-Konfiguration nicht gefunden: %s"
+write_external_config_nginx_log_0002="Backup der Default-Konfiguration fehlgeschlagen!"
 
-set_nginx_cnf_external_txt_0002="Backup der bestehenden Fotobox-Konfiguration fehlgeschlagen!"
-set_nginx_cnf_external_txt_0003="Backup der bestehenden Fotobox-Konfiguration nach %s"
-set_nginx_cnf_external_txt_0004="Kopieren der Fotobox-Konfiguration fehlgeschlagen!"
-set_nginx_cnf_external_txt_0005="Fotobox-Konfiguration nach %s kopiert."
-set_nginx_cnf_external_txt_0006="Symlink für Fotobox-Konfiguration konnte nicht erstellt werden!"
-set_nginx_cnf_external_txt_0007="Symlink für Fotobox-Konfiguration erstellt."
-set_nginx_cnf_external_txt_0008="NGINX-Konfiguration konnte nach externer Integration nicht neu geladen werden!"
+write_external_config_nginx_txt_0002="Backup der bestehenden Fotobox-Konfiguration fehlgeschlagen!"
+write_external_config_nginx_txt_0003="Backup der bestehenden Fotobox-Konfiguration nach %s"
+write_external_config_nginx_txt_0004="Kopieren der Fotobox-Konfiguration fehlgeschlagen!"
+write_external_config_nginx_txt_0005="Fotobox-Konfiguration nach %s kopiert."
+write_external_config_nginx_txt_0006="Symlink für Fotobox-Konfiguration konnte nicht erstellt werden!"
+write_external_config_nginx_txt_0007="Symlink für Fotobox-Konfiguration erstellt."
+write_external_config_nginx_txt_0008="NGINX-Konfiguration konnte nach externer Integration nicht neu geladen werden!"
 
-set_external_config_nginx() {
+write_external_config_nginx() {
     # -----------------------------------------------------------------------
-    # set_external_config_nginx
+    # write_external_config_nginx
     # -----------------------------------------------------------------------
     # Funktion.: Erstellt für die Anwendung aus dem Template eine eigene
     # .........  Konfiguration im Projekt Ordner und bindet diese über einen
@@ -772,24 +839,24 @@ set_external_config_nginx() {
     # local nginx_cnf_src="$(get_config_file_nginx "activated")"
 
     # Debug-Meldung eröffnen
-    debug "$set_nginx_cnf_external_debug_0001"
+    debug "$write_external_config_nginx_debug_0001"
 
     # Ermitteln der aktiven NGINX-Konfigurationsdatei
     local nginx_cnf_src
     nginx_cnf_src=$(get_config_file_nginx "activated")
     if [ $? -ne 0 ] || [ -z "$nginx_cnf_src" ]; then
         # Fehler beim Abrufen der Konfigurationsdatei
-        debug "$(printf "$set_nginx_cnf_external_debug_0002" "$nginx_cnf_src")"
-        log "$set_nginx_cnf_external_log_0001" "$nginx_cnf_src"
+        debug "$(printf "$write_external_config_nginx_debug_0002" "$nginx_cnf_src")"
+        log "$write_external_config_nginx_log_0001" "$nginx_cnf_src"
         return 1
     fi
 
     # Backup der bestehenden NGINX-Konfiguration anlegen
-    backup_config_nginx "$nginx_cnf_src" "external" "set_external_config_nginx"
+    backup_config_nginx "$nginx_cnf_src" "external" "write_external_config_nginx"
     if [ $? -ne 0 ]; then
         # Fehler beim Backup der NGINX-Konfiguration
-        debug "$set_nginx_cnf_external_debug_0003"
-        log "$set_nginx_cnf_external_log_0002"
+        debug "$write_external_config_nginx_debug_0003"
+        log "$write_external_config_nginx_log_0002"
         return 2
     fi
 
@@ -815,26 +882,26 @@ set_external_config_nginx() {
     local nginx_dst="/etc/nginx/sites-available/fotobox"
     local conf_src="$(get_nginx_template_file fotobox)"
 
-    log "${set_nginx_cnf_external_txt_0001}"
+    log "${write_external_config_nginx_txt_0001}"
     # Prüfen, ob bereits eine Zielkonfiguration existiert
     if [ -f "$nginx_dst" ]; then
         backup_nginx_config "$nginx_dst" "external" "set_nginx_cnf_external" "$mode" || return 2
-        log_or_json "$mode" "success" "$set_nginx_cnf_external_txt_0003" 0
+        log_or_json "$mode" "success" "$write_external_config_nginx_txt_0003" 0
     fi
     # Neue Konfiguration kopieren
-    cp "$conf_src" "$nginx_dst" || { log_or_json "$mode" "error" "$set_nginx_cnf_external_txt_0004" 1; return 1; }
-    log_or_json "$mode" "success" "$set_nginx_cnf_external_txt_0005" 0
+    cp "$conf_src" "$nginx_dst" || { log_or_json "$mode" "error" "$write_external_config_nginx_txt_0004" 1; return 1; }
+    log_or_json "$mode" "success" "$write_external_config_nginx_txt_0005" 0
     # Prüfen, ob Symlink existiert, sonst anlegen
     if [ ! -L /etc/nginx/sites-enabled/fotobox ]; then
-        ln -s "$nginx_dst" /etc/nginx/sites-enabled/fotobox || { log_or_json "$mode" "error" "$set_nginx_cnf_external_txt_0006" 10; return 10; }
-        log_or_json "$mode" "success" "$set_nginx_cnf_external_txt_0007" 0
+        ln -s "$nginx_dst" /etc/nginx/sites-enabled/fotobox || { log_or_json "$mode" "error" "$write_external_config_nginx_txt_0006" 10; return 10; }
+        log_or_json "$mode" "success" "$write_external_config_nginx_txt_0007" 0
     fi
     local reload_result
     reload_result=$(chk_nginx_reload "$mode")
     local reload_status=$?
     
     if [ $reload_status -ne 0 ]; then 
-        log_or_json "$mode" "error" "$set_nginx_cnf_external_txt_0008" 4
+        log_or_json "$mode" "error" "$write_external_config_nginx_txt_0008" 4
         return 4
     fi
     
@@ -900,61 +967,6 @@ get_nginx_template_path() {
     fi
     
     echo "$template_file"
-}
-
-# chk_nginx_port
-chk_nginx_port_txt_0001="Port-Prüfung starten ..."
-chk_nginx_port_txt_0002="lsof ist nicht verfügbar. Portprüfung nicht möglich."
-chk_nginx_port_txt_0003="Port %s ist belegt."
-chk_nginx_port_txt_0004="Port %s ist frei."
-chk_nginx_port_txt_0005="Portprüfung abgeschlossen."
-chk_nginx_port_txt_0006="Fehler bei der Portprüfung."
-
-chk_nginx_port() {
-    # -----------------------------------------------------------------------
-    # chk_nginx_port
-    # -----------------------------------------------------------------------
-    # Funktion: Prüft, ob der gewünschte Port belegt ist oder frei.
-    # Parameter: $1 = Port (Default: 80)
-    #            $2 = Modus (text|json), optional (Standard: text)
-    # Rückgabe:  0 = frei, 1 = belegt, 2 = Fehler
-    # Seiteneffekte: keine
-    local port=${1:-80}
-    local mode="${2:-text}"
-    # Prüfen, ob lsof, ss oder netstat verfügbar ist
-    if command -v lsof >/dev/null 2>&1; then
-        # Prüfen, ob der Port belegt ist (lsof)
-        if lsof -i :$port | grep LISTEN > /dev/null; then
-            log "$(printf "$chk_nginx_port_txt_0003" "$port")"
-            return 1
-        else
-            log "$(printf "$chk_nginx_port_txt_0004" "$port")"
-            return 0
-        fi
-    elif command -v ss >/dev/null 2>&1; then
-        # Prüfen, ob der Port belegt ist (ss)
-        if ss -tuln | grep -E ":$port[[:space:]]" > /dev/null; then
-            log "$(printf "$chk_nginx_port_txt_0003" "$port")"
-            return 1
-        else
-            log "$(printf "$chk_nginx_port_txt_0004" "$port")"
-            return 0
-        fi
-    elif command -v netstat >/dev/null 2>&1; then
-        # Prüfen, ob der Port belegt ist (netstat)
-        if netstat -tuln | grep -E ":$port[[:space:]]" > /dev/null; then
-            log "$(printf "$chk_nginx_port_txt_0003" "$port")"
-            return 1
-        else
-            log "$(printf "$chk_nginx_port_txt_0004" "$port")"
-            return 0
-        fi
-    else
-        # Keines der Tools verfügbar
-        log_or_json "$mode" "error" "${chk_nginx_port_txt_0002} (lsof/ss/netstat fehlen)" 2
-        return 2
-    fi
-    # log "${chk_nginx_port_txt_0005}"  # ENTFERNT
 }
 
 # ===========================================================================
@@ -1934,16 +1946,16 @@ setup_nginx_service() {
     nginx_status=$(_is_default_nginx)
     if [ $? -eq 0 ]; then  # Default-Konfiguration
         if [ "$output_mode" = "json" ]; then
-            set_default_config_nginx || return 1
+            write_default_config_nginx || return 1
         else
             # Ausgabe im CLI-Modus, Spinner anzeigen
             echo -n "$setup_nginx_service_txt_0008"
             # Einrichtung NGINX-Server im Hintergrund ausführen
             # und Spinner anzeigen
             debug "$setup_nginx_service_debug_0009"
-            # TODO: set_default_config_nginx im Hintergrund ausführen für DEBUG abgeschaltet
-            #(set_default_config_nginx) &> /dev/null 2>&1 & 
-            set_default_config_nginx
+            # TODO: write_default_config_nginx im Hintergrund ausführen für DEBUG abgeschaltet
+            #(write_default_config_nginx) &> /dev/null 2>&1 & 
+            write_default_config_nginx
             service_pid=$!
             show_spinner "$service_pid" "dots"
             # Überprüfe, ob die neue Konfiguration erfolgreich war
@@ -1956,9 +1968,9 @@ setup_nginx_service() {
         fi
     elif [ $? -eq 1 ]; then  # Angepasste Konfiguration
         if [ "$output_mode" = "json" ]; then
-            set_external_config_nginx "json" || return 1
+            write_external_config_nginx "json" || return 1
         else
-            set_external_config_nginx "text" || return 1
+            write_external_config_nginx "text" || return 1
         fi
     else  # Unklarer Status
         log_or_json "$output_mode" "error" "$improved_nginx_install_txt_0009" 9
