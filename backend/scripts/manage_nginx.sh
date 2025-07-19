@@ -439,44 +439,51 @@ start_nginx() {
     return 0
 }
 
-# nginx_stop
-nginx_stop_txt_0001="Stoppe NGINX-Dienst..."
-nginx_stop_txt_0002="NGINX-Dienst erfolgreich gestoppt."
-nginx_stop_txt_0003="NGINX-Dienst konnte nicht gestoppt werden!"
-nginx_stop_txt_0004="NGINX ist nicht installiert."
+# stop_nginx
+stop_nginx_debug_0001="INFO: Stoppe NGINX-Dienst..."
+stop_nginx_debug_0002="ERROR: NGINX ist nicht installiert."
+stop_nginx_debug_0003="ERROR: NGINX-Dienst konnte nicht gestoppt werden! Meldung: \n%s"
+stop_nginx_debug_0004="SUCCESS: NGINX-Dienst erfolgreich gestoppt."
+stop_nginx_log_0001="Stop NGINX-Server fehlgeschlagen: NGINX ist nicht installiert!"
+stop_nginx_log_0002="Stop NGINX-Server fehlgeschlagen: \n%s"
+stop_nginx_log_0003="NGINX-Server erfolgreich gestoppt."
 
-nginx_stop() {
+stop_nginx() {
     # -----------------------------------------------------------------------
-    # nginx_stop
+    # stop_nginx
     # -----------------------------------------------------------------------
-    # Funktion: Stoppt den NGINX-Dienst
-    # Parameter: $1 = Modus (text|json), optional (Default: text)
-    # Rückgabe:  0 = erfolgreich gestoppt, 1 = Fehler
+    # Funktion.: Stoppt den NGINX-Dienst
+    # Parameter: keine
+    # Rückgabe.:  0 = erfolgreich gestoppt
+    # .........   1 = Fehler
     # Seiteneffekte: Stoppt den NGINX-Dienst (systemctl stop nginx)
-    
-    local mode="${1:-text}"
+    # -----------------------------------------------------------------------
+
+    # Debug-Meldung eröffnen
+    debug "$stop_nginx_debug_0001"
     
     # Zuerst prüfen, ob NGINX überhaupt installiert ist
-    if ! is_nginx_available >/dev/null; then
-        log_or_json "$mode" "error" "${nginx_stop_txt_0004}" 1
+    if ! is_nginx_available; then
+        # NGINX ist nicht installiert
+        debug "$stop_nginx_debug_0002"
+        log "$stop_nginx_log_0001"
         return 1
     fi
     
-    log_or_json "$mode" "info" "${nginx_stop_txt_0001}" 0
-    
-    # NGINX-Dienst stoppen
-    if systemctl stop nginx; then
-        # Stop erfolgreich
-        log_or_json "$mode" "success" "${nginx_stop_txt_0002}" 0
-        return 0
-    else
+    # NGINX ist installiert, jetzt NGINX-Dienst stoppen
+    if ! systemctl stop nginx; then
         # Stop fehlgeschlagen, Fehlerdetails ausgeben
         local status_out
         status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
-        log_or_json "$mode" "error" "${nginx_stop_txt_0003}" 1
-        log "$status_out"
+        debug "$(printf "$stop_nginx_debug_0003" "$status_out")"
+        log "$(printf "$stop_nginx_log_0002" "$status_out")"
         return 1
     fi
+
+    # Stop erfolgreich
+    debug "$stop_nginx_debug_0004"
+    log "$stop_nginx_log_0003"
+    return 0
 }
 
 # reload_nginx
@@ -486,7 +493,6 @@ reload_nginx_debug_0003="ERROR: NGINX konnte nicht neu geladen werden! Statusaus
 reload_nginx_debug_0004="SUCCESS: NGINX-Konfiguration erfolgreich neu geladen."
 reload_nginx_log_0001="Fehler in der NGINX-Konfiguration! Bitte prüfen."
 reload_nginx_log_0002="NGINX konnte nicht neu geladen werden! Statusauszug: \n%s"
-
 
 reload_nginx() {
     # -----------------------------------------------------------------------
