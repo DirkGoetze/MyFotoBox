@@ -67,6 +67,11 @@ DEFAULT_FRONTEND_DIR_FALLBACK="/var/www/html" # Fallback-Verzeichnis
 DEFAULT_INDEX_FILES=("index.html" "start.html")
 DEFAULT_INDEX_FILES_FALLBACK=("index.html" "index.htm" "index.php")
 
+# Standard-API-URL für NGINX
+# ---------------------------------------------------------------------------
+DEFAULT_API_URL="http://127.0.0.1:5000"          # Standard-API-URL für NGINX
+DEFAULT_API_URL_FALLBACK="http://localhost:5000/api"       # Fallback-API-URL
+
 # ===========================================================================
 
 # ===========================================================================
@@ -854,6 +859,81 @@ set_index_file_nginx() {
     return 0
 }
 
+# get_api_url_nginx
+get_api_url_nginx_debug_0001="INFO: API-URL für NGINX aus DB abfragen..."
+get_api_url_nginx_debug_0002="ERROR: API-URL für NGINX nicht gesetzt, Standardwert '%s' wird verwendet."
+get_api_url_nginx_debug_0003="SUCCESS: NGINX-API-URL: '%s'."
+get_api_url_nginx_log_0001="API-URL für NGINX nicht gesetzt, Standardwert wird verwendet."
+get_api_url_nginx_log_0002="NGINX-API-URL: '%s'."
+
+get_api_url_nginx() {
+    # -----------------------------------------------------------------------
+    # get_api_url_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Gibt die aktuell konfigurierte API-URL für NGINX aus der 
+    # .........  Datenbank zurück. Falls keine API-URL gesetzt ist, wird 
+    # .........  der Standardwert 'http://localhost:8080/api' zurückgegeben.
+    # Parameter: keine
+    # Rückgabe.: API-URL (Standard: 'http://localhost:8080/api')
+    # Seiteneffekte: keine
+    # -----------------------------------------------------------------------
+
+    # Debug-Meldung eröffnen
+    debug "$get_api_url_nginx_debug_0001"
+
+    # API-URL aus der Konfiguration abrufen
+    local api_url=$(get_config_value "nginx.api_url")
+    if [ $? -ne 0 ] || [ -z "$api_url" ]; then
+        # API-URL nicht gesetzt, Standardwert verwenden
+        debug "$(printf "$get_api_url_nginx_debug_0002" "$DEFAULT_API_URL_FALLBACK")"
+        log "$(printf "$get_api_url_nginx_log_0001" "$DEFAULT_API_URL_FALLBACK")"
+        api_url=$DEFAULT_API_URL
+    fi
+
+    # API-URL zurückgeben
+    debug "$(printf "$get_api_url_nginx_debug_0003" "$api_url")"
+    log "$(printf "$get_api_url_nginx_log_0002" "$api_url")"
+    echo "$api_url"  # Standardwert 'http://localhost:8080/api', falls nicht gesetzt
+    return 0
+}
+
+# set_api_url_nginx
+set_api_url_nginx_debug_0001="INFO: Setze API-URL für NGINX auf: '%s'"
+set_api_url_nginx_debug_0002="ERROR: Fehler beim Schreiben der API-URL: '%s'"
+set_api_url_nginx_debug_0003="SUCCESS: NGINX-API-URL erfolgreich geschrieben: '%s'"
+set_api_url_nginx_log_0001="Fehler beim Schreiben der API-URL: '%s'"
+
+set_api_url_nginx() {
+    # -----------------------------------------------------------------------
+    # set_api_url_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Setzt die API-URL für NGINX in der Datenbank
+    # Parameter: $1 = API-URL (z.B. 'http://localhost:8080/api')
+    # Rückgabe.:  0 = OK, 
+    # .........   1 = Fehler (ungültige API-URL)
+    # Seiteneffekte: Aktualisiert die NGINX-Konfiguration in der Datenbank
+    # -----------------------------------------------------------------------
+    local api_url="$1"
+
+    # Debug-Meldung eröffnen
+    debug "$(printf "$set_api_url_nginx_debug_0001" "$api_url")"
+
+    # Parameterprüfung
+    if ! check_param "$api_url" "api_url"; then return 1; fi
+
+    # API-URL in der Konfiguration setzen
+    set_config_value "nginx.api_url" "$api_url" "string" "API-URL für NGINX-Server"
+    if [ $? -ne 0 ]; then
+        # Fehler beim Setzen der API-URL
+        debug "$(printf "$set_api_url_nginx_debug_0002" "$api_url")"
+        log "$(printf "$set_api_url_nginx_log_0001" "$api_url")"
+        return 1
+    fi
+
+    debug "$(printf "$set_api_url_nginx_debug_0003" "$api_url")"
+    return 0
+}
+
 # ===========================================================================
 # Externe Funktionen zur Bearbeitung der NGINX-Server Konigurationsdateien
 # ===========================================================================
@@ -1005,7 +1085,7 @@ write_default_config_nginx() {
     local server_name="$(get_server_name_nginx)" # Standard Server-Name
     local frontend_dir="$(get_frontend_dir)"     # WEB-Root Verzeichnis
     local index_files="$(get_index_file_nginx)"  # Standard Index-Dateien
-    local api_url="http://127.0.0.1:5000"        # API-URL
+    local api_url="$(get_api_url_nginx)"         # API-URL
 
     # Konfiguration in die Datenbank schreiben
     register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx"
@@ -1013,8 +1093,7 @@ write_default_config_nginx() {
     set_server_name_nginx "$DEFAULT_SERVER_NAME"
     set_frontend_dir_nginx "$DEFAULT_FRONTEND_DIR"
     set_index_file_nginx "$DEFAULT_INDEX_FILE"
-    set_config_value "nginx.index_files"   "$index_files"  "string" "Index-Dateien für NGINX-Server" 
-    set_config_value "nginx.api_url"       "$api_url"      "string" "API-URL für NGINX-Server" 
+    set_api_url_nginx "$DEFAULT_API_URL"
 
     # Template-Datei suchen, wenn gefunden wurde, Platzhalter ersetzen
     local template_file  # Pfad zur Template-Datei
@@ -1108,7 +1187,7 @@ write_external_config_nginx() {
     local server_name="$(get_server_name_nginx)" # Standard Server-Name
     local frontend_dir="$(get_frontend_dir)"     # WEB-Root Verzeichnis
     local index_files="$(get_index_file_nginx)"  # Standard Index-Dateien
-    local api_url="http://127.0.0.1:5000"        # API-URL
+    local api_url="$(get_api_url_nginx)"         # API-URL
 
     # Konfiguration in die Datenbank schreiben
     register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx"
@@ -1116,7 +1195,7 @@ write_external_config_nginx() {
     set_server_name_nginx "$DEFAULT_SERVER_NAME"
     set_frontend_dir_nginx "$DEFAULT_FRONTEND_DIR"  
     set_index_file_nginx "$DEFAULT_INDEX_FILE"
-    set_config_value "nginx.api_url"       "$api_url"      "string" "API-URL für NGINX-Server" 
+    set_api_url_nginx "$DEFAULT_API_URL"
 
 
 
