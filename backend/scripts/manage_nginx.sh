@@ -52,9 +52,20 @@ DEFAULT_HTTP_PORT=80                     # Standard-Ports für HTTP
 DEFAULT_HTTPS_PORT=443                   # Standard-Ports für HTTPS
 DEFAULT_HTTP_PORT_FALLBACK=8080          # falls 80/443 nicht verfügbar sind
 
-# Standard-Server-Name für NGINX
-DEFAULT_SERVER_NAME="fotobox.local"       # Standard-Server-Name für NGINX
-DEFAULT_SERVER_NAME_FALLBACK="localhost"  # Standard-Server-Name für NGINX
+# Server-Name für NGINX
+# ---------------------------------------------------------------------------
+DEFAULT_SERVER_NAME="_"                    # Standard-Server-Name für Projekt
+DEFAULT_SERVER_NAME_FALLBACK="localhost"   # Standard-Server-Name für NGINX
+
+# Frontend-Verzeichnis für NGINX
+# ---------------------------------------------------------------------------
+DEFAULT_FRONTEND_DIR="$(get_frontend_dir)"    # Standard-Frontend-Verzeichnis
+DEFAULT_FRONTEND_DIR_FALLBACK="/var/www/html" # Fallback-Verzeichnis
+
+# Index-Dateien für NGINX
+# ---------------------------------------------------------------------------
+DEFAULT_INDEX_FILES=("index.html" "start.html")
+DEFAULT_INDEX_FILES_FALLBACK=("index.html" "index.htm" "index.php")
 
 # ===========================================================================
 
@@ -645,7 +656,7 @@ get_server_name_nginx() {
         # Server-Name nicht gesetzt, Standardwert verwenden
         debug "$get_server_name_nginx_debug_0002"
         log "$get_server_name_nginx_log_0001"
-        server_name=$DEFAULT_SERVER_NAME_FALLBACK
+        server_name=$DEFAULT_SERVER_NAME
     fi
 
     # Server-Name zurückgeben
@@ -693,7 +704,80 @@ set_server_name_nginx() {
 }
 
 # get_frontend_dir_nginx
+get_frontend_dir_nginx_debug_0001="INFO: Frontend-Verzeichnis für NGINX aus DB abfragen..."
+get_frontend_dir_nginx_debug_0002="ERROR: Frontend-Verzeichnis für NGINX nicht gesetzt, Standardwert '%s' wird verwendet."
+get_frontend_dir_nginx_debug_0003="SUCCESS: NGINX-Frontend-Verzeichnis: '%s'."
+get_frontend_dir_nginx_log_0001="Frontend-Verzeichnis für NGINX nicht gesetzt, Standardwert wird verwendet."
+get_frontend_dir_nginx_log_0002="NGINX-Frontend-Verzeichnis: '%s'."
+
+get_frontend_dir_nginx() {
+    # -----------------------------------------------------------------------
+    # get_frontend_dir_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Gibt das aktuell konfigurierte Frontend-Verzeichnis für  
+    # .........  NGINX aus der Datenbank zurück. Falls kein Verzeichnis
+    # .........  gesetzt ist, wird der Standardwert '/var/www/html'
+    # .........  zurückgegeben.
+    # Parameter: keine
+    # Rückgabe.: Frontend-Verzeichnis (Standard: '/var/www/html')
+    # Seiteneffekte: keine
+    # -----------------------------------------------------------------------
+
+    # Debug-Meldung eröffnen
+    debug "$get_frontend_dir_nginx_debug_0001"
+
+    # Frontend-Verzeichnis aus der Konfiguration abrufen
+    local frontend_dir=$(get_config_value "nginx.document_root")
+    if [ $? -ne 0 ] || [ -z "$frontend_dir" ]; then
+        # Frontend-Verzeichnis nicht gesetzt, Standardwert verwenden
+        debug "$(printf "$get_frontend_dir_nginx_debug_0002" "$DEFAULT_FRONTEND_DIR_FALLBACK")"
+        log "$(printf "$get_frontend_dir_nginx_log_0001" "$DEFAULT_FRONTEND_DIR_FALLBACK")"
+        frontend_dir=$DEFAULT_FRONTEND_DIR
+    fi
+
+    # Frontend-Verzeichnis zurückgeben
+    debug "$(printf "$get_frontend_dir_nginx_debug_0003" "$frontend_dir")"
+    log "$(printf "$get_frontend_dir_nginx_log_0002" "$frontend_dir")"
+    echo "$frontend_dir"  # Standardwert '/var/www/html', falls nicht gesetzt
+    return 0
+}
+
 # set_frontend_dir_nginx
+set_frontend_dir_nginx_debug_0001="INFO: Setze Frontend-Verzeichnis für NGINX auf: '%s'"
+set_frontend_dir_nginx_debug_0002="ERROR: Fehler beim Schreiben des Frontend-Verzeichnis: '%s'"
+set_frontend_dir_nginx_debug_0003="SUCCESS: NGINX-Frontend-Verzeichnis erfolgreich geschrieben: '%s'"
+set_frontend_dir_nginx_log_0001="Fehler beim Schreiben des Frontend-Verzeichnis: '%s'"
+
+set_frontend_dir_nginx() {
+    # -----------------------------------------------------------------------
+    # set_frontend_dir_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Setzt das Frontend-Verzeichnis für NGINX in der Datenbank
+    # Parameter: $1 = Frontend-Verzeichnis (z.B. '/var/www/html')
+    # Rückgabe.:  0 = OK, 
+    # .........   1 = Fehler (ungültiges Verzeichnis)
+    # Seiteneffekte: Aktualisiert die NGINX-Konfiguration in der Datenbank
+    # -----------------------------------------------------------------------
+    local frontend_dir="$1"
+
+    # Debug-Meldung eröffnen
+    debug "$(printf "$set_frontend_dir_nginx_debug_0001" "$frontend_dir")"
+
+    # Parameterprüfung
+    if ! check_param "$frontend_dir" "frontend_dir"; then return 1; fi
+
+    # Frontend-Verzeichnis in der Konfiguration setzen
+    set_config_value "nginx.document_root" "$frontend_dir" "string" "Web-Root Verzeichnis der Application"
+    if [ $? -ne 0 ]; then
+        # Fehler beim Setzen des Frontend-Verzeichnisses
+        debug "$(printf "$set_frontend_dir_nginx_debug_0002" "$frontend_dir")"
+        log "$(printf "$set_frontend_dir_nginx_log_0001" "$frontend_dir")"
+        return 1
+    fi
+
+    debug "$(printf "$set_frontend_dir_nginx_debug_0003" "$frontend_dir")"
+    return 0
+}
 
 # ===========================================================================
 # Externe Funktionen zur Bearbeitung der NGINX-Server Konigurationsdateien
@@ -850,8 +934,9 @@ write_default_config_nginx() {
 
     # Konfiguration in die Datenbank schreiben
     register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx"
-    set_port_nginx "$port" 
-    set_config_value "nginx.server_name"   "$server_name"  "string" "Server-Name für NGINX-Server" 
+    set_port_nginx "$port" "80"
+    set_server_name_nginx "$server_name" "_"
+    set_frontend_dir_nginx "$frontend_dir"  
     set_config_value "nginx.document_root" "$(get_frontend_dir)" "string" "Web-Root Verzeichnis der Application" 
     set_config_value "nginx.index_files"   "$index_files"  "string" "Index-Dateien für NGINX-Server" 
     set_config_value "nginx.api_url"       "$api_url"      "string" "API-URL für NGINX-Server" 
@@ -952,8 +1037,9 @@ write_external_config_nginx() {
 
     # Konfiguration in die Datenbank schreiben
     register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx"
-    set_port_nginx "$port" 
-    set_config_value "nginx.server_name"   "$server_name"  "string" "Server-Name für NGINX-Server" 
+    set_port_nginx "$port" "80"
+    set_server_name_nginx "$server_name" "_"
+    set_frontend_dir_nginx "$frontend_dir"  
     set_config_value "nginx.document_root" "$(get_frontend_dir)" "string" "Web-Root Verzeichnis der Application" 
     set_config_value "nginx.index_files"   "$index_files"  "string" "Index-Dateien für NGINX-Server" 
     set_config_value "nginx.api_url"       "$api_url"      "string" "API-URL für NGINX-Server" 
