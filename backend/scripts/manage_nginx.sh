@@ -1029,17 +1029,17 @@ write_external_config_nginx() {
 
     # Template-Ersetzung vorbereiten, Einstellungen aus der Datenbank abrufen
     # TODO: Einstellungen aus der Datenbank abrufen
-    local port="$(get_port_nginx)"             # Port für NGINX
-    local server_name="_"                      # Standard Server-Name
-    local frontend_dir="$(get_frontend_dir)"   # WEB-Root Verzeichnis
-    local index_files="index.html"             # Standard Index-Dateien
-    local api_url="http://127.0.0.1:5000"      # API-URL
+    local port="$(get_port_nginx)"               # Port für NGINX
+    local server_name="$(get_server_name_nginx)" # Standard Server-Name
+    local frontend_dir="$(get_frontend_dir)"     # WEB-Root Verzeichnis
+    local index_files="index.html"               # Standard Index-Dateien
+    local api_url="http://127.0.0.1:5000"        # API-URL
 
     # Konfiguration in die Datenbank schreiben
     register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx"
-    set_port_nginx "$port" "80"
-    set_server_name_nginx "$server_name" "_"
-    set_frontend_dir_nginx "$frontend_dir"  
+    set_port_nginx "$DEFAULT_HTTP_PORT"
+    set_server_name_nginx "$DEFAULT_SERVER_NAME"
+    set_frontend_dir_nginx "$DEFAULT_FRONTEND_DIR"  
     set_config_value "nginx.index_files"   "$index_files"  "string" "Index-Dateien für NGINX-Server" 
     set_config_value "nginx.api_url"       "$api_url"      "string" "API-URL für NGINX-Server" 
 
