@@ -42,9 +42,9 @@ echo "Lade Module aus Verzeichnis: $TEST_SCRIPT_DIR"
 echo "Versuche lib_core.sh und alle anderen Module zu laden..."
 source "$TEST_SCRIPT_DIR/lib_core.sh"
 if [ $? -eq 0 ]; then
-    echo "✅ SUCCES: Modul lib_core.sh und alle anderen Management-Module wurde geladen."
+    print_success "Modul lib_core.sh und alle anderen Management-Module wurde geladen."
 else
-    echo "❌ FEHLER: Beim Laden von lib_core.sh ist ein Fehler aufgetreten."
+    print_error "Beim Laden von lib_core.sh ist ein Fehler aufgetreten."
     exit 1
 fi
 echo "---------------------------------------------------------------------------"
@@ -58,19 +58,10 @@ test_manage_folders
 # Test der manage_files.sh Funktionen
 # -------------------------------
 test_manage_files
-
-exit
-
-
-
 # -------------------------------
 # Test der manage_nginx.sh Funktionen
 # -------------------------------
-list_module_functions "$MANAGE_NGINX_SH" false
-echo
-echo "========================================================================="
-echo "  Test der Funktionen in manage_nginx.sh"
-echo "========================================================================="
+test_manage_nginx
 
 exit
 
