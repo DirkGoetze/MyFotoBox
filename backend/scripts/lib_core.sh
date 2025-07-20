@@ -1112,7 +1112,7 @@ test_function() {
     else
         debug_output "$(printf "$test_function_debug_0009" "$result")"
         if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
-            print_info "$(printf "$test_function_txt_0008" "$function_name")"
+            # print_info "$(printf "$test_function_txt_0008" "$function_name")"
             if [ $result -eq 0 ]; then
                 print_success "$(printf "$test_function_txt_0007" "$result")"
             else
