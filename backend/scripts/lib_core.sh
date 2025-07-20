@@ -550,6 +550,7 @@ bind_resource_debug_0009="[bind_resource] INFO: Modul '%s' geladen, Pfad-Variabl
 bind_resource_debug_0010="[bind_resource] INFO: Modul '%s' geladen, Guard-Variable '%s' gesetzt"
 bind_resource_debug_0011="[bind_resource] ERROR: Fehler - Modul '%s' konnte nicht korrekt geladen werden"
 bind_resource_debug_0012="[bind_resource] SUCCESS: Modul '%s' erfolgreich geladen"
+bind_resource_debug_0013="[bind_resource] INFO: Ressource '%s' geladen mit Status: '%s'"
 bind_resource_log_0001="[bind_resource] ERROR: Verzeichnis '%s' nicht gefunden oder nicht lesbar"
 bind_resource_log_0002="[bind_resource] ERROR: Die Datei '%s' existiert nicht oder ist nicht lesbar"
 bind_resource_log_0003="[bind_resource] ERROR: Konnte '%s' nicht laden (Status: %d)"
@@ -595,14 +596,14 @@ bind_resource() {
     # Ressource laden
     debug_output "$(printf "$bind_resource_debug_0007" "${resource_file}")"
     source "$resource_file"
-    local source_result=$?
-    echo "Ressource $resource_name geladen mit Status: $source_result"
-    
+    local source_result=$?    
+    debug_output "$(printf "$bind_resource_debug_0013" "$resource_name" "$source_result")"
     if [ $source_result -ne 0 ]; then
         debug_output "$(printf "$bind_resource_debug_0008" "${resource_name%.sh}" "$source_result")"
         echo "$(printf "$bind_resource_log_0003" "${resource_name%.sh}" "$source_result")"
         return 1
     fi
+    debug_output "$(printf "$bind_resource_debug_0013" "$resource_name" "$source_result")"
 
     # Setze die Path-Variable, um den Pfad zur Ressource global verfügbar zu machen
     local path_var="${resource_name%.sh}_sh"
