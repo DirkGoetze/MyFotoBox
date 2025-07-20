@@ -207,9 +207,11 @@ _generate_group_id() {
     if [ -n "$prefix" ]; then
         debug "$(printf "$_generate_group_id_debug_0002" "${prefix}_${timestamp}_${random}")"
         echo "${prefix}_${timestamp}_${random}"
+        return 0
     else
         debug "$(printf "$_generate_group_id_debug_0002" "grp_${timestamp}_${random}")"
         echo "grp_${timestamp}_${random}"
+        return 0
     fi
 }
 
@@ -235,12 +237,12 @@ _hierarchy_exists() {
     local hierarchy_name="$1"
     local db_file="${2:-$(get_data_file)}"
 
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$_hierarchy_exists_debug_0001" "$hierarchy_name")"
+
     # Überprüfen, ob der Hierarchiename und der Datenbankpfad angegeben sind
     if ! check_param "$hierarchy_name" "hierarchy_name"; then return 1; fi
     if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$_hierarchy_exists_debug_0001" "$hierarchy_name")"
 
     # Hierarchienamen bereinigen und validieren
     hierarchy_name=$(_clean_key "$hierarchy_name")
@@ -254,9 +256,11 @@ _hierarchy_exists() {
     # Ergebnis prüfen und zurückgeben
     if [ "$exists" -gt 0 ]; then
         debug "$(printf "$_hierarchy_exists_debug_0002" "$hierarchy_name")"
+        echo "$hierarchy_name"  # Hierarchie existiert
         return 0  # Hierarchie existiert
     else
         debug "$(printf "$_hierarchy_exists_debug_0003" "$hierarchy_name")"
+        echo ""  # Hierarchie existiert nicht
         return 1  # Hierarchie existiert nicht
     fi
 }
