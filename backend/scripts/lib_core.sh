@@ -1112,7 +1112,8 @@ test_function() {
     fi
 
     # Gib den originalen Rückgabewert der getesteten Funktion zurück
-    echo -e "${COLOR_GREEN}  → [OK] $(printf "$test_function_txt_0009" "$function_name")"
+    print_success "$(printf "$test_function_txt_0009" "$function_name")"
+    #echo -e "${COLOR_GREEN}  → [OK] $(printf "$test_function_txt_0009" "$function_name")"
     echo
     return $result
 }
