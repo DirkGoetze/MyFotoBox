@@ -594,6 +594,7 @@ bind_resource() {
     
     # Ressource laden
     debug_output "$(printf "$bind_resource_debug_0007" "${resource_name%.sh}")"
+    debug_output "$(printf "$bind_resource_debug_0007" "${resource_file}")"
     source "$resource_file"
     local source_result=$?
     if [ $source_result -ne 0 ]; then
