@@ -468,6 +468,7 @@ print_debug() {
 
 # Logdatei global ermitteln und speichern
 if [ -z "${LOG_FILENAME+x}" ] || [ -z "$LOG_FILENAME" ]; then
+    debug_output "INFO: Logdatei wird ermittelt um Umstellung auf zentralisierte Logdatei zu ermöglichen"
     LOG_FILENAME="$(get_log_file)"
     export LOG_FILENAME
     debug "INFO: Modul 'manage_logging' geladen, Logdatei ermittelt: $LOG_FILENAME"
