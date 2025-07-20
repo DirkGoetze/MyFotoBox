@@ -950,6 +950,7 @@ list_module_functions() {
       sed -E 's/^[[:space:]]*(function[[:space:]]+)?([a-zA-Z0-9_]+)\(\).*/\2/' | 
       grep -v "^_" |
       sort
+    echo ""
     
     echo "$global_seperator_h2"
     echo ""

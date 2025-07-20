@@ -54,6 +54,7 @@ echo
 # Test der manage_folders.sh Funktionen
 # -------------------------------
 test_modul "manage_folders.sh"
+test_function "manage_folders_sh" "get_install_dir"
 exit
 list_module_functions "$MANAGE_FOLDERS_SH" false
 echo "========================================================================="
