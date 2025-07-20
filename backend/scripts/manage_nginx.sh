@@ -2254,53 +2254,53 @@ test_manage_nginx() {
     # Hier können spezifische Tests für die Funktion implementiert werden
     # -----------------------------------------------------------------------
     # Test: chk_installation_nginx
-    # test_function "manage_nginx_sh" "chk_installation_nginx" "J"
+    test_function "manage_nginx_sh" "chk_installation_nginx" "J"
     # Test: chk_config_nginx
-    # test_function "manage_nginx_sh" "chk_config_nginx"
+    test_function "manage_nginx_sh" "chk_config_nginx"
     # Test: chk_port_nginx
-    # test_function "manage_nginx_sh" "chk_port_nginx" 
+    test_function "manage_nginx_sh" "chk_port_nginx" 
     # Test: chk_port_nginx
-    # test_function "manage_nginx_sh" "chk_port_nginx" "$DEFAULT_HTTP_PORT"
+    test_function "manage_nginx_sh" "chk_port_nginx" "$DEFAULT_HTTP_PORT"
     # Test: chk_port_nginx
-    # test_function "manage_nginx_sh" "chk_port_nginx" "$DEFAULT_HTTPS_PORT"
+    test_function "manage_nginx_sh" "chk_port_nginx" "$DEFAULT_HTTPS_PORT"
     # Test: chk_port_nginx
-    # test_function "manage_nginx_sh" "chk_port_nginx" "$DEFAULT_HTTP_PORT_FALLBACK"
+    test_function "manage_nginx_sh" "chk_port_nginx" "$DEFAULT_HTTP_PORT_FALLBACK"
     # Test: get_port_nginx
     test_function "manage_nginx_sh" "get_port_nginx" 
     # Test: set_port_nginx
-    # test_function "manage_nginx_sh" "set_port_nginx" "$DEFAULT_HTTP_PORT"
+    test_function "manage_nginx_sh" "set_port_nginx" "$DEFAULT_HTTP_PORT"
     # Test: get_server_name_nginx
-    # test_function "manage_nginx_sh" "get_server_name_nginx" 
+    test_function "manage_nginx_sh" "get_server_name_nginx" 
     # Test: set_server_name_nginx
-    # test_function "manage_nginx_sh" "set_server_name_nginx" "$DEFAULT_SERVER_NAME"
+    test_function "manage_nginx_sh" "set_server_name_nginx" "$DEFAULT_SERVER_NAME"
     # Test: get_frontend_dir_nginx
-    # test_function "manage_nginx_sh" "get_frontend_dir_nginx" 
+    test_function "manage_nginx_sh" "get_frontend_dir_nginx" 
     # Test: set_frontend_dir_nginx
-    # test_function "manage_nginx_sh" "set_frontend_dir_nginx" "$DEFAULT_FRONTEND_DIR"
+    test_function "manage_nginx_sh" "set_frontend_dir_nginx" "$DEFAULT_FRONTEND_DIR"
     # Test: get_index_file_nginx
-    # test_function "manage_nginx_sh" "get_index_file_nginx"
+    test_function "manage_nginx_sh" "get_index_file_nginx"
     # Test: set_index_file_nginx
-    # test_function "manage_nginx_sh" "set_index_file_nginx" "$DEFAULT_INDEX_FILES"
+    test_function "manage_nginx_sh" "set_index_file_nginx" "$DEFAULT_INDEX_FILES"
     # Test: get_api_url_nginx
-    # test_function "manage_nginx_sh" "get_api_url_nginx"
+    test_function "manage_nginx_sh" "get_api_url_nginx"
     # Test: set_api_url_nginx
-    # test_function "manage_nginx_sh" "set_api_url_nginx" "$DEFAULT_API_URL"
+    test_function "manage_nginx_sh" "set_api_url_nginx" "$DEFAULT_API_URL"
     # Test: stop_nginx
-    # test_function "manage_nginx_sh" "stop_nginx"
+    test_function "manage_nginx_sh" "stop_nginx"
     # Test: start_nginx
-    # test_function "manage_nginx_sh" "start_nginx"
+    test_function "manage_nginx_sh" "start_nginx"
     # Test: reload_nginx
-    # test_function "manage_nginx_sh" "reload_nginx"
+    test_function "manage_nginx_sh" "reload_nginx"
     # Test: backup_config_nginx
-    # test_function "manage_nginx_sh" "backup_config_nginx" "$(get_config_file_nginx "local")" "Testaufruf-Backup NGINX"
+    test_function "manage_nginx_sh" "backup_config_nginx" "$(get_config_file_nginx "local")" "Testaufruf-Backup NGINX"
     # Test: write_config_file_nginx
-    # test_function "manage_nginx_sh" "write_config_file_nginx" "local"
+    test_function "manage_nginx_sh" "write_config_file_nginx" "local"
     # Test: write_config_file_nginx
-    # test_function "manage_nginx_sh" "write_config_file_nginx" "internal"
+    test_function "manage_nginx_sh" "write_config_file_nginx" "internal"
     # Test: write_config_file_nginx
-    # test_function "manage_nginx_sh" "write_config_file_nginx" "external"
+    test_function "manage_nginx_sh" "write_config_file_nginx" "external"
     # Test: setup_nginx_service
-    # test_function "manage_nginx_sh" "setup_nginx_service"
+    test_function "manage_nginx_sh" "setup_nginx_service"
 
     # Tests abgeschlossen, Deaktivieren des globalen Debug-Modus 
     # DEBUG_MOD_GLOBAL=0 
