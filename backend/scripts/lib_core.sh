@@ -913,8 +913,8 @@ global_seperator_h3="~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # list_module_functions
 list_module_functions_001=" Liste der Funktionen in Modul '%s'"
-list_module_functions_002="Private Funktionen:"
-list_module_functions_003="Öffentliche Funktionen:"
+list_module_functions_002=" Private Funktionen:"
+list_module_functions_003=" Öffentliche Funktionen:"
 
 list_module_functions() {
     # -----------------------------------------------------------------------
