@@ -256,11 +256,9 @@ _hierarchy_exists() {
     # Ergebnis prüfen und zurückgeben
     if [ "$exists" -gt 0 ]; then
         debug "$(printf "$_hierarchy_exists_debug_0002" "$hierarchy_name")"
-        echo "$hierarchy_name"  # Hierarchie existiert
         return 0  # Hierarchie existiert
     else
         debug "$(printf "$_hierarchy_exists_debug_0003" "$hierarchy_name")"
-        echo ""  # Hierarchie existiert nicht
         return 1  # Hierarchie existiert nicht
     fi
 }
@@ -285,12 +283,12 @@ _get_hierarchy_id() {
     local hierarchy_name="$1"
     local db_file="${2:-$(get_data_file)}"
     
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$register_config_hierarchy_debug_0001" "$hierarchy_name" "$db_file")"
+
     # Überprüfen, ob alle erforderlichen Parameter angegeben sind
     if ! check_param "$hierarchy_name" "hierarchy_name"; then return 1; fi
     if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$register_config_hierarchy_debug_0001" "$hierarchy_name" "$db_file")"
 
     # Hierarchienamen bereinigen
     hierarchy_name=$(_clean_key "$hierarchy_name")
@@ -310,6 +308,7 @@ _get_hierarchy_id() {
     debug "$(printf "$_get_hierarchy_id_debug_0003" "$hierarchy_name" "$hierarchy_id")"
     log "$(printf "$_get_hierarchy_id_log_0002" "$hierarchy_name" "$hierarchy_id")"
     echo "$hierarchy_id"
+    return 0
 }
 
 # ===========================================================================
@@ -346,15 +345,15 @@ register_config_hierarchy() {
     local hierarchy_data="${4:-{}}"  # Standardwert für leere Hierarchie-Daten
     local db_file="${5:-$(get_data_file)}"
 
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$register_config_hierarchy_debug_0001" "$hierarchy_name" "$description" "$responsible")"
+
     # Überprüfen, ob alle erforderlichen Parameter angegeben sind
     if ! check_param "$hierarchy_name" "hierarchy_name"; then return 1; fi
     if ! check_param "$description" "description"; then return 1; fi
     if ! check_param "$responsible" "responsible"; then return 1; fi
     if ! check_param "$hierarchy_data" "hierarchy_data"; then return 1; fi
     if ! check_param "$db_file" "db_file"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$register_config_hierarchy_debug_0001" "$hierarchy_name" "$description" "$responsible")"
 
     # Hierarchienamen bereinigen und validieren
     hierarchy_name=$(_clean_key "$hierarchy_name")
