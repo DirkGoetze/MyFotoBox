@@ -1051,7 +1051,7 @@ test_function() {
 
     # Informationen über den Aufruf, wenn Parameter vorhanden sind
     if [ ${#params[@]} -gt 0 ]; then
-        debug "$(printf "$test_function_debug_0002" "${params[*]}")"
+        debug_output "$(printf "$test_function_debug_0002" "${params[*]}")"
         echo "$global_seperator_h3"
         echo "$(printf "$test_function_txt_0002" "${params[*]}")"
         echo "$global_seperator_h3"
@@ -1059,19 +1059,19 @@ test_function() {
 
     # Prüfe, ob das Modul verfügbar ist
     if [ -z "${!module_path_var_upper}" ] || [ ! -f "${!module_path_var_upper}" ]; then
-        debug "$(printf "$test_function_debug_0003" "$module_path_var_upper" "${!module_path_var_upper:-nicht gesetzt}")" "CLI" "test_function"
+        debug_output "$(printf "$test_function_debug_0003" "$module_path_var_upper" "${!module_path_var_upper:-nicht gesetzt}")" "CLI" "test_function"
         echo "❌ ERROR: Modul $module_path_var_upper nicht verfügbar oder Pfad ungültig!" &>2
         return 1
     fi
 
     # Prüfe, ob die Funktion existiert (bereits geladen)
     if ! declare -f "$function_name" > /dev/null 2>&1; then
-        debug "$(printf "$test_function_debug_0004" "$function_name")"
+        debug_output "$(printf "$test_function_debug_0004" "$function_name")"
         echo "❌ ERROR: Funktion '$function_name' wurde nicht gefunden!" &>2
         return 2
     fi
 
-    debug "$(printf "$test_function_debug_0005" "$function_name" "$module_path_var_upper")"
+    debug_output "$(printf "$test_function_debug_0005" "$function_name" "$module_path_var_upper")"
 
     # Führe die Funktion aus und erfasse Rückgabewert und Ausgabe
     local output
@@ -1080,11 +1080,11 @@ test_function() {
     # Führe die Funktion DIREKT mit den übergebenen Parametern aus
     set +e  # Deaktiviere Fehlerabbruch
     if [ ${#params[@]} -gt 0 ]; then
-        debug "$(printf "$test_function_debug_0006" "$function_name" "${params[*]}")"
+        debug_output "$(printf "$test_function_debug_0006" "$function_name" "${params[*]}")"
         output=$("$function_name" "${params[@]}" 2>&1)
         result=$?
     else
-        debug "$(printf "$test_function_debug_0007" "$function_name")"
+        debug_output "$(printf "$test_function_debug_0007" "$function_name")"
         output=$("$function_name" 2>&1)
         result=$?
     fi
@@ -1092,15 +1092,15 @@ test_function() {
 
     # Rest der Funktion bleibt gleich...
     if [ -n "$output" ]; then
-        debug "$(printf "$test_function_debug_0008" "$output")"
-        debug "$(printf "$test_function_debug_0009" "$result")"
+        debug_output "$(printf "$test_function_debug_0008" "$output")"
+        debug_output "$(printf "$test_function_debug_0009" "$result")"
         if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
             echo "✅ SUCCES: Ausgabe der Funktion '$function_name': $output"
             echo "✅ SUCCES: Rückgabewert der Funktion '$function_name': $result"
             echo
         fi
     else
-        debug "$(printf "$test_function_debug_0009" "$result")"
+        debug_output "$(printf "$test_function_debug_0009" "$result")"
         if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
             echo "✅ SUCCES: Keine Ausgabe von Funktion '$function_name', Rückgabewert: $result"
             echo
