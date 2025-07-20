@@ -1222,3 +1222,4 @@ if [ $? -ne 0 ]; then
     echo "Fehler: Einige Ressourcen konnten nicht geladen werden. Bitte überprüfen Sie die Fehlermeldungen."
     exit 1
 fi
+LIB_CORE_LOADED=1  # Flag, das anzeigt, dass dieses Modul geladen wurde
