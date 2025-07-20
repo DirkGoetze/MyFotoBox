@@ -1059,7 +1059,6 @@ test_function() {
     # Informationen über den Aufruf, wenn Parameter vorhanden sind
     if [ ${#params[@]} -gt 0 ]; then
         debug_output "$(printf "$test_function_debug_0002" "${params[*]}")"
-        echo "$global_seperator_h3"
         echo "$(printf "$test_function_txt_0002" "${params[*]}")"
         echo "$global_seperator_h3"
     fi
