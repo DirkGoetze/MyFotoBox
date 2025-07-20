@@ -557,15 +557,15 @@ dlg_check_system_requirements() {
     # -----------------------------------------------------------------------
     # Funktion: Prüft die Systemvoraussetzungen und stellt Logging-Ressourcen bereit
     ((STEP_COUNTER++))
-    echo -e "\033[1;33m[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfung der Systemvoraussetzungen ...\033[0m"    
+    print_step "[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfe Systemvoraussetzungen ..."
+    #echo -e "\033[1;33m[${STEP_COUNTER}/${TOTAL_STEPS}] Prüfung der Systemvoraussetzungen ...\033[0m"    
     
     # Auf kritische Ressourcen prüfen und Logging einrichten
     if ! check_system_requirements; then
-        echo -e "\033[1;31m  → [ERROR]\033[0m Kritische Systemvoraussetzungen nicht erfüllt oder Logging konnte nicht eingerichtet werden."
+        print_error "Kritische Systemvoraussetzungen nicht erfüllt oder Logging konnte nicht eingerichtet werden."
+        #echo -e "\033[1;31m  → [ERROR]\033[0m Kritische Systemvoraussetzungen nicht erfüllt oder Logging konnte nicht eingerichtet werden."
         exit 1
     fi
-    
-    # Ab hier können die print_* Funktionen verwendet werden
     
     # Prüfe, ob externe Abhängigkeiten verfügbar sind
     if ! command -v apt-get &>/dev/null; then
