@@ -1143,6 +1143,11 @@ test_function() {
 # Testfunktionen für lib_core.sh selber
 # ============================================================================
 
+# test_lib_core
+test_lib_core_debug_0001="INFO: Starte Test für lib_core.sh"
+test_lib_core_txt_0001=" Test für das zentrale Modul 'lib_core.sh'"
+test_lib_core_txt_0002=" Vorhandene Modul-Dateien im Skriptverzeichnis"
+
 test_lib_core() {
     # -----------------------------------------------------------------------
     # Funktion: Testet die Funktionen in lib_core.sh
@@ -1150,19 +1155,19 @@ test_lib_core() {
     # Rückgabe: 0 = OK, 1 = Fehler bei den Tests
     # -----------------------------------------------------------------------
     # Eröffnungsmeldung im Debug Modus
-    debug "$test_manage_files_debug_0001"
+    debug "$test_lib_core_debug_0001"
     
     # Aktivieren des globalen Debug-Modus für die Tests
     # DEBUG_MOD_GLOBAL=1 
 
     print_info "$global_seperator_h1"
-    print_info " Teste Funktionen in lib_core.sh"
+    print_info "$(printf "$test_lib_core_txt_0001")"
     print_info "$global_seperator_h1"
 
     # Debug-Ausgabe zum Anzeigen der vorhandenen Modul-Dateien
     local script_dir="/opt/fotobox/backend/scripts"
     print_info "$global_seperator_h2"
-    print_info " Vorhandene Dateien im Skriptverzeichnis"
+    print_info "$(printf "$test_lib_core_txt_0002")"
     print_info "$global_seperator_h2"
     ls -la "$script_dir"
     echo
