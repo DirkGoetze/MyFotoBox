@@ -501,7 +501,7 @@ chk_port_nginx() {
 # get_port_nginx
 get_port_nginx_debug_0001="INFO: Port für NGINX aus DB abgefragen..."
 get_port_nginx_debug_0002="WARN: Port für NGINX nicht gesetzt, Standardwert '%s' wird verwendet."
-get_port_nginx_degug_0003="SUCCESS: Port für NGINX: %s."
+get_port_nginx_debug_0003="SUCCESS: Port für NGINX: %s."
 get_port_nginx_log_0001="Port für NGINX nicht gesetzt, Standardwert '%s' wird verwendet."
 get_port_nginx_log_0002="Port für NGINX: %s."
 

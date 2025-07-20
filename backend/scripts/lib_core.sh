@@ -975,6 +975,10 @@ test_modul() {
     # auch wenn ein Befehl fehlschlägt. Hilfreich, um bewusst mit Fehlern 
     # umzugehen.
     set +e
+    # Aktivierten des sofortige Beenden des Skripts, wenn eine nicht 
+    # definierte Variable verwendet wird. Dies verhindert subtile Fehler
+    # durch Tippfehler in Variablennamen.
+    set -u
 
     # Funktionsstart anzeigen
     print_info "$global_seperator_h1"
@@ -1017,6 +1021,9 @@ test_modul() {
     # Liste der Funktionen im Modul anzeigen
     list_module_functions "$full_path" true
 
+    # Test abgeschlossen, deaktiviere Prüfung auf nicht definierte Variablen.
+    # Diese werden wieder als leere Strings behandelt.
+    set +u
     # Tests abgeschlossen, aktiviert das sofortige Beenden bei Fehlern wieder
     set -e
 
@@ -1056,6 +1063,10 @@ test_function() {
     # auch wenn ein Befehl fehlschlägt. Hilfreich, um bewusst mit Fehlern 
     # umzugehen.
     set +e
+    # Aktivierten des sofortige Beenden des Skripts, wenn eine nicht 
+    # definierte Variable verwendet wird. Dies verhindert subtile Fehler
+    # durch Tippfehler in Variablennamen.
+    set -u
 
     # Meldung über Start des Tests ausgeben
     print_info "$global_seperator_h2"
@@ -1130,6 +1141,9 @@ test_function() {
         fi
     fi
 
+    # Test abgeschlossen, deaktiviere Prüfung auf nicht definierte Variablen.
+    # Diese werden wieder als leere Strings behandelt.
+    set +u
     # Tests abgeschlossen, aktiviert das sofortige Beenden bei Fehlern wieder
     set -e
 
