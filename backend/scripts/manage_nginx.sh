@@ -2241,10 +2241,6 @@ test_manage_nginx() {
     # Eröffnungsmeldung im Debug Modus
     debug "$test_manage_nginx_debug_0001"
 
-    # Deaktiviert das sofortige Beenden bei Fehlern. Das Skript läuft weiter, 
-    # auch wenn ein Befehl fehlschlägt. Hilfreich, um bewusst mit Fehlern 
-    # umzugehen.
-    set +e
     # Aktivieren des globalen Debug-Modus für die Tests
     # DEBUG_MOD_GLOBAL=1 
 
@@ -2307,9 +2303,7 @@ test_manage_nginx() {
     # test_function "manage_nginx_sh" "setup_nginx_service"
 
     # Tests abgeschlossen, Deaktivieren des globalen Debug-Modus 
-    DEBUG_MOD_GLOBAL=0 
-    # Tests abgeschlossen, aktiviert das sofortige Beenden bei Fehlern wieder
-    set -e
+    # DEBUG_MOD_GLOBAL=0 
 
     # Meldung ausgeben
     debug "$test_manage_nginx_debug_0003"

@@ -641,6 +641,8 @@ load_resources() {
     # -----------------------------------------------------------------------
     local result=0
     
+    DEBUG_MOD_LOCAL=1  # Lokales Debug-Flag aktivieren, damit Debug-Ausgaben sichtbar sind
+
     debug_output "$(printf "$load_resources_debug_0001")"
     
     # 1. manage_folders.sh einbinden
@@ -976,6 +978,12 @@ test_modul() {
     # Extrahiere den Basisnamen ohne .sh Endung für die Variablennamen
     local base_name=$(basename "$module_name" .sh)
 
+    # Deaktiviert das sofortige Beenden bei Fehlern. Das Skript läuft weiter, 
+    # auch wenn ein Befehl fehlschlägt. Hilfreich, um bewusst mit Fehlern 
+    # umzugehen.
+    set +e
+
+    # Funktionsstart anzeigen
     print_info "$global_seperator_h1"
     print_info "$(printf "$test_modul_txt_0001" "${base_name^^}")"
     print_info "$global_seperator_h1"
@@ -1016,6 +1024,10 @@ test_modul() {
     # Liste der Funktionen im Modul anzeigen
     list_module_functions "$full_path" true
 
+    # Tests abgeschlossen, aktiviert das sofortige Beenden bei Fehlern wieder
+    set -e
+
+    # Erfolgreich getestet
     return 0
 }
 
@@ -1039,7 +1051,6 @@ test_function_txt_0007="Rückgabe: %d"
 test_function_txt_0008="Ausgabe.: Funktion '%s' hat keine Ausgabe erzeugt."
 test_function_txt_0009="Funktion '%s' wurde erfolgreich getestet."
 
-
 test_function() {
     # Erweiterte Testfunktion für flexible Modulaufrufe und Ergebnisanalyse
     # Parameter verarbeiten
@@ -1047,6 +1058,11 @@ test_function() {
     local module_path_var_upper="${module_path_var^^}"  # Wandelt nur den Variablennamen in Großbuchstaben um
     local function_name="$2"          # Name der zu testenden Funktion
     local params=("${@:3}")           # Alle weiteren Parameter für die Funktion
+
+    # Deaktiviert das sofortige Beenden bei Fehlern. Das Skript läuft weiter, 
+    # auch wenn ein Befehl fehlschlägt. Hilfreich, um bewusst mit Fehlern 
+    # umzugehen.
+    set +e
 
     # Meldung über Start des Tests ausgeben
     print_info "$global_seperator_h2"
@@ -1121,28 +1137,17 @@ test_function() {
         fi
     fi
 
+    # Tests abgeschlossen, aktiviert das sofortige Beenden bei Fehlern wieder
+    set -e
+
     # Gib den originalen Rückgabewert der getesteten Funktion zurück
     print_success "$(printf "$test_function_txt_0009" "$function_name")"
     echo
     return $result
 }
 
-# ===========================================================================
-# Hauptteil des Skripts: Ressourcen laden und Module überprüfen
-# ===========================================================================
-# Initialisieren aller Ressourcen
-debug_output "lib_core.sh: Initialisieren und Laden aller Ressourcen"
-
-# Versuche, alle benötigten Ressourcen zu laden
-load_resources
-if [ $? -ne 0 ]; then
-    debug_output "lib_core.sh: Fehler beim Laden der Ressourcen, Abbruch"
-    echo "Fehler: Einige Ressourcen konnten nicht geladen werden. Bitte überprüfen Sie die Fehlermeldungen."
-    exit 1
-fi
-
 # ============================================================================
-# Testfunktionen für lib_core.sh
+# Testfunktionen für lib_core.sh selber
 # ============================================================================
 
 test_lib_core() {
@@ -1154,10 +1159,8 @@ test_lib_core() {
     # Eröffnungsmeldung im Debug Modus
     debug "$test_manage_files_debug_0001"
     
-    # Deaktiviert das sofortige Beenden bei Fehlern. Das Skript läuft weiter, 
-    # auch wenn ein Befehl fehlschlägt. Hilfreich, um bewusst mit Fehlern 
-    # umzugehen.
-    set -e
+    # Aktivieren des globalen Debug-Modus für die Tests
+    # DEBUG_MOD_GLOBAL=1 
 
     print_info "$global_seperator_h1"
     print_info " Teste Funktionen in lib_core.sh"
@@ -1183,8 +1186,24 @@ test_lib_core() {
     # Teste list_module_functions
     # list_module_functions "manage_folders.sh" true
     
-    # Test abgeschlossen, Reaktiviere Fehlerabbruch, Meldung ausgeben
-    set -e  
+    # Tests abgeschlossen, Deaktivieren des globalen Debug-Modus 
+    DEBUG_MOD_GLOBAL=0 
+
+    # Meldung ausgeben
     debug "$test_manage_files_debug_0003"
     return 0
 }
+
+# ===========================================================================
+# Hauptteil des Skripts: Ressourcen laden und Module überprüfen
+# ===========================================================================
+# Initialisieren aller Ressourcen
+debug_output "lib_core.sh: Initialisieren und Laden aller Ressourcen"
+
+# Versuche, alle benötigten Ressourcen zu laden
+load_resources
+if [ $? -ne 0 ]; then
+    debug_output "lib_core.sh: Fehler beim Laden der Ressourcen, Abbruch"
+    echo "Fehler: Einige Ressourcen konnten nicht geladen werden. Bitte überprüfen Sie die Fehlermeldungen."
+    exit 1
+fi

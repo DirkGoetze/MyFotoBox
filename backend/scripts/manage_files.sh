@@ -1195,10 +1195,6 @@ test_manage_files() {
     # Eröffnungsmeldung im Debug Modus
     debug "$test_manage_files_debug_0001"
 
-    # Deaktiviert das sofortige Beenden bei Fehlern. Das Skript läuft weiter, 
-    # auch wenn ein Befehl fehlschlägt. Hilfreich, um bewusst mit Fehlern 
-    # umzugehen.
-    set +e
     # Aktivieren des globalen Debug-Modus für die Tests
     # DEBUG_MOD_GLOBAL=1 
 
@@ -1266,9 +1262,7 @@ test_manage_files() {
     test_function "manage_files_sh" "get_backup_meta_file" "$backup_file"
 
     # Tests abgeschlossen, Deaktivieren des globalen Debug-Modus 
-    DEBUG_MOD_GLOBAL=0 
-    # Tests abgeschlossen, aktiviert das sofortige Beenden bei Fehlern wieder
-    set -e
+    # DEBUG_MOD_GLOBAL=0 
 
     # Meldung ausgeben
     debug "$test_manage_files_debug_0003"
