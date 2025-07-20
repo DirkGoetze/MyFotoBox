@@ -69,11 +69,11 @@ _parse_hierarchical_key() {
     # -----------------------------------------------------------------------
     local key="$1"
 
-    # Überprüfen, ob der Schlüssel angegeben ist
-    if ! check_param "$key" "key"; then return 1; fi
-
     # Debug-Ausgabe eröffnen
     debug "$(printf "$_parse_hierarchical_key_debug_0001" "$key")"
+
+    # Überprüfen, ob der Schlüssel angegeben ist
+    if ! check_param "$key" "key"; then return 1; fi
 
     # Ersten Punkt finden und den String aufteilen
     local hierarchy_name="${key%%.*}"
@@ -87,6 +87,7 @@ _parse_hierarchical_key() {
     # Ergebnis ausgeben
     debug "$(printf "$_parse_hierarchical_key_debug_0002" "$hierarchy_name" "$key_name")"
     echo "$hierarchy_name" "$key_name"
+    return 0
 }
 
 # _clean_key
