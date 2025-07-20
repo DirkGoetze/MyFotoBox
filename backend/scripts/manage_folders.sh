@@ -261,8 +261,8 @@ _create_directory() {
         debug "$(printf "$create_directory_debug_0005" "$dir")"
         return 0
     else
-        # TODO: Log auskommentiert, Vermutlich Grund für Endlosschleife 
-        #log "$(printf "$create_directory_log_0006" "$dir")"
+        # TODO: Log auskommentiert, Vermutlich Grund für Endlosschleife
+        # log "$(printf "$create_directory_log_0006" "$dir")"
         return 1
     fi
 }
@@ -350,7 +350,8 @@ _get_folder_path() {
 
     # Wenn alle Versuche fehlschlagen, eine Fehlermeldung im Log ausgeben
     debug "$(printf "$get_folder_path_debug_0012")"
-    log "$get_folder_path_log_0001" "get_folder_path"
+    # TODO: Log auskommentiert, Vermutlich Grund für Endlosschleife
+    # log "$get_folder_path_log_0001" "get_folder_path"
     return 1
 }
 
