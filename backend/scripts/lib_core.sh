@@ -542,7 +542,7 @@ bind_resource_debug_0001="[bind_resource] INFO: Starte Einbindung der Ressource 
 bind_resource_debug_0002="[bind_resource] INFO: Ressource '%s' bereits geladen, überspringe"
 bind_resource_debug_0003="[bind_resource] INFO: Suche Ressourcenverzeichnis: '%s'"
 bind_resource_debug_0004="[bind_resource] ERROR: Verzeichnis '%s' nicht gefunden oder nicht lesbar"
-bind_resource_debug_0005="[bind_resource] INFO: Versuche Ressource zu laden: '%s'"
+bind_resource_debug_0005="[bind_resource] INFO: Versuche Ressource zu finden: '%s'"
 bind_resource_debug_0006="[bind_resource] ERROR: Die Datei '%s' existiert nicht oder ist nicht lesbar"
 bind_resource_debug_0007="[bind_resource] INFO: Lade '%s'"
 bind_resource_debug_0008="[bind_resource] ERROR: Fehler beim Laden von '%s' (Status: %d)"
@@ -593,7 +593,6 @@ bind_resource() {
     fi
     
     # Ressource laden
-    debug_output "$(printf "$bind_resource_debug_0007" "${resource_name%.sh}")"
     debug_output "$(printf "$bind_resource_debug_0007" "${resource_file}")"
     source "$resource_file"
     local source_result=$?
