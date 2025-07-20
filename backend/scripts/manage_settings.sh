@@ -463,12 +463,14 @@ has_config_value() {
 
 # get_config_value
 get_config_value_debug_0001="INFO: Abrufen des Konfigurationswerts für '%s' aus der Hierarchie '%s'."
-get_config_value_debug_0002="ERROR: Ungültiger Schlüsselname: '%s'."
-get_config_value_debug_0003="ERROR: Hierarchie '%s' existiert nicht in der Datenbank '%s'."
-get_config_value_debug_0004="SUCCESS: Konfigurationswert für '%s' in der Hierarchie '%s' abgerufen: '%s'."
-get_config_value_log_0001="Ungültiger Schlüsselname: '%s'."
-get_config_value_log_0002="Hierarchie '%s' existiert nicht in der Datenbank '%s'."
-get_config_value_log_0003="Konfigurationswert für '%s' in der Hierarchie '%s' abgerufen: '%s'."
+get_config_value_debug_0002="ERROR: SQLite3 ist nicht installiert. Bitte installieren Sie SQLite3, um Konfigurationswerte zu verwalten."
+get_config_value_debug_0003="ERROR: Ungültiger Schlüsselname: '%s'."
+get_config_value_debug_0004="ERROR: Hierarchie '%s' existiert nicht in der Datenbank '%s'."
+get_config_value_debug_0005="SUCCESS: Konfigurationswert für '%s' in der Hierarchie '%s' abgerufen: '%s'."
+get_config_value_log_0001="SQLite3 ist nicht installiert."
+get_config_value_log_0002="Ungültiger Schlüsselname: '%s'."
+get_config_value_log_0003="Hierarchie '%s' existiert nicht in der Datenbank '%s'."
+get_config_value_log_0004="Konfigurationswert für '%s' in der Hierarchie '%s' abgerufen: '%s'."
 
 get_config_value() {
     # -----------------------------------------------------------------------
@@ -484,17 +486,24 @@ get_config_value() {
     local full_key="$1"
     local db_file="${2:-$(get_data_file)}"
     
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$get_config_value_debug_0001" "$full_key")"
+
     # Überprüfen, ob alle erforderlichen Parameter angegeben sind
     if ! check_param "$full_key" "full_key"; then return 1; fi
     if ! check_param "$db_file" "db_file"; then return 1; fi
 
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$get_config_value_debug_0001" "$full_key")"
+    # Prüfen ob SQLite3 installiert ist
+    if ! _is_sqlite_installed; then
+        debug "$(printf "$get_config_value_debug_0002")"
+        log "$(printf "$get_config_value_log_0001")"
+        return 1
+    fi
 
     # Schlüssel validieren
     if ! _validate_key "$full_key"; then
-        debug "$(printf "$get_config_value_debug_0002" "$full_key")"
-        log "$(printf "$get_config_value_log_0001" "$full_key")"
+        debug "$(printf "$get_config_value_debug_0003" "$full_key")"
+        log "$(printf "$get_config_value_log_0002" "$full_key")"
         return 1
     fi
     
@@ -505,8 +514,8 @@ get_config_value() {
     
     # Wenn die Hierarchie nicht existiert, gibt es auch keinen Wert
     if ! _hierarchy_exists "$hierarchy_name" "$db_file"; then
-        debug "$(printf "$get_config_value_debug_0003" "$hierarchy_name" "$db_file")"
-        log "$(printf "$get_config_value_log_0002" "$hierarchy_name" "$db_file")"
+        debug "$(printf "$get_config_value_debug_0004" "$hierarchy_name" "$db_file")"
+        log "$(printf "$get_config_value_log_0003" "$hierarchy_name" "$db_file")"
         return 1
     fi
     
@@ -523,8 +532,8 @@ get_config_value() {
         has_config_value "$full_key" "$db_file"
         return $?
     else
-        debug "$(printf "$get_config_value_debug_0004" "$key_name" "$hierarchy_name" "$value")"
-        log "$(printf "$get_config_value_log_0003" "$key_name" "$hierarchy_name" "$value")"
+        debug "$(printf "$get_config_value_debug_0005" "$key_name" "$hierarchy_name" "$value")"
+        log "$(printf "$get_config_value_log_0004" "$key_name" "$hierarchy_name" "$value")"
         return 0
     fi
 }
