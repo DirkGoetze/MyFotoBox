@@ -597,13 +597,13 @@ bind_resource() {
     debug_output "$(printf "$bind_resource_debug_0007" "${resource_file}")"
     source "$resource_file"
     local source_result=$?    
-    echo "$(printf "$bind_resource_debug_0013" "$resource_name" "$source_result")"
+    debug_output "$(printf "$bind_resource_debug_0013" "$resource_name" "$source_result")"
     if [ $source_result -ne 0 ]; then
         debug_output "$(printf "$bind_resource_debug_0008" "${resource_name%.sh}" "$source_result")"
         echo "$(printf "$bind_resource_log_0003" "${resource_name%.sh}" "$source_result")"
         return 1
     fi
-    echo "$(printf "$bind_resource_debug_0013" "$resource_name" "$source_result")"
+    debug_output "$(printf "$bind_resource_debug_0013" "$resource_name" "$source_result")"
 
     # Setze die Path-Variable, um den Pfad zur Ressource global verfügbar zu machen
     local path_var="${resource_name%.sh}_sh"
