@@ -53,11 +53,11 @@ echo
 # -------------------------------
 # Test der manage_folders.sh Funktionen
 # -------------------------------
-test_manage_folders
+# test_manage_folders
 # -------------------------------
 # Test der manage_files.sh Funktionen
 # -------------------------------
-test_manage_files
+# test_manage_files
 # -------------------------------
 # Test der manage_nginx.sh Funktionen
 # -------------------------------
