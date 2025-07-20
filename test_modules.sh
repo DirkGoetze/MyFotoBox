@@ -13,86 +13,6 @@ set -e  # Beende bei Fehlern
 set -u  # Beende bei Verwendung nicht gesetzter Variablen
 set +e  # Deaktiviere strict mode für die Initialisierung
 
-# test_function
-test_function_debug_0001="INFO: Test Funktion: %s"
-test_function_debug_0002="INFO: Parameter: %s"
-test_function_debug_0003="ERROR: Modul nicht verfügbar! Variable: %s, Pfad: %s"
-test_function_debug_0004="ERROR: Funktion '%s' wurde nicht gefunden"
-test_function_debug_0005="INFO: Funktion '%s' in Modul %s gefunden"
-test_function_debug_0006="INFO: Führe Funktion '%s' aus mit Parametern: %s"
-test_function_debug_0007="INFO: Führe Funktion '%s' aus"
-test_function_debug_0008="INFO: Ausgabe: %s"
-test_function_debug_0009="INFO: Rückgabewert: %d"
-
-test_function() {
-    # Erweiterte Testfunktion für flexible Modulaufrufe und Ergebnisanalyse
-    # Parameter verarbeiten
-    local module_path_var="$1"        # Name der Modul-Pfad-Variable (z.B. manage_folders_sh)
-    local module_path_var_upper="${module_path_var^^}"  # Wandelt nur den Variablennamen in Großbuchstaben um
-    local function_name="$2"          # Name der zu testenden Funktion
-    local params=("${@:3}")           # Alle weiteren Parameter für die Funktion
-
-    debug "$(printf "$test_function_debug_0001" "$function_name")"
-
-    # DEBUG: Informationen über den Aufruf, wenn Parameter vorhanden sind
-    if [ ${#params[@]} -gt 0 ]; then
-        debug "$(printf "$test_function_debug_0002" "${params[*]}")"
-    fi
-
-    # Prüfe, ob das Modul verfügbar ist
-    if [ -z "${!module_path_var_upper}" ] || [ ! -f "${!module_path_var_upper}" ]; then
-        debug "$(printf "$test_function_debug_0003" "$module_path_var_upper" "${!module_path_var_upper:-nicht gesetzt}")" "CLI" "test_function"
-        echo "❌ ERROR: Modul $module_path_var_upper nicht verfügbar oder Pfad ungültig!" &>2
-        return 1
-    fi
-
-    # Prüfe, ob die Funktion existiert (bereits geladen)
-    if ! declare -f "$function_name" > /dev/null 2>&1; then
-        debug "$(printf "$test_function_debug_0004" "$function_name")"
-        echo "❌ ERROR: Funktion '$function_name' wurde nicht gefunden!" &>2
-        return 2
-    fi
-
-    debug "$(printf "$test_function_debug_0005" "$function_name" "$module_path_var_upper")"
-
-    # Führe die Funktion aus und erfasse Rückgabewert und Ausgabe
-    local output
-    local result
-
-    # Führe die Funktion DIREKT mit den übergebenen Parametern aus
-    set +e  # Deaktiviere Fehlerabbruch
-    if [ ${#params[@]} -gt 0 ]; then
-        debug "$(printf "$test_function_debug_0006" "$function_name" "${params[*]}")"
-        output=$("$function_name" "${params[@]}" 2>&1)
-        result=$?
-    else
-        debug "$(printf "$test_function_debug_0007" "$function_name")"
-        output=$("$function_name" 2>&1)
-        result=$?
-    fi
-    set -e  # Reaktiviere Fehlerabbruch
-
-    # Rest der Funktion bleibt gleich...
-    if [ -n "$output" ]; then
-        debug "$(printf "$test_function_debug_0008" "$output")"
-        debug "$(printf "$test_function_debug_0009" "$result")"
-        if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
-            echo "✅ SUCCES: Ausgabe der Funktion '$function_name': $output"
-            echo "✅ SUCCES: Rückgabewert der Funktion '$function_name': $result"
-            echo
-        fi
-    else
-        debug "$(printf "$test_function_debug_0009" "$result")"
-        if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
-            echo "✅ SUCCES: Keine Ausgabe von Funktion '$function_name', Rückgabewert: $result"
-            echo
-        fi
-    fi
-
-    # Gib den originalen Rückgabewert der getesteten Funktion zurück
-    return $result
-}
-
 # Informiere über Strategie
 echo "==========================================================================="
 echo "           Test der Module lib_core.sh, manage_folders.sh,"
@@ -106,7 +26,6 @@ echo
 # -------------------------------
 echo "-------------------------------------------------------------------------"
 echo "Test für das Laden aller Module zentral über lib_core.sh"
-
 # Debug-Ausgabe zum Anzeigen der vorhandenen Dateien
 echo "---------------------------------------------------------------------------"
 echo "Vorhandene Dateien im Skriptverzeichnis:"
@@ -115,7 +34,6 @@ echo
 TEST_SCRIPT_DIR="/opt/fotobox/backend/scripts"
 ls -la "$TEST_SCRIPT_DIR"
 echo "---------------------------------------------------------------------------"
-
 # Laden der erforderlichen Module
 echo
 echo "---------------------------------------------------------------------------"
@@ -135,6 +53,8 @@ echo
 # -------------------------------
 # Test der manage_folders.sh Funktionen
 # -------------------------------
+test_modul "manage_folders.sh"
+exit
 list_module_functions "$MANAGE_FOLDERS_SH" false
 echo "========================================================================="
 echo "  Test der Funktionen in manage_folders.sh                               "
@@ -358,6 +278,8 @@ echo "+-----------------------------------------------------------------------+"
 echo "| Test: ensure_folder_structure                                         |"
 echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "ensure_folder_structure"
+
+
 # -------------------------------
 # Test der manage_files.sh Funktionen
 # -------------------------------
@@ -497,6 +419,136 @@ echo "| Test: get_backup_meta_file (NGINX)                                    |"
 echo "+-----------------------------------------------------------------------+"
 backup_file=$(get_backup_file "nginx" "default.conf")
 test_function "manage_files_sh" "get_backup_meta_file" "$backup_file"
+
+
+# -------------------------------
+# Test der manage_nginx.sh Funktionen
+# -------------------------------
+list_module_functions "$MANAGE_NGINX_SH" false
+echo
+echo "========================================================================="
+echo "  Test der Funktionen in manage_nginx.sh"
+echo "========================================================================="
+# Test: chk_installation_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: chk_installation_nginx                                          |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "chk_installation_nginx" "N"
+# Test: chk_config_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: chk_config_nginx                                                |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "chk_config_nginx"
+# Test: chk_port_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: chk_port_nginx  [ohne Parameter]                                |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "chk_port_nginx" 
+# Test: chk_port_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: chk_port_nginx (80)                                             |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "chk_port_nginx" "$DEFAULT_HTTP_PORT"
+# Test: chk_port_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: chk_port_nginx (443)                                            |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "chk_port_nginx" "$DEFAULT_HTTPS_PORT"
+# Test: chk_port_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: chk_port_nginx (8080)                                           |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "chk_port_nginx" "$DEFAULT_HTTP_PORT_FALLBACK"
+# Test: get_port_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_port_nginx                                                  |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "get_port_nginx" 
+# Test: set_port_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: set_port_nginx                                                  |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "set_port_nginx" "$DEFAULT_HTTP_PORT"
+# Test: get_server_name_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_server_name_nginx                                           |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "get_server_name_nginx" 
+# Test: set_server_name_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: set_server_name_nginx                                           |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "set_server_name_nginx" "$DEFAULT_SERVER_NAME"
+# Test: get_frontend_dir_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_frontend_dir_nginx                                          |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "get_frontend_dir_nginx" 
+# Test: set_frontend_dir_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: set_frontend_dir_nginx                                          |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "set_frontend_dir_nginx" "$DEFAULT_FRONTEND_DIR"
+# Test: get_index_file_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_index_file_nginx                                            |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "get_index_file_nginx"
+# Test: set_index_file_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: set_index_file_nginx                                            |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "set_index_file_nginx" "$DEFAULT_INDEX_FILES"
+# Test: get_api_url_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: get_api_url_nginx                                               |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "get_api_url_nginx"
+# Test: set_api_url_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: set_api_url_nginx                                               |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "set_api_url_nginx" "$DEFAULT_API_URL"
+# Test: stop_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: stop_nginx                                                      |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "stop_nginx"
+# Test: start_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: start_nginx                                                     |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "start_nginx"
+# Test: reload_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: reload_nginx                                                    |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "reload_nginx"
+# Test: backup_config_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: backup_config_nginx                                             |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "backup_config_nginx" "$(get_config_file_nginx "local")" "Testaufruf-Backup NGINX"
+# Test: write_config_file_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: write_config_file_nginx  (local)                                |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "write_config_file_nginx" "local"
+# Test: write_config_file_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: write_config_file_nginx  (internal)                             |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "write_config_file_nginx" "internal"
+# Test: write_config_file_nginx
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: write_config_file_nginx  (external)                             |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "write_config_file_nginx" "external"
+# Test: setup_nginx_service
+echo "+-----------------------------------------------------------------------+"
+echo "| Test: setup_nginx_service                                             |"
+echo "+-----------------------------------------------------------------------+"
+test_function "manage_nginx_sh" "setup_nginx_service"
 exit
 
 

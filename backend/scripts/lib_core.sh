@@ -904,6 +904,18 @@ load_resources() {
     return $result
 }
 
+# ===========================================================================
+# Prüfroutinen für einzelne Module
+# ===========================================================================
+global_seperator_h1="=========================================================================="
+global_seperator_h2="--------------------------------------------------------------------------"
+global_seperator_h3="~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+# list_module_functions
+list_module_functions_001=" Liste der Funktionen in Modul '%s'"
+list_module_functions_002="Private Funktionen:"
+list_module_functions_003="Öffentliche Funktionen:"
+
 list_module_functions() {
     # -----------------------------------------------------------------------
     # Funktion: Liste alle Funktionen eines Moduls auf
@@ -915,28 +927,181 @@ list_module_functions() {
     local module_name=$(basename "$module_file")
     local show_private=${2:-false}  # Optional: true zeigt private Funktionen an
     
-    echo "-------------------------------------------------------------------------"
-    echo " Liste der Funktionen aus $module_name" 
-    echo "-------------------------------------------------------------------------"
-    
+    echo "$global_seperator_h2"
+    echo "$(printf "$list_module_functions_001" "$module_name")"
+    echo "$global_seperator_h2"
+
     if [ "$show_private" = "true" ]; then
         # Zuerst private Funktionen anzeigen
-        echo "Private Funktionen:"
+        echo "$(printf "$list_module_functions_002")"
         grep -E '^[[:space:]]*(function[[:space:]]+)?_[a-zA-Z0-9_]+\(\)[[:space:]]*\{' "$module_file" | 
           sed -E 's/^[[:space:]]*(function[[:space:]]+)?([a-zA-Z0-9_]+)\(\).*/\2/' | 
           sort
-        echo
-        echo "Öffentliche Funktionen:"
+        echo "$global_seperator_h3"
     fi
     
     # Öffentliche Funktionen anzeigen
+    echo "$(printf "$list_module_functions_003")"
     grep -E '^[[:space:]]*(function[[:space:]]+)?[a-zA-Z0-9_]+\(\)[[:space:]]*\{' "$module_file" | 
       sed -E 's/^[[:space:]]*(function[[:space:]]+)?([a-zA-Z0-9_]+)\(\).*/\2/' | 
       grep -v "^_" |
       sort
     
-    echo "-------------------------------------------------------------------------"
+    echo "$global_seperator_h2"
     echo ""
+}
+
+# test_modul
+test_modul_txt_0001=" Test des Moduls '%s'"
+test_modul_txt_0002="❌ FEHLER: Modul-Datei '%s' ist nicht vorhanden oder nicht lesbar!"
+test_modul_txt_0003="✅ Modul-Datei ist vorhanden: '%s'"
+test_modul_txt_0004="❌ FEHLER: Guard-Variable '%s' ist NICHT korrekt gesetzt (%s)"
+test_modul_txt_0005="✅ Guard-Variable '%s' ist korrekt gesetzt (%s)"
+test_modul_txt_0006="❌ FEHLER: Pfad-Variable '%s' ist NICHT korrekt definiert (%s)"
+test_modul_txt_0007="✅ Pfad-Variable '%s' ist korrekt definiert (%s)"
+test_modul_txt_0008="✅ ERFOLG: Modul '%s' wurde korrekt geladen"
+
+test_modul() {
+    # -----------------------------------------------------------------------
+    # Funktion: Testet, ob ein Modul korrekt geladen wurde
+    # Parameter: $1 - Name des Moduls (z.B. "manage_folders.sh")
+    # Rückgabe: 0 = OK, 1 = Modul nicht verfügbar, 2 = Funktion nicht gefunden
+    # -----------------------------------------------------------------------
+    local module_name="$1"
+
+    # Extrahiere den Basisnamen ohne .sh Endung für die Variablennamen
+    local base_name=$(basename "$module_name" .sh)
+
+    echo "$global_seperator_h1"
+    echo "$(printf "$test_modul_txt_0001" "${base_name^^}")"
+    echo "$global_seperator_h1"
+
+    # Prüfe die Dateipräsenz des Moduls
+    local full_path="$SCRIPT_DIR/$module_name"
+    if [ ! -f "$full_path" ]; then
+        echo "$(printf "$test_modul_txt_0002" "$full_path")"
+        return 2  # Modul nicht vorhanden
+    fi
+    echo "$(printf "$test_modul_txt_0003" "$full_path")"
+
+    # Extrahiere den Basisnamen ohne .sh Endung für die Variablennamen
+    local base_name=$(basename "$module_name" .sh)
+
+    # Erstelle Namen für die Guardvariable und prüfe Guard-Variable
+    local guard_var="${base_name^^}_LOADED"
+    if [ -n "${!guard_var:-}" ] && [ ${!guard_var} -eq 1 ]; then
+        echo "$(printf "$test_modul_txt_0005" "$guard_var" "${!guard_var:-nicht gesetzt}")"
+    else
+        echo "$(printf "$test_modul_txt_0004" "$guard_var" "${!guard_var:-nicht gesetzt}")"
+        return 1  # Guard nicht OK
+    fi
+
+    # Erstelle Namen für die Pfadvariable und prüfe Pfad-Variable
+    local path_var="${base_name^^}_SH"
+    if [ -n "${!path_var:-}" ] && [ -f "${!path_var}" ]; then
+        echo "$(printf "$test_modul_txt_0007" "$path_var" "${!path_var}")"
+    else
+        echo "$(printf "$test_modul_txt_0006" "$path_var" "${!path_var:-nicht gesetzt}")"
+        return 2  # Pfad nicht OK
+    fi
+
+    # Wenn wir hier ankommen, sind beide Prüfungen erfolgreich
+    echo "$(printf "$test_modul_txt_0008" "$module_name")"
+
+    # Liste der Funktionen im Modul anzeigen
+    list_module_functions "$module_name" true
+
+    return 0
+}
+
+# test_function
+test_function_debug_0001=" Test Funktion: %s"
+test_function_debug_0002="INFO: Parameter: %s"
+test_function_debug_0003="ERROR: Modul nicht verfügbar! Variable: %s, Pfad: %s"
+test_function_debug_0004="ERROR: Funktion '%s' wurde nicht gefunden"
+test_function_debug_0005="INFO: Funktion '%s' in Modul %s gefunden"
+test_function_debug_0006="INFO: Führe Funktion '%s' aus mit Parametern: %s"
+test_function_debug_0007="INFO: Führe Funktion '%s' aus"
+test_function_debug_0008="INFO: Ausgabe: %s"
+test_function_debug_0009="INFO: Rückgabewert: %d"
+
+test_function_txt_0001="Test der Funktion: %s"
+test_function_txt_0002="Parameter: %s"
+
+test_function() {
+    # Erweiterte Testfunktion für flexible Modulaufrufe und Ergebnisanalyse
+    # Parameter verarbeiten
+    local module_path_var="$1"        # Name der Modul-Pfad-Variable (z.B. manage_folders_sh)
+    local module_path_var_upper="${module_path_var^^}"  # Wandelt nur den Variablennamen in Großbuchstaben um
+    local function_name="$2"          # Name der zu testenden Funktion
+    local params=("${@:3}")           # Alle weiteren Parameter für die Funktion
+
+    # Debug-Ausgabe eröffnen
+    debug_output "$(printf "$test_function_debug_0001" "$function_name")"
+    echo "$global_seperator_h2"
+    echo "$(printf "$test_function_txt_0001" "$function_name")"
+    echo "$global_seperator_h2"
+
+    # Informationen über den Aufruf, wenn Parameter vorhanden sind
+    if [ ${#params[@]} -gt 0 ]; then
+        debug "$(printf "$test_function_debug_0002" "${params[*]}")"
+        echo "$global_seperator_h3"
+        echo "$(printf "$test_function_txt_0002" "${params[*]}")"
+        echo "$global_seperator_h3"
+    fi
+
+    # Prüfe, ob das Modul verfügbar ist
+    if [ -z "${!module_path_var_upper}" ] || [ ! -f "${!module_path_var_upper}" ]; then
+        debug "$(printf "$test_function_debug_0003" "$module_path_var_upper" "${!module_path_var_upper:-nicht gesetzt}")" "CLI" "test_function"
+        echo "❌ ERROR: Modul $module_path_var_upper nicht verfügbar oder Pfad ungültig!" &>2
+        return 1
+    fi
+
+    # Prüfe, ob die Funktion existiert (bereits geladen)
+    if ! declare -f "$function_name" > /dev/null 2>&1; then
+        debug "$(printf "$test_function_debug_0004" "$function_name")"
+        echo "❌ ERROR: Funktion '$function_name' wurde nicht gefunden!" &>2
+        return 2
+    fi
+
+    debug "$(printf "$test_function_debug_0005" "$function_name" "$module_path_var_upper")"
+
+    # Führe die Funktion aus und erfasse Rückgabewert und Ausgabe
+    local output
+    local result
+
+    # Führe die Funktion DIREKT mit den übergebenen Parametern aus
+    set +e  # Deaktiviere Fehlerabbruch
+    if [ ${#params[@]} -gt 0 ]; then
+        debug "$(printf "$test_function_debug_0006" "$function_name" "${params[*]}")"
+        output=$("$function_name" "${params[@]}" 2>&1)
+        result=$?
+    else
+        debug "$(printf "$test_function_debug_0007" "$function_name")"
+        output=$("$function_name" 2>&1)
+        result=$?
+    fi
+    set -e  # Reaktiviere Fehlerabbruch
+
+    # Rest der Funktion bleibt gleich...
+    if [ -n "$output" ]; then
+        debug "$(printf "$test_function_debug_0008" "$output")"
+        debug "$(printf "$test_function_debug_0009" "$result")"
+        if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
+            echo "✅ SUCCES: Ausgabe der Funktion '$function_name': $output"
+            echo "✅ SUCCES: Rückgabewert der Funktion '$function_name': $result"
+            echo
+        fi
+    else
+        debug "$(printf "$test_function_debug_0009" "$result")"
+        if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
+            echo "✅ SUCCES: Keine Ausgabe von Funktion '$function_name', Rückgabewert: $result"
+            echo
+        fi
+    fi
+
+    # Gib den originalen Rückgabewert der getesteten Funktion zurück
+    return $result
 }
 
 # ===========================================================================

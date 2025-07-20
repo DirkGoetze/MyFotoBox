@@ -447,152 +447,6 @@ chk_port_nginx() {
 }
 
 # ===========================================================================
-# Externe Funktionen zur Steuerung des NGINX-Server
-# ===========================================================================
-
-# start_nginx
-start_nginx_debug_0001="INFO: Starte NGINX-Dienst..."
-start_nginx_debug_0002="ERROR: NGINX ist nicht installiert."
-start_nginx_debug_0003="ERROR: NGINX-Dienst konnte nicht gestartet werden! Meldung: \n%s"
-start_nginx_debug_0004="SUCCESS: NGINX-Dienst erfolgreich gestartet."
-start_nginx_log_0001="Start NGINX-Server fehlgeschlagen: NGINX ist nicht installiert!"
-start_nginx_log_0002="Start NGINX-Server fehlgeschlagen: \n%s"
-start_nginx_log_0003="NGINX-Server erfolgreich gestartet."
-
-start_nginx() {
-    # -----------------------------------------------------------------------
-    # start_nginx
-    # -----------------------------------------------------------------------
-    # Funktion.: Startet den NGINX-Dienst
-    # Parameter: keine
-    # Rückgabe.:  0 = erfolgreich gestartet, 
-    # .........   1 = Fehler
-    # Seiteneffekte: Startet den NGINX-Dienst (systemctl start nginx)
-    # -----------------------------------------------------------------------
-
-    # Debug-Meldung eröffnen
-    debug "$start_nginx_debug_0001"
-
-    # Zuerst prüfen, ob NGINX überhaupt installiert ist
-    if ! _is_installed_nginx; then
-        # NGINX ist nicht installiert
-        debug "$start_nginx_debug_0002"
-        log "$start_nginx_log_0001"
-        return 1
-    fi
-
-    # NGINX ist installiert, jetzt NGINX-Service starten
-    if ! systemctl start nginx; then
-        # Start fehlgeschlagen, Fehlerdetails ausgeben
-        local status_out
-        status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
-        debug "$(printf "$start_nginx_debug_0003" "$status_out")"
-        log "$(printf "$start_nginx_log_0002" "$status_out")"
-        return 1
-    fi
-
-    # Start erfolgreich
-    debug "$start_nginx_debug_0004"
-    log "$start_nginx_log_0003"
-    return 0
-}
-
-# stop_nginx
-stop_nginx_debug_0001="INFO: Stoppe NGINX-Dienst..."
-stop_nginx_debug_0002="ERROR: NGINX ist nicht installiert."
-stop_nginx_debug_0003="ERROR: NGINX-Dienst konnte nicht gestoppt werden! Meldung: \n%s"
-stop_nginx_debug_0004="SUCCESS: NGINX-Dienst erfolgreich gestoppt."
-stop_nginx_log_0001="Stop NGINX-Server fehlgeschlagen: NGINX ist nicht installiert!"
-stop_nginx_log_0002="Stop NGINX-Server fehlgeschlagen: \n%s"
-stop_nginx_log_0003="NGINX-Server erfolgreich gestoppt."
-
-stop_nginx() {
-    # -----------------------------------------------------------------------
-    # stop_nginx
-    # -----------------------------------------------------------------------
-    # Funktion.: Stoppt den NGINX-Dienst
-    # Parameter: keine
-    # Rückgabe.:  0 = erfolgreich gestoppt
-    # .........   1 = Fehler
-    # Seiteneffekte: Stoppt den NGINX-Dienst (systemctl stop nginx)
-    # -----------------------------------------------------------------------
-
-    # Debug-Meldung eröffnen
-    debug "$stop_nginx_debug_0001"
-    
-    # Zuerst prüfen, ob NGINX überhaupt installiert ist
-    if ! is_nginx_available; then
-        # NGINX ist nicht installiert
-        debug "$stop_nginx_debug_0002"
-        log "$stop_nginx_log_0001"
-        return 1
-    fi
-    
-    # NGINX ist installiert, jetzt NGINX-Dienst stoppen
-    if ! systemctl stop nginx; then
-        # Stop fehlgeschlagen, Fehlerdetails ausgeben
-        local status_out
-        status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
-        debug "$(printf "$stop_nginx_debug_0003" "$status_out")"
-        log "$(printf "$stop_nginx_log_0002" "$status_out")"
-        return 1
-    fi
-
-    # Stop erfolgreich
-    debug "$stop_nginx_debug_0004"
-    log "$stop_nginx_log_0003"
-    return 0
-}
-
-# reload_nginx
-reload_nginx_debug_0001="INFO: NGINX-Konfiguration wird getestet und ein Reload versucht ..."
-reload_nginx_debug_0002="ERROR: Fehler in der NGINX-Konfiguration! Bitte prüfen."
-reload_nginx_debug_0003="ERROR: NGINX konnte nicht neu geladen werden! Statusauszug: \n%s"
-reload_nginx_debug_0004="SUCCESS: NGINX-Konfiguration erfolgreich neu geladen."
-reload_nginx_log_0001="Fehler in der NGINX-Konfiguration! Bitte prüfen."
-reload_nginx_log_0002="NGINX konnte nicht neu geladen werden! Statusauszug: \n%s"
-
-reload_nginx() {
-    # -----------------------------------------------------------------------
-    # reload_nginx
-    # -----------------------------------------------------------------------
-    # Funktion.: Testet die NGINX-Konfiguration und lädt sie falls fehlerfrei
-    # .........  neu
-    # Parameter: keine
-    # Rückgabe.:  0 = OK, 
-    # .........   1 = Reload-Fehler,
-    # .........   2 = Konfigurationsfehler
-    # Seiteneffekte: Reload von nginx (systemctl reload nginx)
-    # -----------------------------------------------------------------------
-
-    # Debug-Meldung eröffnen
-    debug "$reload_nginx_debug_0001"
-
-    # Prüfen, ob die NGINX-Konfiguration fehlerfrei ist
-    chk_config_nginx
-    if [ $? -ne 0 ]; then
-        # Konfiguration fehlerhaft, Fehlerdetails ausgeben
-        debug "$reload_nginx_debug_0002"
-        log "$reload_nginx_log_0001"
-        return 2
-    fi
-
-    # Konfiguration ist fehlerfrei
-    if ! systemctl reload nginx; then
-        # Reload fehlgeschlagen, Fehlerdetails ausgeben
-        local status_out
-        status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
-        debug "$(printf "$reload_nginx_debug_0003" "$status_out")"
-        log "$(printf "$reload_nginx_log_0002" "$status_out")"
-        return 1
-    fi
-
-    # Reload erfolgreich
-    debug "$reload_nginx_debug_0004"
-    return 0
-}
-
-# ===========================================================================
 # Funktionen zur Konfiguration der NGINX-Server in der Datenbank
 # ===========================================================================
 
@@ -973,6 +827,152 @@ set_api_url_nginx() {
 }
 
 # ===========================================================================
+# Externe Funktionen zur Steuerung des NGINX-Server
+# ===========================================================================
+
+# stop_nginx
+stop_nginx_debug_0001="INFO: Stoppe NGINX-Dienst..."
+stop_nginx_debug_0002="ERROR: NGINX ist nicht installiert."
+stop_nginx_debug_0003="ERROR: NGINX-Dienst konnte nicht gestoppt werden! Meldung: \n%s"
+stop_nginx_debug_0004="SUCCESS: NGINX-Dienst erfolgreich gestoppt."
+stop_nginx_log_0001="Stop NGINX-Server fehlgeschlagen: NGINX ist nicht installiert!"
+stop_nginx_log_0002="Stop NGINX-Server fehlgeschlagen: \n%s"
+stop_nginx_log_0003="NGINX-Server erfolgreich gestoppt."
+
+stop_nginx() {
+    # -----------------------------------------------------------------------
+    # stop_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Stoppt den NGINX-Dienst
+    # Parameter: keine
+    # Rückgabe.:  0 = erfolgreich gestoppt
+    # .........   1 = Fehler
+    # Seiteneffekte: Stoppt den NGINX-Dienst (systemctl stop nginx)
+    # -----------------------------------------------------------------------
+
+    # Debug-Meldung eröffnen
+    debug "$stop_nginx_debug_0001"
+    
+    # Zuerst prüfen, ob NGINX überhaupt installiert ist
+    if ! is_nginx_available; then
+        # NGINX ist nicht installiert
+        debug "$stop_nginx_debug_0002"
+        log "$stop_nginx_log_0001"
+        return 1
+    fi
+    
+    # NGINX ist installiert, jetzt NGINX-Dienst stoppen
+    if ! systemctl stop nginx; then
+        # Stop fehlgeschlagen, Fehlerdetails ausgeben
+        local status_out
+        status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
+        debug "$(printf "$stop_nginx_debug_0003" "$status_out")"
+        log "$(printf "$stop_nginx_log_0002" "$status_out")"
+        return 1
+    fi
+
+    # Stop erfolgreich
+    debug "$stop_nginx_debug_0004"
+    log "$stop_nginx_log_0003"
+    return 0
+}
+
+# start_nginx
+start_nginx_debug_0001="INFO: Starte NGINX-Dienst..."
+start_nginx_debug_0002="ERROR: NGINX ist nicht installiert."
+start_nginx_debug_0003="ERROR: NGINX-Dienst konnte nicht gestartet werden! Meldung: \n%s"
+start_nginx_debug_0004="SUCCESS: NGINX-Dienst erfolgreich gestartet."
+start_nginx_log_0001="Start NGINX-Server fehlgeschlagen: NGINX ist nicht installiert!"
+start_nginx_log_0002="Start NGINX-Server fehlgeschlagen: \n%s"
+start_nginx_log_0003="NGINX-Server erfolgreich gestartet."
+
+start_nginx() {
+    # -----------------------------------------------------------------------
+    # start_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Startet den NGINX-Dienst
+    # Parameter: keine
+    # Rückgabe.:  0 = erfolgreich gestartet, 
+    # .........   1 = Fehler
+    # Seiteneffekte: Startet den NGINX-Dienst (systemctl start nginx)
+    # -----------------------------------------------------------------------
+
+    # Debug-Meldung eröffnen
+    debug "$start_nginx_debug_0001"
+
+    # Zuerst prüfen, ob NGINX überhaupt installiert ist
+    if ! _is_installed_nginx; then
+        # NGINX ist nicht installiert
+        debug "$start_nginx_debug_0002"
+        log "$start_nginx_log_0001"
+        return 1
+    fi
+
+    # NGINX ist installiert, jetzt NGINX-Service starten
+    if ! systemctl start nginx; then
+        # Start fehlgeschlagen, Fehlerdetails ausgeben
+        local status_out
+        status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
+        debug "$(printf "$start_nginx_debug_0003" "$status_out")"
+        log "$(printf "$start_nginx_log_0002" "$status_out")"
+        return 1
+    fi
+
+    # Start erfolgreich
+    debug "$start_nginx_debug_0004"
+    log "$start_nginx_log_0003"
+    return 0
+}
+
+# reload_nginx
+reload_nginx_debug_0001="INFO: NGINX-Konfiguration wird getestet und ein Reload versucht ..."
+reload_nginx_debug_0002="ERROR: Fehler in der NGINX-Konfiguration! Bitte prüfen."
+reload_nginx_debug_0003="ERROR: NGINX konnte nicht neu geladen werden! Statusauszug: \n%s"
+reload_nginx_debug_0004="SUCCESS: NGINX-Konfiguration erfolgreich neu geladen."
+reload_nginx_log_0001="Fehler in der NGINX-Konfiguration! Bitte prüfen."
+reload_nginx_log_0002="NGINX konnte nicht neu geladen werden! Statusauszug: \n%s"
+
+reload_nginx() {
+    # -----------------------------------------------------------------------
+    # reload_nginx
+    # -----------------------------------------------------------------------
+    # Funktion.: Testet die NGINX-Konfiguration und lädt sie falls fehlerfrei
+    # .........  neu
+    # Parameter: keine
+    # Rückgabe.:  0 = OK, 
+    # .........   1 = Reload-Fehler,
+    # .........   2 = Konfigurationsfehler
+    # Seiteneffekte: Reload von nginx (systemctl reload nginx)
+    # -----------------------------------------------------------------------
+
+    # Debug-Meldung eröffnen
+    debug "$reload_nginx_debug_0001"
+
+    # Prüfen, ob die NGINX-Konfiguration fehlerfrei ist
+    chk_config_nginx
+    if [ $? -ne 0 ]; then
+        # Konfiguration fehlerhaft, Fehlerdetails ausgeben
+        debug "$reload_nginx_debug_0002"
+        log "$reload_nginx_log_0001"
+        return 2
+    fi
+
+    # Konfiguration ist fehlerfrei
+    if ! systemctl reload nginx; then
+        # Reload fehlgeschlagen, Fehlerdetails ausgeben
+        local status_out
+        status_out=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 10)
+        debug "$(printf "$reload_nginx_debug_0003" "$status_out")"
+        log "$(printf "$reload_nginx_log_0002" "$status_out")"
+        return 1
+    fi
+
+    # Reload erfolgreich
+    debug "$reload_nginx_debug_0004"
+    return 0
+}
+
+# ===========================================================================
 # Externe Funktionen zur Verarbeitung der NGINX-Server Konigurationsdateien
 # ===========================================================================
 
@@ -1193,6 +1193,12 @@ write_config_file_nginx() {
     log "$(printf "$write_config_file_nginx_log_0005")"
     return 0
 }
+
+
+
+
+
+
 
 # read_url_nginx
 read_url_nginx_debug_0001="INFO: NGINX-URL wird ermittelt..."
