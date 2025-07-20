@@ -246,8 +246,13 @@ print_step() {
     # -----------------------------------------------------------------------
     # Funktion: Gibt einen Hinweis auf einen auszuführenden Schritt in Gelb aus
     # Parameter: $* = Meldungstext
-    echo -e "\r${COLOR_YELLOW}$*${COLOR_RESET}"
-    log "STEP: $*"
+    local message="$*"
+    local message_length=${#message}
+    local underline_chars=$(printf "%0.s-" $(seq 1 $message_length))
+
+    echo -e "\r${COLOR_YELLOW}$message${COLOR_RESET}"
+    echo -e "\r${COLOR_YELLOW}$underline_chars${COLOR_RESET}"
+    log "STEP: $message"
 }
 
 print_info() {
