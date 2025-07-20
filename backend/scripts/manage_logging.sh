@@ -168,23 +168,13 @@ log() {
     #          log ohne Parameter → prüft/rotiert/komprimiert das Logfile
     # -----------------------------------------------------------------------
     local msg="${1:-}"
-    local log_file="$LOG_FILENAME"
+    local log_file=$(get_log_file) #"$LOG_FILENAME"
 
     # Wenn Debug-Modus aktiv ist, kein Log, sondern nur Debug
     if [ "$DEBUG_MOD_GLOBAL" = "1" ] || [ "$DEBUG_MOD_LOCAL" = "1" ]; then
         return 0
     fi
     
-    # Prüfe, ob Systemvariable gesetzt ist
-    if [ -z "${LOG_FILENAME+x}" ] || [ -z "$LOG_FILENAME" ]; then
-        # Logdatei ist nicht gesetzt, versuche sie zu ermitteln
-        log_file="$(get_log_file)"
-        if [ -z "$log_file" ]; then
-            echo "FEHLER: Logdatei konnte nicht ermittelt werden!" >&2
-            return 1
-        fi
-    fi
-
     if [ -z "$msg" ]; then
         # Debug Meldung: log() ohne Parameter aufgerufen
         debug "$(printf "$log_debug_0001")"
