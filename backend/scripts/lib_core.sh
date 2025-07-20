@@ -1105,18 +1105,18 @@ test_function() {
         if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
             echo "$(printf "$test_function_txt_0006" "$output")"
             echo "$(printf "$test_function_txt_0007" "$result")"
-            echo
         fi
     else
         debug_output "$(printf "$test_function_debug_0009" "$result")"
         if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
             echo "$(printf "$test_function_txt_0008" "$function_name")"
             echo "$(printf "$test_function_txt_0007" "$result")"
-            echo
         fi
     fi
 
     # Gib den originalen Rückgabewert der getesteten Funktion zurück
+    echo "$(printf "$test_function_txt_0009" "$function_name")"
+    echo
     return $result
 }
 
