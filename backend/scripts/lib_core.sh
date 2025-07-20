@@ -1034,6 +1034,13 @@ test_function_debug_0009="INFO: Rückgabewert: %d"
 
 test_function_txt_0001="Test der Funktion: %s"
 test_function_txt_0002="Parameter: %s"
+test_function_txt_0003="❌ FEHLER: Modul '%s' nicht verfügbar oder Pfad ungültig!"
+test_function_txt_0004="❌ FEHLER: Funktion '%s' wurde nicht gefunden!"
+test_function_txt_0005="Funktion '%s' in Modul '%s' gefunden"
+test_function_txt_0006="✅ ERFOLG: Ausgabe.....: %s"
+test_function_txt_0007="✅ ERFOLG: Rückgabewert: %d"
+test_function_txt_0008="✅ ERFOLG: Ausgabe.....: Funktion '%s' hat keine Ausgabe erzeugt."
+
 
 test_function() {
     # Erweiterte Testfunktion für flexible Modulaufrufe und Ergebnisanalyse
@@ -1060,18 +1067,19 @@ test_function() {
     # Prüfe, ob das Modul verfügbar ist
     if [ -z "${!module_path_var_upper}" ] || [ ! -f "${!module_path_var_upper}" ]; then
         debug_output "$(printf "$test_function_debug_0003" "$module_path_var_upper" "${!module_path_var_upper:-nicht gesetzt}")" "CLI" "test_function"
-        echo "❌ ERROR: Modul $module_path_var_upper nicht verfügbar oder Pfad ungültig!" &>2
+        echo "$(printf "$test_function_txt_0003" "${!module_path_var_upper:-nicht gesetzt}")" &>2
         return 1
     fi
 
     # Prüfe, ob die Funktion existiert (bereits geladen)
     if ! declare -f "$function_name" > /dev/null 2>&1; then
         debug_output "$(printf "$test_function_debug_0004" "$function_name")"
-        echo "❌ ERROR: Funktion '$function_name' wurde nicht gefunden!" &>2
+        echo "$(printf "$test_function_txt_0004" "$function_name")" &>2
         return 2
     fi
 
     debug_output "$(printf "$test_function_debug_0005" "$function_name" "$module_path_var_upper")"
+    echo "$(printf "$test_function_txt_0005" "$function_name" "${module_path_var_upper}")"
 
     # Führe die Funktion aus und erfasse Rückgabewert und Ausgabe
     local output
@@ -1095,15 +1103,15 @@ test_function() {
         debug_output "$(printf "$test_function_debug_0008" "$output")"
         debug_output "$(printf "$test_function_debug_0009" "$result")"
         if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
-            echo "✅ SUCCES: Ausgabe.....: $output"
-            echo "✅ SUCCES: Rückgabewert: $result"
+            echo "$(printf "$test_function_txt_0006" "$output")"
+            echo "$(printf "$test_function_txt_0007" "$result")"
             echo
         fi
     else
         debug_output "$(printf "$test_function_debug_0009" "$result")"
         if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
-            echo "✅ SUCCES: Ausgabe.....: Funktion '$function_name' hat keine Ausgabe erzeugt."
-            echo "✅ SUCCES: Rückgabewert: $result"
+            echo "$(printf "$test_function_txt_0008" "$function_name")"
+            echo "$(printf "$test_function_txt_0007" "$result")"
             echo
         fi
     fi
