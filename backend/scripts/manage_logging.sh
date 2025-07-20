@@ -276,7 +276,7 @@ print_success() {
     # -----------------------------------------------------------------------
     # Funktion: Gibt eine Erfolgsmeldung in Dunkelgrün aus
     # Parameter: $* = Meldungstext
-    echo -e "\r${COLOR_GREEN}  → ✅  ${COLOR_RESET} $*"
+    echo -e "\r${COLOR_GREEN}✅  ${COLOR_RESET} $*"
     log "SUCCESS: $*"
 }
 
@@ -286,7 +286,7 @@ print_warning() {
     # -----------------------------------------------------------------------
     # Funktion: Gibt eine Warnung in gelber Farbe aus 
     # Parameter: $* = Warnungstext
-    echo -e "\r${COLOR_YELLOW}  → ⚠️ ${COLOR_RESET} $*"
+    echo -e "\r${COLOR_YELLOW}⚠️ ${COLOR_RESET} $*"
     log "WARNING: $*"
 }
 
@@ -296,7 +296,7 @@ print_error() {
     # -----------------------------------------------------------------------
     # Funktion: Gibt eine Fehlermeldung farbig aus
     # Parameter: $* = Fehlertext
-    echo -e "\r${COLOR_RED}  → ❌ ${COLOR_RESET} $*"
+    echo -e "\r${COLOR_RED}❌ ${COLOR_RESET} $*"
     log "ERROR: $*"
 }
 
