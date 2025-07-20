@@ -148,7 +148,7 @@ _is_running_nginx_debug_0002="WARN: NGINX ist nicht installiert!"
 _is_running_nginx_debug_0003="ERROR: NGINX-Dienst ist gestoppt! Status: %s"
 _is_running_nginx_debug_0004="SUCCESS: NGINX-Dienst ist aktiv."
 _is_running_nginx_log_0001="NGINX ist nicht installiert!"
-_is_running_nginx_log_0002="NGINX-Dienst ist gestoppt."
+_is_running_nginx_log_0002="NGINX-Dienst ist gestoppt! Status: %s"
 _is_running_nginx_log_0003="NGINX-Dienst läuft."
 
 _is_running_nginx() {
@@ -182,7 +182,7 @@ _is_running_nginx() {
 
         # Debug-Ausgabe mit Statusdetails
         debug "$(printf "$_is_running_nginx_debug_0003" "$status_details")"
-        log "$_is_running_nginx_log_0002"
+        log "$(printf "$_is_running_nginx_log_0002" "$status_details")"
         return 1
     fi
 
@@ -311,8 +311,16 @@ _template_filename_nginx() {
 
 # chk_installation_nginx
 chk_installation_nginx_debug_0001="INFO: Überprüfung der NGINX-Installation ..."
-chk_installation_nginx_debug_0002="ERROR: NGINX konnte nicht installiert werden!"
-chk_installation_nginx_debug_0003="SUCCESS: NGINX ist installiert und aktiv."
+chk_installation_nginx_debug_0002="WARN: NGINX ist nicht installiert. Installation wird gestartet..."
+chk_installation_nginx_debug_0003="ERROR: NGINX-Installation fehlgeschlagen!"
+chk_installation_nginx_debug_0004="SUCCESS: NGINX ist installiert und aktiv."
+chk_installation_nginx_debug_0005="WARN: NGINX ist installiert, aber nicht aktiv. Starte NGINX..."
+chk_installation_nginx_debug_0006="ERROR: NGINX konnte nicht gestartet werden!"
+chk_installation_nginx_log_0001="NGINX ist nicht installiert. Installation wird gestartet..."
+chk_installation_nginx_log_0002="NGINX-Installation fehlgeschlagen!"
+chk_installation_nginx_log_0003="NGINX ist installiert und aktiv."
+chk_installation_nginx_log_0004="NGINX ist installiert, aber nicht aktiv. Starte NGINX..."
+chk_installation_nginx_log_0005="NGINX konnte nicht gestartet werden!"
 
 chk_installation_nginx() {
     # -----------------------------------------------------------------------
@@ -329,17 +337,53 @@ chk_installation_nginx() {
     # Debug-Meldung eröffnen
     debug "$chk_installation_nginx_debug_0001"
 
-    # Prüfen, ob nginx installiert und aktiv ist
-    _is_running_nginx $install_decision
-    local nginx_status=$?
-    if [ $nginx_status -ne 0 ]; then
-        # NGINX ist nicht installiert oder Installation wurde abgebrochen
-        debug "$chk_installation_nginx_debug_0002"
-        return 1
+    # 1. Prüfen, ob NGINX installiert ist
+    _is_installed_nginx "$install_decision"
+    local install_status=$?
+    
+    if [ $install_status -ne 0 ]; then
+        # NGINX ist nicht installiert oder Installation fehlgeschlagen
+        if [ $install_status -eq 1 ]; then
+            # NGINX ist nicht installiert und Installation wurde abgebrochen
+            debug "$chk_installation_nginx_debug_0002"
+            log "$chk_installation_nginx_log_0001"
+            return 1
+        else
+            # Installation fehlgeschlagen
+            debug "$chk_installation_nginx_debug_0003"
+            log "$chk_installation_nginx_log_0002"
+            return 1
+        fi
     fi
 
-    # NGINX ist installiert und läuft
-    debug "$chk_installation_nginx_debug_0003"
+    # 2. Prüfen, ob NGINX läuft
+    _is_running_nginx
+    local running_status=$?
+    
+    if [ $running_status -ne 0 ]; then
+        # NGINX ist installiert, aber nicht aktiv
+        if [ $running_status -eq 1 ]; then
+            # NGINX ist gestoppt/hat Fehler, versuchen zu starten
+            debug "$chk_installation_nginx_debug_0005"
+            log "$chk_installation_nginx_log_0004"
+            
+            # NGINX starten
+            start_nginx
+            if [ $? -ne 0 ]; then
+                # Start fehlgeschlagen
+                debug "$chk_installation_nginx_debug_0006"
+                log "$chk_installation_nginx_log_0005"
+                return 1
+            fi
+        else
+            # Unerwarteter Fehler (sollte nicht auftreten, da wir bereits geprüft haben, dass NGINX installiert ist)
+            return 1
+        fi
+    fi
+
+    # NGINX ist installiert und aktiv
+    debug "$chk_installation_nginx_debug_0004"
+    log "$chk_installation_nginx_log_0003"
     return 0
 }
 
