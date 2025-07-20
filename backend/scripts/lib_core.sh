@@ -550,7 +550,7 @@ bind_resource_debug_0009="[bind_resource] INFO: Modul '%s' geladen, Pfad-Variabl
 bind_resource_debug_0010="[bind_resource] INFO: Modul '%s' geladen, Guard-Variable '%s' gesetzt"
 bind_resource_debug_0011="[bind_resource] ERROR: Fehler - Modul '%s' konnte nicht korrekt geladen werden"
 bind_resource_debug_0012="[bind_resource] SUCCESS: Modul '%s' erfolgreich geladen"
-bind_resource_debug_0013="[bind_resource] INFO: Ressource '%s' geladen mit Status: '%s'"
+bind_resource_debug_0013="[bind_resource] INFO: Ressourcendatei '%s' erfolgreich geladen."
 bind_resource_log_0001="[bind_resource] ERROR: Verzeichnis '%s' nicht gefunden oder nicht lesbar"
 bind_resource_log_0002="[bind_resource] ERROR: Die Datei '%s' existiert nicht oder ist nicht lesbar"
 bind_resource_log_0003="[bind_resource] ERROR: Konnte '%s' nicht laden (Status: %d)"
@@ -597,7 +597,6 @@ bind_resource() {
     debug_output "$(printf "$bind_resource_debug_0007" "${resource_file}")"
     source "$resource_file"
     local source_result=$?    
-    debug_output "$(printf "$bind_resource_debug_0013" "$resource_name" "$source_result")"
     if [ $source_result -ne 0 ]; then
         debug_output "$(printf "$bind_resource_debug_0008" "${resource_name%.sh}" "$source_result")"
         echo "$(printf "$bind_resource_log_0003" "${resource_name%.sh}" "$source_result")"
@@ -644,8 +643,7 @@ load_resources() {
     # -----------------------------------------------------------------------
     local result=0
     
-    DEBUG_MOD_LOCAL=1  # Lokales Debug-Flag aktivieren, damit Debug-Ausgaben sichtbar sind
-
+    # Debug-Ausgabe eröffnen
     debug_output "$(printf "$load_resources_debug_0001")"
     
     # 1. manage_folders.sh einbinden
