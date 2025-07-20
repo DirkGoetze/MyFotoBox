@@ -500,9 +500,9 @@ chk_port_nginx() {
 
 # get_port_nginx
 get_port_nginx_debug_0001="INFO: Port für NGINX aus DB abgefragen..."
-get_port_nginx_debug_0002="ERROR: Port für NGINX nicht gesetzt, Standardwert '80' wird verwendet."
+get_port_nginx_debug_0002="WARN: Port für NGINX nicht gesetzt, Standardwert '%s' wird verwendet."
 get_port_nginx_degug_0003="SUCCESS: Port für NGINX: %s."
-get_port_nginx_log_0001="Port für NGINX nicht gesetzt, Standardwert wird verwendet."
+get_port_nginx_log_0001="Port für NGINX nicht gesetzt, Standardwert '%s' wird verwendet."
 get_port_nginx_log_0002="Port für NGINX: %s."
 
 get_port_nginx() {
@@ -524,15 +524,15 @@ get_port_nginx() {
     local port=$(get_config_value "nginx.port")
     if [ $? -ne 0 ] || [ -z "$port" ]; then
         # Port nicht gesetzt, Standardwert verwenden
-        debug "$get_port_nginx_debug_0002"
-        log "$get_port_nginx_log_0001"
+        debug "$(printf "$get_port_nginx_debug_0002" "$DEFAULT_HTTP_PORT")"
+        log "$(printf "$get_port_nginx_log_0001" "$DEFAULT_HTTP_PORT")"
         port=$DEFAULT_HTTP_PORT
     fi
 
     # Port zurückgeben
     debug "$(printf "$get_port_nginx_debug_0003" "$port")"
     log "$(printf "$get_port_nginx_log_0002" "$port")"
-    echo "$port"  # Standardwert 80, falls nicht gesetzt
+    echo "$port"  
     return 0
 }
 

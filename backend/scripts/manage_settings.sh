@@ -540,16 +540,18 @@ get_config_value() {
 
 # set_config_value
 set_config_value_debug_0001="INFO: Setze Konfigurationswert für '%s' auf '%s' (Typ: '%s', Beschreibung: '%s', Gewichtung: %d, Änderungsgruppe: '%s')."
-set_config_value_debug_0002="ERROR: Ungültiger Schlüsselname: '%s'."
-set_config_value_debug_0003="ERROR: Ungültiger Schlüssel: %s - keine Hierarchie angegeben."
-set_config_value_debug_0004="ERROR: Fehler beim Erstellen der Hierarchie '%s'"
-set_config_value_debug_0005="SUCCESS: Konfigurationswert für '%s' in der Hierarchie '%s' gesetzt: '%s'."
-set_config_value_debug_0006="ERROR: Konfigurationswert für '%s' in der Hierarchie '%s' konnte nicht gesetzt werden: %s"
-set_config_value_log_0001="Ungültiger Schlüsselname: '%s'."
-set_config_value_log_0002="Ungültiger Schlüssel: %s - keine Hierarchie angegeben."
-set_config_value_log_0003="Fehler beim Erstellen der Hierarchie '%s'."
-set_config_value_log_0004="Konfigurationswert für '%s' in der Hierarchie '%s' gesetzt: '%s'."
-set_config_value_log_0005="Konfigurationswert für '%s' in der Hierarchie '%s' konnte nicht gesetzt werden: %s."
+set_config_value_debug_0002="ERROR: SQLite3 ist nicht installiert. Bitte installieren Sie SQLite3, um Konfigurationswerte zu verwalten."
+set_config_value_debug_0003="ERROR: Ungültiger Schlüsselname: '%s'."
+set_config_value_debug_0004="ERROR: Ungültiger Schlüssel: %s - keine Hierarchie angegeben."
+set_config_value_debug_0005="ERROR: Fehler beim Erstellen der Hierarchie '%s'"
+set_config_value_debug_0006="SUCCESS: Konfigurationswert für '%s' in der Hierarchie '%s' gesetzt: '%s'."
+set_config_value_debug_0007="ERROR: Konfigurationswert für '%s' in der Hierarchie '%s' konnte nicht gesetzt werden: %s"
+set_config_value_log_0001="SQLite3 ist nicht installiert."
+set_config_value_log_0002="Ungültiger Schlüsselname: '%s'."
+set_config_value_log_0003="Ungültiger Schlüssel: %s - keine Hierarchie angegeben."
+set_config_value_log_0004="Fehler beim Erstellen der Hierarchie '%s'."
+set_config_value_log_0005="Konfigurationswert für '%s' in der Hierarchie '%s' gesetzt: '%s'."
+set_config_value_log_0006="Konfigurationswert für '%s' in der Hierarchie '%s' konnte nicht gesetzt werden: %s."
 
 set_config_value() {
     # -----------------------------------------------------------------------
@@ -573,16 +575,24 @@ set_config_value() {
     local change_group="${6:-}"
     local db_file="${7:-$(get_data_file)}"
 
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$set_config_value_debug_0001" "$full_key")"
+
     # Überprüfen, ob alle erforderlichen Parameter angegeben sind
     if ! check_param "$full_key" "full_key"; then return 1; fi
     if ! check_param "$value" "value"; then return 1; fi
 
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$set_config_value_debug_0001" "$full_key")"
+    # Prüfen ob SQLite3 installiert ist
+    if ! _is_sqlite_installed; then
+        debug "$(printf "$set_config_value_debug_0002")"
+        log "$(printf "$set_config_value_log_0001")"
+        return 1
+    fi
 
     # Schlüssel validieren
     if ! _validate_key "$full_key"; then
-        debug "$(printf "$set_config_value_debug_0002" "$full_key")"
+        debug "$(printf "$set_config_value_debug_0003" "$full_key")"
+        log "$(printf "$set_config_value_log_0002" "$full_key")"
         return 1
     fi
 
@@ -593,7 +603,8 @@ set_config_value() {
 
     # Wenn kein Schlüsselname vorhanden ist (z.B. nur "nginx" ohne ".port"), abbrechen
     if [ -z "$key_name" ]; then
-        debug "$(printf "$set_config_value_debug_0003" "$full_key")"
+        debug "$(printf "$set_config_value_debug_0004" "$full_key")"
+        log "$(printf "$set_config_value_log_0003" "$full_key")"
         return 1
     fi
 
@@ -605,7 +616,8 @@ set_config_value() {
                                  '{"auto_created":true}' \
                                  "$db_file"
         if [ $? -ne 0 ]; then
-            debug "$(printf "$set_config_value_debug_0004" "$hierarchy_name")"
+            debug "$(printf "$set_config_value_debug_0005" "$hierarchy_name")"
+            log "$(printf "$set_config_value_log_0004" "$hierarchy_name")"
             return 1
         fi
     fi
@@ -722,14 +734,14 @@ set_config_value() {
 
     # Prüfen, ob der Einfügevorgang erfolgreich war
     if [ $? -ne 0 ]; then
-        debug "$(printf "$set_config_value_debug_0006" "$key_name" "$hierarchy_name" "$(sqlite3 "$db_file" "SELECT sqlite_error_msg();")")"
-        log "$(printf "$set_config_value_log_0005" "$key_name" "$hierarchy_name" "$(sqlite3 "$db_file" "SELECT sqlite_error_msg();")")"
+        debug "$(printf "$set_config_value_debug_0007" "$key_name" "$hierarchy_name" "$(sqlite3 "$db_file" "SELECT sqlite_error_msg();")")"
+        log "$(printf "$set_config_value_log_0006" "$key_name" "$hierarchy_name" "$(sqlite3 "$db_file" "SELECT sqlite_error_msg();")")"
         return 1
     fi
 
     # Erfolgsmeldung ausgeben
-    debug "$(printf "$set_config_value_debug_0005" "$key_name" "$hierarchy_name" "$value")"
-    log "$(printf "$set_config_value_log_0004" "$key_name" "$hierarchy_name" "$value")"
+    debug "$(printf "$set_config_value_debug_0006" "$key_name" "$hierarchy_name" "$value")"
+    log "$(printf "$set_config_value_log_0005" "$key_name" "$hierarchy_name" "$value")"
     return 0
 }
 
