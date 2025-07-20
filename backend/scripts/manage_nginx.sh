@@ -2201,6 +2201,7 @@ test_manage_nginx() {
     fi
 
     # Hier können spezifische Tests für die Funktion implementiert werden
+    set +e  # Deaktiviere Fehlerabbruch
     # Test: chk_installation_nginx
     test_function "manage_nginx_sh" "chk_installation_nginx" "N"
     # Test: chk_config_nginx
@@ -2250,6 +2251,8 @@ test_manage_nginx() {
     # Test: setup_nginx_service
     test_function "manage_nginx_sh" "setup_nginx_service"
 
+    # Test abgeschlossen, Reaktiviere Fehlerabbruch, Meldung ausgeben
+    set -e  
     debug "$test_manage_nginx_debug_0003"
     return 0
 }

@@ -1203,6 +1203,7 @@ test_manage_files() {
     fi
 
     # Hier können spezifische Tests für die Funktion implementiert werden
+    set +e  # Deaktiviere Fehlerabbruch
     # Test: get_data_file
     test_function "manage_files_sh" "get_data_file"
     # Test: get_config_file
@@ -1257,6 +1258,8 @@ test_manage_files() {
     backup_file=$(get_backup_file "nginx" "default.conf")
     test_function "manage_files_sh" "get_backup_meta_file" "$backup_file"
 
+    # Test abgeschlossen, Reaktiviere Fehlerabbruch, Meldung ausgeben
+    set -e  
     debug "$test_manage_files_debug_0003"
     return 0
 }

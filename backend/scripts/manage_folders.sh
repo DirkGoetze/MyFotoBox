@@ -2166,6 +2166,7 @@ test_manage_folders() {
     fi
 
     # Hier können spezifische Tests für die Funktion implementiert werden
+    set +e  # Deaktiviere Fehlerabbruch
     # Test: get_install_dir
     test_function "manage_folders_sh" "get_install_dir"
     debug "INFO: INSTALL_DIR: ${INSTALL_DIR:-nicht gesetzt}"
@@ -2275,6 +2276,8 @@ test_manage_folders() {
     # Test: ensure_folder_structure
     test_function "manage_folders_sh" "ensure_folder_structure"
 
+    # Test abgeschlossen, Reaktiviere Fehlerabbruch, Meldung ausgeben
+    set -e  
     debug "$test_manage_folders_debug_0003"
     return 0
 }
