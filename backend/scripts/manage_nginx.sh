@@ -2202,6 +2202,8 @@ test_manage_nginx() {
 
     # Hier können spezifische Tests für die Funktion implementiert werden
     set +e  # Deaktiviere Fehlerabbruch
+    DEBUG_MOD_GLOBAL=1 # Aktivieren des globalen Debug-Modus für die Tests
+
     # Test: chk_installation_nginx
     test_function "manage_nginx_sh" "chk_installation_nginx" "J"
     # Test: chk_config_nginx
@@ -2252,6 +2254,7 @@ test_manage_nginx() {
     test_function "manage_nginx_sh" "setup_nginx_service"
 
     # Test abgeschlossen, Reaktiviere Fehlerabbruch, Meldung ausgeben
+    DEBUG_MOD_GLOBAL=0 # Deaktivieren des globalen Debug-Modus 
     set -e  
     debug "$test_manage_nginx_debug_0003"
     return 0
