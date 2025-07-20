@@ -935,10 +935,11 @@ list_module_functions() {
         # Zuerst private Funktionen anzeigen
         echo "$global_seperator_h3"
         echo "$(printf "$list_module_functions_002")"
+        echo "$global_seperator_h3"
         grep -E '^[[:space:]]*(function[[:space:]]+)?_[a-zA-Z0-9_]+\(\)[[:space:]]*\{' "$module_file" | 
           sed -E 's/^[[:space:]]*(function[[:space:]]+)?([a-zA-Z0-9_]+)\(\).*/\2/' | 
           sort
-        echo "$global_seperator_h3"
+        echo ""
     fi
     
     # Öffentliche Funktionen anzeigen
@@ -952,6 +953,7 @@ list_module_functions() {
     
     echo "$global_seperator_h2"
     echo ""
+    return 0  # Erfolgreich
 }
 
 # test_modul
