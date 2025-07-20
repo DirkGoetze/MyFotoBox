@@ -279,7 +279,7 @@ get_config_file() {
 }
 
 # get_log_file
-get_log_file_debug_0001="INFO: Ermittle Log-Datei: %s"
+get_log_file_debug_0001="INFO: Ermittle Dateiname für Log-Datei"
 get_log_file_debug_0002="SUCCESS: Verwende für Log-Datei \$LOG_FILENAME: '%s'"
 get_log_file_debug_0003="INFO: Genutzter Verzeichnispfad zur Log-Datei: '%s'"
 get_log_file_debug_0004="SUCCESS: Vollständiger Pfad zur Log-Datei: '%s'"
