@@ -927,15 +927,15 @@ list_module_functions() {
     local module_name=$(basename "$module_file")
     local show_private=${2:-false}  # Optional: true zeigt private Funktionen an
     
-    echo "$global_seperator_h2"
-    echo "$(printf "$list_module_functions_001" "${module_name^^}")"
-    echo "$global_seperator_h2"
+    print_info "$global_seperator_h2"
+    print_info "$(printf "$list_module_functions_001" "${module_name^^}")"
+    print_info "$global_seperator_h2"
 
     if [ "$show_private" = "true" ]; then
         # Zuerst private Funktionen anzeigen
-        echo "$global_seperator_h3"
-        echo "$(printf "$list_module_functions_002")"
-        echo "$global_seperator_h3"
+        print_info "$global_seperator_h3"
+        print_info "$(printf "$list_module_functions_002")"
+        print_info "$global_seperator_h3"
         grep -E '^[[:space:]]*(function[[:space:]]+)?_[a-zA-Z0-9_]+\(\)[[:space:]]*\{' "$module_file" | 
           sed -E 's/^[[:space:]]*(function[[:space:]]+)?([a-zA-Z0-9_]+)\(\).*/\2/' | 
           sort
@@ -943,9 +943,9 @@ list_module_functions() {
     fi
     
     # Öffentliche Funktionen anzeigen
-    echo "$global_seperator_h3"
-    echo "$(printf "$list_module_functions_003")"
-    echo "$global_seperator_h3"
+    print_info "$global_seperator_h3"
+    print_info "$(printf "$list_module_functions_003")"
+    print_info "$global_seperator_h3"
     grep -E '^[[:space:]]*(function[[:space:]]+)?[a-zA-Z0-9_]+\(\)[[:space:]]*\{' "$module_file" | 
       sed -E 's/^[[:space:]]*(function[[:space:]]+)?([a-zA-Z0-9_]+)\(\).*/\2/' | 
       grep -v "^_" |
@@ -957,13 +957,13 @@ list_module_functions() {
 
 # test_modul
 test_modul_txt_0001=" Test des Moduls '%s'"
-test_modul_txt_0002="❌ FEHLER: Modul-Datei '%s' ist nicht vorhanden oder nicht lesbar!"
+test_modul_txt_0002="Modul-Datei '%s' ist nicht vorhanden oder nicht lesbar!"
 test_modul_txt_0003="Modul-Datei...: '%s'"
-test_modul_txt_0004="❌ FEHLER: Guard-Variable '%s' ist NICHT korrekt gesetzt (%s)"
+test_modul_txt_0004="Guard-Variable '%s' ist NICHT korrekt gesetzt (%s)"
 test_modul_txt_0005="Guard-Variable: '%s' = gesetzt ('%s')"
-test_modul_txt_0006="❌ FEHLER: Pfad-Variable '%s' ist NICHT korrekt definiert (%s)"
+test_modul_txt_0006="Pfad-Variable '%s' ist NICHT korrekt definiert (%s)"
 test_modul_txt_0007="Pfad-Variable.: '%s' = gesetzt ('%s')"
-test_modul_txt_0008="✅ ERFOLG: Modul '%s' wurde korrekt geladen"
+test_modul_txt_0008="Modul '%s' wurde korrekt geladen"
 
 test_modul() {
     # -----------------------------------------------------------------------
@@ -976,17 +976,17 @@ test_modul() {
     # Extrahiere den Basisnamen ohne .sh Endung für die Variablennamen
     local base_name=$(basename "$module_name" .sh)
 
-    echo "$global_seperator_h1"
-    echo "$(printf "$test_modul_txt_0001" "${base_name^^}")"
-    echo "$global_seperator_h1"
+    print_info "$global_seperator_h1"
+    print_info "$(printf "$test_modul_txt_0001" "${base_name^^}")"
+    print_info "$global_seperator_h1"
 
     # Prüfe die Dateipräsenz des Moduls
     local full_path="$SCRIPT_DIR/$module_name"
     if [ ! -f "$full_path" ]; then
-        echo "$(printf "$test_modul_txt_0002" "$full_path")"
+        print_error "$(printf "$test_modul_txt_0002" "$full_path")"
         return 2  # Modul nicht vorhanden
     fi
-    echo "$(printf "$test_modul_txt_0003" "$full_path")"
+    print_info "$(printf "$test_modul_txt_0003" "$full_path")"
 
     # Extrahiere den Basisnamen ohne .sh Endung für die Variablennamen
     local base_name=$(basename "$module_name" .sh)
@@ -994,23 +994,23 @@ test_modul() {
     # Erstelle Namen für die Guardvariable und prüfe Guard-Variable
     local guard_var="${base_name^^}_LOADED"
     if [ -n "${!guard_var:-}" ] && [ ${!guard_var} -eq 1 ]; then
-        echo "$(printf "$test_modul_txt_0005" "$guard_var" "${!guard_var:-nicht gesetzt}")"
+        print_info "$(printf "$test_modul_txt_0005" "$guard_var" "${!guard_var:-nicht gesetzt}")"
     else
-        echo "$(printf "$test_modul_txt_0004" "$guard_var" "${!guard_var:-nicht gesetzt}")"
+        print_error "$(printf "$test_modul_txt_0004" "$guard_var" "${!guard_var:-nicht gesetzt}")"
         return 1  # Guard nicht OK
     fi
 
     # Erstelle Namen für die Pfadvariable und prüfe Pfad-Variable
     local path_var="${base_name^^}_SH"
     if [ -n "${!path_var:-}" ] && [ -f "${!path_var}" ]; then
-        echo "$(printf "$test_modul_txt_0007" "$path_var" "${!path_var}")"
+        print_info "$(printf "$test_modul_txt_0007" "$path_var" "${!path_var}")"
     else
-        echo "$(printf "$test_modul_txt_0006" "$path_var" "${!path_var:-nicht gesetzt}")"
+        print_error "$(printf "$test_modul_txt_0006" "$path_var" "${!path_var:-nicht gesetzt}")"
         return 2  # Pfad nicht OK
     fi
 
     # Wenn wir hier ankommen, sind beide Prüfungen erfolgreich
-    echo "$(printf "$test_modul_txt_0008" "${base_name^^}")"
+    print_success "$(printf "$test_modul_txt_0008" "${base_name^^}")"
     echo ""
 
     # Liste der Funktionen im Modul anzeigen
