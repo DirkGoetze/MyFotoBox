@@ -9,9 +9,9 @@
 # ---------------------------------------------------------------------------
 
 # Setze strict mode für sicheres Bash-Scripting
-set -e  # Beende bei Fehlern
-set -u  # Beende bei Verwendung nicht gesetzter Variablen
-set +e  # Deaktiviere strict mode für die Initialisierung
+#set -e  # Beende bei Fehlern
+#set -u  # Beende bei Verwendung nicht gesetzter Variablen
+#set +e  # Deaktiviere strict mode für die Initialisierung
 
 # Informiere über Strategie
 echo "==========================================================================="
