@@ -2137,3 +2137,145 @@ get_ssl_key_systemdir() {
     echo ""
     return 1
 }
+
+# ============================================================================
+# Test-Funktionen
+# ============================================================================
+
+# test_manage_folders
+test_manage_folders_debug_0001="INFO: Starte Test für manage_folders.sh"
+test_manage_folders_debug_0002="ERROR: Test für manage_folders.sh fehlgeschlagen"
+test_manage_folders_debug_0003="INFO: Test für manage_folders.sh erfolgreich abgeschlossen"
+
+test_manage_folders() {
+    # -----------------------------------------------------------------------
+    # test_manage_folders
+    # -----------------------------------------------------------------------
+    # Funktion: Führt einen Test des Moduls durch
+    # Parameter: keine
+    # Rückgabe: 0 = Erfolg, 1 = Fehler
+    # -----------------------------------------------------------------------
+    # Eröffnungsmeldung im Debug Modus
+    debug "$test_manage_folders_debug_0001"
+
+    # Allgemeiner Test des Moduls
+    test_modul "manage_folders.sh"
+    if [ $? -ne 0 ]; then
+        debug "$test_manage_folders_debug_0002"
+        return 1
+    fi
+
+    # Hier können spezifische Tests für die Funktion implementiert werden
+    test_function "manage_folders_sh" "get_install_dir"
+    # Test: get_install_dir
+    test_function "manage_folders_sh" "get_install_dir"
+    debug "INFO: INSTALL_DIR: ${INSTALL_DIR:-nicht gesetzt}"
+    # Test: get_backend_dir
+    test_function "manage_folders_sh" "get_backend_dir"
+    debug "INFO: BACKEND_DIR: ${BACKEND_DIR:-nicht gesetzt}"
+    # Test: get_script_dir
+    test_function "manage_folders_sh" "get_script_dir"
+    debug "INFO: SCRIPT_DIR: ${SCRIPT_DIR:-nicht gesetzt}"
+    # Test: get_venv_dir
+    test_function "manage_folders_sh" "get_venv_dir"
+    debug "INFO: BACKEND_VENV_DIR: ${BACKEND_VENV_DIR:-nicht gesetzt}"
+    # Test: get_backup_dir
+    test_function "manage_folders_sh" "get_backup_dir"
+    debug "INFO: BACKUP_DIR: ${BACKUP_DIR:-nicht gesetzt}"
+    # Test: get_data_backup_dir
+    test_function "manage_folders_sh" "get_data_backup_dir"
+    debug "INFO: BACKUP_DIR_DATA: ${BACKUP_DIR_DATA:-nicht gesetzt}"
+    # Test: get_nginx_backup_dir
+    test_function "manage_folders_sh" "get_nginx_backup_dir"
+    debug "INFO: BACKUP_DIR_NGINX: ${BACKUP_DIR_NGINX:-nicht gesetzt}"
+    # Test: get_https_backup_dir
+    test_function "manage_folders_sh" "get_https_backup_dir"
+    debug "INFO: BACKUP_DIR_HTTPS: ${BACKUP_DIR_HTTPS:-nicht gesetzt}"
+    # Test: get_system_backup_dir
+    test_function "manage_folders_sh" "get_systemd_backup_dir"
+    debug "INFO: BACKUP_DIR_SYSTEMD: ${BACKUP_DIR_SYSTEMD:-nicht gesetzt}"
+    # Test: get_config_dir
+    test_function "manage_folders_sh" "get_config_dir"
+    debug "INFO: CONF_DIR: ${CONF_DIR:-nicht gesetzt}"
+    # Test: get_camera_conf_dir
+    test_function "manage_folders_sh" "get_camera_conf_dir"
+    debug "INFO: CONF_DIR_CAMERA: ${CONF_DIR_CAMERA:-nicht gesetzt}"
+    # Test: get_https_conf_dir
+    test_function "manage_folders_sh" "get_https_conf_dir"
+    debug "INFO: CONF_DIR_HTTPS: ${CONF_DIR_HTTPS:-nicht gesetzt}"
+    # Test: get_nginx_conf_dir
+    test_function "manage_folders_sh" "get_nginx_conf_dir"
+    debug "INFO: CONF_DIR_NGINX: ${CONF_DIR_NGINX:-nicht gesetzt}"
+    # Test: get_nginx_conf_dir
+    test_function "manage_folders_sh" "get_nginx_conf_dir" "external"
+    debug "INFO: CONF_DIR_NGINX: ${CONF_DIR_NGINX:-nicht gesetzt}"
+    # Test: get_nginx_conf_dir
+    test_function "manage_folders_sh" "get_nginx_conf_dir" "internal"
+    debug "INFO: CONF_DIR_NGINX: ${CONF_DIR_NGINX:-nicht gesetzt}"
+    # Test: get_nginx_conf_dir
+    test_function "manage_folders_sh" "get_nginx_conf_dir" "activated"
+    debug "INFO: CONF_DIR_NGINX: ${CONF_DIR_NGINX:-nicht gesetzt}"
+    # Test: get_template_dir
+    test_function "manage_folders_sh" "get_template_dir"
+    debug "INFO: CONF_DIR_TEMPLATES: ${CONF_DIR_TEMPLATES:-nicht gesetzt}"
+    # Test: get_template_dir
+    test_function "manage_folders_sh" "get_template_dir" "nginx"
+    debug "INFO: TEMPLATE_DIR: ${TEMPLATE_DIR:-nicht gesetzt}"
+    # Test: get_data_dir
+    test_function "manage_folders_sh" "get_data_dir"
+    debug "INFO: DATA_DIR: ${DATA_DIR:-nicht gesetzt}"
+    # Test: get_frontend_dir
+    test_function "manage_folders_sh" "get_frontend_dir"
+    debug "INFO: FRONTEND_DIR: ${FRONTEND_DIR:-nicht gesetzt}"
+    # Test: get_frontend_css_dir
+    test_function "manage_folders_sh" "get_frontend_css_dir"
+    debug "INFO: FRONTEND_DIR_CSS: ${FRONTEND_DIR_CSS:-nicht gesetzt}"
+    # Test: get_frontend_fonts_dir
+    test_function "manage_folders_sh" "get_frontend_fonts_dir"
+    debug "INFO: FRONTEND_DIR_FONTS: ${FRONTEND_DIR_FONTS:-nicht gesetzt}"
+    # Test: get_frontend_js_dir
+    test_function "manage_folders_sh" "get_frontend_js_dir"
+    debug "INFO: FRONTEND_DIR_JS: ${FRONTEND_DIR_JS:-nicht gesetzt}"
+    # Test: get_photos_dir
+    test_function "manage_folders_sh" "get_photos_dir"
+    debug "INFO: FRONTEND_DIR_PHOTOS: ${FRONTEND_DIR_PHOTOS:-nicht gesetzt}"
+    # Test: get_photos_original_dir
+    test_function "manage_folders_sh" "get_photos_originals_dir"
+    debug "INFO: FRONTEND_DIR_PHOTOS_ORIGINAL: ${FRONTEND_DIR_PHOTOS_ORIGINAL:-nicht gesetzt}"
+    # Test: get_photos_originals_dir
+    test_function "manage_folders_sh" "get_photos_originals_dir" "Mein Event"
+    # Test: get_photos_gallery_dir
+    test_function "manage_folders_sh" "get_photos_gallery_dir"
+    debug "INFO: FRONTEND_DIR_PHOTOS_THUMBNAILS: ${FRONTEND_DIR_PHOTOS_THUMBNAILS:-nicht gesetzt}"
+    # Test: get_photos_originals_dir
+    test_function "manage_folders_sh" "get_photos_gallery_dir" "Mein Event"
+    # Test: get_frontend_picture_dir
+    test_function "manage_folders_sh" "get_frontend_picture_dir"
+    debug "INFO: FRONTEND_DIR_PICTURE: ${FRONTEND_DIR_PICTURE:-nicht gesetzt}"
+    # Test: get_log_dir
+    test_function "manage_folders_sh" "get_log_dir"
+    debug "INFO: LOG_DIR: ${LOG_DIR:-nicht gesetzt}"
+    # Test: get_tmp_dir
+    test_function "manage_folders_sh" "get_tmp_dir"
+    debug "INFO: TMP_DIR: ${TMP_DIR:-nicht gesetzt}"
+    # Test: get_nginx_systemdir
+    test_function "manage_folders_sh" "get_nginx_systemdir"
+    debug "INFO: SYSTEM_PATH_NGINX: ${SYSTEM_PATH_NGINX:-nicht gesetzt}"
+    # Test: get_systemd_systemdir
+    test_function "manage_folders_sh" "get_systemd_systemdir"
+    debug "INFO: SYSTEM_PATH_SYSTEMD: ${SYSTEM_PATH_SYSTEMD:-nicht gesetzt}"
+    # Test: get_ssl_systemdir
+    test_function "manage_folders_sh" "get_ssl_systemdir"
+    debug "INFO: SYSTEM_PATH_SSL: ${SYSTEM_PATH_SSL:-nicht gesetzt}"
+    # Test: get_ssl_cert_systemdir
+    test_function "manage_folders_sh" "get_ssl_cert_systemdir"
+    debug "INFO: SYSTEM_PATH_SSL_CERTS: ${SYSTEM_PATH_SSL_CERTS:-nicht gesetzt}"
+    # Test: get_ssl_key_systemdir
+    test_function "manage_folders_sh" "get_ssl_key_systemdir"
+    debug "INFO: SYSTEM_PATH_SSL_KEY: ${SYSTEM_PATH_SSL_KEY:-nicht gesetzt}"
+    # Test: ensure_folder_structure
+    test_function "manage_folders_sh" "ensure_folder_structure"
+
+    debug "$test_manage_folders_debug_0003"
+    return 0
+}
