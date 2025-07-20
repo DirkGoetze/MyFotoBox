@@ -20,6 +20,7 @@ set -e
 INSTALL_DIR="$(dirname "$(readlink -f "$0")")"
 # Diese Variable wird zu Beginn direkt gesetzt, damit die lib_core.sh geladen werden kann
 # Nach dem Laden der lib_core.sh sollten die Getter-Funktionen verwendet werden
+DEBUG_MOD_GLOBAL=1
 
 # Debug-Ausgabe zum Nachverfolgen des Installationspfads
 echo "INSTALL_DIR=$INSTALL_DIR"
@@ -60,7 +61,6 @@ set +e
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
 DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
-DEBUG_MOD_GLOBAL=1
 
 # ---------------------------------------------------------------------------
 # Diese Variablen werden global deklariert und später sicher initialisiert
