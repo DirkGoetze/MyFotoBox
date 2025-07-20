@@ -1174,3 +1174,89 @@ create_empty_file() {
         return 1
     fi
 }
+
+# ============================================================================
+# Test-Funktionen
+# ============================================================================
+
+# test_manage_files
+test_manage_files_debug_0001="INFO: Starte Test für manage_files.sh"
+test_manage_files_debug_0002="ERROR: Test für manage_files.sh fehlgeschlagen"
+test_manage_files_debug_0003="INFO: Test für manage_files.sh erfolgreich abgeschlossen"
+
+test_manage_files() {
+    # -----------------------------------------------------------------------
+    # test_manage_files
+    # -----------------------------------------------------------------------
+    # Funktion: Führt einen Test des Moduls durch
+    # Parameter: keine
+    # Rückgabe: 0 = Erfolg, 1 = Fehler
+    # -----------------------------------------------------------------------
+    # Eröffnungsmeldung im Debug Modus
+    debug "$test_manage_files_debug_0001"
+
+    # Allgemeiner Test des Moduls
+    test_modul "manage_files.sh"
+    if [ $? -ne 0 ]; then
+        debug "$test_manage_files_debug_0002"
+        return 1
+    fi
+
+    # Hier können spezifische Tests für die Funktion implementiert werden
+    # Test: get_data_file
+    test_function "manage_files_sh" "get_data_file"
+    # Test: get_config_file
+    test_function "manage_files_sh" "get_config_file"
+    # Test: get_log_file
+    test_function "manage_files_sh" "get_log_file"
+    # Test: get_requirements_system_file
+    test_function "manage_files_sh" "get_requirements_system_file"
+    # Test: get_requirements_python_file
+    test_function "manage_files_sh" "get_requirements_python_file"
+    # Test: get_tmp_file
+    test_function "manage_files_sh" "get_tmp_file"
+    # Test: get_template_file
+    test_function "manage_files_sh" "get_template_file" "nginx" "template_local"
+    # Test: get_template_file
+    test_function "manage_files_sh" "get_template_file" "nginx" "template_internal"
+    # Test: get_template_file
+    test_function "manage_files_sh" "get_template_file" "nginx" "template_external"
+    # Test: get_template_file
+    test_function "manage_files_sh" "get_template_file" "systemd" "fotobox-backend"
+    # Test: get_template_file
+    test_function "manage_files_sh" "get_template_file" "ssl_cert" "fotobox"
+    # Test: get_template_file
+    test_function "manage_files_sh" "get_template_file" "ssl_key" "fotobox"
+    # Test: get_template_file
+    test_function "manage_files_sh" "get_template_file" "backup_meta" "fotobox-backup"
+    # Test: get_template_file
+    test_function "manage_files_sh" "get_template_file" "firewall" "fotobox-firewall"
+    # Test: get_template_file
+    test_function "manage_files_sh" "get_template_file" "ssh" "fotobox-ssh"
+    # Test: get_config_file_nginx
+    test_function "manage_files_sh" "get_config_file_nginx"
+    # Test: get_config_file_nginx
+    test_function "manage_files_sh" "get_config_file_nginx" "local"
+    # Test: get_config_file_nginx
+    test_function "manage_files_sh" "get_config_file_nginx" "internal"
+    # Test: get_config_file_nginx
+    test_function "manage_files_sh" "get_config_file_nginx" "external"
+    # Test: get_config_file_nginx
+    test_function "manage_files_sh" "get_config_file_nginx" "activated"
+    # Test: get_backup_file
+    test_function "manage_files_sh" "get_backup_file" "irgendwas" ".zip"
+    # Test: get_backup_file
+    test_function "manage_files_sh" "get_backup_file" "data" "fotobox.db"
+    # Test: get_backup_file
+    test_function "manage_files_sh" "get_backup_file" "nginx" "default.conf"
+    # Test: get_backup_file
+    test_function "manage_files_sh" "get_backup_file" "https" "fotobox"
+    # Test: get_backup_file
+    test_function "manage_files_sh" "get_backup_file" "systemd" "fotobox.service"
+    # Test: get_backup_meta_file
+    backup_file=$(get_backup_file "nginx" "default.conf")
+    test_function "manage_files_sh" "get_backup_meta_file" "$backup_file"
+
+    debug "$test_manage_files_debug_0003"
+    return 0
+}

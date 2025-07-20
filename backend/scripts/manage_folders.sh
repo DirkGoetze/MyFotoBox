@@ -2166,7 +2166,6 @@ test_manage_folders() {
     fi
 
     # Hier können spezifische Tests für die Funktion implementiert werden
-    test_function "manage_folders_sh" "get_install_dir"
     # Test: get_install_dir
     test_function "manage_folders_sh" "get_install_dir"
     debug "INFO: INSTALL_DIR: ${INSTALL_DIR:-nicht gesetzt}"
