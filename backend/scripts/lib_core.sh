@@ -1095,14 +1095,15 @@ test_function() {
         debug_output "$(printf "$test_function_debug_0008" "$output")"
         debug_output "$(printf "$test_function_debug_0009" "$result")"
         if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
-            echo "✅ SUCCES: Ausgabe der Funktion '$function_name': $output"
-            echo "✅ SUCCES: Rückgabewert der Funktion '$function_name': $result"
+            echo "✅ SUCCES: Ausgabe.....: $output"
+            echo "✅ SUCCES: Rückgabewert: $result"
             echo
         fi
     else
         debug_output "$(printf "$test_function_debug_0009" "$result")"
         if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
-            echo "✅ SUCCES: Keine Ausgabe von Funktion '$function_name', Rückgabewert: $result"
+            echo "✅ SUCCES: Ausgabe.....: Funktion '$function_name' hat keine Ausgabe erzeugt."
+            echo "✅ SUCCES: Rückgabewert: $result"
             echo
         fi
     fi
