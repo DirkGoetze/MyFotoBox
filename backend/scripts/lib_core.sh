@@ -933,6 +933,7 @@ list_module_functions() {
 
     if [ "$show_private" = "true" ]; then
         # Zuerst private Funktionen anzeigen
+        echo "$global_seperator_h3"
         echo "$(printf "$list_module_functions_002")"
         grep -E '^[[:space:]]*(function[[:space:]]+)?_[a-zA-Z0-9_]+\(\)[[:space:]]*\{' "$module_file" | 
           sed -E 's/^[[:space:]]*(function[[:space:]]+)?([a-zA-Z0-9_]+)\(\).*/\2/' | 
@@ -941,7 +942,9 @@ list_module_functions() {
     fi
     
     # Öffentliche Funktionen anzeigen
+    echo "$global_seperator_h3"
     echo "$(printf "$list_module_functions_003")"
+    echo "$global_seperator_h3"
     grep -E '^[[:space:]]*(function[[:space:]]+)?[a-zA-Z0-9_]+\(\)[[:space:]]*\{' "$module_file" | 
       sed -E 's/^[[:space:]]*(function[[:space:]]+)?([a-zA-Z0-9_]+)\(\).*/\2/' | 
       grep -v "^_" |
