@@ -1101,19 +1101,26 @@ test_function() {
         debug_output "$(printf "$test_function_debug_0009" "$result")"
         if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
             print_info "$(printf "$test_function_txt_0006" "$output")"
-            print_info "$(printf "$test_function_txt_0007" "$result")"
+            if [ $result -eq 0 ]; then
+                print_success "$(printf "$test_function_txt_0007" "$result")"
+            else
+                print_warning "$(printf "$test_function_txt_0007" "$result")"
+            fi
         fi
     else
         debug_output "$(printf "$test_function_debug_0009" "$result")"
         if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
             print_info "$(printf "$test_function_txt_0008" "$function_name")"
-            print_info "$(printf "$test_function_txt_0007" "$result")"
+            if [ $result -eq 0 ]; then
+                print_success "$(printf "$test_function_txt_0007" "$result")"
+            else
+                print_warning "$(printf "$test_function_txt_0007" "$result")"
+            fi
         fi
     fi
 
     # Gib den originalen Rückgabewert der getesteten Funktion zurück
     print_success "$(printf "$test_function_txt_0009" "$function_name")"
-    #echo -e "${COLOR_GREEN}  → [OK] $(printf "$test_function_txt_0009" "$function_name")"
     echo
     return $result
 }
