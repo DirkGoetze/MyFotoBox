@@ -54,15 +54,13 @@ echo
 # Test der manage_folders.sh Funktionen
 # -------------------------------
 test_manage_folders
-exit
 # -------------------------------
 # Test der manage_files.sh Funktionen
 # -------------------------------
-list_module_functions "$MANAGE_FILES_SH" false
-echo
-echo "========================================================================="
-echo "  Test der Funktionen in manage_files.sh"
-echo "========================================================================="
+test_manage_files
+
+exit
+
 
 
 # -------------------------------
