@@ -55,232 +55,116 @@ echo
 # -------------------------------
 test_modul "manage_folders.sh"
 test_function "manage_folders_sh" "get_install_dir"
-exit
-list_module_functions "$MANAGE_FOLDERS_SH" false
-echo "========================================================================="
-echo "  Test der Funktionen in manage_folders.sh                               "
-echo "========================================================================="
 # Test: get_install_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_install_dir                                                 |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_install_dir"
 debug "INFO: INSTALL_DIR: ${INSTALL_DIR:-nicht gesetzt}"
 # Test: get_backend_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_backend_dir                                                 |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_backend_dir"
 debug "INFO: BACKEND_DIR: ${BACKEND_DIR:-nicht gesetzt}"
 # Test: get_script_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_script_dir                                                  |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_script_dir"
 debug "INFO: SCRIPT_DIR: ${SCRIPT_DIR:-nicht gesetzt}"
 # Test: get_venv_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_venv_dir                                                    |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_venv_dir"
 debug "INFO: BACKEND_VENV_DIR: ${BACKEND_VENV_DIR:-nicht gesetzt}"
 # Test: get_backup_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_backup_dir                                                  |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_backup_dir"
 debug "INFO: BACKUP_DIR: ${BACKUP_DIR:-nicht gesetzt}"
 # Test: get_data_backup_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_data_backup_dir                                             |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_data_backup_dir"
 debug "INFO: BACKUP_DIR_DATA: ${BACKUP_DIR_DATA:-nicht gesetzt}"
 # Test: get_nginx_backup_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_nginx_backup_dir                                            |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_nginx_backup_dir"
 debug "INFO: BACKUP_DIR_NGINX: ${BACKUP_DIR_NGINX:-nicht gesetzt}"
 # Test: get_https_backup_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_https_backup_dir                                            |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_https_backup_dir"
 debug "INFO: BACKUP_DIR_HTTPS: ${BACKUP_DIR_HTTPS:-nicht gesetzt}"
 # Test: get_system_backup_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_systemd_backup_dir                                          |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_systemd_backup_dir"
 debug "INFO: BACKUP_DIR_SYSTEMD: ${BACKUP_DIR_SYSTEMD:-nicht gesetzt}"
 # Test: get_config_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_config_dir                                                  |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_config_dir"
 debug "INFO: CONF_DIR: ${CONF_DIR:-nicht gesetzt}"
 # Test: get_camera_conf_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_camera_conf_dir                                             |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_camera_conf_dir"
 debug "INFO: CONF_DIR_CAMERA: ${CONF_DIR_CAMERA:-nicht gesetzt}"
 # Test: get_https_conf_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_https_conf_dir                                              |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_https_conf_dir"
 debug "INFO: CONF_DIR_HTTPS: ${CONF_DIR_HTTPS:-nicht gesetzt}"
 # Test: get_nginx_conf_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_nginx_conf_dir [ohne Parameter - external]                  |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_nginx_conf_dir"
 debug "INFO: CONF_DIR_NGINX: ${CONF_DIR_NGINX:-nicht gesetzt}"
 # Test: get_nginx_conf_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_nginx_conf_dir (external)                                   |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_nginx_conf_dir" "external"
 debug "INFO: CONF_DIR_NGINX: ${CONF_DIR_NGINX:-nicht gesetzt}"
 # Test: get_nginx_conf_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_nginx_conf_dir (internal)                                   |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_nginx_conf_dir" "internal"
 debug "INFO: CONF_DIR_NGINX: ${CONF_DIR_NGINX:-nicht gesetzt}"
 # Test: get_nginx_conf_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_nginx_conf_dir (activated)                                  |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_nginx_conf_dir" "activated"
 debug "INFO: CONF_DIR_NGINX: ${CONF_DIR_NGINX:-nicht gesetzt}"
 # Test: get_template_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_template_dir (ohne Modul)                                   |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_template_dir"
 debug "INFO: CONF_DIR_TEMPLATES: ${CONF_DIR_TEMPLATES:-nicht gesetzt}"
 # Test: get_template_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_template_dir (mit Modul)                                    |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_template_dir" "nginx"
 debug "INFO: TEMPLATE_DIR: ${TEMPLATE_DIR:-nicht gesetzt}"
 # Test: get_data_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_data_dir                                                    |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_data_dir"
 debug "INFO: DATA_DIR: ${DATA_DIR:-nicht gesetzt}"
 # Test: get_frontend_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_frontend_dir                                                |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_frontend_dir"
 debug "INFO: FRONTEND_DIR: ${FRONTEND_DIR:-nicht gesetzt}"
 # Test: get_frontend_css_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_frontend_css_dir                                            |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_frontend_css_dir"
 debug "INFO: FRONTEND_DIR_CSS: ${FRONTEND_DIR_CSS:-nicht gesetzt}"
 # Test: get_frontend_fonts_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_frontend_fonts_dir                                          |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_frontend_fonts_dir"
 debug "INFO: FRONTEND_DIR_FONTS: ${FRONTEND_DIR_FONTS:-nicht gesetzt}"
 # Test: get_frontend_js_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_frontend_js_dir                                             |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_frontend_js_dir"
 debug "INFO: FRONTEND_DIR_JS: ${FRONTEND_DIR_JS:-nicht gesetzt}"
 # Test: get_photos_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_photos_dir                                                  |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_photos_dir"
 debug "INFO: FRONTEND_DIR_PHOTOS: ${FRONTEND_DIR_PHOTOS:-nicht gesetzt}"
 # Test: get_photos_original_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_photos_original_dir (ohne Event)                            |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_photos_originals_dir"
 debug "INFO: FRONTEND_DIR_PHOTOS_ORIGINAL: ${FRONTEND_DIR_PHOTOS_ORIGINAL:-nicht gesetzt}"
 # Test: get_photos_originals_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_photos_originals_dir (mit Event)                            |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_photos_originals_dir" "Mein Event"
 # Test: get_photos_gallery_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_photos_gallery_dir (ohne Event)                             |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_photos_gallery_dir"
 debug "INFO: FRONTEND_DIR_PHOTOS_THUMBNAILS: ${FRONTEND_DIR_PHOTOS_THUMBNAILS:-nicht gesetzt}"
 # Test: get_photos_originals_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_photos_gallery_dir (mit Event)                              |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_photos_gallery_dir" "Mein Event"
 # Test: get_frontend_picture_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_frontend_picture_dir                                        |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_frontend_picture_dir"
 debug "INFO: FRONTEND_DIR_PICTURE: ${FRONTEND_DIR_PICTURE:-nicht gesetzt}"
 # Test: get_log_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_log_dir                                                     |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_log_dir"
 debug "INFO: LOG_DIR: ${LOG_DIR:-nicht gesetzt}"
 # Test: get_tmp_dir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_tmp_dir                                                     |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_tmp_dir"
 debug "INFO: TMP_DIR: ${TMP_DIR:-nicht gesetzt}"
 # Test: get_nginx_systemdir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_nginx_systemdir                                             |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_nginx_systemdir"
 debug "INFO: SYSTEM_PATH_NGINX: ${SYSTEM_PATH_NGINX:-nicht gesetzt}"
 # Test: get_systemd_systemdir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_systemd_systemdir                                           |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_systemd_systemdir"
 debug "INFO: SYSTEM_PATH_SYSTEMD: ${SYSTEM_PATH_SYSTEMD:-nicht gesetzt}"
 # Test: get_ssl_systemdir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_ssl_systemdir                                             |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_ssl_systemdir"
 debug "INFO: SYSTEM_PATH_SSL: ${SYSTEM_PATH_SSL:-nicht gesetzt}"
 # Test: get_ssl_cert_systemdir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_ssl_cert_systemdir                                         |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_ssl_cert_systemdir"
 debug "INFO: SYSTEM_PATH_SSL_CERTS: ${SYSTEM_PATH_SSL_CERTS:-nicht gesetzt}"
 # Test: get_ssl_key_systemdir
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: get_ssl_key_systemdir                                           |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "get_ssl_key_systemdir"
 debug "INFO: SYSTEM_PATH_SSL_KEY: ${SYSTEM_PATH_SSL_KEY:-nicht gesetzt}"
 # Test: ensure_folder_structure
-echo "+-----------------------------------------------------------------------+"
-echo "| Test: ensure_folder_structure                                         |"
-echo "+-----------------------------------------------------------------------+"
 test_function "manage_folders_sh" "ensure_folder_structure"
 
-
+exit
 # -------------------------------
 # Test der manage_files.sh Funktionen
 # -------------------------------
