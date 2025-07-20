@@ -1140,3 +1140,49 @@ if [ $? -ne 0 ]; then
     echo "Fehler: Einige Ressourcen konnten nicht geladen werden. Bitte überprüfen Sie die Fehlermeldungen."
     exit 1
 fi
+
+# ============================================================================
+# Testfunktionen für lib_core.sh
+# ============================================================================
+
+test_lib_core() {
+    # -----------------------------------------------------------------------
+    # Funktion: Testet die Funktionen in lib_core.sh
+    # Parameter: keine
+    # Rückgabe: 0 = OK, 1 = Fehler bei den Tests
+    # -----------------------------------------------------------------------
+    # Eröffnungsmeldung im Debug Modus
+    debug "$test_manage_files_debug_0001"
+    
+    # Hier können spezifische Tests für die Funktion implementiert werden
+    set +e  # Deaktiviere Fehlerabbruch
+
+    print_info "$global_seperator_h1"
+    print_info " Teste Funktionen in lib_core.sh"
+    print_info "$global_seperator_h1"
+
+    # Debug-Ausgabe zum Anzeigen der vorhandenen Modul-Dateien
+    local script_dir="/opt/fotobox/backend/scripts"
+    print_info "$global_seperator_h2"
+    print_info " Vorhandene Dateien im Skriptverzeichnis"
+    print_info "$global_seperator_h2"
+    ls -la "$script_dir"
+    echo
+
+    # Teste set_config_value
+    # test_function "set_config_value" "test_key" "test_value" "/tmp/test_config.conf"
+    
+    # Teste check_module
+    # test_function "check_module" "manage_folders.sh"
+    
+    # Teste bind_resource
+    # test_function "bind_resource" "manage_folders.sh"
+    
+    # Teste list_module_functions
+    # list_module_functions "manage_folders.sh" true
+    
+    # Test abgeschlossen, Reaktiviere Fehlerabbruch, Meldung ausgeben
+    set -e  
+    debug "$test_manage_files_debug_0003"
+    return 0
+}

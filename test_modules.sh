@@ -26,7 +26,7 @@ echo
 # -------------------------------
 echo "-------------------------------------------------------------------------"
 echo "Test für das Laden aller Module zentral über lib_core.sh"
-# Debug-Ausgabe zum Anzeigen der vorhandenen Dateien
+# Debug-Ausgabe zum Anzeigen der vorhandenen Modul-Dateien
 echo "---------------------------------------------------------------------------"
 echo "Vorhandene Dateien im Skriptverzeichnis:"
 echo
