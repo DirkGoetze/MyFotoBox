@@ -145,7 +145,7 @@ _is_installed_nginx() {
 # _is_running_nginx
 _is_running_nginx_debug_0001="INFO: NGINX-Dienst wird geprüft ..."
 _is_running_nginx_debug_0002="WARN: NGINX ist nicht installiert!"
-_is_running_nginx_debug_0003="ERROR: NGINX-Dienst ist gestoppt!"
+_is_running_nginx_debug_0003="ERROR: NGINX-Dienst ist gestoppt! Status: %s"
 _is_running_nginx_debug_0004="SUCCESS: NGINX-Dienst ist aktiv."
 _is_running_nginx_log_0001="NGINX ist nicht installiert!"
 _is_running_nginx_log_0002="NGINX-Dienst ist gestoppt."
@@ -177,7 +177,11 @@ _is_running_nginx() {
     # NGINX ist installiert, jetzt Status prüfen
     if ! systemctl is-active --quiet nginx; then
         # NGINX-Dienst ist gestoppt oder hat Fehler
-        debug "$_is_running_nginx_debug_0003"
+        local status_details
+        status_details=$(systemctl status nginx 2>&1 | grep -E 'Active:|Loaded:|Main PID:|nginx.service|error|failed' | head -n 5)
+
+        # Debug-Ausgabe mit Statusdetails
+        debug "$(printf "$_is_running_nginx_debug_0003" "$status_details")"
         log "$_is_running_nginx_log_0002"
         return 1
     fi
