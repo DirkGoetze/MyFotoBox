@@ -596,6 +596,8 @@ bind_resource() {
     debug_output "$(printf "$bind_resource_debug_0007" "${resource_file}")"
     source "$resource_file"
     local source_result=$?
+    echo "Ressource $resource_name geladen mit Status: $source_result"
+    
     if [ $source_result -ne 0 ]; then
         debug_output "$(printf "$bind_resource_debug_0008" "${resource_name%.sh}" "$source_result")"
         echo "$(printf "$bind_resource_log_0003" "${resource_name%.sh}" "$source_result")"
