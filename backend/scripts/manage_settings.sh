@@ -107,11 +107,11 @@ _clean_key() {
     local key="$1"
     local default="${2:-}"
 
-    # Überprüfen, ob der Schlüssel angegeben ist
-    if ! check_param "$key" "key"; then return 1; fi
-
     # Debug-Ausgabe eröffnen
     debug "$(printf "$_clean_key_debug_0001" "$key")"
+
+    # Überprüfen, ob der Schlüssel angegeben ist
+    if ! check_param "$key" "key"; then return 1; fi
 
     # Ungültige Zeichen entfernen (nur a-z, A-Z, 0-9, ., _ und - sind erlaubt)
     key=$(echo "$key" | sed 's/[^a-zA-Z0-9._-]//g')
@@ -130,6 +130,7 @@ _clean_key() {
     # Ergebnis ausgeben
     debug "$(printf "$_clean_key_debug_0002" "$key")"
     echo "$key"
+    return 0
 }
 
 # _validate_key
