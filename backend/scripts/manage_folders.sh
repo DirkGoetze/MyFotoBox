@@ -24,7 +24,7 @@
 # Hilfsfunktionen zur Einbindung externer Skript-Ressourcen
 # ===========================================================================
 # Guard für dieses Management-Skript
-MANAGE_FOLDERS_LOADED=0
+: "${MANAGE_FOLDERS_LOADED:=0}"  # Setze nur, wenn nicht bereits gesetzt
 # ===========================================================================
 
 # ===========================================================================

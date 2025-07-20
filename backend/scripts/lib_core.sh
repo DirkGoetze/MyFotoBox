@@ -24,7 +24,7 @@
 
 # Standardwerte für Guard-Variablen festlegen
 # ------------------------------------------------------------------------------
-: "${MANAGE_FOLDERS_LOADED:=0}"
+#: "${MANAGE_FOLDERS_LOADED:=0}"
 : "${MANAGE_FILES_LOADED:=0}"
 : "${MANAGE_LOGGING_LOADED:=0}"
 : "${MANAGE_DATABASE_LOADED:=0}"
