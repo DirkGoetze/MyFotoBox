@@ -7,14 +7,6 @@
 #           und gemeinsame Hilfsfunktionen, die von allen Skripten benötigt werden.
 # ------------------------------------------------------------------------------
 
-# Guard für sich selbst
-#: "${LIB_CORE_LOADED:=0}"
-#if [ "$LIB_CORE_LOADED" -eq 1 ]; then
-#    return 0  # Bereits geladen
-#fi
-# Sofort markieren, dass diese Bibliothek geladen wird, um rekursive Probleme zu vermeiden
-#LIB_CORE_LOADED=1
-
 # ===========================================================================
 # Zentrale Konstanten für das gesamte Fotobox-System
 # ===========================================================================
@@ -1188,7 +1180,7 @@ test_lib_core() {
     # list_module_functions "manage_folders.sh" true
     
     # Tests abgeschlossen, Deaktivieren des globalen Debug-Modus 
-    DEBUG_MOD_GLOBAL=0 
+    # DEBUG_MOD_GLOBAL=0 
 
     # Meldung ausgeben
     debug "$test_manage_files_debug_0003"
