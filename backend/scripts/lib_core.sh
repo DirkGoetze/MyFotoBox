@@ -564,23 +564,13 @@ bind_resource() {
     # Prüfen, ob die Ressource bereits geladen ist
     local base_name="${resource_name%.sh}"    
     local guard_var_name="${base_name^^}_LOADED"  # erzwinge Großbuchstaben für Guard-Variable
-    # Deaktiviere "unbound variable" Fehler, um Guard-Variable zu prüfen
-    local e_was_set
-    local u_was_set
-    local old_state=$-
-    if [[ $old_state == *e* ]]; then e_was_set=1;  else e_was_set=0; fi
-    if [[ $old_state == *u* ]]; then u_was_set=1;  else u_was_set=0; fi
-    set +u
-    set -e
 
     # Prüfe, ob die Guard-Variable gesetzt ist und den Wert 1 hat
-    if [ "$(eval echo \$$guard_var_name)" -eq 1 ]; then
+    eval val=\$$guard_var_name
+    if [ -n "$val" ] && [ "$val" -eq 1 ] 2>/dev/null; then
         debug_output "$(printf "$bind_resource_debug_0002" "$base_name")"
         return 0  # Bereits geladen, alles OK
     fi
-    # Stelle den ursprünglichen Zustand "unbound variable" Fehler wieder her
-    if [ "$u_was_set" -eq 1 ]; then set -u; fi
-    if [ "$e_was_set" -eq 1 ]; then set -e; fi
 
     # Prüfung des Ressourcen-Verzeichnisses
     debug_output "$(printf "$bind_resource_debug_0003" "$SCRIPT_DIR")"
