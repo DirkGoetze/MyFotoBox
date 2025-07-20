@@ -276,7 +276,7 @@ print_success() {
     # -----------------------------------------------------------------------
     # Funktion: Gibt eine Erfolgsmeldung in Dunkelgrün aus
     # Parameter: $* = Meldungstext
-    echo -e "\r${COLOR_GREEN}✅  ${COLOR_RESET} $*"
+    echo -e "\r${COLOR_GREEN}✅ ${COLOR_RESET} $*"
     log "SUCCESS: $*"
 }
 
