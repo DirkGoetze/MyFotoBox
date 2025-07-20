@@ -2248,6 +2248,11 @@ test_manage_nginx() {
         return 1
     fi
 
+    # Für Einzeltest, kann hier die DB Installiert werden
+    if ! _is_sqlite_installed; then 
+        setup_database
+    fi
+
     # Hier können spezifische Tests für die Funktion implementiert werden
     set +e  # Deaktiviere Fehlerabbruch
     DEBUG_MOD_GLOBAL=1 # Aktivieren des globalen Debug-Modus für die Tests
