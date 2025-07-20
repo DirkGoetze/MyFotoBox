@@ -60,6 +60,8 @@ set +e
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
 DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
+DEBUG_MOD_GLOBAL=1
+
 # ---------------------------------------------------------------------------
 # Diese Variablen werden global deklariert und später sicher initialisiert
 STEP_COUNTER=0               # Aktueller Schritt (wird inkrementiert)
@@ -1084,7 +1086,6 @@ main() {
         fi
     }
 
-    DEBUG_MOD_GLOBAL=1
     # Ausführung der einzelnen Dialogschritte, robuste Fehlerbehandlung
     run_step dlg_check_system_requirements "$@"  # Prüfe Systemvoraussetzungen 
     run_step dlg_prepare_system           # Installiere Systempakete und prüfe Erfolg
