@@ -238,18 +238,21 @@ _create_directory() {
             debug "$(printf "$create_directory_debug_0002" "$dir")"
             return 1
         }
-        log "$(printf "$create_directory_log_0003" "$dir")"
+        # TODO: Log auskommentiert, Vermutlich Grund für Endlosschleife
+        # log "$(printf "$create_directory_log_0003" "$dir")"
     fi
 
     # Berechtigungen setzen
     chown "$user:$group" "$dir" 2>/dev/null || {
-        log "$(printf "$create_directory_log_0004" "$dir")"
+        # TODO: Log auskommentiert, Vermutlich Grund für Endlosschleife
+        # log "$(printf "$create_directory_log_0004" "$dir")"
         debug "$(printf "$create_directory_debug_0003" "$user" "$group" "$dir")"
         # Fehler beim chown ist kein kritischer Fehler
     }
 
     chmod "$mode" "$dir" 2>/dev/null || {
-        log "$(printf "$create_directory_log_0004" "$dir")"
+        # TODO: Log auskommentiert, Vermutlich Grund für Endlosschleife
+        # log "$(printf "$create_directory_log_0004" "$dir")"
         debug "$(printf "$create_directory_debug_0004" "$mode" "$dir")"
         # Fehler beim chmod ist kein kritischer Fehler
     }
