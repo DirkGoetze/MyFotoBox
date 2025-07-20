@@ -1020,7 +1020,7 @@ test_modul() {
 }
 
 # test_function
-test_function_debug_0001=" Test Funktion: %s"
+test_function_debug_0001="INFO: Test Funktion: %s"
 test_function_debug_0002="INFO: Parameter: %s"
 test_function_debug_0003="ERROR: Modul nicht verfügbar! Variable: %s, Pfad: %s"
 test_function_debug_0004="ERROR: Funktion '%s' wurde nicht gefunden"
@@ -1048,11 +1048,13 @@ test_function() {
     local function_name="$2"          # Name der zu testenden Funktion
     local params=("${@:3}")           # Alle weiteren Parameter für die Funktion
 
-    # Debug-Ausgabe eröffnen
-    debug_output "$(printf "$test_function_debug_0001" "$function_name")"
+    # Meldung über Start des Tests ausgeben
     print_info "$global_seperator_h2"
     print_info "$(printf "$test_function_txt_0001" "$function_name")"
     print_info "$global_seperator_h2"
+
+    # Debug-Ausgabe eröffnen
+    debug_output "$(printf "$test_function_debug_0001" "$function_name")"
 
     # Informationen über den Aufruf, wenn Parameter vorhanden sind
     if [ ${#params[@]} -gt 0 ]; then
