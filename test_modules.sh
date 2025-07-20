@@ -53,7 +53,7 @@ echo
 # -------------------------------
 # Test der manage_folders.sh Funktionen
 # -------------------------------
-
+test_manage_folders
 exit
 # -------------------------------
 # Test der manage_files.sh Funktionen
