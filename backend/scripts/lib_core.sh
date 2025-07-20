@@ -960,9 +960,9 @@ test_modul_txt_0001=" Test des Moduls '%s'"
 test_modul_txt_0002="Modul-Datei '%s' ist nicht vorhanden oder nicht lesbar!"
 test_modul_txt_0003="Modul-Datei...: '%s'"
 test_modul_txt_0004="Guard-Variable '%s' ist NICHT korrekt gesetzt (%s)"
-test_modul_txt_0005="Guard-Variable: '%s' = gesetzt ('%s')"
+test_modul_txt_0005="Guard-Variable: '%s' = '%s'"
 test_modul_txt_0006="Pfad-Variable '%s' ist NICHT korrekt definiert (%s)"
-test_modul_txt_0007="Pfad-Variable.: '%s' = gesetzt ('%s')"
+test_modul_txt_0007="Pfad-Variable.: '%s' = %s'"
 test_modul_txt_0008="Modul '%s' wurde korrekt geladen"
 
 test_modul() {
