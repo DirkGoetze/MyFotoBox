@@ -323,7 +323,7 @@ chk_installation_nginx() {
     local install_decision="${1:-J}"
 
     # Debug-Meldung eröffnen
-    log_debug "$chk_installation_nginx_debug_0001"
+    debug "$chk_installation_nginx_debug_0001"
 
     # Prüfen, ob nginx installiert und aktiv ist
     _is_running_nginx $install_decision
