@@ -928,7 +928,7 @@ list_module_functions() {
     local show_private=${2:-false}  # Optional: true zeigt private Funktionen an
     
     echo "$global_seperator_h2"
-    echo "$(printf "$list_module_functions_001" "$module_name")"
+    echo "$(printf "$list_module_functions_001" "${module_name^^}")"
     echo "$global_seperator_h2"
 
     if [ "$show_private" = "true" ]; then
@@ -954,11 +954,11 @@ list_module_functions() {
 # test_modul
 test_modul_txt_0001=" Test des Moduls '%s'"
 test_modul_txt_0002="❌ FEHLER: Modul-Datei '%s' ist nicht vorhanden oder nicht lesbar!"
-test_modul_txt_0003="✅ Modul-Datei ist vorhanden: '%s'"
+test_modul_txt_0003="Modul-Datei...: '%s'"
 test_modul_txt_0004="❌ FEHLER: Guard-Variable '%s' ist NICHT korrekt gesetzt (%s)"
-test_modul_txt_0005="✅ Guard-Variable '%s' ist korrekt gesetzt (%s)"
+test_modul_txt_0005="Guard-Variable: '%s' = gesetzt ('%s')"
 test_modul_txt_0006="❌ FEHLER: Pfad-Variable '%s' ist NICHT korrekt definiert (%s)"
-test_modul_txt_0007="✅ Pfad-Variable '%s' ist korrekt definiert (%s)"
+test_modul_txt_0007="Pfad-Variable.: '%s' = gesetzt ('%s')"
 test_modul_txt_0008="✅ ERFOLG: Modul '%s' wurde korrekt geladen"
 
 test_modul() {
@@ -1009,7 +1009,7 @@ test_modul() {
     echo "$(printf "$test_modul_txt_0008" "$module_name")"
 
     # Liste der Funktionen im Modul anzeigen
-    list_module_functions "$module_name" true
+    list_module_functions "$full_path" true
 
     return 0
 }
