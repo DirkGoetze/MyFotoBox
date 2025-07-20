@@ -8,12 +8,12 @@
 # ------------------------------------------------------------------------------
 
 # Guard für sich selbst
-: "${LIB_CORE_LOADED:=0}"
-if [ "$LIB_CORE_LOADED" -eq 1 ]; then
-    return 0  # Bereits geladen
-fi
+#: "${LIB_CORE_LOADED:=0}"
+#if [ "$LIB_CORE_LOADED" -eq 1 ]; then
+#    return 0  # Bereits geladen
+#fi
 # Sofort markieren, dass diese Bibliothek geladen wird, um rekursive Probleme zu vermeiden
-LIB_CORE_LOADED=1
+#LIB_CORE_LOADED=1
 
 # ===========================================================================
 # Zentrale Konstanten für das gesamte Fotobox-System
