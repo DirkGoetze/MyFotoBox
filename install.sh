@@ -33,9 +33,9 @@ if [ -f "$SCRIPT_DIR/lib_core.sh" ]; then
     echo "Lade Modul 'lib_core.sh' ..."
     source "$SCRIPT_DIR/lib_core.sh"
     if [ $? -eq 0 ]; then
-        echo "Modul 'lib_core.sh' wurde erfolgreich geladen."
+        print_success "Management-Module wurden durch 'lib_core.sh' erfolgreich geladen."
     else
-        echo "FEHLER: Beim Laden von 'lib_core.sh' ist ein Fehler aufgetreten."
+        print_error "FEHLER: Beim Laden von 'lib_core.sh' ist ein Fehler aufgetreten."
         exit 1
     fi
 fi
