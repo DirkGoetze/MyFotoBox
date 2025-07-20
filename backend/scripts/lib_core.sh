@@ -1050,15 +1050,15 @@ test_function() {
 
     # Debug-Ausgabe eröffnen
     debug_output "$(printf "$test_function_debug_0001" "$function_name")"
-    echo "$global_seperator_h2"
-    echo "$(printf "$test_function_txt_0001" "$function_name")"
-    echo "$global_seperator_h2"
+    print_info "$global_seperator_h2"
+    print_info "$(printf "$test_function_txt_0001" "$function_name")"
+    print_info "$global_seperator_h2"
 
     # Informationen über den Aufruf, wenn Parameter vorhanden sind
     if [ ${#params[@]} -gt 0 ]; then
         debug_output "$(printf "$test_function_debug_0002" "${params[*]}")"
-        echo "$(printf "$test_function_txt_0002" "${params[*]}")"
-        echo "$global_seperator_h3"
+        print_info "$(printf "$test_function_txt_0002" "${params[*]}")"
+        print_info "$global_seperator_h3"
     fi
 
     # Prüfe, ob das Modul verfügbar ist
