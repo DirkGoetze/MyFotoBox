@@ -1031,13 +1031,13 @@ test_function_debug_0008="INFO: Ausgabe: %s"
 test_function_debug_0009="INFO: Rückgabewert: %d"
 test_function_txt_0001=" Test der Funktion: %s"
 test_function_txt_0002=" Parameter: %s"
-test_function_txt_0003="❌ FEHLER: Modul '%s' nicht verfügbar oder Pfad ungültig!"
-test_function_txt_0004="❌ FEHLER: Funktion '%s' wurde nicht gefunden!"
+test_function_txt_0003="Modul '%s' nicht verfügbar oder Pfad ungültig!"
+test_function_txt_0004="Funktion '%s' wurde nicht gefunden!"
 test_function_txt_0005="Funktion: '%s' in Modul '%s' gefunden"
 test_function_txt_0006="Ausgabe.: %s"
 test_function_txt_0007="Rückgabe: %d"
 test_function_txt_0008="Ausgabe.: Funktion '%s' hat keine Ausgabe erzeugt."
-test_function_txt_0009="✅ ERFOLG: Funktion '%s' wurde erfolgreich getestet."
+test_function_txt_0009="Funktion '%s' wurde erfolgreich getestet."
 
 
 test_function() {
@@ -1064,19 +1064,19 @@ test_function() {
     # Prüfe, ob das Modul verfügbar ist
     if [ -z "${!module_path_var_upper}" ] || [ ! -f "${!module_path_var_upper}" ]; then
         debug_output "$(printf "$test_function_debug_0003" "$module_path_var_upper" "${!module_path_var_upper:-nicht gesetzt}")" "CLI" "test_function"
-        echo "$(printf "$test_function_txt_0003" "${!module_path_var_upper:-nicht gesetzt}")" &>2
+        print_error "$(printf "$test_function_txt_0003" "${!module_path_var_upper:-nicht gesetzt}")"
         return 1
     fi
 
     # Prüfe, ob die Funktion existiert (bereits geladen)
     if ! declare -f "$function_name" > /dev/null 2>&1; then
         debug_output "$(printf "$test_function_debug_0004" "$function_name")"
-        echo "$(printf "$test_function_txt_0004" "$function_name")" &>2
+        print_error "$(printf "$test_function_txt_0004" "$function_name")" &>2
         return 2
     fi
 
     debug_output "$(printf "$test_function_debug_0005" "$function_name" "$module_path_var_upper")"
-    echo "$(printf "$test_function_txt_0005" "$function_name" "${module_path_var_upper}")"
+    print_info "$(printf "$test_function_txt_0005" "$function_name" "${module_path_var_upper}")"
 
     # Führe die Funktion aus und erfasse Rückgabewert und Ausgabe
     local output
@@ -1100,14 +1100,14 @@ test_function() {
         debug_output "$(printf "$test_function_debug_0008" "$output")"
         debug_output "$(printf "$test_function_debug_0009" "$result")"
         if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
-            echo "$(printf "$test_function_txt_0006" "$output")"
-            echo "$(printf "$test_function_txt_0007" "$result")"
+            print_info "$(printf "$test_function_txt_0006" "$output")"
+            print_info "$(printf "$test_function_txt_0007" "$result")"
         fi
     else
         debug_output "$(printf "$test_function_debug_0009" "$result")"
         if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
-            echo "$(printf "$test_function_txt_0008" "$function_name")"
-            echo "$(printf "$test_function_txt_0007" "$result")"
+            print_info "$(printf "$test_function_txt_0008" "$function_name")"
+            print_info "$(printf "$test_function_txt_0007" "$result")"
         fi
     fi
 
