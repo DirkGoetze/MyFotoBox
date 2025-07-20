@@ -135,11 +135,10 @@ _clean_key() {
 
 # _validate_key
 _validate_key_debug_0001="INFO: Validierung des Schlüssels: '%s'"
-_validate_key_debug_0002="ERROR: Ungültiger Schlüsselname: Schlüssel ist leer."
-_validate_key_debug_0003="ERROR: Ungültiger Schlüsselname: '%s' enthält ungültige Zeichen. Erlaubt sind: a-z, A-Z, 0-9, ., _ und -."
-_validate_key_debug_0004="ERROR: Ungültiger Schlüsselname: '%s' darf nicht mit einem Punkt oder Unterstrich beginnen oder enden."
-_validate_key_debug_0005="ERROR: Ungültiger Schlüsselname: '%s' darf keine aufeinanderfolgenden Punkte oder Unterstriche enthalten."
-_validate_key_debug_0006="SUCCESS: Schlüssel '%s' ist gültig."
+_validate_key_debug_0002="ERROR: Ungültiger Schlüsselname: '%s' enthält ungültige Zeichen. Erlaubt sind: a-z, A-Z, 0-9, ., _ und -."
+_validate_key_debug_0003="ERROR: Ungültiger Schlüsselname: '%s' darf nicht mit einem Punkt oder Unterstrich beginnen oder enden."
+_validate_key_debug_0004="ERROR: Ungültiger Schlüsselname: '%s' darf keine aufeinanderfolgenden Punkte oder Unterstriche enthalten."
+_validate_key_debug_0005="SUCCESS: Schlüssel '%s' ist gültig."
 
 _validate_key() {
     # -----------------------------------------------------------------------
@@ -156,34 +155,31 @@ _validate_key() {
     # -----------------------------------------------------------------------
     local key="$1"
 
-    # Überprüfen, ob der Schlüssel angegeben ist - Leerer Schlüssel ungültig
-    if ! check_param "$key" "key"; then 
-        debug "$_validate_key_debug_0002"
-        return 1; 
-    fi
-
     # Debug-Ausgabe eröffnen
     debug "$(printf "$_validate_key_debug_0001" "$key")"
 
+    # Überprüfen, ob der Schlüssel angegeben ist
+    if ! check_param "$key" "key"; then return 1; fi
+
     # Ungültige Zeichen prüfen (nur a-z, A-Z, 0-9, ., _ und - sind erlaubt)
     if ! [[ "$key" =~ ^[a-zA-Z0-9._-]+$ ]]; then
-        debug "$(printf "$_validate_key_debug_0003" "$key")"
+        debug "$(printf "$_validate_key_debug_0002" "$key")"
         return 1
     fi
 
     # Prüfen, ob der Schlüssel mit einem Punkt oder Unterstrich beginnt oder endet
     if [[ "$key" =~ ^[._] || "$key" =~ [._]$ ]]; then
-        debug "$(printf "$_validate_key_debug_0004" "$key")"
+        debug "$(printf "$_validate_key_debug_0003" "$key")"
         return 1
     fi
 
     # Prüfen auf aufeinanderfolgende Punkte oder Unterstriche
     if [[ "$key" =~ \.\. || "$key" =~ __ || "$key" =~ \._ || "$key" =~ _\. ]]; then
-        debug "$(printf "$_validate_key_debug_0005" "$key")"
+        debug "$(printf "$_validate_key_debug_0004" "$key")"
         return 1
     fi
 
-    debug "$(printf "$_validate_key_debug_0006" "$key")"
+    debug "$(printf "$_validate_key_debug_0005" "$key")"
     return 0
 }
 
