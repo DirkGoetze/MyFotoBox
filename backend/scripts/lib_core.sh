@@ -1006,7 +1006,8 @@ test_modul() {
     fi
 
     # Wenn wir hier ankommen, sind beide Prüfungen erfolgreich
-    echo "$(printf "$test_modul_txt_0008" "$module_name")"
+    echo "$(printf "$test_modul_txt_0008" "${base_name^^}")"
+    echo ""
 
     # Liste der Funktionen im Modul anzeigen
     list_module_functions "$full_path" true
