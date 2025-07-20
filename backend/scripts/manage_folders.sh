@@ -298,13 +298,13 @@ _get_folder_path() {
     local create_symlink="${5:-1}"    # Standard: Ja, Symlink erstellen
     local actual_path=""
 
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$get_folder_path_debug_0001" "$systemdef_path" "$standard_path" "$fallback_path")"
+
     # Überprüfung der Parameter
     if ! check_param "$systemdef_path" "systemdef_path"; then return 1; fi
     if ! check_param "$standard_path" "standard_path"; then return 1; fi
     if ! check_param "$fallback_path" "fallback_path"; then return 1; fi
-
-    # Debug-Ausgabe eröffnen
-    debug "$(printf "$get_folder_path_debug_0001" "$systemdef_path" "$standard_path" "$fallback_path")"
 
     # Prüfen, ob Systempfad bereits gesetzt ist (z.B. vom install.sh)
     debug "$(printf "$get_folder_path_debug_0002" "$systemdef_path")"
@@ -1712,6 +1712,10 @@ get_log_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Verzeichnis oder leerer String bei Fehler
     # ------------------------------------------------------------------------------
+
+    # Eröffnungsmeldung im Debug Modus
+    debug "$get_log_dir_debug_0001"
+
     # Sicherstellen, dass INSTALL_DIR gesetzt ist
     : "${INSTALL_DIR:=$(get_install_dir)}"
     # Pfade für Daten-Verzeichnis
@@ -1719,9 +1723,6 @@ get_log_dir() {
     local path_system="$INSTALL_DIR/log"
     local path_default="$INSTALL_DIR/log"
     local path_fallback="/var/log/fotobox"
-
-    # Eröffnungsmeldung im Debug Modus
-    debug "$get_log_dir_debug_0001"
 
     # Prüfen, ob Systemvariable bereits gesetzt ist
     if [ "${LOG_DIR+x}" ] && [ -n "$LOG_DIR" ]; then
