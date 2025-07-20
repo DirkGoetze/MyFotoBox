@@ -2158,6 +2158,13 @@ test_manage_folders() {
     # Eröffnungsmeldung im Debug Modus
     debug "$test_manage_folders_debug_0001"
 
+    # Deaktiviert das sofortige Beenden bei Fehlern. Das Skript läuft weiter, 
+    # auch wenn ein Befehl fehlschlägt. Hilfreich, um bewusst mit Fehlern 
+    # umzugehen.
+    set +e
+    # Aktivieren des globalen Debug-Modus für die Tests
+    # DEBUG_MOD_GLOBAL=1 
+
     # Allgemeiner Test des Moduls
     test_modul "manage_folders.sh"
     if [ $? -ne 0 ]; then
@@ -2166,7 +2173,7 @@ test_manage_folders() {
     fi
 
     # Hier können spezifische Tests für die Funktion implementiert werden
-    set +e  # Deaktiviere Fehlerabbruch
+    # -----------------------------------------------------------------------
     # Test: get_install_dir
     test_function "manage_folders_sh" "get_install_dir"
     debug "INFO: INSTALL_DIR: ${INSTALL_DIR:-nicht gesetzt}"
@@ -2276,8 +2283,12 @@ test_manage_folders() {
     # Test: ensure_folder_structure
     test_function "manage_folders_sh" "ensure_folder_structure"
 
-    # Test abgeschlossen, Reaktiviere Fehlerabbruch, Meldung ausgeben
-    set -e  
+    # Tests abgeschlossen, Deaktivieren des globalen Debug-Modus 
+    DEBUG_MOD_GLOBAL=0 
+    # Tests abgeschlossen, aktiviert das sofortige Beenden bei Fehlern wieder
+    set -e
+
+    # Meldung ausgeben
     debug "$test_manage_folders_debug_0003"
     return 0
 }

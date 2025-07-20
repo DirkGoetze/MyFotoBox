@@ -1154,8 +1154,10 @@ test_lib_core() {
     # Eröffnungsmeldung im Debug Modus
     debug "$test_manage_files_debug_0001"
     
-    # Hier können spezifische Tests für die Funktion implementiert werden
-    set +e  # Deaktiviere Fehlerabbruch
+    # Deaktiviert das sofortige Beenden bei Fehlern. Das Skript läuft weiter, 
+    # auch wenn ein Befehl fehlschlägt. Hilfreich, um bewusst mit Fehlern 
+    # umzugehen.
+    set -e
 
     print_info "$global_seperator_h1"
     print_info " Teste Funktionen in lib_core.sh"
