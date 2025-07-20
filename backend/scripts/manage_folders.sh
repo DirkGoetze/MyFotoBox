@@ -192,6 +192,7 @@ _create_symlink_to_standard_path() {
 }
 
 # _create_directory
+create_directory_debug_0000="INFO: Erstelle Verzeichnis '%s' mit Benutzer '%s', Gruppe '%s' und Berechtigungen '%s'"
 create_directory_debug_0001="INFO: Verzeichnis '%s' existiert nicht, wird erstellt"
 create_directory_debug_0002="ERROR: Fehler beim Erstellen von '%s'"
 create_directory_debug_0003="WARN: Warnung! <chown> '%s:%s' für '%s' fehlgeschlagen, Eigentümer nicht geändert"
@@ -223,6 +224,9 @@ _create_directory() {
     local group="${3:-$DEFAULT_GROUP}"
     local mode="${4:-$DEFAULT_MODE_FOLDER}"
 
+    # Debug-Ausgabe eröffnen
+    debug "$(printf "$create_directory_debug_0000" "$dir" "$user" "$group" "$mode")"
+
     # Prüfung der Parameter
     if ! check_param "$dir" "dir"; then return 1; fi
 
@@ -252,11 +256,13 @@ _create_directory() {
 
     # Überprüfen, ob das Verzeichnis existiert und lesbar ist
     if [ -d "$dir" ] && [ -r "$dir" ]; then
-        log "$(printf "$create_directory_log_0005" "$dir")"
+        # TODO: Log auskommentiert, Vermutlich Grund für Endlosschleife 
+        # log "$(printf "$create_directory_log_0005" "$dir")"
         debug "$(printf "$create_directory_debug_0005" "$dir")"
         return 0
     else
-        log "$(printf "$create_directory_log_0006" "$dir")"
+        # TODO: Log auskommentiert, Vermutlich Grund für Endlosschleife 
+        #log "$(printf "$create_directory_log_0006" "$dir")"
         return 1
     fi
 }
