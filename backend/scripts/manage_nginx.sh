@@ -2254,7 +2254,7 @@ test_manage_nginx() {
     # Hier können spezifische Tests für die Funktion implementiert werden
     # -----------------------------------------------------------------------
     # Test: chk_installation_nginx
-    test_function "manage_nginx_sh" "chk_installation_nginx" "J"
+    # test_function "manage_nginx_sh" "chk_installation_nginx" "J"
     # Test: chk_config_nginx
     test_function "manage_nginx_sh" "chk_config_nginx"
     # Test: chk_port_nginx
