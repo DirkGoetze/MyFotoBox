@@ -1189,6 +1189,22 @@ test_lib_core() {
     ls -la "$script_dir"
     echo
 
+    # Liste aller Funktionen im Namespace von lib_core.sh
+    print_info "$global_seperator_h2"
+    print_info "Liste der Funktionen in lib_core.sh"
+    print_info "$global_seperator_h2"
+    declare -F | grep -E '^[[:space:]]*[a-zA-Z0-9_]+\(\)[[:space:]]*\{' | 
+        sed -E 's/^[[:space:]]*([a-zA-Z0-9_]+)\(\).*/\1/' | 
+        sort | 
+        while read -r func; do
+            # Prüfe, ob die Funktion in lib_core.sh definiert ist
+            if declare -f "$func" &>/dev/null; then
+                print_info "  - $func"
+            else
+                print_warning "  - $func (nicht in lib_core.sh definiert)"
+            fi
+        done
+    echo
     # Teste set_config_value
     # test_function "set_config_value" "test_key" "test_value" "/tmp/test_config.conf"
     
