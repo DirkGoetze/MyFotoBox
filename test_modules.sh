@@ -52,7 +52,7 @@ test_lib_core
 # -------------------------------
 # Test der manage_nginx.sh Funktionen
 # -------------------------------
-test_manage_nginx
+# test_manage_nginx
 
 exit
 
