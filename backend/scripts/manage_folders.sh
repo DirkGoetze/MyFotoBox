@@ -1179,14 +1179,6 @@ get_data_dir() {
     # Parameter: keine
     # Rückgabe: Pfad zum Datenverzeichnis oder leerer String bei Fehler
     # -----------------------------------------------------------------------
-    # Sicherstellen, dass INSTALL_DIR gesetzt ist
-    : "${INSTALL_DIR:=$(get_install_dir)}"
-    # Pfade für Daten-Verzeichnis
-    local dir
-    local path_system="$INSTALL_DIR/data"
-    local path_default="$INSTALL_DIR/data"
-    local path_fallback="/var/lib/fotobox"
-
     # Eröffnungsmeldung im Debug Modus
     debug "$get_data_dir_debug_0001" 
 
@@ -1198,9 +1190,16 @@ get_data_dir() {
         return 0
     fi
 
+    # Pfade für Daten-Verzeichnis zusammenstellen
+    local dir
+    read -r dir < <(get_install_dir)
+    local path_system="$dir/data"
+    local path_default="$dir/data"
+    local path_fallback="/var/lib/fotobox"
+
     # Verwende die für diesen Ordner definierten Pfade
     # Aktiviere Fallback Order(1) und deaktiviere Erzeugen von Symlink (0)
-    dir=$(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 0)    
+    read -r dir < <(_get_folder_path "$path_system" "$path_default" "$path_fallback" 1 0)
     if [ -n "$dir" ]; then
         debug "$(printf "$get_data_dir_debug_0003" "$dir")"
         # System-Variable aktualisieren, wenn nötig
