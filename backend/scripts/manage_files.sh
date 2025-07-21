@@ -1211,7 +1211,7 @@ test_manage_files() {
     # -----------------------------------------------------------------------
     # Test: get_data_file
     test_function "manage_files_sh" "get_data_file"
-    print_debug "Filevariable: \$DB_FILENAME: $DB_FILENAME"
+    print_debug "INFO: File-Variable \$DB_FILENAME: ${DB_FILENAME:-nicht gesetzt}"
     # Test: get_config_file
     # test_function "manage_files_sh" "get_config_file"
     # Test: get_log_file
