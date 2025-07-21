@@ -234,29 +234,34 @@ get_data_file() {
     # Zusammensetzen des vollständigen Dateinamens, prüfen ob Datei existiert
     full_filename="$(_get_file_name "$file_name" "$file_ext" "$folder_path")"
     if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
-        # Versuche den Konfigurationswert in der Datenbank zu speichern
-        set_config_value "files.db_filename" \
-           "$full_filename" \
-           "string" \
-           "full path to SQLite database file" \
-           10 \
-           "grp_files_config" \
-           "$file_config_db" || {
-            # Fehler beim Setzen des Konfigurationswerts
-            debug "ERROR: Konnte Konfigurationswert 'files.db_filename' nicht setzen."
-            return 1
-        }
+        # Wenn das Datenbank- (MANAGE_DATABASE_LOADED=1) und Settingsmodul 
+        # (MANAGE_SETTINGS_LOADED=1) bereits geladen sind, Versuche den 
+        # Konfigurationswert in der Datenbank zu speichern
+        if [ "$MANAGE_DATABASE_LOADED" -eq 1 ] && [ "$MANAGE_SETTINGS_LOADED" -eq 1 ]; then
+            set_config_value "files.db_filename" \
+                "$full_filename" \
+                "string" \
+                "full path to SQLite database file" \
+                10 \
+                "grp_files_config" \
+                "$file_config_db" || {
+                # Fehler beim Setzen des Konfigurationswerts
+                debug "WARN: Konnte Konfigurationswert 'files.db_filename' nicht setzen."
+            }
+        fi
 
         # Erfolg: Datei existiert und ist les-/schreibbar
-        if [ -z "${DB_FILENAME+x}" ] || [ -z "$DB_FILENAME" ] || [ "$full_filename" != "$DB_FILENAME" ]; then
-            DB_FILENAME="$full_filename"
-            export DB_FILENAME
-        fi
+        #if [ -z "${DB_FILENAME+x}" ] || [ -z "$DB_FILENAME" ] || [ "$full_filename" != "$DB_FILENAME" ]; then
+        #    DB_FILENAME="$full_filename"
+        #    export DB_FILENAME
+        #fi
+
+        # Ausgabe des vollständigen Pfads
         debug "$(printf "$get_data_file_debug_0004" "$full_filename")"
         echo "$full_filename"
         return 0
     else
-        # Fehlerfall
+        # Fehlerfall - DB Datei nicht gefunden oder nicht lesbar/beschreibbar
         debug "$get_data_file_debug_0005"
         return 1
     fi
