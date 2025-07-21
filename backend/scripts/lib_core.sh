@@ -103,10 +103,10 @@ trace_output() {
 }
 
 # check_param
-check_param_debug_0001="INFO: Parameterprüfung für [%s:%s()] Parameter: %s:%s"
-check_param_debug_0002="ERROR: Parameter '%s' in Funktion '%s' des Moduls '%s' ist leer oder nicht gesetzt"
-check_param_debug_0003="SUCCESS: Parameter '%s' in Funktion '%s' des Moduls '%s' ist gesetzt"
-check_param_log_0001="ERROR: Parameter '%s' in Funktion '%s' des Moduls '%s' ist leer oder nicht gesetzt"
+check_param_debug_0001="INFO: Modul '%s' Funktion '%s()' Parameterprüfung für Parameter '%s'"
+check_param_debug_0002="ERROR: Modul '%s' Funktion '%s()' Parameter '%s' ist leer oder nicht gesetzt"
+check_param_debug_0003="SUCCESS: Modul '%s' Funktion '%s()' Parameter '%s' hat den Wert '%s'"
+check_param_log_0001="Modul '%s' Funktion '%s()' Parameter '%s' ist leer oder nicht gesetzt"
 
 check_param() {
     # -----------------------------------------------------------------------
@@ -135,19 +135,19 @@ check_param() {
     # Konvertiere in Großbuchstaben für Konsistenz
     module_name=$(echo "$module_name" | tr '[:lower:]' '[:upper:]')
 
-    # Debugging-Ausgabe für die Modul-Identifikation
-    debug "$(printf "$check_param_debug_0001" "$module_name" "$calling_function" "$param_name" "$param")"
+    # Debugging-Ausgabe für die Modul-Identifikation 
+    debug "$(printf "$check_param_debug_0001" "$module_name" "$calling_function" "$param_name" )"
 
     # Überprüfen, ob ein Parameter übergeben wurde
     if [ -z "$param" ]; then
         # Parameter ist leer oder nicht gesetzt
-        debug "$(printf "$check_param_debug_0002" "$param_name" "$calling_function" "$module_name")"
-        log "$(printf "$check_param_log_0001" "$param_name" "$calling_function" "$module_name")"
+        debug "$(printf "$check_param_debug_0002" "$module_name" "$calling_function" "$param_name")"
+        log "$(printf "$check_param_log_0001" "$module_name" "$calling_function" "$param_name")"
         return 1
     fi
   
     # Parameter ist gesetzt, Debug-Ausgabe für Erfolg
-    debug "$(printf "$check_param_debug_0003" "$param_name" "$calling_function" "$module_name")"
+    debug "$(printf "$check_param_debug_0003" "$module_name" "$calling_function" "$param_name" "$param")"
     return 0
 }
 
