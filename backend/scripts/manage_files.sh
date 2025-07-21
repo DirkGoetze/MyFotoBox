@@ -195,7 +195,7 @@ get_data_file() {
     read -r folder_path < <(get_data_dir)
     file_name="$PROJECT_NAME"
     file_ext="$DB_FILE_EXT_DEFAULT"
-    file_config_db="$folder_path/$file_name.$file_ext"
+    file_config_db="$folder_path/$file_name$file_ext"
     debug "$(printf "$get_data_file_debug_0002" "$folder_path")"
 
     # Prüfen, ob die Datei bereits in der Datenbank steht
@@ -219,12 +219,18 @@ get_data_file() {
     # Zusammensetzen des vollständigen Dateinamens, prüfen ob Datei existiert
     full_filename="$(_get_file_name "$file_name" "$file_ext" "$folder_path")"
     if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
-        # Prüfen, ob der Konfigurationswert bereits gesetzt ist
-        #set_config_value "files.db_filename" "$full_filename" "string" "Path to SQLite database file" 10 "grp_files_config" || {
+        # Versuche den Konfigurationswert in der Datenbank zu speichern
+        set_config_value "files.db_filename" \
+           "$full_filename" \
+           "string" \
+           "full path to SQLite database file" \
+           10 \
+           "grp_files_config" \
+           "$file_config_db" || {
             # Fehler beim Setzen des Konfigurationswerts
-        #    debug "ERROR: Konnte Konfigurationswert 'files.db_filename' nicht setzen."
-        #    return 1
-        #}
+            debug "ERROR: Konnte Konfigurationswert 'files.db_filename' nicht setzen."
+            return 1
+        }
 
         # Erfolg: Datei existiert und ist les-/schreibbar
         if [ -z "${DB_FILENAME+x}" ] || [ -z "$DB_FILENAME" ] || [ "$full_filename" != "$DB_FILENAME" ]; then
