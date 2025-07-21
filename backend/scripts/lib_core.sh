@@ -1163,7 +1163,7 @@ test_function() {
 # test_lib_core
 test_lib_core_debug_0001="INFO: Starte Test für lib_core.sh"
 test_lib_core_txt_0001=" Test für das zentrale Modul 'lib_core.sh'"
-test_lib_core_txt_0002=" Vorhandene Modul-Dateien im Skriptverzeichnis"
+test_lib_core_txt_0002=" Vorhandene Modul-Dateien im Skriptverzeichnis %s"
 
 test_lib_core() {
     # -----------------------------------------------------------------------
@@ -1184,25 +1184,25 @@ test_lib_core() {
     # Debug-Ausgabe zum Anzeigen der vorhandenen Modul-Dateien
     local script_dir="/opt/fotobox/backend/scripts"
     print_info "$global_seperator_h2"
-    print_info "$(printf "$test_lib_core_txt_0002")"
+    print_info "$(printf "$test_lib_core_txt_0002" "$script_dir")"
     print_info "$global_seperator_h2"
     ls -la "$script_dir"
     echo
 
-    # alle Module auflisten
+    # alle Pfade der Module auflisten
+    print_info "$global_seperator_h2"
+    print_info " Modul-Pfade (Pfad-Variablen)"
+    print_info "$global_seperator_h2"
+    declare -p | grep -E "_SH=" | sort
+    echo
+
+    # alle geladenen Module auflisten
     print_info "$global_seperator_h2"
     print_info " Geladene Module (Guard-Variablen)"
     print_info "$global_seperator_h2"
     declare -p | grep -E "_LOADED=" | sort
     echo
     
-    # alle Pfade der Module auflisten
-    print_info "$global_seperator_h2"
-    print_info " Modul-Pfade"
-    print_info "$global_seperator_h2"
-    declare -p | grep -E "_SH=" | sort
-    echo
-
     # alle Funktionen auflisten
     print_info "$global_seperator_h1"
     print_info " Alle definierten Funktionen"
