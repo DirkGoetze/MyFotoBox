@@ -1111,11 +1111,11 @@ test_function() {
     set +e  # Deaktiviere Fehlerabbruch
     if [ ${#params[@]} -gt 0 ]; then
         debug "$(printf "$test_function_debug_0006" "$function_name" "${params[*]}")"
-        output=$("$function_name" "${params[@]}" 2>&1)
+        read -r output < <("$function_name" "${params[@]}" 2>&1)
         result=$?
     else
         debug "$(printf "$test_function_debug_0007" "$function_name")"
-        output=$("$function_name" 2>&1)
+        read -r output < <("$function_name" 2>&1)
         result=$?
     fi
     set -e  # Reaktiviere Fehlerabbruch
