@@ -1197,7 +1197,7 @@ test_manage_files() {
     debug "$test_manage_files_debug_0001"
 
     # Aktivieren des globalen Debug-Modus für die Tests
-    DEBUG_MOD_GLOBAL=1 
+    # DEBUG_MOD_GLOBAL=1 
 
     # Allgemeiner Test des Moduls
     test_modul "manage_files.sh"
@@ -1264,7 +1264,7 @@ test_manage_files() {
     # test_function "manage_files_sh" "get_backup_meta_file" "$backup_file"
 
     # Tests abgeschlossen, Deaktivieren des globalen Debug-Modus 
-    DEBUG_MOD_GLOBAL=0 
+    # DEBUG_MOD_GLOBAL=0 
 
     # Meldung ausgeben
     debug "$test_manage_files_debug_0003"
