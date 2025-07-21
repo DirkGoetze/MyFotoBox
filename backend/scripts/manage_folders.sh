@@ -192,24 +192,18 @@ _create_symlink_to_standard_path() {
 }
 
 # _create_directory
-create_directory_debug_0000="INFO: Erstelle Verzeichnis '%s' mit Benutzer '%s', Gruppe '%s' und Berechtigungen '%s'"
+create_directory_debug_0000="INFO: Prüfung Verzeichnis '%s' für Benutzer '%s', Gruppe '%s' und Berechtigungen '%s'"
 create_directory_debug_0001="INFO: Verzeichnis '%s' existiert nicht, wird erstellt"
 create_directory_debug_0002="ERROR: Fehler beim Erstellen von '%s'"
 create_directory_debug_0003="WARN: Warnung! <chown> '%s:%s' für '%s' fehlgeschlagen, Eigentümer nicht geändert"
 create_directory_debug_0004="WARN: Warnung! <chmod> '%s' für '%s' fehlgeschlagen, Berechtigungen nicht geändert"
-create_directory_debug_0005="INFO: Verzeichnis '%s' erfolgreich vorbereitet"
-create_directory_log_0001="Kein Verzeichnis angegeben"
-create_directory_log_0002="Fehler beim Erstellen des Verzeichnisses %s"
-create_directory_log_0003="Verzeichnis %s wurde erstellt"
-create_directory_log_0004="Fehler beim Setzen der Berechtigungen für %s"
-create_directory_log_0005="Verzeichnis %s erfolgreich vorbereitet"
-create_directory_log_0006="Verzeichnis %s konnte nicht korrekt vorbereitet werden"
+create_directory_debug_0005="SUCCESS: Prüfung erfolgreich. Verzeichnis '%s' ist vorbereitet"
 
 _create_directory() {
     # -----------------------------------------------------------------------
     # _create_directory
     # -----------------------------------------------------------------------
-    # Funktion: Erstellt ein Verzeichnis mit den korrekten Berechtigungen, 
+    # Funktion.: Erstellt ein Verzeichnis mit den korrekten Berechtigungen, 
     # .........  wenn es noch nicht existiert
     # Parameter: $1 - Pfad des zu erstellenden Verzeichnisses
     # .........  $2 - (Optional) Benutzername, Standard: "fotobox"
@@ -234,38 +228,27 @@ _create_directory() {
     if [ ! -d "$dir" ]; then
         debug "$(printf "$create_directory_debug_0001" "$dir")"
         mkdir -p "$dir" || {
-            log "$(printf "$create_directory_log_0002" "$dir")"
             debug "$(printf "$create_directory_debug_0002" "$dir")"
             return 1
         }
-        # TODO: Log auskommentiert, Vermutlich Grund für Endlosschleife
-        # log "$(printf "$create_directory_log_0003" "$dir")"
     fi
 
     # Berechtigungen setzen
     chown "$user:$group" "$dir" 2>/dev/null || {
-        # TODO: Log auskommentiert, Vermutlich Grund für Endlosschleife
-        # log "$(printf "$create_directory_log_0004" "$dir")"
         debug "$(printf "$create_directory_debug_0003" "$user" "$group" "$dir")"
         # Fehler beim chown ist kein kritischer Fehler
     }
 
     chmod "$mode" "$dir" 2>/dev/null || {
-        # TODO: Log auskommentiert, Vermutlich Grund für Endlosschleife
-        # log "$(printf "$create_directory_log_0004" "$dir")"
         debug "$(printf "$create_directory_debug_0004" "$mode" "$dir")"
         # Fehler beim chmod ist kein kritischer Fehler
     }
 
     # Überprüfen, ob das Verzeichnis existiert und lesbar ist
     if [ -d "$dir" ] && [ -r "$dir" ]; then
-        # TODO: Log auskommentiert, Vermutlich Grund für Endlosschleife 
-        # log "$(printf "$create_directory_log_0005" "$dir")"
         debug "$(printf "$create_directory_debug_0005" "$dir")"
         return 0
     else
-        # TODO: Log auskommentiert, Vermutlich Grund für Endlosschleife
-        # log "$(printf "$create_directory_log_0006" "$dir")"
         return 1
     fi
 }
