@@ -823,5 +823,6 @@ setup_database() {
 
 # Prüfe, ob SQLite installiert ist und initialisiere die Datenbank
 if _is_sqlite_installed; then
+    DEBUG_MOD_GLOBAL=1
     ensure_database
 fi
