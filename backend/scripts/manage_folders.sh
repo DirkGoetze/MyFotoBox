@@ -272,12 +272,12 @@ _create_directory() {
 
 # _get_folder_path
 get_folder_path_debug_0001="INFO: Prüfe Ordner-Pfade: Systempfad='%s', Standardpfad='%s', Fallbackpfad='%s'"
-get_folder_path_debug_0002="INFO: Systempfad (Exist, Rights und User) prüfen ('%s')"
-get_folder_path_debug_0003="SUCCESS: Systempfad ok, verwende Systempfad ('%s')"
-get_folder_path_debug_0004="INFO: Standardpfad (Exist, Rights und User) prüfen ('%s')"
-get_folder_path_debug_0005="SUCCESS: Standardpfad ok, verwende Standardpfad ('%s')"
-get_folder_path_debug_0006="INFO: Fallback-Pfad (Exist, Rights und User) prüfen ('%s')"
-get_folder_path_debug_0007="SUCCESS: Fallback-Pfad ok, verwende Fallback-Pfad ('%s')"
+get_folder_path_debug_0002="INFO: Prüfung Systempfad (exist, read, write, rights): '%s'"
+get_folder_path_debug_0003="SUCCESS: Systempfad ok"
+get_folder_path_debug_0004="INFO: Prüfung Standardpfad (exist, read, write, rights): '%s'"
+get_folder_path_debug_0005="SUCCESS: Standardpfad ok"
+get_folder_path_debug_0006="INFO: Prüfung Fallback-Pfad (exist, read, write, rights): '%s'"
+get_folder_path_debug_0007="SUCCESS: Fallback-Pfad ok"
 get_folder_path_debug_0008="INFO: Versuche Symlink von '%s' nach '%s' zu erstellen"
 get_folder_path_debug_0009="WARN: Symlink-Erstellung fehlgeschlagen, möglicherweise kein Schreibzugriff im übergeordneten Verzeichnis"
 get_folder_path_debug_0010="INFO: Verwende Root-Verzeichnis als letzten Fallback: '%s'"
@@ -289,13 +289,14 @@ _get_folder_path() {
     # -----------------------------------------------------------------------
     # _get_folder_path
     # -----------------------------------------------------------------------
-    # Funktion: Hilfsfunktion zum Ermitteln und Erstellen eines Ordners mit 
+    # Funktion:  Hilfsfunktion zum Ermitteln und Erstellen eines Ordners mit 
     # .........  Fallback-Logik. Erstellt zusätzlich einen Symlink vom
     # .........  Standard-Pfad zum tatsächlich verwendeten Pfad, wenn möglich.
     # Parameter: $1 - System-Pfad oder bereits definierter Pfad
     # .........  $2 - Standard-Pfad aus lib_core.sh
     # .........  $3 - Fallback-Pfad (falls Standard-Pfad nicht verfügbar)
-    # .........  $4 - (Optional) Fallback zum Projekthauptverzeichnis (1=ja, 0=nein, Default: 1)
+    # .........  $4 - (Optional) Fallback zum Projekthauptverzeichnis
+    # .........       (1=ja, 0=nein, Default: 1)
     # .........  $5 - (Optional) Symlink erstellen (1=ja, 0=nein, Default: 1)
     # Rückgabe.: Den Pfad zum verfügbaren Ordner oder leeren String bei Fehler
     # Extras...: Implementiert eine mehrschichtige Fallback-Strategie
@@ -318,7 +319,7 @@ _get_folder_path() {
     # Prüfen, ob Systempfad bereits gesetzt ist (z.B. vom install.sh)
     debug "$(printf "$get_folder_path_debug_0002" "$systemdef_path")"
     if _create_directory "$systemdef_path"; then
-        debug "$(printf "$get_folder_path_debug_0003" "$systemdef_path")"
+        debug "$(printf "$get_folder_path_debug_0003")"
         echo "$systemdef_path"
         return 0
     fi
@@ -326,14 +327,14 @@ _get_folder_path() {
     # Prüfen ob der Standardpfad existiert oder erzeugt werden kann
     debug "$(printf "$get_folder_path_debug_0004" "$standard_path")"
     if _create_directory "$standard_path"; then
-        debug "$(printf "$get_folder_path_debug_0005" "$standard_path")"
+        debug "$(printf "$get_folder_path_debug_0005")"
         echo "$standard_path"
         return 0
     else
         # Versuchen, den Fallback-Pfad zu verwenden
         debug "$(printf "$get_folder_path_debug_0006" "$standard_path")"
         if _create_directory "$fallback_path"; then
-            debug "$(printf "$get_folder_path_debug_0007" "$fallback_path")"
+            debug "$(printf "$get_folder_path_debug_0007")"
             actual_path="$fallback_path"
             
             # Wenn gewünscht und möglich, einen Symlink vom Standard-Pfad zum Fallback erstellen
