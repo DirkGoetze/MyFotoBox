@@ -539,7 +539,7 @@ get_config_value() {
 }
 
 # set_config_value
-set_config_value_debug_0001="START: Setze Konfigurationswert '%s' auf \nWert: '%s', \nTyp: '%s', \nBeschreibung: '%s', \nGewichtung: %d, \nÄnderungsgruppe: '%s'."
+set_config_value_debug_0001="START: Setze Konfigurationswert '%s': [Wert: '%s', Typ: '%s', Beschreibung: '%s', Gewichtung: %d, Änderungsgruppe: '%s']."
 set_config_value_debug_0002="ERROR: SQLite3 ist nicht installiert. Bitte installieren Sie SQLite3, um Konfigurationswerte zu verwalten."
 set_config_value_debug_0003="ERROR: Ungültiger Schlüsselname: '%s'."
 set_config_value_debug_0004="ERROR: Ungültiger Schlüssel: %s - keine Hierarchie angegeben."
