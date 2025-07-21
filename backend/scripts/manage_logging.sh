@@ -451,10 +451,25 @@ print_debug() {
         done
         
         # 4. Gib alle Debug-Zeilen direkt aus
+        # for line in "${debug_lines[@]}"; do
+        #     echo -e "${COLOR_CYAN}  →${COLOR_RESET} $line" >&2
+        # done
+
+        # 4. Gib alle Debug-Zeilen direkt aus
         for line in "${debug_lines[@]}"; do
-            echo -e "${COLOR_CYAN}  →${COLOR_RESET} $line" >&2
+            # Zähle die Anzahl der [DEBUG] Marker, um die Einrückungstiefe zu bestimmen
+            local depth=$(echo "$line" | grep -o "\[DEBUG\]" | wc -l)
+            local indent=""
+            
+            # Erzeuge eine entsprechende Einrückung basierend auf der Tiefe
+            for ((d=0; d<depth; d++)); do
+                indent="$indent  "
+            done
+            
+            # Ausgabe mit dynamischer Einrückung
+            echo -e "${COLOR_CYAN}$indent→${COLOR_RESET} $line" >&2
         done
-        
+
         # 5. Gib das Ergebnis mit dem extrahierten Präfix aus, wenn nicht leer
         if [ -n "$result_text" ]; then
             #echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${prefix}${result_text}"
