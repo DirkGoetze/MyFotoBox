@@ -1204,9 +1204,9 @@ test_lib_core() {
     echo
     
     # alle Funktionen auflisten
-    print_info "$global_seperator_h1"
+    print_info "$global_seperator_h2"
     print_info " Alle definierten Funktionen"
-    print_info "$global_seperator_h1"
+    print_info "$global_seperator_h2"
     declare -F | awk '{print $3}' | sort | while read -r func; do
         print_info "  - $func"
     done
