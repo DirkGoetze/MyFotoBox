@@ -372,7 +372,6 @@ print_debug() {
     # Parameter: $* = Debugtext
     if [ "${DEBUG_MOD_GLOBAL:-0}" = "1" ] || [ "${DEBUG_MOD_LOCAL:-0}" = "1" ]; then
         local content="$*"
-        echo "[TEST] $content" >&2
 
         # Einfacher Fall: Keine verschachtelten Debug-Ausgaben
         if [[ "$content" != *"[DEBUG]"* ]]; then
