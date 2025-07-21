@@ -40,7 +40,7 @@ echo
 # -------------------------------
 # Test des Main-Modul lib_core.sh
 # -------------------------------
-# test_lib_core
+test_lib_core
 # -------------------------------
 # Test der manage_folders.sh Funktionen
 # -------------------------------
