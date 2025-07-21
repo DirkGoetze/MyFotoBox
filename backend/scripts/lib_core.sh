@@ -1160,37 +1160,6 @@ test_function() {
 # Testfunktionen für lib_core.sh selber
 # ============================================================================
 
-list_namespace_functions() {
-    # -----------------------------------------------------------------------
-    # Funktion: Listet alle Funktionen eines bestimmten Namespaces auf
-    # Parameter: $1 - Namespace-Präfix (z.B. "test_" oder "manage_")
-    #            $2 - Optional: "true" zeigt auch private Funktionen an
-    # Rückgabe: 0 = OK
-    # -----------------------------------------------------------------------
-    local namespace="$1"
-    local show_private=${2:-false}  # Optional: true zeigt private Funktionen an
-    
-    print_info "$global_seperator_h2"
-    print_info " Funktionen im Namespace '$namespace'"
-    print_info "$global_seperator_h2"
-    
-    # Alle Funktionen mit diesem Namespace finden
-    declare -F | 
-        awk '{print $3}' | 
-        grep "^${namespace}" | 
-        sort | 
-        while read -r func; do
-            # Prüfen, ob private Funktionen ausgeblendet werden sollen
-            if [[ "$show_private" != "true" && "$func" =~ _[a-zA-Z0-9_]+$ ]]; then
-                continue  # Private Funktion überspringen
-            fi
-            print_info "  - $func"
-        done
-    
-    echo ""
-    return 0
-}
-
 # test_lib_core
 test_lib_core_debug_0001="INFO: Starte Test für lib_core.sh"
 test_lib_core_txt_0001=" Test für das zentrale Modul 'lib_core.sh'"
@@ -1220,8 +1189,28 @@ test_lib_core() {
     ls -la "$script_dir"
     echo
 
-    # Liste aller Funktionen im Namespace von lib_core.sh
-    list_namespace_functions "lib_core"
+    # alle Module auflisten
+    print_info "$global_seperator_h2"
+    print_info " Geladene Module (Guard-Variablen)"
+    print_info "$global_seperator_h2"
+    
+    declare -p | grep -E "_LOADED=" | sort
+    
+    # alle Pfade der Module auflisten
+    print_info "$global_seperator_h2"
+    print_info " Modul-Pfade"
+    print_info "$global_seperator_h2"
+    
+    declare -p | grep -E "_SH=" | sort
+
+    # alle Funktionen auflisten
+    print_info "$global_seperator_h1"
+    print_info " Alle definierten Funktionen"
+    print_info "$global_seperator_h1"
+
+    declare -F | awk '{print $3}' | sort | while read -r func; do
+        print_info "  - $func"
+    done
 
     # Teste set_config_value
     # test_function "set_config_value" "test_key" "test_value" "/tmp/test_config.conf"
