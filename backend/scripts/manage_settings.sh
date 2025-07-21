@@ -576,7 +576,7 @@ set_config_value() {
     local db_file="${7:-$(get_data_file)}"
 
     # Debug-Ausgabe eröffnen
-    debug "$(printf "$set_config_value_debug_0001" "$full_key")"
+    debug "$(printf "$set_config_value_debug_0001" "$full_key" "$value" "$value_type" "$description" "$weight" "$change_group")"
 
     # Überprüfen, ob alle erforderlichen Parameter angegeben sind
     if ! check_param "$full_key" "full_key"; then return 1; fi

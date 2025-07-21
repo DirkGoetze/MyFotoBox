@@ -50,6 +50,7 @@ COLOR_YELLOW="\033[1;33m"
 COLOR_BLUE="\033[1;34m"
 COLOR_CYAN="\033[1;36m"
 COLOR_GRAY="\033[0;37m"
+COLOR_PURPLE="\033[1;35m"
 
 # Standard-Flags
 # ------------------------------------------------------------------------------
@@ -629,8 +630,8 @@ bind_resource() {
 }
 
 # load_resources
-load_resources_debug_0001="[load_resources] INFO: Starte Prüfung aller benötigten Ressourcen"
-load_resources_debug_0002="[load_resources] Versuche %s einzubinden ..."
+load_resources_debug_0001="[load_resources] START: Starte Laden aller Management-Ressourcen"
+load_resources_debug_0002="[load_resources] INFO: Versuche Modul-Datei '%s' einzubinden ..."
 load_resources_debug_0003="[load_resources] ERROR: Fehler beim Laden von %s, erstelle Fallback-Funktionen"
 load_resources_debug_0004="[load_resources] INFO: Fallback-Funktion für %s wurde erstellt"
 load_resources_debug_0005="[load_resources] INFO: Prüfung aller Ressourcen abgeschlossen mit Ergebnis: %d"

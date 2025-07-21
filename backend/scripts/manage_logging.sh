@@ -379,6 +379,9 @@ print_debug() {
             if [[ "$content" == *"INFO:"* ]]; then
                 # Info-Stil (Standard/Reset-Farbe)
                 echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_GRAY}$content${COLOR_RESET}" >&2
+            elif [[ "$content" == *"START:"* ]]; then
+                # Debug-Stil (lila)
+                echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_PURPLE}$content${COLOR_RESET}" >&2
             elif [[ "$content" == *"WARN:"* ]]; then
                 # Warnungs-Stil (gelb)
                 echo -e "${COLOR_CYAN}  → [DEBUG]${COLOR_RESET} ${COLOR_YELLOW}$content${COLOR_RESET}" >&2
