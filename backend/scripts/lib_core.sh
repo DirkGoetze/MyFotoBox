@@ -50,7 +50,7 @@ COLOR_YELLOW="\033[1;33m"
 COLOR_BLUE="\033[1;34m"
 COLOR_CYAN="\033[1;36m"
 COLOR_GRAY="\033[0;37m"
-COLOR_PURPLE="\033[1;35m"
+COLOR_PURPLE="\033[1;35m\033[46;XXm"
 
 # Standard-Flags
 # ------------------------------------------------------------------------------
