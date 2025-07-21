@@ -25,7 +25,7 @@
 : "${MANAGE_HTTPS_LOADED:=0}"
 : "${MANAGE_FIREWALL_LOADED:=0}"
 : "${MANAGE_PYTHON_ENV_LOADED:=0}"
-: "${MANAGE_SQL_LOADED:=0}"
+#: "${MANAGE_SQL_LOADED:=0}"
 : "${MANAGE_BACKEND_SERVICE_LOADED:=0}"
 # ggf. weitere Guard-Variablen hier hinzufügen
 
@@ -1193,24 +1193,24 @@ test_lib_core() {
     print_info "$global_seperator_h2"
     print_info " Geladene Module (Guard-Variablen)"
     print_info "$global_seperator_h2"
-    
     declare -p | grep -E "_LOADED=" | sort
+    echo
     
     # alle Pfade der Module auflisten
     print_info "$global_seperator_h2"
     print_info " Modul-Pfade"
     print_info "$global_seperator_h2"
-    
     declare -p | grep -E "_SH=" | sort
+    echo
 
     # alle Funktionen auflisten
     print_info "$global_seperator_h1"
     print_info " Alle definierten Funktionen"
     print_info "$global_seperator_h1"
-
     declare -F | awk '{print $3}' | sort | while read -r func; do
         print_info "  - $func"
     done
+    echo
 
     # Teste set_config_value
     # test_function "set_config_value" "test_key" "test_value" "/tmp/test_config.conf"
