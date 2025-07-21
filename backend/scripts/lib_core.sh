@@ -109,7 +109,7 @@ trace_output() {
 }
 
 # check_param
-check_param_debug_0001="INFO: Modul '%s' Funktion '%s()' Parameterprüfung für Parameter '%s'"
+check_param_debug_0001="START: Modul '%s' Funktion '%s()' Parameterprüfung für Parameter '%s'"
 check_param_debug_0002="ERROR: Modul '%s' Funktion '%s()' Parameter '%s' ist leer oder nicht gesetzt"
 check_param_debug_0003="SUCCESS: Modul '%s' Funktion '%s()' Parameter '%s' hat den Wert '%s'"
 check_param_log_0001="Modul '%s' Funktion '%s()' Parameter '%s' ist leer oder nicht gesetzt"

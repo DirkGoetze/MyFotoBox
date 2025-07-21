@@ -462,7 +462,7 @@ has_config_value() {
 }
 
 # get_config_value
-get_config_value_debug_0001="INFO: Abrufen des Konfigurationswerts für '%s' aus der Hierarchie '%s'."
+get_config_value_debug_0001="START: Abrufen des Konfigurationswerts für '%s' aus der Hierarchie '%s'."
 get_config_value_debug_0002="ERROR: SQLite3 ist nicht installiert. Bitte installieren Sie SQLite3, um Konfigurationswerte zu verwalten."
 get_config_value_debug_0003="ERROR: Ungültiger Schlüsselname: '%s'."
 get_config_value_debug_0004="ERROR: Hierarchie '%s' existiert nicht in der Datenbank '%s'."
@@ -539,7 +539,7 @@ get_config_value() {
 }
 
 # set_config_value
-set_config_value_debug_0001="INFO: Setze Konfigurationswert für '%s' auf '%s' (Typ: '%s', Beschreibung: '%s', Gewichtung: %d, Änderungsgruppe: '%s')."
+set_config_value_debug_0001="START: Setze Konfigurationswert für '%s' auf '%s' (Typ: '%s', Beschreibung: '%s', Gewichtung: %d, Änderungsgruppe: '%s')."
 set_config_value_debug_0002="ERROR: SQLite3 ist nicht installiert. Bitte installieren Sie SQLite3, um Konfigurationswerte zu verwalten."
 set_config_value_debug_0003="ERROR: Ungültiger Schlüsselname: '%s'."
 set_config_value_debug_0004="ERROR: Ungültiger Schlüssel: %s - keine Hierarchie angegeben."

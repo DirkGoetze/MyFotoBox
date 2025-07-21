@@ -69,7 +69,7 @@ DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 # ---------------------------------------------------------------------------
 
 # _get_file_name
-_get_file_name_debug_0001="INFO: Prüfung der Datei: '%s'"
+_get_file_name_debug_0001="START: Prüfung der Datei: '%s'"
 _get_file_name_debug_0002="INFO: Verzeichnispfad zur Datei: %s"
 _get_file_name_debug_0003="INFO: Zusammengesetzter Dateiname: %s%s"
 _get_file_name_debug_0004="INFO: Prüfung der Datei (exist, read, write, rights) :'%s'"
