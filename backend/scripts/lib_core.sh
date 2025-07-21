@@ -1077,30 +1077,30 @@ test_function() {
     print_info "$global_seperator_h2"
 
     # Debug-Ausgabe eröffnen
-    debug_output "$(printf "$test_function_debug_0001" "$function_name")"
+    debug "$(printf "$test_function_debug_0001" "$function_name")"
 
     # Informationen über den Aufruf, wenn Parameter vorhanden sind
     if [ ${#params[@]} -gt 0 ]; then
-        debug_output "$(printf "$test_function_debug_0002" "${params[*]}")"
+        debug "$(printf "$test_function_debug_0002" "${params[*]}")"
         print_info "$(printf "$test_function_txt_0002" "${params[*]}")"
         print_info "$global_seperator_h3"
     fi
 
     # Prüfe, ob das Modul verfügbar ist
     if [ -z "${!module_path_var_upper}" ] || [ ! -f "${!module_path_var_upper}" ]; then
-        debug_output "$(printf "$test_function_debug_0003" "$module_path_var_upper" "${!module_path_var_upper:-nicht gesetzt}")" "CLI" "test_function"
+        debug "$(printf "$test_function_debug_0003" "$module_path_var_upper" "${!module_path_var_upper:-nicht gesetzt}")"
         print_error "$(printf "$test_function_txt_0003" "${!module_path_var_upper:-nicht gesetzt}")"
         return 1
     fi
 
     # Prüfe, ob die Funktion existiert (bereits geladen)
     if ! declare -f "$function_name" > /dev/null 2>&1; then
-        debug_output "$(printf "$test_function_debug_0004" "$function_name")"
+        debug "$(printf "$test_function_debug_0004" "$function_name")"
         print_error "$(printf "$test_function_txt_0004" "$function_name")" &>2
         return 2
     fi
 
-    debug_output "$(printf "$test_function_debug_0005" "$function_name" "$module_path_var_upper")"
+    debug "$(printf "$test_function_debug_0005" "$function_name" "$module_path_var_upper")"
     print_info "$(printf "$test_function_txt_0005" "$function_name" "${module_path_var_upper}")"
 
     # Führe die Funktion aus und erfasse Rückgabewert und Ausgabe
@@ -1110,11 +1110,11 @@ test_function() {
     # Führe die Funktion DIREKT mit den übergebenen Parametern aus
     set +e  # Deaktiviere Fehlerabbruch
     if [ ${#params[@]} -gt 0 ]; then
-        debug_output "$(printf "$test_function_debug_0006" "$function_name" "${params[*]}")"
+        debug "$(printf "$test_function_debug_0006" "$function_name" "${params[*]}")"
         output=$("$function_name" "${params[@]}" 2>&1)
         result=$?
     else
-        debug_output "$(printf "$test_function_debug_0007" "$function_name")"
+        debug "$(printf "$test_function_debug_0007" "$function_name")"
         output=$("$function_name" 2>&1)
         result=$?
     fi
@@ -1122,8 +1122,8 @@ test_function() {
 
     # Rest der Funktion bleibt gleich...
     if [ -n "$output" ]; then
-        debug_output "$(printf "$test_function_debug_0008" "$output")"
-        debug_output "$(printf "$test_function_debug_0009" "$result")"
+        debug "$(printf "$test_function_debug_0008" "$output")"
+        debug "$(printf "$test_function_debug_0009" "$result")"
         if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
             print_info "$(printf "$test_function_txt_0006" "$output")"
             if [ $result -eq 0 ]; then
@@ -1133,7 +1133,7 @@ test_function() {
             fi
         fi
     else
-        debug_output "$(printf "$test_function_debug_0009" "$result")"
+        debug "$(printf "$test_function_debug_0009" "$result")"
         if [ "${DEBUG_MOD_GLOBAL:-0}" = "0" ] && [ "${DEBUG_MOD_LOCAL:-0}" = "0" ]; then
             # print_info "$(printf "$test_function_txt_0008" "$function_name")"
             if [ $result -eq 0 ]; then
