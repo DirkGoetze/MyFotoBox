@@ -241,8 +241,8 @@ _create_table() {
 _validate_table_debug_0001="INFO: Prüfung der Tabelle '%s' auf Fehler."
 _validate_table_debug_0002="ERROR: Tabelle '%s' existiert nicht in der Datenbank."
 _validate_table_debug_0003="SUCCESS: Tabelle '%s' hat die Integritätsprüfung bestanden."
-_validate_table_debug_0004="ERROR: Integritätsprobleme in Tabelle '%s' gefunden: %s"
-_validate_table_debug_0005="ERROR: Fremdschlüsselprobleme in Tabelle '%s' gefunden: %s"
+_validate_table_debug_0004="ERROR: Integritätsprobleme in Tabelle '%s' gefunden: \n%s"
+_validate_table_debug_0005="ERROR: Fremdschlüsselprobleme in Tabelle '%s' gefunden: \n%s"
 
 _validate_table() {
     # -----------------------------------------------------------------------
@@ -669,11 +669,11 @@ validate_database() {
     local db_file="${1:-$(get_data_file)}"
     local validation_errors=0
 
+    # Debug-Ausgabe eröffnen
+    debug "$validate_database_debug_0001"
+
     # Prüfe zuerst, ob SQLite installiert ist
     if _is_sqlite_installed; then
-
-        # Debug-Ausgabe eröffnen
-        debug "$validate_database_debug_0001"
 
         # 1. Vollständige Datenbank-Integritätsprüfung (schneller als tabellenweise)
         debug "$validate_database_debug_0002"
@@ -734,11 +734,11 @@ ensure_database() {
     # -----------------------------------------------------------------------
     local db_file
     
+    # SQLite ist verfügbar, initialisiere die Datenbank
+    debug "$ensure_database_debug_0001"
+
     # Prüfe zuerst, ob SQLite installiert ist
     if _is_sqlite_installed; then
-
-        # SQLite ist verfügbar, initialisiere die Datenbank
-        debug "$ensure_database_debug_0001"
 
         # Prüfe, ob die Datenbankdatei existiert und gültig ist
         db_file=$(_ensure_database_file)

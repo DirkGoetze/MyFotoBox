@@ -210,6 +210,7 @@ get_data_file() {
     full_filename="$(_get_file_name "$file_name" "$file_ext" "$folder_path")"
     if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
         # Erfolg: Datei existiert und ist les-/schreibbar
+        DB_FILENAME="$full_filename"
         debug "$(printf "$get_data_file_debug_0004" "$full_filename")"
         echo "$full_filename"
         return 0
