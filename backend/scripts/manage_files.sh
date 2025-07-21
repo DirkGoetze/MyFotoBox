@@ -189,6 +189,16 @@ get_data_file() {
     # Eröffnungsmeldung für die Debug-Ausgabe
     debug "$get_data_file_debug_0001"
 
+    # prüfen, ob der Wert schon in der Datenbank steht
+    full_filename="$(get_config_value "files.db_filename")"
+    if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
+        # Erfolg: Datei existiert und ist les-/schreibbar
+        debug "$(printf "$get_data_file_debug_0002" "$full_filename")"
+        # Vollständigen Pfad zurückgeben
+        echo "$full_filename"
+        return 0
+    fi
+
     # Prüfen, ob Systemvariable bereits gesetzt ist
     if [ "${DB_FILENAME+x}" ] && [ -n "$DB_FILENAME" ]; then
         # Systemvariable wurde bereits ermittelt, diese zurückgeben
@@ -207,6 +217,14 @@ get_data_file() {
     # Zusammensetzen des vollständigen Dateinamens erfolgreich
     full_filename="$(_get_file_name "$file_name" "$file_ext" "$folder_path")"
     if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
+
+        # Prüfen, ob der Konfigurationswert bereits gesetzt ist
+        set_config_value "files.db_filename" "$full_filename" "string" "Path to SQLite database file" 10 "grp_files_config" || {
+            # Fehler beim Setzen des Konfigurationswerts
+            debug "ERROR: Konnte Konfigurationswert 'files.db_filename' nicht setzen."
+            return 1
+        }
+
         # Erfolg: Datei existiert und ist les-/schreibbar
         if [ -z "${DB_FILENAME+x}" ] || [ -z "$DB_FILENAME" ] || [ "$full_filename" != "$DB_FILENAME" ]; then
             DB_FILENAME="$full_filename"
