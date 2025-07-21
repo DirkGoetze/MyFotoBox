@@ -254,7 +254,7 @@ _create_directory() {
 }
 
 # _get_folder_path
-get_folder_path_debug_0001="INFO: Prüfe Ordner-Pfade: Systempfad='%s', Standardpfad='%s', Fallbackpfad='%s'"
+get_folder_path_debug_0001="START: Prüfe Ordner-Pfade: \nSystempfad='%s', \nStandardpfad='%s', \nFallbackpfad='%s'"
 get_folder_path_debug_0002="INFO: Prüfung Systempfad (exist, read, write, rights): '%s'"
 get_folder_path_debug_0003="SUCCESS: Systempfad ok"
 get_folder_path_debug_0004="INFO: Prüfung Standardpfad (exist, read, write, rights): '%s'"
@@ -347,7 +347,7 @@ _get_folder_path() {
 # ===========================================================================
 
 # get_install_dir
-get_install_dir_debug_0001="INFO: Ermittle Installations-Verzeichnis"
+get_install_dir_debug_0001="START: Ermittle Installations-Verzeichnis ..."
 get_install_dir_debug_0002="SUCCESS: Verwendete für Installations-Verzeichnis \$INSTALL_DIR: '%s'"
 get_install_dir_debug_0003="SUCCESS: Verwendeter Pfad für Installations-Verzeichnis: '%s'"
 get_install_dir_debug_0004="ERROR: Alle Pfade für Installations-Verzeichnis fehlgeschlagen"
@@ -1150,7 +1150,7 @@ get_template_dir() {
 # ---------------------------------------------------------------------------
 
 # get_data_dir
-get_data_dir_debug_0001="INFO: Ermittle Daten-Verzeichnis"
+get_data_dir_debug_0001="START: Ermittle Daten-Verzeichnis ..."
 get_data_dir_debug_0002="SUCCESS: Verwende für Daten-Verzeichnis \$DATA_DIR: %s"
 get_data_dir_debug_0003="SUCCESS: Verwendeter Pfad für Daten-Verzeichnis: %s"
 get_data_dir_debug_0004="ERROR: Alle Pfade für Daten-Verzeichnis fehlgeschlagen"

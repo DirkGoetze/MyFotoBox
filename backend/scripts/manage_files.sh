@@ -166,7 +166,7 @@ _get_file_name() {
 # ===========================================================================
 
 # get_data_file
-get_data_file_debug_0001="INFO: Ermittle SQLite-Datenbankdatei..."
+get_data_file_debug_0001="START: Ermittle SQLite-Datenbankdatei..."
 get_data_file_debug_0002="INFO: Genutzter Verzeichnispfad zur SQLite-Datenbankdatei: '%s'"
 get_data_file_debug_0003="SUCCESS: Verwende SQLite-Datenbankdatei aus Konfigurationsdatenbank: '%s'"
 get_data_file_debug_0004="SUCCESS: Neuer Pfad zur SQLite-Datenbankdatei: '%s'"
