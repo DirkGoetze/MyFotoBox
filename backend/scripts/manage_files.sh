@@ -198,15 +198,30 @@ get_data_file() {
     file_config_db="$folder_path/$file_name$file_ext"
     debug "$(printf "$get_data_file_debug_0002" "$folder_path")"
 
-    # Prüfen, ob die Datei bereits in der Datenbank steht
-    full_filename="$(get_config_value "files.db_filename" "$file_config_db")"
-    if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
-        # Erfolg: Verwende den Wert aus der Konfiguration
-        debug "$(printf "$get_data_file_debug_0003" "$full_filename")"
-        # Vollständigen Pfad zurückgeben
-        echo "$full_filename"
-        return 0
+    # Wenn das Datenbank- (MANAGE_DATABASE_LOADED=1) und das Settingsmodul 
+    # (MANAGE_SETTINGS_LOADED=1) bereits geladen sind, überprüfen ob der 
+    # vollständige Pfad zur Datenbankdatei bereits in der Konfiguration
+    # steht. Wenn ja, den Wert aus der Konfiguration verwenden
+    if [ "$MANAGE_DATABASE_LOADED" -eq 1 ] && [ "$MANAGE_SETTINGS_LOADED" -eq 1 ]; then
+        # Versuche den Konfigurationswert aus der Datenbank zu lesen
+        full_filename="$(get_config_value "files.db_filename" "$file_config_db")"
+        if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
+            # Erfolg: Verwende den Wert aus der Konfiguration
+            debug "$(printf "$get_data_file_debug_0003" "$full_filename")"
+            # Vollständigen Pfad zurückgeben
+            echo "$full_filename"
+            return 0
+        fi
     fi
+
+    #full_filename="$(get_config_value "files.db_filename" "$file_config_db")"
+    #if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
+    #    # Erfolg: Verwende den Wert aus der Konfiguration
+    #    debug "$(printf "$get_data_file_debug_0003" "$full_filename")"
+    #    # Vollständigen Pfad zurückgeben
+    #    echo "$full_filename"
+    #    return 0
+    #fi
 
     # Prüfen, ob Systemvariable bereits gesetzt ist
     # if [ "${DB_FILENAME+x}" ] && [ -n "$DB_FILENAME" ]; then
