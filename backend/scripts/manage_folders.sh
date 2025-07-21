@@ -194,7 +194,7 @@ _create_symlink_to_standard_path() {
 # _create_directory
 _create_directory_debug_0001="INFO: Prüfung Verzeichnis '%s' für Benutzer '%s', Gruppe '%s' und Berechtigungen '%s'"
 _create_directory_debug_0002="WARN: Verzeichnis '%s' existiert nicht, wird erstellt"
-_create_directory_debug_0003="ERROR: Fehler beim Erstellen von '%s'"
+_create_directory_debug_0003="ERROR: Fehler beim Erstellen von Verzeichnis '%s'"
 _create_directory_debug_0004="WARN: Warnung! <chown> '%s:%s' für '%s' fehlgeschlagen, Eigentümer nicht geändert"
 _create_directory_debug_0005="WARN: Warnung! <chmod> '%s' für '%s' fehlgeschlagen, Berechtigungen nicht geändert"
 _create_directory_debug_0006="SUCCESS: Prüfung erfolgreich. Verzeichnis '%s' ist vorbereitet"
