@@ -1227,9 +1227,6 @@ create_empty_file() {
 # ============================================================================
 
 # test_manage_files
-test_manage_files_debug_0001="INFO: Starte Test für manage_files.sh"
-test_manage_files_debug_0002="ERROR: Test für manage_files.sh fehlgeschlagen"
-test_manage_files_debug_0003="INFO: Test für manage_files.sh erfolgreich abgeschlossen"
 
 test_manage_files() {
     # -----------------------------------------------------------------------
@@ -1240,12 +1237,12 @@ test_manage_files() {
     # Rückgabe: 0 = Erfolg, 1 = Fehler
     # -----------------------------------------------------------------------
     # Eröffnungsmeldung im Debug Modus
-    debug "$test_manage_files_debug_0001"
+    debug "$(printf "$global_test_debug_0001" "manage_files.sh")"
 
     # Allgemeiner Test des Moduls
     test_modul "manage_files.sh"
     if [ $? -ne 0 ]; then
-        debug "$test_manage_files_debug_0002"
+        debug "$(printf "$global_test_debug_0002" "manage_files.sh")"
         return 1
     fi
 
@@ -1313,6 +1310,6 @@ test_manage_files() {
     DEBUG_MOD_GLOBAL=0 
 
     # Meldung ausgeben
-    debug "$test_manage_files_debug_0003"
+    debug "$(printf "$global_test_debug_0003" "manage_files.sh")"
     return 0
 }

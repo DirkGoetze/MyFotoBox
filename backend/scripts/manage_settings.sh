@@ -1060,6 +1060,47 @@ rollback_config_changes() {
     return 0
 }
 
+# ============================================================================
+# Test-Funktionen
+# ============================================================================
+
+# test_manage_settings
+
+test_manage_settings() {
+    # -----------------------------------------------------------------------
+    # test_manage_settings
+    # -----------------------------------------------------------------------
+    # Funktion: Führt einen Test des Moduls durch
+    # Parameter: keine
+    # Rückgabe: 0 = Erfolg, 1 = Fehler
+    # -----------------------------------------------------------------------
+    # Eröffnungsmeldung im Debug Modus
+    debug "$(printf "$global_test_debug_0001" "manage_settings.sh")"
+
+    # Allgemeiner Test des Moduls
+    test_modul "manage_settings.sh"
+    if [ $? -ne 0 ]; then
+        debug "$(printf "$global_test_debug_0002" "manage_settings.sh")"
+        return 1
+    fi
+
+    # Aktivieren des globalen Debug-Modus für die Tests
+    DEBUG_MOD_GLOBAL=1
+
+    # Hier können spezifische Tests für die Funktion implementiert werden
+    # -----------------------------------------------------------------------
+    # Tests abgeschlossen, Deaktivieren des globalen Debug-Modus 
+    DEBUG_MOD_GLOBAL=0 
+
+    # Meldung ausgeben
+    debug "$(printf "$global_test_debug_0003" "manage_settings.sh")"
+    return 0
+}
+
+
+
+
+
 # ===========================================================================
 # TODO: Noch zu implementierende Funktionen
 # ===========================================================================

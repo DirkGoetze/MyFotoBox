@@ -50,6 +50,18 @@ test_manage_folders
 # -------------------------------
 test_manage_files
 # -------------------------------
+# Test der manage_logging.sh Funktionen
+# -------------------------------
+test_manage_logging
+# -------------------------------
+# Test der manage_database.sh Funktionen
+# -------------------------------
+test_manage_database
+# -------------------------------
+# Test der manage_settings.sh Funktionen
+# -------------------------------
+test_manage_settings
+# -------------------------------
 # Test der manage_nginx.sh Funktionen
 # -------------------------------
 # test_manage_nginx

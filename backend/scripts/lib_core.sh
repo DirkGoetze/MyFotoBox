@@ -914,6 +914,10 @@ load_resources() {
 global_seperator_h1="=========================================================================="
 global_seperator_h2="--------------------------------------------------------------------------"
 global_seperator_h3="~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+global_test_debug_0001="START: Starte Test für Modul %s"
+global_test_debug_0002="ERROR: Test Modul %s fehlgeschlagen"
+global_test_debug_0003="SUCCESS: Test Modul %s erfolgreich abgeschlossen"
+
 
 # list_module_functions
 list_module_functions_001=" Liste der Funktionen in Modul '%s'"

@@ -491,6 +491,43 @@ print_debug() {
     fi
 }
 
+# ============================================================================
+# Test-Funktionen
+# ============================================================================
+
+# test_manage_logging
+
+test_manage_logging() {
+    # -----------------------------------------------------------------------
+    # test_manage_logging
+    # -----------------------------------------------------------------------
+    # Funktion: Führt einen Test des Moduls durch
+    # Parameter: keine
+    # Rückgabe: 0 = Erfolg, 1 = Fehler
+    # -----------------------------------------------------------------------
+    # Eröffnungsmeldung im Debug Modus
+    debug "$(printf "$global_test_debug_0001" "manage_logging.sh")"
+
+    # Allgemeiner Test des Moduls
+    test_modul "manage_logging.sh"
+    if [ $? -ne 0 ]; then
+        debug "$(printf "$global_test_debug_0002" "manage_logging.sh")"
+        return 1
+    fi
+
+    # Aktivieren des globalen Debug-Modus für die Tests
+    DEBUG_MOD_GLOBAL=1
+
+    # Hier können spezifische Tests für die Funktion implementiert werden
+    # -----------------------------------------------------------------------
+    # Tests abgeschlossen, Deaktivieren des globalen Debug-Modus 
+    DEBUG_MOD_GLOBAL=0 
+
+    # Meldung ausgeben
+    debug "$(printf "$global_test_debug_0003" "manage_logging.sh")"
+    return 0
+}
+
 # Logdatei global ermitteln und speichern
 if [ -z "${LOG_FILENAME+x}" ] || [ -z "$LOG_FILENAME" ]; then
     debug "INFO: Logdatei wird ermittelt um Umstellung auf zentralisierte Logdatei zu ermöglichen"

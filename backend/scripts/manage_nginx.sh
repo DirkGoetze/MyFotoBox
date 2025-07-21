@@ -2226,9 +2226,6 @@ setup_nginx_service() {
 # ============================================================================
 
 # test_manage_nginx
-test_manage_nginx_debug_0001="INFO: Starte Test für manage_nginx.sh"
-test_manage_nginx_debug_0002="ERROR: Test für manage_nginx.sh fehlgeschlagen"
-test_manage_nginx_debug_0003="INFO: Test für manage_nginx.sh erfolgreich abgeschlossen"
 
 test_manage_nginx() {
     # -----------------------------------------------------------------------
@@ -2239,7 +2236,7 @@ test_manage_nginx() {
     # Rückgabe: 0 = Erfolg, 1 = Fehler
     # -----------------------------------------------------------------------
     # Eröffnungsmeldung im Debug Modus
-    debug "$test_manage_nginx_debug_0001"
+    debug "$(printf "$global_test_debug_0001" "manage_nginx.sh")"
 
     # Aktivieren des globalen Debug-Modus für die Tests
     # DEBUG_MOD_GLOBAL=1 
@@ -2247,7 +2244,7 @@ test_manage_nginx() {
     # Allgemeiner Test des Moduls
     test_modul "manage_nginx.sh"
     if [ $? -ne 0 ]; then
-        debug "$test_manage_nginx_debug_0002"
+        debug "$(printf "$global_test_debug_0002" "manage_nginx.sh")"
         return 1
     fi
 
@@ -2306,7 +2303,7 @@ test_manage_nginx() {
     # DEBUG_MOD_GLOBAL=0 
 
     # Meldung ausgeben
-    debug "$test_manage_nginx_debug_0003"
+    debug "$(printf "$global_test_debug_0003" "manage_nginx.sh")"
     return 0
 }
 

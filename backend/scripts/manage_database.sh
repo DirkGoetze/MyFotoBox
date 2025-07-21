@@ -821,6 +821,43 @@ setup_database() {
     return 0
 }
 
+# ============================================================================
+# Test-Funktionen
+# ============================================================================
+
+# test_manage_database
+
+test_manage_database() {
+    # -----------------------------------------------------------------------
+    # test_manage_database
+    # -----------------------------------------------------------------------
+    # Funktion: Führt einen Test des Moduls durch
+    # Parameter: keine
+    # Rückgabe: 0 = Erfolg, 1 = Fehler
+    # -----------------------------------------------------------------------
+    # Eröffnungsmeldung im Debug Modus
+    debug "$(printf "$global_test_debug_0001" "manage_database.sh")"
+
+    # Allgemeiner Test des Moduls
+    test_modul "manage_database.sh"
+    if [ $? -ne 0 ]; then
+        debug "$(printf "$global_test_debug_0002" "manage_database.sh")"
+        return 1
+    fi
+
+    # Aktivieren des globalen Debug-Modus für die Tests
+    DEBUG_MOD_GLOBAL=1
+
+    # Hier können spezifische Tests für die Funktion implementiert werden
+    # -----------------------------------------------------------------------
+    # Tests abgeschlossen, Deaktivieren des globalen Debug-Modus 
+    DEBUG_MOD_GLOBAL=0 
+
+    # Meldung ausgeben
+    debug "$(printf "$global_test_debug_0003" "manage_database.sh")"
+    return 0
+}
+
 # Prüfe, ob SQLite installiert ist und initialisiere die Datenbank
 if _is_sqlite_installed; then
     ensure_database

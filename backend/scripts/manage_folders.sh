@@ -2137,9 +2137,6 @@ get_ssl_key_systemdir() {
 # ============================================================================
 
 # test_manage_folders
-test_manage_folders_debug_0001="INFO: Starte Test für manage_folders.sh"
-test_manage_folders_debug_0002="ERROR: Test für manage_folders.sh fehlgeschlagen"
-test_manage_folders_debug_0003="INFO: Test für manage_folders.sh erfolgreich abgeschlossen"
 
 test_manage_folders() {
     # -----------------------------------------------------------------------
@@ -2150,12 +2147,12 @@ test_manage_folders() {
     # Rückgabe: 0 = Erfolg, 1 = Fehler
     # -----------------------------------------------------------------------
     # Eröffnungsmeldung im Debug Modus
-    debug "$test_manage_folders_debug_0001"
+    debug "$(printf "$global_test_debug_0001" "manage_folders.sh")"
 
     # Allgemeiner Test des Moduls
     test_modul "manage_folders.sh"
     if [ $? -ne 0 ]; then
-        debug "$test_manage_folders_debug_0002"
+        debug "$(printf "$global_test_debug_0002" "manage_folders.sh")"
         return 1
     fi
 
@@ -2277,6 +2274,6 @@ test_manage_folders() {
     DEBUG_MOD_GLOBAL=0 
 
     # Meldung ausgeben
-    debug "$test_manage_folders_debug_0003"
+    debug "$(printf "$global_test_debug_0003" "manage_folders.sh")"
     return 0
 }
