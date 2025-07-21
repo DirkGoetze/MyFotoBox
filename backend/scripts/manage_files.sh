@@ -200,7 +200,9 @@ get_data_file() {
     # Festlegen der Bestandteile für den Dateinamen
     file_name="fotobox"
     file_ext="$DB_FILE_EXT_DEFAULT"
-    read -r folder_path < <(get_data_dir)
+    # TODO: Problem mit Subshells vermeiden
+    # read -r folder_path < <(get_data_dir)
+    folder_path="$(get_data_dir)"
     debug "$(printf "$get_data_file_debug_0003" "$folder_path")"
 
     # Zusammensetzen des vollständigen Dateinamens erfolgreich
