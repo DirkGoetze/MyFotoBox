@@ -167,9 +167,9 @@ _get_file_name() {
 
 # get_data_file
 get_data_file_debug_0001="INFO: Ermittle SQLite-Datenbankdatei..."
-get_data_file_debug_0002="SUCCESS: Verwende für DB-Datei \$DB_FILENAME: '%s'"
-get_data_file_debug_0003="INFO: Genutzter Verzeichnispfad zur SQLite-Datenbankdatei: '%s'"
-get_data_file_debug_0004="SUCCESS: Vollständiger Pfad zur SQLite-Datenbankdatei: '%s'"
+get_data_file_debug_0002="INFO: Genutzter Verzeichnispfad zur SQLite-Datenbankdatei: '%s'"
+get_data_file_debug_0003="SUCCESS: Verwende SQLite-Datenbankdatei aus Konfigurationsdatenbank: '%s'"
+get_data_file_debug_0004="SUCCESS: Neuer Pfad zur SQLite-Datenbankdatei: '%s'"
 get_data_file_debug_0005="ERROR: SQLite-Datenbankdatei nicht gefunden oder nicht lesbar/beschreibbar"
 
 get_data_file() {
@@ -181,43 +181,44 @@ get_data_file() {
     # Rückgabe.: Der vollständige Name, inklusive Pfad zur Datei
     # .........  Exit-Code-> 0 bei Erfolg, 1 bei Fehler
     # -----------------------------------------------------------------------
-    local folder_path                         # Pfad zum Konfigurationsordner
-    local file_name                           # Name der Konfigurationsdatei
-    local file_ext                            # Standard-Dateiendung
-    local full_filename
+    local folder_path             # Pfad zum Konfigurationsordner
+    local file_name               # Name der Konfigurationsdatei
+    local file_ext                # Standard-Dateiendung
+    local db_filename             # Konfigurationswert in der Datenbankdatei
+    local full_filename           # Vollständiger Dateiname der Datenbankdatei
 
     # Eröffnungsmeldung für die Debug-Ausgabe
     debug "$get_data_file_debug_0001"
 
-    # prüfen, ob der Wert schon in der Datenbank steht
-    #full_filename="$(get_config_value "files.db_filename")"
+    # Festlegen der Bestandteile für den Dateinamen
+    # Probleme mit Subshells bei Aufruf Hauptfunktionen vermeiden
+    read -r folder_path < <(get_data_dir)
+    file_name="$PROJECT_NAME"
+    file_ext="$DB_FILE_EXT_DEFAULT"
+    file_config_db="$folder_path/$file_name.$file_ext"
+    debug "$(printf "$get_data_file_debug_0002" "$folder_path")"
+
+    # Prüfen, ob die Datei bereits in der Datenbank steht
+    full_filename="$(get_config_value "files.db_filename" "$file_config_db")"
     if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
-        # Erfolg: Datei existiert und ist les-/schreibbar
-        debug "$(printf "$get_data_file_debug_0002" "$full_filename")"
+        # Erfolg: Verwende den Wert aus der Konfiguration
+        debug "$(printf "$get_data_file_debug_0003" "$full_filename")"
         # Vollständigen Pfad zurückgeben
         echo "$full_filename"
         return 0
     fi
 
     # Prüfen, ob Systemvariable bereits gesetzt ist
-    if [ "${DB_FILENAME+x}" ] && [ -n "$DB_FILENAME" ]; then
+    # if [ "${DB_FILENAME+x}" ] && [ -n "$DB_FILENAME" ]; then
         # Systemvariable wurde bereits ermittelt, diese zurückgeben
-        debug "$(printf "$get_data_file_debug_0002" "$DB_FILENAME")"
-        echo "$DB_FILENAME"
-        return 0
-    fi
+    #     debug "$(printf "$get_data_file_debug_0002" "$DB_FILENAME")"
+    #     echo "$DB_FILENAME"
+    #     return 0
+    # fi
 
-    # Festlegen der Bestandteile für den Dateinamen
-    file_name="fotobox"
-    file_ext="$DB_FILE_EXT_DEFAULT"
-    # Probleme mit Subshells bei Aufruf Hauptfunktionen vermeiden
-    read -r folder_path < <(get_data_dir)
-    debug "$(printf "$get_data_file_debug_0003" "$folder_path")"
-
-    # Zusammensetzen des vollständigen Dateinamens erfolgreich
+    # Zusammensetzen des vollständigen Dateinamens, prüfen ob Datei existiert
     full_filename="$(_get_file_name "$file_name" "$file_ext" "$folder_path")"
     if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
-
         # Prüfen, ob der Konfigurationswert bereits gesetzt ist
         #set_config_value "files.db_filename" "$full_filename" "string" "Path to SQLite database file" 10 "grp_files_config" || {
             # Fehler beim Setzen des Konfigurationswerts

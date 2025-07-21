@@ -10,9 +10,14 @@
 # ===========================================================================
 # Zentrale Konstanten für das gesamte Fotobox-System
 # ===========================================================================
+# Projektname des Fotobox-Systems
+# ------------------------------------------------------------------------------
+PROJECT_NAME="fotobox"
+
 # Zentrale Definition des Skriptverzeichnisses - wird von allen Modulen verwendet
-: "${SCRIPT_DIR:="/opt/fotobox/backend/scripts"}"
-: "${CONF_DIR:="/opt/fotobox/conf"}"
+# ------------------------------------------------------------------------------
+: "${SCRIPT_DIR:="/opt/$PROJECT_NAME/backend/scripts"}"
+: "${CONF_DIR:="/opt/$PROJECT_NAME/conf"}"
 
 # Standardwerte für Guard-Variablen festlegen
 # ------------------------------------------------------------------------------
@@ -47,32 +52,32 @@ COLOR_CYAN="\033[1;36m"
 COLOR_GRAY="\033[0;37m"
 
 # Standard-Flags
+# ------------------------------------------------------------------------------
 #: "${DEBUG_MOD:=0}"          # Legacy-Flag (für Kompatibilität mit älteren Skripten)
 : "${UNATTENDED:=0}"
 
 # Debug-Modus: Lokal und global steuerbar
+# ------------------------------------------------------------------------------
 # DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
 : "${DEBUG_MOD_LOCAL:=0}"    # Lokales Debug-Flag für einzelne Skripte
 DEBUG_MOD_GLOBAL=0           # Globales Flag, das alle lokalen überstimmt
 
-# Lademodus für Module
-# 0 = Bei Bedarf laden (für laufenden Betrieb)
-# 1 = Alle Module sofort laden (für Installation/Update/Deinstallation)
-#: "${MODULE_LOAD_MODE:=0}"   # Standardmäßig Module nur bei Bedarf laden
-
 # Benutzer- und Berechtigungseinstellungen
+# ------------------------------------------------------------------------------
 DEFAULT_USER="fotobox"
 DEFAULT_GROUP="fotobox"
 DEFAULT_MODE_FOLDER="755"
 DEFAULT_MODE_FILES="664"
 
 # Konfigurationsdatei
-DEFAULT_CONFIG_FILE="$CONF_DIR/fotobox-config.ini"
+# ------------------------------------------------------------------------------
+DEFAULT_CONFIG_FILE="$CONF_DIR/$PROJECT_NAME.ini"
 
 # Backend Service 
-SYSTEMD_SERVICE="$CONF_DIR/fotobox-backend.service"
-SYSTEMD_DST="/etc/systemd/system/fotobox-backend.service"
+# ------------------------------------------------------------------------------
+SYSTEMD_SERVICE="$CONF_DIR/$PROJECT_NAME-backend.service"
+SYSTEMD_DST="/etc/systemd/system/$PROJECT_NAME-backend.service"
 
 # ===========================================================================
 # Allgemeine Hilfsfunktionen für alle Skripte
