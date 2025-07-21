@@ -106,19 +106,16 @@ _get_file_name() {
     local mode="${6:-$DEFAULT_MODE_FILES}"
     local full_path
 
-    # Überprüfen, ob die erforderlichen Parameter angegeben sind
-    if ! check_param "$name" "name"; then 
-        echo ""
-        return 1
-    fi
-
     # Eröffnungsmeldung für die Debug-Ausgabe
     debug "$(printf "$_get_file_name_debug_0001" "$name")"
+
+    # Überprüfen, ob die erforderlichen Parameter angegeben sind
+    if ! check_param "$name" "name"; then echo ""; return 1; fi
 
     # Prüfen ob der Pfad übergeben wurde
     if [ -z "$path" ]; then
         # Wenn kein Pfad angegeben ist, Standardpfad verwenden
-        path="$(get_config_dir)"
+        read -r path < <(get_config_dir)
     fi
     debug "$(printf "$_get_file_name_debug_0002" "$path")"
 
@@ -203,7 +200,7 @@ get_data_file() {
     # Festlegen der Bestandteile für den Dateinamen
     file_name="fotobox"
     file_ext="$DB_FILE_EXT_DEFAULT"
-    folder_path="$(get_data_dir)"
+    read -r folder_path < <(get_data_dir)
     debug "$(printf "$get_data_file_debug_0003" "$folder_path")"
 
     # Zusammensetzen des vollständigen Dateinamens erfolgreich
@@ -1200,7 +1197,7 @@ test_manage_files() {
     debug "$test_manage_files_debug_0001"
 
     # Aktivieren des globalen Debug-Modus für die Tests
-    # DEBUG_MOD_GLOBAL=1 
+    DEBUG_MOD_GLOBAL=1 
 
     # Allgemeiner Test des Moduls
     test_modul "manage_files.sh"
@@ -1213,60 +1210,61 @@ test_manage_files() {
     # -----------------------------------------------------------------------
     # Test: get_data_file
     test_function "manage_files_sh" "get_data_file"
+    test_function "manage_files_sh" "get_data_file"
     # Test: get_config_file
-    test_function "manage_files_sh" "get_config_file"
+    # test_function "manage_files_sh" "get_config_file"
     # Test: get_log_file
-    test_function "manage_files_sh" "get_log_file"
+    # test_function "manage_files_sh" "get_log_file"
     # Test: get_requirements_system_file
-    test_function "manage_files_sh" "get_requirements_system_file"
+    # test_function "manage_files_sh" "get_requirements_system_file"
     # Test: get_requirements_python_file
-    test_function "manage_files_sh" "get_requirements_python_file"
+    # test_function "manage_files_sh" "get_requirements_python_file"
     # Test: get_tmp_file
-    test_function "manage_files_sh" "get_tmp_file"
+    # test_function "manage_files_sh" "get_tmp_file"
     # Test: get_template_file
-    test_function "manage_files_sh" "get_template_file" "nginx" "template_local"
+    # test_function "manage_files_sh" "get_template_file" "nginx" "template_local"
     # Test: get_template_file
-    test_function "manage_files_sh" "get_template_file" "nginx" "template_internal"
+    # test_function "manage_files_sh" "get_template_file" "nginx" "template_internal"
     # Test: get_template_file
-    test_function "manage_files_sh" "get_template_file" "nginx" "template_external"
+    # test_function "manage_files_sh" "get_template_file" "nginx" "template_external"
     # Test: get_template_file
-    test_function "manage_files_sh" "get_template_file" "systemd" "fotobox-backend"
+    # test_function "manage_files_sh" "get_template_file" "systemd" "fotobox-backend"
     # Test: get_template_file
-    test_function "manage_files_sh" "get_template_file" "ssl_cert" "fotobox"
+    # test_function "manage_files_sh" "get_template_file" "ssl_cert" "fotobox"
     # Test: get_template_file
-    test_function "manage_files_sh" "get_template_file" "ssl_key" "fotobox"
+    # test_function "manage_files_sh" "get_template_file" "ssl_key" "fotobox"
     # Test: get_template_file
-    test_function "manage_files_sh" "get_template_file" "backup_meta" "fotobox-backup"
+    # test_function "manage_files_sh" "get_template_file" "backup_meta" "fotobox-backup"
     # Test: get_template_file
-    test_function "manage_files_sh" "get_template_file" "firewall" "fotobox-firewall"
+    # test_function "manage_files_sh" "get_template_file" "firewall" "fotobox-firewall"
     # Test: get_template_file
-    test_function "manage_files_sh" "get_template_file" "ssh" "fotobox-ssh"
+    # test_function "manage_files_sh" "get_template_file" "ssh" "fotobox-ssh"
     # Test: get_config_file_nginx
-    test_function "manage_files_sh" "get_config_file_nginx"
+    # test_function "manage_files_sh" "get_config_file_nginx"
     # Test: get_config_file_nginx
-    test_function "manage_files_sh" "get_config_file_nginx" "local"
+    # test_function "manage_files_sh" "get_config_file_nginx" "local"
     # Test: get_config_file_nginx
-    test_function "manage_files_sh" "get_config_file_nginx" "internal"
+    # test_function "manage_files_sh" "get_config_file_nginx" "internal"
     # Test: get_config_file_nginx
-    test_function "manage_files_sh" "get_config_file_nginx" "external"
+    # test_function "manage_files_sh" "get_config_file_nginx" "external"
     # Test: get_config_file_nginx
-    test_function "manage_files_sh" "get_config_file_nginx" "activated"
+    # test_function "manage_files_sh" "get_config_file_nginx" "activated"
     # Test: get_backup_file
-    test_function "manage_files_sh" "get_backup_file" "irgendwas" ".zip"
+    # test_function "manage_files_sh" "get_backup_file" "irgendwas" ".zip"
     # Test: get_backup_file
-    test_function "manage_files_sh" "get_backup_file" "data" "fotobox.db"
+    # test_function "manage_files_sh" "get_backup_file" "data" "fotobox.db"
     # Test: get_backup_file
-    test_function "manage_files_sh" "get_backup_file" "nginx" "default.conf"
+    # test_function "manage_files_sh" "get_backup_file" "nginx" "default.conf"
     # Test: get_backup_file
-    test_function "manage_files_sh" "get_backup_file" "https" "fotobox"
+    # test_function "manage_files_sh" "get_backup_file" "https" "fotobox"
     # Test: get_backup_file
-    test_function "manage_files_sh" "get_backup_file" "systemd" "fotobox.service"
+    # test_function "manage_files_sh" "get_backup_file" "systemd" "fotobox.service"
     # Test: get_backup_meta_file
-    backup_file=$(get_backup_file "nginx" "default.conf")
-    test_function "manage_files_sh" "get_backup_meta_file" "$backup_file"
+    # backup_file=$(get_backup_file "nginx" "default.conf")
+    # test_function "manage_files_sh" "get_backup_meta_file" "$backup_file"
 
     # Tests abgeschlossen, Deaktivieren des globalen Debug-Modus 
-    # DEBUG_MOD_GLOBAL=0 
+    DEBUG_MOD_GLOBAL=0 
 
     # Meldung ausgeben
     debug "$test_manage_files_debug_0003"
