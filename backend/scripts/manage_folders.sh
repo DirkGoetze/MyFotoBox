@@ -192,12 +192,12 @@ _create_symlink_to_standard_path() {
 }
 
 # _create_directory
-create_directory_debug_0000="INFO: Prüfung Verzeichnis '%s' für Benutzer '%s', Gruppe '%s' und Berechtigungen '%s'"
-create_directory_debug_0001="INFO: Verzeichnis '%s' existiert nicht, wird erstellt"
-create_directory_debug_0002="ERROR: Fehler beim Erstellen von '%s'"
-create_directory_debug_0003="WARN: Warnung! <chown> '%s:%s' für '%s' fehlgeschlagen, Eigentümer nicht geändert"
-create_directory_debug_0004="WARN: Warnung! <chmod> '%s' für '%s' fehlgeschlagen, Berechtigungen nicht geändert"
-create_directory_debug_0005="SUCCESS: Prüfung erfolgreich. Verzeichnis '%s' ist vorbereitet"
+_create_directory_debug_0001="INFO: Prüfung Verzeichnis '%s' für Benutzer '%s', Gruppe '%s' und Berechtigungen '%s'"
+_create_directory_debug_0002="WARN: Verzeichnis '%s' existiert nicht, wird erstellt"
+_create_directory_debug_0003="ERROR: Fehler beim Erstellen von '%s'"
+_create_directory_debug_0004="WARN: Warnung! <chown> '%s:%s' für '%s' fehlgeschlagen, Eigentümer nicht geändert"
+_create_directory_debug_0005="WARN: Warnung! <chmod> '%s' für '%s' fehlgeschlagen, Berechtigungen nicht geändert"
+_create_directory_debug_0006="SUCCESS: Prüfung erfolgreich. Verzeichnis '%s' ist vorbereitet"
 
 _create_directory() {
     # -----------------------------------------------------------------------
@@ -219,34 +219,34 @@ _create_directory() {
     local mode="${4:-$DEFAULT_MODE_FOLDER}"
 
     # Debug-Ausgabe eröffnen
-    debug "$(printf "$create_directory_debug_0000" "$dir" "$user" "$group" "$mode")"
+    debug "$(printf "$_create_directory_debug_0001" "$dir" "$user" "$group" "$mode")"
 
     # Prüfung der Parameter
     if ! check_param "$dir" "dir"; then return 1; fi
 
     # Verzeichnis erstellen, falls es nicht existiert
     if [ ! -d "$dir" ]; then
-        debug "$(printf "$create_directory_debug_0001" "$dir")"
+        debug "$(printf "$_create_directory_debug_0002" "$dir")"
         mkdir -p "$dir" || {
-            debug "$(printf "$create_directory_debug_0002" "$dir")"
+            debug "$(printf "$_create_directory_debug_0003" "$dir")"
             return 1
         }
     fi
 
     # Berechtigungen setzen
     chown "$user:$group" "$dir" 2>/dev/null || {
-        debug "$(printf "$create_directory_debug_0003" "$user" "$group" "$dir")"
+        debug "$(printf "$_create_directory_debug_0004" "$user" "$group" "$dir")"
         # Fehler beim chown ist kein kritischer Fehler
     }
 
     chmod "$mode" "$dir" 2>/dev/null || {
-        debug "$(printf "$create_directory_debug_0004" "$mode" "$dir")"
+        debug "$(printf "$_create_directory_debug_0005" "$mode" "$dir")"
         # Fehler beim chmod ist kein kritischer Fehler
     }
 
     # Überprüfen, ob das Verzeichnis existiert und lesbar ist
     if [ -d "$dir" ] && [ -r "$dir" ]; then
-        debug "$(printf "$create_directory_debug_0005" "$dir")"
+        debug "$(printf "$_create_directory_debug_0006" "$dir")"
         return 0
     else
         return 1
