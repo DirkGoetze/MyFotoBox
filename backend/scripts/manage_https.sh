@@ -1395,8 +1395,10 @@ EOF
     return 0
 }
 
-# Prüfe, ob SQLite installiert ist 
-if _is_sqlite_installed; then
-    # Einstellungshierarchie für Manage Modul erstellen
-    register_config_hierarchy "https" "HTTPS-Konfigurationsmodul" "manage_https"
+if [ "$MANAGE_DATABASE_LOADED" -eq 1 ] && [ "$MANAGE_SETTINGS_LOADED" -eq 1 ]; then
+    # Prüfe, ob SQLite installiert ist 
+    if _is_sqlite_installed; then
+        # Einstellungshierarchie für Manage Modul erstellen
+        register_config_hierarchy "https" "HTTPS-Konfigurationsmodul" "manage_https"
+    fi
 fi
