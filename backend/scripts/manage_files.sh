@@ -166,7 +166,7 @@ _get_file_name() {
 # ===========================================================================
 
 # get_data_file
-get_data_file_debug_0001="INFO: Ermittle SQLite-Datenbankdatei"
+get_data_file_debug_0001="INFO: Ermittle SQLite-Datenbankdatei..."
 get_data_file_debug_0002="SUCCESS: Verwende für DB-Datei \$DB_FILENAME: '%s'"
 get_data_file_debug_0003="INFO: Genutzter Verzeichnispfad zur SQLite-Datenbankdatei: '%s'"
 get_data_file_debug_0004="SUCCESS: Vollständiger Pfad zur SQLite-Datenbankdatei: '%s'"
@@ -200,7 +200,7 @@ get_data_file() {
     # Festlegen der Bestandteile für den Dateinamen
     file_name="fotobox"
     file_ext="$DB_FILE_EXT_DEFAULT"
-    # Probleme mit Subshells vermeiden
+    # Probleme mit Subshells bei Aufruf Hauptfunktionen vermeiden
     read -r folder_path < <(get_data_dir)
     debug "$(printf "$get_data_file_debug_0003" "$folder_path")"
 
