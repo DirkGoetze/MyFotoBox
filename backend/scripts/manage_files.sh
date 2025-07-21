@@ -190,7 +190,7 @@ get_data_file() {
     debug "$get_data_file_debug_0001"
 
     # prüfen, ob der Wert schon in der Datenbank steht
-    full_filename="$(get_config_value "files.db_filename")"
+    #full_filename="$(get_config_value "files.db_filename")"
     if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
         # Erfolg: Datei existiert und ist les-/schreibbar
         debug "$(printf "$get_data_file_debug_0002" "$full_filename")"
@@ -219,11 +219,11 @@ get_data_file() {
     if [ $? -eq 0 ] && [ -n "$full_filename" ]; then
 
         # Prüfen, ob der Konfigurationswert bereits gesetzt ist
-        set_config_value "files.db_filename" "$full_filename" "string" "Path to SQLite database file" 10 "grp_files_config" || {
+        #set_config_value "files.db_filename" "$full_filename" "string" "Path to SQLite database file" 10 "grp_files_config" || {
             # Fehler beim Setzen des Konfigurationswerts
-            debug "ERROR: Konnte Konfigurationswert 'files.db_filename' nicht setzen."
-            return 1
-        }
+        #    debug "ERROR: Konnte Konfigurationswert 'files.db_filename' nicht setzen."
+        #    return 1
+        #}
 
         # Erfolg: Datei existiert und ist les-/schreibbar
         if [ -z "${DB_FILENAME+x}" ] || [ -z "$DB_FILENAME" ] || [ "$full_filename" != "$DB_FILENAME" ]; then
