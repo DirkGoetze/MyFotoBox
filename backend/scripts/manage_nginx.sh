@@ -2314,8 +2314,10 @@ test_manage_nginx() {
 
 # Prüfe, ob SQLite installiert ist 
 if [ "$MANAGE_DATABASE_LOADED" -eq 1 ] && [ "$MANAGE_SETTINGS_LOADED" -eq 1 ]; then
+    debug "INFO: Modul manage_nginx.sh wurde geladen. Prüfe Datenbank-Installation..."
     if _is_sqlite_installed; then
         # Einstellungshierarchie für Manage Modul erstellen
+        debug "INFO: Starte Erstellung der Konfigurationshierarchie für NGINX-Modul..."
         register_config_hierarchy "nginx" "NGINX-Konfigurationsmodul" "manage_nginx"
     fi
 fi
