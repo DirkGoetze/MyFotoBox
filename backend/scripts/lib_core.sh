@@ -877,7 +877,7 @@ load_resources() {
 
     DEBUG_MOD_LOCAL=1  # Setze lokales Debug-Flag für dieses Skript
     set -e  # Beende das Skript bei jedem Fehler
-
+    
     # 7. manage_https.sh einbinden
     debug_output "$(printf "$load_resources_debug_0002" "manage_https.sh")"
     bind_resource "manage_https.sh"
