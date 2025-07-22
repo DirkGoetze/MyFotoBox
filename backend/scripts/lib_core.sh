@@ -647,6 +647,7 @@ load_resources() {
     # -----------------------------------------------------------------------
     local result=0
     DEBUG_MOD_LOCAL=1  # Setze lokales Debug-Flag für dieses Skript
+    set -e  # Beende das Skript bei jedem Fehler
     # Debug-Ausgabe eröffnen
     debug_output "$(printf "$load_resources_debug_0001")"
     
