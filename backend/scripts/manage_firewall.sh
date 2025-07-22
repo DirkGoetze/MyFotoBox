@@ -440,9 +440,11 @@ reset_firewall() {
 }
 
 if [ "$MANAGE_DATABASE_LOADED" -eq 1 ] && [ "$MANAGE_SETTINGS_LOADED" -eq 1 ]; then
-    # Prüfe, ob SQLite installiert ist 
+    # Prüfe, ob SQLite installiert ist
+    debug "INFO: Modul manage_firewall.sh wurde geladen. Prüfe Datenbank-Installation..."
     if _is_sqlite_installed; then
         # Einstellungshierarchie für Manage Modul erstellen
+        debug "INFO: Starte Erstellung der Konfigurationshierarchie für Firewall-Modul..."
         register_config_hierarchy "firewall" "Firewall-Konfigurationsmodul" "manage_firewall"
     fi
 fi
