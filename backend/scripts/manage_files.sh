@@ -64,8 +64,8 @@ BACKUP_FILE_EXT_DEFAULT=".bak" #'.zip' ist nicht mehr Standard, da wir keine ZIP
 # Debug-Modus: Lokal und global steuerbar
 # DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
-#DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
-#: "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
+# DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
+# : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
 # ---------------------------------------------------------------------------
 
 # _get_file_name
@@ -1247,7 +1247,9 @@ test_manage_files() {
     fi
 
     # Aktivieren des globalen Debug-Modus für die Tests
-    DEBUG_MOD_GLOBAL=1
+    local old_debug_mode
+    old_debug_mode=$DEBUG_MOD_GLOBAL
+    DEBUG_MOD_GLOBAL=1 
 
     # Hier können spezifische Tests für die Funktion implementiert werden
     # -----------------------------------------------------------------------
@@ -1306,10 +1308,10 @@ test_manage_files() {
     # backup_file=$(get_backup_file "nginx" "default.conf")
     # test_function "manage_files_sh" "get_backup_meta_file" "$backup_file"
 
-    # Tests abgeschlossen, Deaktivieren des globalen Debug-Modus 
-    DEBUG_MOD_GLOBAL=0 
-
-    # Meldung ausgeben
+    # Meldung ausgeben, Test abgeschlossen ----------------------------------
     debug "$(printf "$global_test_debug_0003" "manage_files.sh")"
+
+    # Tests abgeschlossen, wiederherstellen des globalen Debug-Modus  -------
+    DEBUG_MOD_GLOBAL=$old_debug_mode
     return 0
 }

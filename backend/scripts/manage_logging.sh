@@ -41,8 +41,8 @@ MANAGE_LOGGING_LOADED=0
 # Debug-Modus: Lokal und global steuerbar
 # DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
-#DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
-#: "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
+# DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
+# : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
 
 # ===========================================================================
 # Hilfsfunktionen
@@ -516,15 +516,18 @@ test_manage_logging() {
     fi
 
     # Aktivieren des globalen Debug-Modus für die Tests
-    DEBUG_MOD_GLOBAL=1
+    local old_debug_mode
+    old_debug_mode=$DEBUG_MOD_GLOBAL
+    DEBUG_MOD_GLOBAL=1 
 
     # Hier können spezifische Tests für die Funktion implementiert werden
     # -----------------------------------------------------------------------
-    # Tests abgeschlossen, Deaktivieren des globalen Debug-Modus 
-    DEBUG_MOD_GLOBAL=0 
 
-    # Meldung ausgeben
+    # Meldung ausgeben, Test abgeschlossen ----------------------------------
     debug "$(printf "$global_test_debug_0003" "manage_logging.sh")"
+
+    # Tests abgeschlossen, wiederherstellen des globalen Debug-Modus  -------
+    DEBUG_MOD_GLOBAL=$old_debug_mode
     return 0
 }
 
