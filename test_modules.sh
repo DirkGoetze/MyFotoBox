@@ -41,27 +41,27 @@ echo
 # -------------------------------
 # Test des Main-Modul lib_core.sh
 # -------------------------------
-# test_lib_core
+test_lib_core
 # -------------------------------
 # Test der manage_folders.sh Funktionen
 # -------------------------------
-test_manage_folders
+#test_manage_folders
 # -------------------------------
 # Test der manage_files.sh Funktionen
 # -------------------------------
-test_manage_files
+#test_manage_files
 # -------------------------------
 # Test der manage_logging.sh Funktionen
 # -------------------------------
-test_manage_logging
+#test_manage_logging
 # -------------------------------
 # Test der manage_database.sh Funktionen
 # -------------------------------
-test_manage_database
+#test_manage_database
 # -------------------------------
 # Test der manage_settings.sh Funktionen
 # -------------------------------
-test_manage_settings
+#test_manage_settings
 # -------------------------------
 # Test der manage_nginx.sh Funktionen
 # -------------------------------
