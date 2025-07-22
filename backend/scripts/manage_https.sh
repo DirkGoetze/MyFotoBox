@@ -1437,8 +1437,10 @@ test_manage_https() {
 
 if [ "$MANAGE_DATABASE_LOADED" -eq 1 ] && [ "$MANAGE_SETTINGS_LOADED" -eq 1 ]; then
     # Prüfe, ob SQLite installiert ist 
+    debug "INFO: Modul manage_https.sh wurde geladen. Prüfe Datenbank-Installation..."
     if _is_sqlite_installed; then
         # Einstellungshierarchie für Manage Modul erstellen
+        debug "INFO: Starte Erstellung der Konfigurationshierarchie für HTTPS-Modul..."
         register_config_hierarchy "https" "HTTPS-Konfigurationsmodul" "manage_https"
     fi
 fi

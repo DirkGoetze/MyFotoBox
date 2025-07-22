@@ -1315,3 +1315,13 @@ test_manage_files() {
     DEBUG_MOD_GLOBAL=$old_debug_mode
     return 0
 }
+
+if [ "$MANAGE_DATABASE_LOADED" -eq 1 ] && [ "$MANAGE_SETTINGS_LOADED" -eq 1 ]; then
+    # Prüfe, ob SQLite installiert ist 
+    debug "INFO: Modul manage_files.sh wurde geladen. Prüfe Datenbank-Installation..."
+    if _is_sqlite_installed; then
+        # Einstellungshierarchie für Manage Modul erstellen
+        debug "INFO: Starte Erstellung der Konfigurationshierarchie für Files-Modul..."
+        register_config_hierarchy "files" "Files-Konfigurationsmodul" "manage_files"
+    fi
+fi
