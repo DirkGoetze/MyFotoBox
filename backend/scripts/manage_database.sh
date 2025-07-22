@@ -730,7 +730,7 @@ validate_database() {
 }
 
 # ensure_database
-ensure_database_debug_0001="INFO: Sicherstellen, dass die Datenbank initialisiert ist."
+ensure_database_debug_0001="START: Initialisierung der Datenbank und Sicherstellung der Tabellenstruktur."
 ensure_database_debug_0002="SUCCESS: Datenbank ist initialisiert und bereit zur Nutzung."
 ensure_database_debug_0003="WARN: SQLite ist nicht installiert. Datenbank-Initialisierung wurde übersprungen."
 ensure_database_debug_0004="ERROR: Datenbank-Initialisierung fehlgeschlagen."
@@ -886,11 +886,4 @@ test_manage_database() {
 
 # Prüfe, ob SQLite installiert ist und initialisiere die Datenbank
 debug "INFO: Modul manage_database.sh wurde geladen. Prüfe Datenbank-Installation..."
-if ! _is_sqlite_installed; then
-    debug "WARN: SQLite ist nicht installiert. Datenbank-Initialisierung wird übersprungen."
-    return 0
-fi
-if _is_sqlite_installed; then
-    debug "INFO: Starte Datenbank-Initialisierung..."
-    ensure_database
-fi
+ensure_database
