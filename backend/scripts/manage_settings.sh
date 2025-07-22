@@ -319,7 +319,7 @@ _get_hierarchy_id() {
 # ===========================================================================
 
 # register_config_hierarchy
-register_config_hierarchy_debug_0001="INFO: Registriere Konfigurationshierarchie '%s' mit Beschreibung '%s', Verantwortlichem '%s'."
+register_config_hierarchy_debug_0001="START: Registriere Konfigurationshierarchie '%s' mit Beschreibung '%s', Verantwortlichem '%s'."
 register_config_hierarchy_debug_0002="ERROR: Ungültiger Hierarchiename: '%s'. Hierarchie konnte nicht registriert werden."
 register_config_hierarchy_debug_0003="WARN: Hierarchie '%s' existiert bereits."
 register_config_hierarchy_debug_0004="ERROR: Fehler beim Einfügen der Hierarchie in die Datenbank: %s"
@@ -376,12 +376,16 @@ register_config_hierarchy() {
     # Hierarchie in die Datenbank einfügen
     if [ "$hierarchy_data" = "{}" ]; then
         # Einfaches leeres JSON direkt im SQL verwenden
-        sqlite3 "$db_file" "INSERT INTO ${DB_TAB_NAME_CONFIG_HIERARCHIES} (hierarchy_name, description, responsible, hierarchy_data) 
+        local sql_string="INSERT INTO ${DB_TAB_NAME_CONFIG_HIERARCHIES} (hierarchy_name, description, responsible, hierarchy_data) 
                            VALUES ('$hierarchy_name', '$description', '$responsible', '{}')"
+        debug "SQL: $sql_string"
+        sqlite3 "$db_file" "$sql_string"
     else
         # Für nicht-leere JSON-Werte die json()-Funktion verwenden
-        sqlite3 "$db_file" "INSERT INTO ${DB_TAB_NAME_CONFIG_HIERARCHIES} (hierarchy_name, description, responsible, hierarchy_data) 
+        local sql_string="INSERT INTO ${DB_TAB_NAME_CONFIG_HIERARCHIES} (hierarchy_name, description, responsible, hierarchy_data) 
                            VALUES ('$hierarchy_name', '$description', '$responsible', json('$hierarchy_data'))"
+        debug "SQL: $sql_string"
+        sqlite3 "$db_file" "$sql_string"
     fi
 
     # Prüfen, ob der Einfügevorgang erfolgreich war
