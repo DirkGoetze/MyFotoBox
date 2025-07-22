@@ -345,7 +345,7 @@ register_config_hierarchy() {
     local hierarchy_name="$1"
     local description="$2"
     local responsible="$3"
-    local hierarchy_data="${4:-{}}"  # Standardwert für leere Hierarchie-Daten
+    local hierarchy_data="${4:-}"  # Standardwert für leere Hierarchie-Daten
     local db_file="${5:-$(get_data_file)}"
 
     # Debug-Ausgabe eröffnen
@@ -374,22 +374,11 @@ register_config_hierarchy() {
     fi
     
     # Hierarchie in die Datenbank einfügen
-    if [ "$hierarchy_data" = "{}" ]; then
-        # Einfaches leeres JSON direkt im SQL verwenden
-        local sql_string="INSERT INTO ${DB_TAB_NAME_CONFIG_HIERARCHIES} (hierarchy_name, description, responsible, hierarchy_data) 
-                           VALUES ('$hierarchy_name', '$description', '$responsible', '{}')"
-        debug "SQL: $sql_string"
-        sqlite3 "$db_file" "$sql_string"
-    else
-        # Für nicht-leere JSON-Werte: Maskiere Anführungszeichen im JSON
-        # Entferne überzählige schließende Klammern am Ende
-        local cleaned_json=$(echo "$hierarchy_data" | sed 's/}*$/}/g')
-        local escaped_json=$(echo "$cleaned_json" | sed "s/'/''/g")
-        local sql_string="INSERT INTO ${DB_TAB_NAME_CONFIG_HIERARCHIES} (hierarchy_name, description, responsible, hierarchy_data) 
-                           VALUES ('$hierarchy_name', '$description', '$responsible', json('$escaped_json'))"
-        debug "SQL: $sql_string"
-        sqlite3 "$db_file" "$sql_string"
-    fi
+    # Für nicht-leere JSON-Werte die json()-Funktion verwenden
+    local sql_string="INSERT INTO ${DB_TAB_NAME_CONFIG_HIERARCHIES} (hierarchy_name, description, responsible, hierarchy_data) 
+                        VALUES ('$hierarchy_name', '$description', '$responsible', json('{$hierarchy_data}'))"
+    debug "SQL: $sql_string"
+    sqlite3 "$db_file" "$sql_string"
 
     # Prüfen, ob der Einfügevorgang erfolgreich war
     if [ $? -ne 0 ]; then
