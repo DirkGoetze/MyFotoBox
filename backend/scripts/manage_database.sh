@@ -863,7 +863,9 @@ test_manage_database() {
 
 # Prüfe, ob SQLite installiert ist und initialisiere die Datenbank
 if [ "$MANAGE_DATABASE_LOADED" -eq 1 ] && [ "$MANAGE_SETTINGS_LOADED" -eq 1 ]; then
+    debug "INFO: Modul manage_database.sh wurde geladen. Prüfe Datenbank-Installation..."
     if _is_sqlite_installed; then
+        debug "INFO: Starte Datenbank-Initialisierung..."
         ensure_database
     fi
 fi
