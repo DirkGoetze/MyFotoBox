@@ -646,7 +646,7 @@ load_resources() {
     # Rückgabe: 0 = OK, 1 = mind. eine Ressource fehlt oder ist nicht nutzbar
     # -----------------------------------------------------------------------
     local result=0
-    
+    DEBUG_MOD_LOCAL=1  # Setze lokales Debug-Flag für dieses Skript
     # Debug-Ausgabe eröffnen
     debug_output "$(printf "$load_resources_debug_0001")"
     
