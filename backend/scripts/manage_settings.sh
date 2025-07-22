@@ -252,7 +252,10 @@ _hierarchy_exists() {
     fi
     
     # Prüfen, ob die Hierarchie in der Datenbank existiert
-    local exists=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM ${DB_TAB_NAME_CONFIG_HIERARCHIES} WHERE hierarchy_name='$hierarchy_name';")
+    local sql_string="SELECT COUNT(*) FROM ${DB_TAB_NAME_CONFIG_HIERARCHIES} WHERE hierarchy_name='$hierarchy_name';"
+    debug "SQL: $sql_string" # Debug-Ausgabe für SQL-String
+    exit 0
+    local exists=$(sqlite3 "$db_file" "$sql_string")
 
     # Ergebnis prüfen und zurückgeben
     if [ "$exists" -gt 0 ]; then
