@@ -358,7 +358,10 @@ _ensure_table_schema_versions () {
 
 ## --- 2. Tabelle: db_backups -----------------------------------------------
 # _ensure_table_db_backups
-_ensure_table_db_backups_debug_0001="INFO: Sicherstellen, dass die Tabelle 'db_backups' existiert."
+_ensure_table_db_backups_debug_0001="INFO: Sicherstellen, dass die Tabelle '%s' existiert."
+_ensure_table_db_backups_debug_0002="INFO: Tabelle '%s' prüfen und wenn nicht vorhanden, erstellen..."
+_ensure_table_db_backups_debug_0003="ERROR: Tabelle '%s' konnte nicht erstellt werden."
+_ensure_table_db_backups_debug_0004="INFO: Tabelle '%s' wurde erfolgreich erstellt."
 
 _ensure_table_db_backups () {
     # -----------------------------------------------------------------------
@@ -374,7 +377,7 @@ _ensure_table_db_backups () {
     local db_file="$1"
 
     # Debug-Ausgabe eröffnen
-    debug "$_ensure_table_db_backups_debug_0001"
+    debug "$(printf "$_ensure_table_db_backups_debug_0001" "${DB_TAB_NAME_DB_BACKUPS}")"
 
     # Überprüfen, ob der Datenbankpfad angegeben ist
     if ! check_param "$db_file" "db_file"; then return 1; fi
@@ -391,11 +394,17 @@ _ensure_table_db_backups () {
     );"
 
     # Tabelle erstellen
+    debug "$(printf "$_ensure_table_db_backups_debug_0002" "${DB_TAB_NAME_DB_BACKUPS}")"
     _create_table "$create_table_sql" "$db_file"
 
-
     # Prüfen, ob die Tabelle erfolgreich erstellt wurde
-    if [ $? -ne 0 ]; then return 1; else return 0; fi
+    if [ $? -ne 0 ]; then 
+        debug "$(printf "$_ensure_table_db_backups_debug_0003" "${DB_TAB_NAME_DB_BACKUPS}")"
+        return 1
+    else
+        debug "$(printf "$_ensure_table_db_backups_debug_0004" "${DB_TAB_NAME_DB_BACKUPS}")"
+        return 0
+    fi
 }   
 
 ## --- 3. Tabelle: config_hierarchies ---------------------------------------
