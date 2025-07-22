@@ -254,7 +254,7 @@ _create_directory() {
 }
 
 # _get_folder_path
-get_folder_path_debug_0001="START: Prüfe Ordner-Pfade: \nSystempfad='%s', \nStandardpfad='%s', \nFallbackpfad='%s'"
+get_folder_path_debug_0001="START: Prüfe Ordner-Pfade: [Systempfad='%s'], [Standardpfad='%s'], [Fallbackpfad='%s']"
 get_folder_path_debug_0002="INFO: Prüfung Systempfad (exist, read, write, rights): '%s'"
 get_folder_path_debug_0003="SUCCESS: Systempfad ok"
 get_folder_path_debug_0004="INFO: Prüfung Standardpfad (exist, read, write, rights): '%s'"
