@@ -885,5 +885,7 @@ test_manage_database() {
 }
 
 # Prüfe, ob SQLite installiert ist und initialisiere die Datenbank
+DEBUG_MOD_GLOBAL=1
 debug "INFO: Modul manage_database.sh wurde geladen. Prüfe Datenbank-Installation..."
 ensure_database
+DEBUG_MOD_GLOBAL=0

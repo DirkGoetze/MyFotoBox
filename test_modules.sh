@@ -27,7 +27,6 @@ echo
 # Lade lib_core.sh, was automatisch alle anderen Module laden sollte
 echo "---------------------------------------------------------------------------"
 echo "Versuche 'lib_core.sh' und alle anderen Module zu laden..."
-DEBUG_MOD_LOCAL=1  # Aktiviere lokalen Debug-Modus für detaillierte Ausgaben
 TEST_SCRIPT_DIR="/opt/fotobox/backend/scripts"
 source "$TEST_SCRIPT_DIR/lib_core.sh"
 if [ $? -eq 0 ]; then
@@ -37,7 +36,7 @@ else
     exit 1
 fi
 echo
-
+exit
 # -------------------------------
 # Test des Main-Modul lib_core.sh
 # -------------------------------
