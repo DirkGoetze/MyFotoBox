@@ -2146,6 +2146,7 @@ test_manage_folders() {
     # Parameter: keine
     # Rückgabe: 0 = Erfolg, 1 = Fehler
     # -----------------------------------------------------------------------
+    local old_debug_mode
     # Eröffnungsmeldung im Debug Modus
     debug "$(printf "$global_test_debug_0001" "manage_folders.sh")"
 
@@ -2157,6 +2158,7 @@ test_manage_folders() {
     fi
 
     # Aktivieren des globalen Debug-Modus für die Tests
+    old_debug_mode=$DEBUG_MOD_GLOBAL
     DEBUG_MOD_GLOBAL=1 
 
     # Hier können spezifische Tests für die Funktion implementiert werden
@@ -2270,10 +2272,10 @@ test_manage_folders() {
     # Test: ensure_folder_structure
     # test_function "manage_folders_sh" "ensure_folder_structure"
 
-    # Tests abgeschlossen, Deaktivieren des globalen Debug-Modus 
-    DEBUG_MOD_GLOBAL=0 
-
-    # Meldung ausgeben
+    # Meldung ausgeben, Test abgeschlossen ----------------------------------
     debug "$(printf "$global_test_debug_0003" "manage_folders.sh")"
+
+    # Tests abgeschlossen, wiederherstellen des globalen Debug-Modus  -------
+    DEBUG_MOD_GLOBAL=$old_debug_mode
     return 0
 }
