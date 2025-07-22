@@ -381,9 +381,10 @@ register_config_hierarchy() {
         debug "SQL: $sql_string"
         sqlite3 "$db_file" "$sql_string"
     else
-        # Für nicht-leere JSON-Werte die json()-Funktion verwenden
+        # Für nicht-leere JSON-Werte: Maskiere Anführungszeichen im JSON
+        local escaped_json=$(echo "$hierarchy_data" | sed "s/'/''/g")
         local sql_string="INSERT INTO ${DB_TAB_NAME_CONFIG_HIERARCHIES} (hierarchy_name, description, responsible, hierarchy_data) 
-                           VALUES ('$hierarchy_name', '$description', '$responsible', json('$hierarchy_data'))"
+                           VALUES ('$hierarchy_name', '$description', '$responsible', json('$escaped_json'))"
         debug "SQL: $sql_string"
         sqlite3 "$db_file" "$sql_string"
     fi
