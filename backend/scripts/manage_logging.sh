@@ -41,8 +41,8 @@ MANAGE_LOGGING_LOADED=0
 # Debug-Modus: Lokal und global steuerbar
 # DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
-DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
-: "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
+#DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
+#: "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
 
 # ===========================================================================
 # Hilfsfunktionen

@@ -536,19 +536,19 @@ check_module() {
 }
 
 # bind_resource
-bind_resource_debug_0001="[bind_resource] INFO: Starte Einbindung der Ressource '%s'"
-bind_resource_debug_0002="[bind_resource] INFO: Ressource '%s' bereits geladen, überspringe"
+bind_resource_debug_0001="[bind_resource] START: Starte Einbindung der Ressource '%s'"
+bind_resource_debug_0002="[bind_resource] INFO: Ressource '%s' bereits geladen, überspringe erneutes Laden"
 bind_resource_debug_0003="[bind_resource] INFO: Suche Ressourcenverzeichnis: '%s'"
 bind_resource_debug_0004="[bind_resource] ERROR: Verzeichnis '%s' nicht gefunden oder nicht lesbar"
-bind_resource_debug_0005="[bind_resource] INFO: Versuche Ressource zu finden: '%s'"
+bind_resource_debug_0005="[bind_resource] INFO: Versuche Ressourcendatei zu finden: '%s'"
 bind_resource_debug_0006="[bind_resource] ERROR: Die Datei '%s' existiert nicht oder ist nicht lesbar"
 bind_resource_debug_0007="[bind_resource] INFO: Lade '%s'"
 bind_resource_debug_0008="[bind_resource] ERROR: Fehler beim Laden von '%s' (Status: %d)"
-bind_resource_debug_0009="[bind_resource] INFO: Modul '%s' geladen, setze Pfad-Variable '%s'"
-bind_resource_debug_0010="[bind_resource] INFO: Modul '%s' geladen, setze Guard-Variable '%s'"
-bind_resource_debug_0011="[bind_resource] ERROR: Fehler - Modul '%s' konnte nicht korrekt geladen werden"
-bind_resource_debug_0012="[bind_resource] SUCCESS: Modul '%s' erfolgreich geladen"
-bind_resource_debug_0013="[bind_resource] INFO: Ressourcendatei '%s' erfolgreich geladen."
+bind_resource_debug_0009="[bind_resource] INFO: Ressourcendatei '%s' erfolgreich geladen."
+bind_resource_debug_0010="[bind_resource] INFO: Modul '%s' geladen, setze Pfad-Variable '%s'"
+bind_resource_debug_0011="[bind_resource] INFO: Modul '%s' geladen, setze Guard-Variable '%s'"
+bind_resource_debug_0012="[bind_resource] ERROR: Fehler - Modul '%s' konnte nicht korrekt geladen werden"
+bind_resource_debug_0013="[bind_resource] SUCCESS: Modul '%s' erfolgreich geladen"
 bind_resource_log_0001="[bind_resource] ERROR: Verzeichnis '%s' nicht gefunden oder nicht lesbar"
 bind_resource_log_0002="[bind_resource] ERROR: Die Datei '%s' existiert nicht oder ist nicht lesbar"
 bind_resource_log_0003="[bind_resource] ERROR: Konnte '%s' nicht laden (Status: %d)"
@@ -561,6 +561,9 @@ bind_resource() {
     # -----------------------------------------------------------------------
     local resource_name="$1"
     local resource_file="$SCRIPT_DIR/$resource_name"
+
+    # Debug-Ausgabe eröffnen
+    debug_output "$(printf "$bind_resource_debug_0001" "$resource_name")"
 
     if [ -z "$resource_name" ]; then
         echo "Fehler: Ressource-Name ist leer."
@@ -603,29 +606,29 @@ bind_resource() {
         echo "$(printf "$bind_resource_log_0003" "${resource_name%.sh}" "$source_result")"
         return 1
     fi
-    debug_output "$(printf "$bind_resource_debug_0013" "$resource_name" "$source_result")"
+    debug_output "$(printf "$bind_resource_debug_0009" "$resource_name" "$source_result")"
 
     # Setze die Path-Variable, um den Pfad zur Ressource global verfügbar zu machen
     local path_var="${resource_name%.sh}_sh"
     path_var="${path_var^^}"  # Konvertiere gesamten Variablennamen in Großbuchstaben
     eval "$path_var=\"$resource_file\""
     export "$path_var"  # Exportiere die Variable, damit sie global verfügbar ist
-    debug_output "$(printf "$bind_resource_debug_0009" "$(basename "${resource_name%.sh}" | tr '[:lower:]' '[:upper:]')" "$path_var")"
+    debug_output "$(printf "$bind_resource_debug_0010" "$(basename "${resource_name%.sh}" | tr '[:lower:]' '[:upper:]')" "$path_var")"
 
     # Setze die Guard-Variable auf 1, um anzuzeigen, dass die Ressource geladen wurde
     eval "$guard_var_name=1"
     export "$guard_var_name"  # Exportiere die Variable, damit sie global verfügbar ist
-    debug_output "$(printf "$bind_resource_debug_0010" "$(basename "${resource_name%.sh}" | tr '[:lower:]' '[:upper:]')" "$guard_var_name")"
+    debug_output "$(printf "$bind_resource_debug_0011" "$(basename "${resource_name%.sh}" | tr '[:lower:]' '[:upper:]')" "$guard_var_name")"
 
     # Prüfe ob das Laden erfolgreich war
     if ! check_module "$resource_name"; then
-        debug_output "$(printf "$bind_resource_debug_0011" "$(basename "${resource_name%.sh}" | tr '[:lower:]' '[:upper:]')")"
+        debug_output "$(printf "$bind_resource_debug_0012" "$(basename "${resource_name%.sh}" | tr '[:lower:]' '[:upper:]')")"
         echo "$(printf "$bind_resource_log_0003" "${resource_name%.sh}" "$source_result")"
         return 1
     fi
 
     # Wenn wir hier ankommen, war alles erfolgreich
-    debug_output "$(printf "$bind_resource_debug_0012" "$(basename "${resource_name%.sh}" | tr '[:lower:]' '[:upper:]')")"
+    debug_output "$(printf "$bind_resource_debug_0013" "$(basename "${resource_name%.sh}" | tr '[:lower:]' '[:upper:]')")"
     return 0  # Erfolgreich geladen
 }
 
