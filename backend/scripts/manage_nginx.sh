@@ -2248,6 +2248,11 @@ test_manage_nginx() {
         return 1
     fi
 
+    # Aktivieren des globalen Debug-Modus für die Tests
+    local old_debug_mode
+    old_debug_mode=$DEBUG_MOD_GLOBAL
+    DEBUG_MOD_GLOBAL=1 
+
     # Hier können spezifische Tests für die Funktion implementiert werden
     # -----------------------------------------------------------------------
     # Test: chk_installation_nginx
@@ -2299,11 +2304,11 @@ test_manage_nginx() {
     # Test: setup_nginx_service
     test_function "manage_nginx_sh" "setup_nginx_service"
 
-    # Tests abgeschlossen, Deaktivieren des globalen Debug-Modus 
-    # DEBUG_MOD_GLOBAL=0 
-
-    # Meldung ausgeben
+    # Meldung ausgeben, Test abgeschlossen ----------------------------------
     debug "$(printf "$global_test_debug_0003" "manage_nginx.sh")"
+
+    # Tests abgeschlossen, wiederherstellen des globalen Debug-Modus  -------
+    DEBUG_MOD_GLOBAL=$old_debug_mode
     return 0
 }
 

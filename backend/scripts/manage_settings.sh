@@ -1085,15 +1085,18 @@ test_manage_settings() {
     fi
 
     # Aktivieren des globalen Debug-Modus für die Tests
-    DEBUG_MOD_GLOBAL=1
+    local old_debug_mode
+    old_debug_mode=$DEBUG_MOD_GLOBAL
+    DEBUG_MOD_GLOBAL=1 
 
     # Hier können spezifische Tests für die Funktion implementiert werden
     # -----------------------------------------------------------------------
-    # Tests abgeschlossen, Deaktivieren des globalen Debug-Modus 
-    DEBUG_MOD_GLOBAL=0 
 
-    # Meldung ausgeben
+    # Meldung ausgeben, Test abgeschlossen ----------------------------------
     debug "$(printf "$global_test_debug_0003" "manage_settings.sh")"
+
+    # Tests abgeschlossen, wiederherstellen des globalen Debug-Modus  -------
+    DEBUG_MOD_GLOBAL=$old_debug_mode
     return 0
 }
 
