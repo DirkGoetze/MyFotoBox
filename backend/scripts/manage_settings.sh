@@ -252,8 +252,8 @@ _hierarchy_exists() {
     fi
     
     # Prüfen, ob die Hierarchie in der Datenbank existiert
-    local exists=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM config_hierarchies WHERE hierarchy_name='$hierarchy_name';")
-    
+    local exists=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM ${DB_TAB_NAME_CONFIG_HIERARCHIES} WHERE hierarchy_name='$hierarchy_name';")
+
     # Ergebnis prüfen und zurückgeben
     if [ "$exists" -gt 0 ]; then
         debug "$(printf "$_hierarchy_exists_debug_0002" "$hierarchy_name")"
@@ -295,7 +295,7 @@ _get_hierarchy_id() {
     hierarchy_name=$(_clean_key "$hierarchy_name")
 
     # ID aus der Datenbank abrufen
-    local hierarchy_id=$(sqlite3 "$db_file" "SELECT id FROM config_hierarchies WHERE hierarchy_name='$hierarchy_name';")
+    local hierarchy_id=$(sqlite3 "$db_file" "SELECT id FROM ${DB_TAB_NAME_CONFIG_HIERARCHIES} WHERE hierarchy_name='$hierarchy_name';")
 
     # Prüfen, ob die Hierarchie-ID gefunden wurde
     if [ -z "$hierarchy_id" ]; then
@@ -374,11 +374,11 @@ register_config_hierarchy() {
     # Hierarchie in die Datenbank einfügen
     if [ "$hierarchy_data" = "{}" ]; then
         # Einfaches leeres JSON direkt im SQL verwenden
-        sqlite3 "$db_file" "INSERT INTO config_hierarchies (hierarchy_name, description, responsible, hierarchy_data) 
+        sqlite3 "$db_file" "INSERT INTO ${DB_TAB_NAME_CONFIG_HIERARCHIES} (hierarchy_name, description, responsible, hierarchy_data) 
                            VALUES ('$hierarchy_name', '$description', '$responsible', '{}')"
     else
         # Für nicht-leere JSON-Werte die json()-Funktion verwenden
-        sqlite3 "$db_file" "INSERT INTO config_hierarchies (hierarchy_name, description, responsible, hierarchy_data) 
+        sqlite3 "$db_file" "INSERT INTO ${DB_TAB_NAME_CONFIG_HIERARCHIES} (hierarchy_name, description, responsible, hierarchy_data) 
                            VALUES ('$hierarchy_name', '$description', '$responsible', json('$hierarchy_data'))"
     fi
 
@@ -448,7 +448,7 @@ has_config_value() {
     local hierarchy_id=$(_get_hierarchy_id "$hierarchy_name" "$db_file")
 
     # Prüfen, ob der Schlüssel existiert
-    local exists=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM settings WHERE hierarchy_id=$hierarchy_id AND key='$key_name' AND is_active=1;")
+    local exists=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM ${DB_TABLE_SETTINGS} WHERE hierarchy_id=$hierarchy_id AND key='$key_name' AND is_active=1;")
 
     # Ergebnis prüfen und zurückgeben  
     if [ "$exists" -gt 0 ]; then
@@ -524,8 +524,8 @@ get_config_value() {
     local hierarchy_id=$(_get_hierarchy_id "$hierarchy_name" "$db_file")
     
     # Wert aus der Datenbank abrufen
-    local value=$(sqlite3 "$db_file" "SELECT value FROM settings WHERE hierarchy_id=$hierarchy_id AND key='$key_name' AND is_active=1;")
-    
+    local value=$(sqlite3 "$db_file" "SELECT value FROM ${DB_TABLE_SETTINGS} WHERE hierarchy_id=$hierarchy_id AND key='$key_name' AND is_active=1;")
+
     echo "$value"
     
     # Wenn der Wert leer ist, prüfen, ob der Schlüssel wirklich existiert
@@ -634,7 +634,7 @@ set_config_value() {
     # Prüfen, ob der Schlüssel bereits existiert
     local old_value=""
     local setting_id=""
-    local exists=$(sqlite3 "$db_file" "SELECT id, value FROM settings WHERE hierarchy_id=$hierarchy_id AND key='$key_name';") || {
+    local exists=$(sqlite3 "$db_file" "SELECT id, value FROM ${DB_TABLE_SETTINGS} WHERE hierarchy_id=$hierarchy_id AND key='$key_name';") || {
         sqlite3 "$db_file" "ROLLBACK;"
         debug "Fehler bei der Abfrage nach existierendem Schlüssel"
         return 1
@@ -802,7 +802,7 @@ del_config_value() {
     local hierarchy_id=$(_get_hierarchy_id "$hierarchy_name" "$db_file")
     
     # Prüfen, ob der Schlüssel existiert
-    local setting_id=$(sqlite3 "$db_file" "SELECT id FROM settings WHERE hierarchy_id=$hierarchy_id AND key='$key_name';")
+    local setting_id=$(sqlite3 "$db_file" "SELECT id FROM ${DB_TABLE_SETTINGS} WHERE hierarchy_id=$hierarchy_id AND key='$key_name';")
     if [ -z "$setting_id" ]; then
         debug "$(printf "$del_config_value_debug_0004" "$key_name" "$hierarchy_name")"
         log "$(printf "$del_config_value_log_0003" "$key_name" "$hierarchy_name")"
@@ -904,7 +904,7 @@ lst_config_values() {
     else
         # Text-Format (key=value)
         sqlite3 "$db_file" "SELECT h.hierarchy_name || '.' || s.key, s.value 
-                           FROM settings s $join_clause $where_clause;" | while read -r line; do
+                           FROM ${DB_TABLE_SETTINGS} s $join_clause $where_clause;" | while read -r line; do
             key=$(echo "$line" | cut -d'|' -f1)
             value=$(echo "$line" | cut -d'|' -f2)
             echo "$key=$value"
@@ -945,7 +945,7 @@ apply_config_changes() {
     debug "$(printf "$apply_config_changes_debug_0001" "$change_group" "$db_file")"
 
     # Prüfen, ob die Änderungsgruppe existiert
-    local group_exists=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM change_groups WHERE group_name='$change_group';")
+    local group_exists=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM ${DB_TAB_NAME_CHANGE_GROUPS} WHERE group_name='$change_group';")
     if [ "$group_exists" -eq 0 ]; then
         echo "Änderungsgruppe '$change_group' existiert nicht." >&2
         return 1
@@ -955,7 +955,7 @@ apply_config_changes() {
     sqlite3 "$db_file" "BEGIN TRANSACTION;"
 
     # Status der Änderungsgruppe auf 'complete' setzen
-    sqlite3 "$db_file" "UPDATE change_groups SET status='complete', updated_at=datetime('now','localtime') WHERE group_name='$change_group';"
+    sqlite3 "$db_file" "UPDATE ${DB_TAB_NAME_CHANGE_GROUPS} SET status='complete', updated_at=datetime('now','localtime') WHERE group_name='$change_group';"
 
     # Transaktion abschließen
     sqlite3 "$db_file" "COMMIT;"
@@ -1001,7 +1001,7 @@ rollback_config_changes() {
     debug "$(printf "$rollback_config_changes_debug_0001" "$change_group" "$db_file")"
 
     # Prüfen, ob die Änderungsgruppe existiert
-    local group_exists=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM change_groups WHERE group_name='$change_group';")
+    local group_exists=$(sqlite3 "$db_file" "SELECT COUNT(*) FROM ${DB_TAB_NAME_CHANGE_GROUPS} WHERE group_name='$change_group';")
     if [ "$group_exists" -eq 0 ]; then
         debug "$(printf "$rollback_config_changes_debug_0002" "$change_group")"
         log "$(printf "$rollback_config_changes_log_0001" "$change_group")"
@@ -1012,12 +1012,12 @@ rollback_config_changes() {
     sqlite3 "$db_file" "BEGIN TRANSACTION;"
 
     # Change-Group-ID abrufen
-    local change_group_id=$(sqlite3 "$db_file" "SELECT id FROM change_groups WHERE group_name='$change_group';")
+    local change_group_id=$(sqlite3 "$db_file" "SELECT id FROM ${DB_TAB_NAME_CHANGE_GROUPS} WHERE group_name='$change_group';")
 
     # Alle betroffenen Einstellungen abrufen
     local settings_result=$(sqlite3 "$db_file" "
         SELECT s.id, h.hierarchy_name, s.key, sh.old_value 
-        FROM settings s
+        FROM ${DB_TABLE_SETTINGS} s
         JOIN settings_change_groups scg ON s.id = scg.setting_id
         JOIN settings_history sh ON s.id = sh.setting_id
         JOIN config_hierarchies h ON s.hierarchy_id = h.id

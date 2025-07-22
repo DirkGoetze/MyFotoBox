@@ -45,6 +45,29 @@ MANAGE_DATABASE_LOADED=0
 # DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
 # : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
 
+# Globale Definition der Tabellen-Namen für die SQLite-Datenbank, verhindert
+# Tippfehler bei der Verwendung in anderen Modulen
+# Diese Konstanten sollten nicht verändert werden, da sie in anderen Modulen
+# als Referenz für die Tabellen-Namen in der SQLite-Datenbank dienen.
+# ---------------------------------------------------------------------------
+
+# Tabellen-Namen für die Standard-Konfigurationstabellen in der Datenbank
+# ---------------------------------------------------------------------------
+DB_TAB_NAME_SCHEMA_VERSIONS="schema_versions"
+DB_TAB_NAME_DB_BACKUPS="db_backups"
+DB_TAB_NAME_CONFIG_HIERARCHIES="config_hierarchies"
+DB_TAB_NAME_SETTINGS="settings"
+DB_TAB_NAME_SETTINGS_HISTORY="settings_history"
+DB_TAB_NAME_SETTING_DEPENDENCIES="setting_dependencies"
+DB_TAB_NAME_CHANGE_GROUPS="change_groups"
+DB_TAB_NAME_SETTINGS_CHANGE_GROUPS="settings_change_groups"
+
+# Tabellen-Namen für die Standard-Tabellen in der Datenbank
+# ---------------------------------------------------------------------------
+DB_TABLE_USERS="users"
+DB_TABLE_SESSIONS="sessions"
+DB_TABLE_FILES="files"
+
 # ===========================================================================
 # Hilfsfunktionen
 # ===========================================================================
@@ -318,7 +341,7 @@ _ensure_table_schema_versions () {
     if ! check_param "$db_file" "db_file"; then return 1; fi
 
     # SQL-Statement für die Tabellenerstellung definieren
-    local create_table_sql="CREATE TABLE IF NOT EXISTS schema_versions (
+    local create_table_sql="CREATE TABLE IF NOT EXISTS ${DB_TAB_NAME_SCHEMA_VERSIONS} (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         table_name TEXT NOT NULL,        -- Name der Tabelle
         version INTEGER NOT NULL,        -- Aktuelle Schemaversion
@@ -357,7 +380,7 @@ _ensure_table_db_backups () {
     if ! check_param "$db_file" "db_file"; then return 1; fi
 
     # SQL-Statement für die Tabellenerstellung definieren
-    local create_table_sql="CREATE TABLE IF NOT EXISTS db_backups (
+    local create_table_sql="CREATE TABLE IF NOT EXISTS ${DB_TAB_NAME_DB_BACKUPS} (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         backup_name TEXT NOT NULL UNIQUE, -- Name des Backups
         backup_file TEXT NOT NULL,       -- Dateipfad zum Backup
@@ -399,7 +422,7 @@ _ensure_table_config_hierarchies () {
     if ! check_param "$db_file" "db_file"; then return 1; fi
 
     # SQL-Statement für die Tabellenerstellung definieren
-    local create_table_sql="CREATE TABLE IF NOT EXISTS config_hierarchies (
+    local create_table_sql="CREATE TABLE IF NOT EXISTS ${DB_TAB_NAME_CONFIG_HIERARCHIES} (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         hierarchy_name TEXT NOT NULL UNIQUE, -- Name der Hierarchie (z.B. "nginx", "camera")
         hierarchy_data TEXT NOT NULL,         -- JSON-Daten der Hierarchie
@@ -444,7 +467,7 @@ _ensure_table_settings () {
     if ! check_param "$db_file" "db_file"; then return 1; fi
 
     # SQL-Statement für die Tabellenerstellung definieren
-    local create_table_sql="CREATE TABLE IF NOT EXISTS settings (
+    local create_table_sql="CREATE TABLE IF NOT EXISTS ${DB_TAB_NAME_SETTINGS} (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         hierarchy_id INTEGER,                -- Verweis auf die Hierarchie
         key TEXT NOT NULL,                   -- Konfigurationsschlüssel (z.B. "port", "ssl.enabled")
@@ -496,7 +519,7 @@ _ensure_table_settings_history () {
     if ! check_param "$db_file" "db_file"; then return 1; fi
 
     # SQL-Statement für die Tabellenerstellung definieren
-    local create_table_sql="CREATE TABLE IF NOT EXISTS settings_history (
+    local create_table_sql="CREATE TABLE IF NOT EXISTS ${DB_TAB_NAME_SETTINGS_HISTORY} (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         setting_id INTEGER NOT NULL,         -- Verweis auf die Einstellung
         old_value TEXT,                      -- Vorheriger Wert
@@ -541,7 +564,7 @@ _ensure_table_setting_dependencies () {
     if ! check_param "$db_file" "db_file"; then return 1; fi
 
     # SQL-Statement für die Tabellenerstellung definieren
-    local create_table_sql="CREATE TABLE IF NOT EXISTS setting_dependencies (
+    local create_table_sql="CREATE TABLE IF NOT EXISTS ${DB_TAB_NAME_SETTING_DEPENDENCIES} (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         setting_id INTEGER NOT NULL,         -- Verweis auf die Einstellung
         dependent_setting_id INTEGER NOT NULL, -- Abhängige Einstellung
@@ -583,7 +606,7 @@ _ensure_table_change_groups () {
     if ! check_param "$db_file" "db_file"; then return 1; fi
 
     # SQL-Statement für die Tabellenerstellung definieren
-    local create_table_sql="CREATE TABLE IF NOT EXISTS change_groups (
+    local create_table_sql="CREATE TABLE IF NOT EXISTS ${DB_TAB_NAME_CHANGE_GROUPS} (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         group_name TEXT NOT NULL UNIQUE,     -- Name der Änderungsgruppe
         description TEXT,                    -- Beschreibung der Gruppe
@@ -627,7 +650,7 @@ _ensure_table_settings_change_groups () {
     if ! check_param "$db_file" "db_file"; then return 1; fi
 
     # SQL-Statement für die Tabellenerstellung definieren
-    local create_table_sql="CREATE TABLE IF NOT EXISTS settings_change_groups (
+    local create_table_sql="CREATE TABLE IF NOT EXISTS ${DB_TAB_NAME_SETTINGS_CHANGE_GROUPS} (
         setting_id INTEGER NOT NULL,         -- Verweis auf die Einstellung
         change_group_id INTEGER NOT NULL,    -- Verweis auf die Änderungsgruppe
         FOREIGN KEY (setting_id) REFERENCES settings(id) ON DELETE CASCADE,
