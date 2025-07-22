@@ -61,8 +61,8 @@ LETSENCRYPT_LIVE_DIR="${LETSENCRYPT_CONFIG_DIR}/live"
 # Debug-Modus: Lokal und global steuerbar
 # DEBUG_MOD_LOCAL: Wird in jedem Skript individuell definiert (Standard: 0)
 # DEBUG_MOD_GLOBAL: Überschreibt alle lokalen Einstellungen (Standard: 0)
-DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
-: "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
+# DEBUG_MOD_LOCAL=0            # Lokales Debug-Flag für einzelne Skripte
+# : "${DEBUG_MOD_GLOBAL:=0}"   # Globales Flag, das alle lokalen überstimmt
 
 # ===========================================================================
 # Hilfsfunktionen
@@ -1392,6 +1392,46 @@ EOF
     log_or_json "$mode" "info" "Firewall: Port $https_port (TCP) geöffnet für HTTPS-Verbindungen" 0
     log_or_json "$mode" "info" "Systemlimits für NGINX: $nginx_user_limits" 0
     
+    return 0
+}
+
+# ============================================================================
+# Test-Funktionen
+# ============================================================================
+
+# test_manage_https
+
+test_manage_https() {
+    # -----------------------------------------------------------------------
+    # test_manage_https
+    # -----------------------------------------------------------------------
+    # Funktion: Führt einen Test des Moduls durch
+    # Parameter: keine
+    # Rückgabe: 0 = Erfolg, 1 = Fehler
+    # -----------------------------------------------------------------------
+    # Eröffnungsmeldung im Debug Modus
+    debug "$(printf "$global_test_debug_0001" "manage_https.sh")"
+
+    # Allgemeiner Test des Moduls
+    test_modul "manage_https.sh"
+    if [ $? -ne 0 ]; then
+        debug "$(printf "$global_test_debug_0002" "manage_https.sh")"
+        return 1
+    fi
+
+    # Aktivieren des globalen Debug-Modus für die Tests
+    local old_debug_mode
+    old_debug_mode=$DEBUG_MOD_GLOBAL
+    DEBUG_MOD_GLOBAL=1 
+
+    # Hier können spezifische Tests für die Funktion implementiert werden
+    # -----------------------------------------------------------------------
+
+    # Meldung ausgeben, Test abgeschlossen ----------------------------------
+    debug "$(printf "$global_test_debug_0003" "manage_https.sh")"
+
+    # Tests abgeschlossen, wiederherstellen des globalen Debug-Modus  -------
+    DEBUG_MOD_GLOBAL=$old_debug_mode
     return 0
 }
 
