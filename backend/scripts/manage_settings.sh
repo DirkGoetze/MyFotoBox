@@ -376,7 +376,7 @@ register_config_hierarchy() {
     # Hierarchie in die Datenbank einfügen
     # Für nicht-leere JSON-Werte die json()-Funktion verwenden
     local sql_string="INSERT INTO ${DB_TAB_NAME_CONFIG_HIERARCHIES} (hierarchy_name, description, responsible, hierarchy_data) 
-                        VALUES ('$hierarchy_name', '$description', '$responsible', json('{$hierarchy_data}'))"
+                        VALUES ('$hierarchy_name', '$description', '$responsible', json('$hierarchy_data'))"
     debug "SQL: $sql_string"
     sqlite3 "$db_file" "$sql_string"
 
