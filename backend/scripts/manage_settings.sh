@@ -220,7 +220,7 @@ _generate_group_id() {
 # ---------------------------------------------------------------------------
 
 # _hierarchy_exists
-_hierarchy_exists_debug_0001="INFO: Prüfe, ob Hierarchie '%s' in der Datenbank existiert."
+_hierarchy_exists_debug_0001="START: Prüfung ob Hierarchie '%s' in der Datenbank '%s' existiert."
 _hierarchy_exists_debug_0002="SUCCESS: Hierarchie '%s' existiert in der Datenbank."
 _hierarchy_exists_debug_0003="WARN: Hierarchie '%s' existiert noch nicht in der Datenbank."
 
@@ -235,10 +235,11 @@ _hierarchy_exists() {
     # Rückgabe: 0, wenn die Hierarchie existiert, sonst 1
     # -----------------------------------------------------------------------
     local hierarchy_name="$1"
-    local db_file="${2:-$(get_data_file)}"
 
     # Debug-Ausgabe eröffnen
-    debug "$(printf "$_hierarchy_exists_debug_0001" "$hierarchy_name")"
+    debug "$(printf "$_hierarchy_exists_debug_0001" "$hierarchy_name" "$2")"
+
+    local db_file="${2:-$(get_data_file)}"
 
     # Überprüfen, ob der Hierarchiename und der Datenbankpfad angegeben sind
     if ! check_param "$hierarchy_name" "hierarchy_name"; then return 1; fi
